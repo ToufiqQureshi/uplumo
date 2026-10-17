@@ -146,3 +146,9 @@ configuration and evidence for 13 months. Organization/project deletion cascades
   answered observations; a 20-point decline is an in-app investigation warning.
 - Billing forecasts these schedules alongside rank checks. Forecasts do not
   reserve credits and cannot promise that shared credits will remain available.
+
+AI tracking jobs allow two hours: the permitted 60 sequential live model calls
+at the transport's 60-second deadline, DataForSEO's standard queue of up to
+45 minutes, and 15 minutes for submission/collection. This is a bounded job
+window, not a promised completion time. Accepted task reads remain resumable
+after process shutdown without buying another task.

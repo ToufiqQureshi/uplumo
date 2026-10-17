@@ -14,6 +14,10 @@ import (
 
 const trackingQueue = "ai_visibility"
 
+// Up to 60 sequential model requests (60 seconds each), the standard
+// scraper queue (45 minutes), and 15 minutes for submission/collection.
+const trackingRunTimeout = 2 * time.Hour
+
 // Save replaces approved configuration without changing historical answers.
 func (s *Tracking) Save(ctx context.Context, org, project string, c TrackingConfig) error {
 	if err := c.validate(); err != nil {
@@ -200,7 +204,7 @@ func (s *Tracking) Start(ctx context.Context, org, project, key string, schedule
 		if err != nil {
 			return err
 		}
-		_, err = tx.Exec(ctx, `INSERT INTO go_jobs(queue,idempotency_key,payload,max_attempts,timeout_seconds) VALUES($1,$2,$3,3,2100)`, trackingQueue, id, payload)
+		_, err = tx.Exec(ctx, `INSERT INTO go_jobs(queue,idempotency_key,payload,max_attempts,timeout_seconds) VALUES($1,$2,$3,3,$4)`, trackingQueue, id, payload, int(trackingRunTimeout/time.Second))
 		if err != nil {
 			return err
 		}

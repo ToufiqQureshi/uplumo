@@ -174,6 +174,13 @@ func TestTrackingDurableCollectionAndTenantIsolation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	var timeoutSeconds int
+	if err := db.QueryRow(ctx, `SELECT timeout_seconds FROM go_jobs WHERE queue=$1 AND idempotency_key=$2`, trackingQueue, id).Scan(&timeoutSeconds); err != nil {
+		t.Fatal(err)
+	}
+	if timeoutSeconds < 7200 {
+		t.Fatalf("job timeout %ds cannot cover the 45-minute queue plus maximum live-model fanout", timeoutSeconds)
+	}
 	again, err := svc.Start(ctx, org, project, "request-key-1", false, 10)
 	if err != nil || again != id {
 		t.Fatal("idempotent start changed run", err)
