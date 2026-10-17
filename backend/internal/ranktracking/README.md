@@ -54,3 +54,7 @@ migration test phase.
 refill, including keyword operators, device pairs, depth and per-call rounding.
 The Billing page subtracts this and saved AI tracking estimates from the current
 balance. It is advisory; it makes no provider calls and creates no credit holds.
+
+Monthly usage forecasts use Scheduler.Next's existing month-end anchors,
+including timezone day shifts. Do not replace them with AddDate: January 31
+normalizes into March and can omit February's actual scheduled check.
