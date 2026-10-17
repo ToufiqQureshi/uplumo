@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { BriefPanel } from "./BriefPanel";
 import { briefForWriter } from "./brief-view";
 import { DraftsPanel } from "./EditorPanels";
@@ -66,6 +67,18 @@ export function ContentEditorSidePanel({
   onDeleteDraft: (draft: ContentDraftSummary) => void;
   onUseSuggestion: (content: string) => void;
 }) {
+  const taskScope = `${draftId ?? "new"}:${draft.targetKeyword}`;
+  const [writingTask, setWritingTask] = useState<{
+    id: string;
+    scope: string;
+    mode: EditorMode;
+  } | null>(null);
+  const task =
+    writingTask?.scope === taskScope
+      ? (writingTask.mode === "seo" ? seo : aeo).checks.find(
+          (check) => check.id === writingTask.id && !check.passed,
+        )
+      : undefined;
   const outline = draft.content.split("\n").flatMap((line) => {
     const match = line.trim().match(/^(#{1,3})\s+(.+)$/u);
     return match ? [{ level: match[1].length, text: match[2] }] : [];
@@ -112,6 +125,10 @@ export function ContentEditorSidePanel({
             onModeChange={onModeChange}
             seo={seo}
             aeo={aeo}
+            onChooseTask={(check) => {
+              setWritingTask({ id: check.id, scope: taskScope, mode });
+              onTabChange("ai");
+            }}
           />
         ) : null}
         {tab === "brief" ? (
@@ -159,7 +176,9 @@ export function ContentEditorSidePanel({
             <WriterAssistant
               projectId={projectId}
               draft={draft}
-              mode={mode}
+              mode={task && writingTask ? writingTask.mode : mode}
+              task={task}
+              onClearTask={() => setWritingTask(null)}
               brief={briefForWriter(brief)}
               disabled={editorBusy}
               onUse={onUseSuggestion}

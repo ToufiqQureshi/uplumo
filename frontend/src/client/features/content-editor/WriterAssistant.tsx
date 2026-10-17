@@ -7,6 +7,8 @@ import {
   generateWritingSuggestion,
   getContentWriterStatus,
 } from "./contentEditorApi";
+import { taskInstructions } from "./editor-actions";
+import type { ScoreCheck } from "./scoring";
 import type { ContentDraftInput, EditorMode } from "./scoring";
 import { useEditorSession } from "./editor-session";
 import { writerContext } from "./writer-context";
@@ -31,6 +33,8 @@ export function WriterAssistant({
   brief,
   disabled,
   onUse,
+  task,
+  onClearTask,
 }: {
   projectId: string;
   draft: ContentDraftInput;
@@ -38,6 +42,8 @@ export function WriterAssistant({
   brief: string;
   disabled: boolean;
   onUse: (content: string) => void;
+  task?: Pick<ScoreCheck, "label" | "detail">;
+  onClearTask?: () => void;
 }) {
   const { editor } = useEditorSession();
   const [instructions, setInstructions] = useState("");
@@ -81,7 +87,7 @@ export function WriterAssistant({
           targetKeyword: draft.targetKeyword,
           content: writerContext(draft.content, selection, currentBlock),
           language,
-          instructions,
+          instructions: taskInstructions(task, instructions),
           brief: brief.slice(0, 2_000),
           idempotencyKey,
         },
@@ -123,6 +129,21 @@ export function WriterAssistant({
         credits. Review suggestions before using them; generated facts may need
         verification.
       </p>
+      {task ? (
+        <div className="space-y-2 rounded-lg border bg-muted p-3 text-sm">
+          <h3 className="font-medium">Focused task: {task.label}</h3>
+          <p className="text-xs leading-5 text-muted-foreground">
+            {task.detail}
+          </p>
+          <p className="text-xs">
+            Select the relevant passage, then choose an action below. Preparing
+            this task has not generated or changed any text.
+          </p>
+          <Button variant="ghost" size="sm" onClick={onClearTask}>
+            Clear focused task
+          </Button>
+        </div>
+      ) : null}
       {writerDisabled ? (
         <p
           role="status"
@@ -151,14 +172,17 @@ export function WriterAssistant({
       </label>
       <label className="block space-y-1 text-sm">
         <span>
-          Instructions <span className="text-muted-foreground">(optional)</span>
+          Instructions{" "}
+          <span className="text-muted-foreground">
+            {task ? "(optional, up to 1,100 characters)" : "(optional)"}
+          </span>
         </span>
         <Textarea
           id="content-assistant-instructions"
           name="content-assistant-instructions"
           value={instructions}
           onChange={(event) => setInstructions(event.target.value)}
-          maxLength={2_000}
+          maxLength={task ? 1_100 : 2_000}
           rows={3}
           placeholder="Audience, tone, or facts to emphasize"
           disabled={disabled || mutation.isPending}

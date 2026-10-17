@@ -30,3 +30,11 @@ Go packages: `contenteditor`, `contentauthors`, `linksuggest` and `sitepublish`;
 - Do not auto-save or publish unreviewed generated text to a customer site.
 - Uploaded images and generated HTML must be constrained to allowed storage/content types.
 - Link suggestions use project-owned GSC/audit data and must never cross project boundaries.
+
+## Focused issue handoff
+
+The writer selects one of the current unfinished score checks → sidebar stores
+only its ID/mode and draft/topic scope → AI help resolves fresh check evidence →
+an explicit action sends bounded task instructions with the selected passage.
+Preparing a task never generates or inserts content. Published articles link to
+free enquiry evidence and the existing explicit paid-tracking flows.

@@ -178,3 +178,12 @@ Secrets go into Railway variables only, never into the repo or chat.
   Google-Extended) on a product that sells AI visibility. Keep or turn off.
 - Whether billing rows are kept when an account is erased (tax records). See
   `backend/internal/gdpr/README.md`.
+
+## Editorial and enquiry measurement
+
+- **Built:** three prioritized editorial tasks with current evidence handed to
+  the existing writer only after an explicit action; duplicate brief headings
+  disabled; published articles link to saved AI/rank/enquiry measurement.
+- **Built:** Missed Enquiries Finder and in-app Lead Flow Guard using first-party
+  events, instrumentation/sample caveats, immutable pre-change baselines and the
+  first complete post-change week. No external alert delivery or revenue claim.

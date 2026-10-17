@@ -144,3 +144,19 @@ Google or predict rankings.
   needed, shifts inside the viewport, and closes on Escape or outside click.
 - The AI writer sends selected text or the current article section, not the
   full article, and limits the brief summary sent with each action.
+
+## Focused edits and measurement
+
+- ScorePanel offers up to three applicable unfinished checks, ordered by points
+  still available. Preparing a focused task switches to AI help without a paid
+  call. WriterAssistant includes the selected check's current evidence only
+  after an explicit action, with the existing 2,000-character instructions cap.
+  Tasks stop applying after changing draft/topic or satisfying the check.
+  Suggestions still need writer review; editorial points are not ranking gains.
+- BriefPanel disables adding a question heading when that exact normalized
+  heading already exists. This is a duplicate-heading guard, not an assertion
+  that the article answers the question semantically.
+- After WordPress publication, the sidebar links to saved AI question tracking,
+  rank tracking and enquiry evidence with a clean page path. Before another edit,
+  save a measurement baseline there; new articles need data before a comparison
+  means anything. Opening any follow-up makes no paid check or site change.

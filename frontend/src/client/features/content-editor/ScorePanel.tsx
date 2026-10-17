@@ -1,3 +1,4 @@
+import { nextEdits } from "./editor-actions";
 import { sortBy } from "remeda";
 import { cn } from "cn";
 import type { EditorMode, ScoreCheck } from "./scoring";
@@ -27,11 +28,13 @@ export function ScorePanel({
   onModeChange,
   seo,
   aeo,
+  onChooseTask,
 }: {
   mode: EditorMode;
   onModeChange: (mode: EditorMode) => void;
   seo: Score;
   aeo: Score;
+  onChooseTask: (check: ScoreCheck) => void;
 }) {
   const active = mode === "seo" ? seo : aeo;
   const checks = sortBy(
@@ -114,6 +117,30 @@ export function ScorePanel({
           </p>
         ) : null}
 
+        <h3 className="label-mono mt-4 mb-2 text-muted-foreground">
+          Next edits to review
+        </h3>
+        <ol className="space-y-2">
+          {nextEdits(active.checks).map((check) => (
+            <li key={check.id} className="rounded-lg border p-3 text-sm">
+              <p className="font-medium">{check.label}</p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                {check.detail}
+              </p>
+              <button
+                type="button"
+                className="mt-2 text-xs font-medium text-primary underline underline-offset-4"
+                onClick={() => onChooseTask(check)}
+              >
+                Prepare focused writing task
+              </button>
+            </li>
+          ))}
+        </ol>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Prioritized by remaining editorial points. Preparing a task is free;
+          select a passage and explicitly run an AI action to use credits.
+        </p>
         <h3 className="label-mono mt-4 mb-2 text-muted-foreground">
           Checklist · {checks.length} checks
         </h3>

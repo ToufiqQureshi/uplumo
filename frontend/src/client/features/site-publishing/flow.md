@@ -26,3 +26,7 @@ Go package: `backend/internal/sitepublish`; draft source is `backend/internal/co
 - Retain explicit owner/admin permissions and plan checks.
 - Sanitize outbound HTML/schema and do not leak WordPress credentials in logs or errors.
 - A timeout after WordPress accepts a post must not cause duplicate posts on blind retry.
+
+After publishing, the writer can open enquiry evidence with a clean page path,
+or saved AI/rank tracking. Follow-up links do not create paid work, save a
+measurement or republish; each tool retains its own explicit actions.

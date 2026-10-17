@@ -27,3 +27,11 @@ Go package: `backend/internal/analytics`; ingestion route is mounted in `backend
 - Collection is public by design, so preserve bot/domain checks and per-IP/per-site rate limits.
 - Custom events must use the same validation and rate limits as pageviews.
 - This feature does not call paid SEO providers.
+
+## Enquiry evidence
+
+Navigation or the editor's published-page link opens EnquiriesPage. A saved
+goal determines the free report. The user can choose a path, record a planned
+edit and immutable pre-change baseline, then request its first complete-week
+comparison. Each query key includes project and comparison ID. Goal edits
+invalidate reports; saved changes retain their original event name.

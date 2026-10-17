@@ -20,3 +20,11 @@ Postgres analytics tables; Redis daily salt/rate-limit counters; no paid SEO pro
 - Do not store cookies or raw IP addresses.
 - Public ingestion must keep same-origin/domain validation, bot filtering, payload bounds and per-IP/site limits.
 - Custom events must not inflate pageview totals or bypass ingestion checks.
+
+## Enquiry workflow
+
+Member selects an event → free report aggregates matched visitor-days → member
+records a baseline before editing a page → repository freezes that week's
+metrics under the project lock → comparison becomes ready after seven complete
+post-change days. Missing instrumentation and small samples stay explicit;
+there is no background email or automatic site edit.
