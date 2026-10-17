@@ -96,10 +96,13 @@ type usage struct {
 	BalanceCredits int64 `json:"balanceCredits"`
 	MonthlyCredits int64 `json:"monthlyCredits"`
 	// PeriodStart is when the current billing month began; Spent covers it.
-	PeriodStart time.Time      `json:"periodStart"`
-	PeriodEnd   *time.Time     `json:"periodEnd"`
-	Spent       []FeatureSpend `json:"spent"`
-	Costs       []ActionCost   `json:"costs"`
+	PeriodStart             time.Time      `json:"periodStart"`
+	PeriodEnd               *time.Time     `json:"periodEnd"`
+	Spent                   []FeatureSpend `json:"spent"`
+	Costs                   []ActionCost   `json:"costs"`
+	ScheduledCredits        int64          `json:"scheduledCredits"`
+	RemainingAfterSchedules int64          `json:"remainingAfterSchedules"`
+	ForecastUntil           time.Time      `json:"forecastUntil"`
 }
 
 // periodStart is the start of the billing month that ends at end, or the
@@ -141,6 +144,19 @@ func usageHandler(logger *slog.Logger, svc *Service, credits *CreditLedgerServic
 				return
 			}
 		}
+		out.ForecastUntil = out.PeriodStart.AddDate(0, 1, 0)
+		if out.PeriodEnd != nil {
+			out.ForecastUntil = *out.PeriodEnd
+		}
+		if svc.Forecast != nil {
+			out.ScheduledCredits, err = svc.Forecast(r.Context(), user.OrganizationID, out.ForecastUntil)
+			if err != nil {
+				logger.ErrorContext(r.Context(), "billing schedule forecast", "err", err)
+				httpx.WriteError(w, 500, "internal", "Could not estimate scheduled usage.")
+				return
+			}
+		}
+		out.RemainingAfterSchedules = out.BalanceCredits - out.ScheduledCredits
 		httpx.WriteJSON(w, http.StatusOK, out)
 	}
 }

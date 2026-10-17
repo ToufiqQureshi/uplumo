@@ -113,6 +113,10 @@ func grantUpToTx(ctx context.Context, tx pgx.Tx, orgID string, amount, ceiling i
 // grantCreditsTx adds amount to the balance and writes the ledger row inside
 // the caller's transaction.
 func grantCreditsTx(ctx context.Context, tx pgx.Tx, orgID string, amount int64, reason string) error {
+	return grantCreditsExpiringTx(ctx, tx, orgID, amount, reason, nil)
+}
+
+func grantCreditsExpiringTx(ctx context.Context, tx pgx.Tx, orgID string, amount int64, reason string, expiry *time.Time) error {
 	_, err := tx.Exec(ctx, `
 		INSERT INTO go_billing_credits (organization_id, balance_credits, updated_at)
 		VALUES ($1, $2, now())
@@ -131,8 +135,8 @@ func grantCreditsTx(ctx context.Context, tx pgx.Tx, orgID string, amount int64, 
 	}
 	_, err = tx.Exec(ctx, `
 		INSERT INTO go_billing_credit_grants (id, organization_id, granted_credits, remaining_credits, expires_at)
-		VALUES ($1, $2, $3, $3, now() + interval '2 months')
-	`, generateID("grt"), orgID, amount)
+		VALUES ($1, $2, $3, $3, COALESCE($4::timestamptz,now() + interval '2 months'))
+	`, generateID("grt"), orgID, amount, expiry)
 	if err != nil {
 		return fmt.Errorf("insert expiring credit grant: %w", err)
 	}

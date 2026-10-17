@@ -35,6 +35,42 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /billing/topups:
+    get:
+      operationId: listCreditPacks
+      responses:
+        "200": { description: Configured credit packs; empty when sales or payments are disabled }
+  /billing/topups/checkout:
+    post:
+      operationId: checkoutCreditPack
+      description: Workspace owner/admin with an active paid plan. Browser amounts are never accepted. Reuses the workspace's pending pack order.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [packId]
+              properties:
+                packId: { type: string }
+      responses:
+        "200": { description: Server-priced order (id, orderId, keyId, amount in paise, currency, credits, expiresAfterDays, status) }
+        "400": { description: Pack unavailable }
+        "402": { description: Active paid plan required }
+        "403": { description: Workspace owner/admin required }
+        "409": { description: Existing pending checkout }
+        "503": { description: Payments unavailable }
+  /billing/topups/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string }
+    get:
+      operationId: getCreditPackPayment
+      responses:
+        "200": { description: Workspace-scoped order status; only signed payment.captured webhooks grant credits }
+        "404": { description: Missing or foreign order }
 components:
   schemas:
     Feature:
@@ -56,6 +92,16 @@ components:
         balanceCredits:
           type: integer
           minimum: 0
+        scheduledCredits:
+          type: integer
+          minimum: 0
+          description: Saved rank and AI check ceilings due before forecastUntil; excludes ad-hoc usage and provider retries.
+        remainingAfterSchedules:
+          type: integer
+          description: Current balance minus scheduledCredits; may be negative, excludes future grant expiry and new usage.
+        forecastUntil:
+          type: string
+          format: date-time
         monthlyCredits:
           type: integer
           minimum: 0

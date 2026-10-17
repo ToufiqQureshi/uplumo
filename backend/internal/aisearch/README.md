@@ -109,3 +109,40 @@ Provider spend is in `go_dataforseo_usage` (migration 00006), per organization.
 `go test ./internal/aisearch/` needs `TEST_REDIS_URL` (and uses an in-process
 fake DataForSEO). The end-to-end test in `internal/httpapi` also needs
 `TEST_DATABASE_URL` and proves authorization and billing attribution.
+
+## Saved prompt tracking
+
+`Tracking` (`tracking*.go`, API contract `backend/api/ai-tracking.yaml`) adds a
+project-scoped tracker beside Brand Lookup and Prompt Explorer. It saves up to
+30 distinct questions, topics, pause flags, five competitor identities, country,
+language and engines. Removing/editing a question changes future checks only.
+`go_ai_trackers`, `go_ai_tracking_runs` and `go_ai_tracking_answers` retain immutable
+configuration and evidence for 13 months. Organization/project deletion cascades.
+
+- `GET .../ai-search/tracking` and `GET .../tracking/runs/{runId}` read saved data
+  without provider calls or credits, including after a downgrade.
+- `POST .../tracking/estimate` is free. `save` and `run` require the AI Visibility
+  entitlement. Enabling a schedule approves `maxCreditsPerRun`; manual checks
+  approve `maxCredits`. Both are checked against the actual saved scope.
+- ChatGPT, Gemini and Google AI Overviews use DataForSEO's standard consumer-site
+  collection queue even for Run now. Answers arrive asynchronously. Claude and
+  Perplexity use their model APIs and can differ from consumer apps. Their
+  country is passed to web search; their language follows the question itself.
+- A full run reserves its ceiling before any paid call. Consumer collection is
+  budgeted at $0.0012 per answer; model API collection conservatively holds $0.50
+  per answer. Actual successful usage settles after submission. No automatic
+  retry purchases a fresh answer. Successful queued submissions are billed even
+  if later collection fails; polling is free.
+- Run creation, immutable questions and the `go_jobs` outbox insert are one
+  transaction. A tracker row lock and partial unique index allow only one active
+  check. The worker checkpoints task IDs, recovers free collection, and marks
+  uncertain paid submissions interrupted instead of posting them again.
+- A five-minute ticker claims due schedules transactionally and advances the
+  previous UTC anchor. Changing frequency schedules a new baseline. Pausing
+  cancels queued scheduled checks; an already-running check may finish.
+- Failed/empty answers never enter mention/citation rates. Mentions use answer
+  prose; a source URL alone is only a citation. Generic names can still collide.
+  The UI compares complete runs only with identical scope and at least ten
+  answered observations; a 20-point decline is an in-app investigation warning.
+- Billing forecasts these schedules alongside rank checks. Forecasts do not
+  reserve credits and cannot promise that shared credits will remain available.

@@ -1,0 +1,121 @@
+openapi: 3.1.0
+info:
+  title: Uplumo saved AI visibility
+  version: 1.0.0
+  description: Project membership is required. Reading stored evidence is free. Save/run require Pro or Agency. Paid checks run through the durable queue with a workspace credit hold; opening this screen never starts one.
+servers:
+  - url: /api/v1
+paths:
+  /projects/{projectId}/ai-search/tracking:
+    parameters:
+      - $ref: '#/components/parameters/Project'
+    get:
+      operationId: getAITracking
+      responses:
+        '200':
+          description: Configuration (null until saved), nextCheckAt, providerConfigured and up to 30 immutable run summaries. Rates use completed nonempty answers; failed/missing answers are separate.
+  /projects/{projectId}/ai-search/tracking/runs/{runId}:
+    parameters:
+      - $ref: '#/components/parameters/Project'
+      - in: path
+        name: runId
+        required: true
+        schema: { type: string }
+    get:
+      operationId: getAITrackingAnswers
+      responses:
+        '200':
+          description: Saved answers with prompt, topic, engine, status, text, citations, owned/competitor brand observations and collectedAt. An unknown or foreign run returns an empty array.
+  /projects/{projectId}/ai-search/tracking/estimate:
+    parameters:
+      - $ref: '#/components/parameters/Project'
+    post:
+      operationId: estimateAITracking
+      requestBody:
+        $ref: '#/components/requestBodies/Configuration'
+      responses:
+        '200':
+          description: Free estimate with answers, credits (per-check hold ceiling), monthlyCredits and ceiling=true. Model API ceilings are deliberately conservative.
+        '400': { description: Invalid configuration }
+  /projects/{projectId}/ai-search/tracking/save:
+    parameters:
+      - $ref: '#/components/parameters/Project'
+    post:
+      operationId: saveAITracking
+      requestBody:
+        $ref: '#/components/requestBodies/Configuration'
+      responses:
+        '200': { description: Configuration saved; previous run evidence stays immutable }
+        '400': { description: Invalid configuration or insufficient approved per-check ceiling }
+        '402': { description: Plan required }
+  /projects/{projectId}/ai-search/tracking/run:
+    parameters:
+      - $ref: '#/components/parameters/Project'
+      - in: header
+        name: Idempotency-Key
+        required: true
+        schema: { type: string, minLength: 8, maxLength: 128 }
+    post:
+      operationId: startAITracking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [maxCredits]
+              properties:
+                maxCredits: { type: integer, minimum: 0 }
+      responses:
+        '200': { description: Queued runId; a repeated idempotency key returns the original run }
+        '400': { description: Missing approval, invalid key or provider unavailable }
+        '402': { description: Plan required }
+        '409': { description: Another run is active for this project }
+components:
+  parameters:
+    Project:
+      in: path
+      name: projectId
+      required: true
+      schema: { type: string }
+  requestBodies:
+    Configuration:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [brand, domain, prompts, engines, locationCode, languageCode, interval, enabled, maxCreditsPerRun]
+            properties:
+              brand: { type: string, minLength: 2, maxLength: 100 }
+              domain: { type: string, description: Public website domain }
+              competitors:
+                type: array
+                maxItems: 5
+                items:
+                  type: object
+                  required: [name, domain]
+                  properties:
+                    name: { type: string, minLength: 2, maxLength: 100 }
+                    domain: { type: string }
+              prompts:
+                type: array
+                minItems: 1
+                maxItems: 30
+                items:
+                  type: object
+                  required: [text, topic, paused]
+                  properties:
+                    text: { type: string, minLength: 3, maxLength: 500 }
+                    topic: { type: string, maxLength: 80 }
+                    paused: { type: boolean }
+              engines:
+                type: array
+                minItems: 1
+                maxItems: 5
+                items: { type: string, enum: [chat_gpt, gemini, google_ai_overview, claude, perplexity] }
+              locationCode: { type: integer }
+              languageCode: { type: string }
+              interval: { type: string, enum: [daily, weekly, monthly] }
+              enabled: { type: boolean }
+              maxCreditsPerRun: { type: integer, minimum: 0 }

@@ -22,6 +22,9 @@ const usageSchema = z.object({
   chargesCredits: z.boolean(),
   balanceCredits: z.number().int().nonnegative(),
   monthlyCredits: z.number().int().nonnegative(),
+  scheduledCredits: z.number().int().nonnegative().optional(),
+  remainingAfterSchedules: z.number().int().optional(),
+  forecastUntil: z.string().optional(),
   periodStart: z.string(),
   periodEnd: z.string().nullable(),
   spent: z.array(

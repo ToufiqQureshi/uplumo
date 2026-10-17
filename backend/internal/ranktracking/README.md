@@ -49,3 +49,8 @@ project-scoped duplicate/limit checks. It defaults to mobile, depth 40, and a
 manual schedule, matching the legacy MCP tool even though the API's own
 configuration defaults differ. Tool-contract tests are deferred to the final
 migration test phase.
+
+`Store.ScheduledCredits` forecasts configured queued checks due before a billing
+refill, including keyword operators, device pairs, depth and per-call rounding.
+The Billing page subtracts this and saved AI tracking estimates from the current
+balance. It is advisory; it makes no provider calls and creates no credit holds.

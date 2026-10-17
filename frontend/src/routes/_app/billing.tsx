@@ -4,6 +4,7 @@ import { QueryError } from "@/client/components/QueryState";
 import { SkeletonPage } from "@/client/components/SkeletonPresets";
 import { BillingUsageChart } from "@/client/features/billing/BillingUsageChart";
 import { CreditBreakdown } from "@/client/features/billing/credits/CreditBreakdown";
+import { TopUpsCard } from "@/client/features/billing/credits/TopUpsCard";
 import { CreditsCard } from "@/client/features/billing/credits/CreditsCard";
 import { useBillingUsage } from "@/client/features/billing/usageApi";
 import { useCanManageBilling } from "@/client/features/team/organizationQueries";
@@ -50,6 +51,12 @@ function BillingPage() {
       <CreditsCard
         usage={usageQuery.data}
         canManageBilling={canManageBilling}
+      />
+      <TopUpsCard
+        canManageBilling={canManageBilling}
+        enabled={
+          usageQuery.data.chargesCredits && usageQuery.data.plan !== "free"
+        }
       />
       <CreditBreakdown usage={usageQuery.data} />
       <BillingUsageChart />

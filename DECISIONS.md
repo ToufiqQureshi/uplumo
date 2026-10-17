@@ -114,3 +114,9 @@ Google Cloud project `agentproject-473109`:
 - An AI action costs at most 11–15 credits.
 - PageSpeed and CrUX are free (Google quota).
 - 1 credit = $1/1,280 of provider cost.
+
+## Approved implementation scope (18 October 2026)
+
+- Owner requested two PRs: (1) AI question tracking, scheduled usage previews and self-service credit packs; (2) content editor improvements, published-page tracking and enquiry opportunities.
+- Reuse Go/Postgres jobs and the existing credit ledger. Paid features share workspace credits and retain daily limits. No subscription prices or grants are changed.
+- Credit-pack commercial terms require an explicit `BILLING_TOPUP_PACKS` configuration; no default pack price or new production configuration is activated by these PRs.

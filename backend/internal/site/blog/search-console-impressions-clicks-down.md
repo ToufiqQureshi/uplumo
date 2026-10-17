@@ -43,7 +43,7 @@ Compare clicks and impressions with average position for the same query or page:
 - **Position improved but clicks fell:** check seasonality, demand, country/device mix, and whether the higher impressions came from different queries. Average position can hide this mix shift.
 - **Clicks and impressions both fell:** see whether demand declined, a page was removed or redirected, indexing changed, or the property/filter changed.
 
-Google describes search as a changing set of systems that discover, index and rank pages; a single chart metric cannot identify the cause by itself. See [How Search Works](https://www.google.com/search/howsearchworks/).
+Google describes search as a changing set of systems that discover, index and rank pages; a single chart metric cannot identify the cause by itself. See [How Search Works](https://developers.google.com/search/docs/fundamentals/how-search-works).
 
 ## Check the search result before editing it
 
@@ -90,5 +90,5 @@ Act quickly if important pages return errors, disappear from indexing, point to 
 ## Sources
 
 - [Google Search Console Performance report](https://support.google.com/webmasters/answer/17010961?hl=en)
-- [How Google Search works](https://www.google.com/search/howsearchworks/)
+- [How Google Search works](https://developers.google.com/search/docs/fundamentals/how-search-works)
 - [Search Console and Google Analytics differences](https://support.google.com/webmasters/answer/10269533?hl=en)

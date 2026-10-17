@@ -32,3 +32,7 @@ After a successful paid Brand Lookup on a paid plan, `BrandLookupPage.tsx` reque
 - Do not add automatic client retries for a paid POST; an explicit user retry is a new lookup.
 - Citations are untrusted URLs; render/link only URLs that the backend has made safe.
 - Provider coverage and mention counts are estimates; the UI must not promise guaranteed ranking or AI inclusion.
+
+## Saved tracking
+
+`PromptTrackingPage.tsx` uses TanStack Query for free history reads and active-run polling. `TrackingForm.tsx` reviews the complete current configuration through the free estimate API before enabling save/run. Editing invalidates the quote. A save never rewrites run evidence. Mentions and citations have separate denominators and model API results are labelled separately from consumer apps.

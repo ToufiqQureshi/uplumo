@@ -136,6 +136,8 @@ type Service struct {
 	planIDs       map[string]string
 	webhookSecret string
 	staffEmails   []string
+	topUpPacks    []TopUpPack
+	Forecast      func(context.Context, string, time.Time) (int64, error)
 }
 
 // NewService returns a Service that sells only Pro, as the Razorpay plan
@@ -493,6 +495,9 @@ func (s *Service) HandleWebhook(ctx context.Context, body []byte, signature, eve
 	var event razorpay.Event
 	if err := json.Unmarshal(body, &event); err != nil {
 		return "", fmt.Errorf("%w: %w", ErrInvalidEvent, err)
+	}
+	if event.Event == "payment.captured" {
+		return s.applyTopUpPayment(ctx, body)
 	}
 	if !slices.Contains(handledEvents, event.Event) {
 		return WebhookIgnored, nil
