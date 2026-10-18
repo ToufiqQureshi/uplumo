@@ -225,7 +225,8 @@ func (s *Service) SaveEnquiryChange(ctx context.Context, project, path, note, ke
 		} else if err != nil {
 			return err
 		}
-		end := s.now().UTC().Truncate(24 * time.Hour)
+		createdAt := s.now().UTC()
+		end := createdAt.Truncate(24 * time.Hour)
 		start := end.AddDate(0, 0, -7)
 		// Reuse the transaction connection while holding the project lock.
 		pages, err := enquiryPages(ctx, tx, project, event, path, start, end, end)
@@ -240,7 +241,7 @@ func (s *Service) SaveEnquiryChange(ctx context.Context, project, path, note, ke
 		if err != nil {
 			return err
 		}
-		_, err = tx.Exec(ctx, `INSERT INTO go_analytics_enquiry_changes(id,project_id,path,event_name,note,baseline,baseline_start,baseline_end,request_key,created_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`, id, project, path, event, note, raw, start, end, key, s.now().UTC())
+		_, err = tx.Exec(ctx, `INSERT INTO go_analytics_enquiry_changes(id,project_id,path,event_name,note,baseline,baseline_start,baseline_end,request_key,created_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`, id, project, path, event, note, raw, start, end, key, createdAt)
 		return err
 	})
 	return id, err

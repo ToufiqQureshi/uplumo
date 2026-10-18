@@ -12,6 +12,13 @@ import type { ScoreCheck } from "./scoring";
 import type { ContentDraftInput, EditorMode } from "./scoring";
 import { useEditorSession } from "./editor-session";
 import { writerContext } from "./writer-context";
+import {
+  applyWriterTarget,
+  captureWriterTarget,
+  writerTargetMode,
+  type WriterAction,
+  type WriterTarget,
+} from "./writer-target";
 
 const actions = [
   ["outline", "Create outline"],
@@ -32,7 +39,7 @@ export function WriterAssistant({
   mode,
   brief,
   disabled,
-  onUse,
+  scope,
   task,
   onClearTask,
 }: {
@@ -41,7 +48,7 @@ export function WriterAssistant({
   mode: EditorMode;
   brief: string;
   disabled: boolean;
-  onUse: (content: string) => void;
+  scope: string;
   task?: Pick<ScoreCheck, "label" | "detail">;
   onClearTask?: () => void;
 }) {
@@ -50,6 +57,7 @@ export function WriterAssistant({
   const [language, setLanguage] = useState("");
   const [result, setResult] = useState("");
   const [error, setError] = useState("");
+  const [target, setTarget] = useState<WriterTarget | null>(null);
   const requestPending = useRef(false);
   const availability = useQuery({
     queryKey: ["contentWriterStatus"],
@@ -64,20 +72,12 @@ export function WriterAssistant({
     mutationFn: ({
       action,
       idempotencyKey,
+      target: requestedTarget,
     }: {
-      action: (typeof actions)[number][0];
+      action: WriterAction;
       idempotencyKey: string;
+      target: WriterTarget;
     }) => {
-      const selection =
-        editor && !editor.state.selection.empty
-          ? editor.state.doc.textBetween(
-              editor.state.selection.from,
-              editor.state.selection.to,
-              "\n",
-            )
-          : "";
-      const currentBlock =
-        editor?.state.selection.$from.parent.textContent ?? "";
       return generateWritingSuggestion({
         data: {
           projectId,
@@ -85,7 +85,11 @@ export function WriterAssistant({
           mode,
           title: draft.title,
           targetKeyword: draft.targetKeyword,
-          content: writerContext(draft.content, selection, currentBlock),
+          content: writerContext(
+            requestedTarget.document,
+            requestedTarget.selected,
+            requestedTarget.currentBlock,
+          ),
           language,
           instructions: taskInstructions(task, instructions),
           brief: brief.slice(0, 2_000),
@@ -93,8 +97,9 @@ export function WriterAssistant({
         },
       });
     },
-    onSuccess: (suggestion) => {
+    onSuccess: (suggestion, variables) => {
       setResult(suggestion.content);
+      setTarget(variables.target);
       setError("");
     },
     onError: (cause) =>
@@ -104,11 +109,25 @@ export function WriterAssistant({
           : "Could not generate a suggestion.",
       ),
   });
-  const runAction = (action: (typeof actions)[number][0]) => {
+  const runAction = (action: WriterAction) => {
     if (requestPending.current) return;
+    if (!editor) {
+      setError("Open the visual article editor before using AI help.");
+      return;
+    }
+    const requestedTarget = captureWriterTarget(editor, action, scope);
+    if (!requestedTarget) {
+      setError(
+        "Select the exact passage you want AI to rewrite, then try again.",
+      );
+      return;
+    }
+    setResult("");
+    setTarget(null);
+    setError("");
     requestPending.current = true;
     mutation.mutate(
-      { action, idempotencyKey: crypto.randomUUID() },
+      { action, idempotencyKey: crypto.randomUUID(), target: requestedTarget },
       {
         onSettled: () => {
           requestPending.current = false;
@@ -124,10 +143,11 @@ export function WriterAssistant({
         <h2 className="font-medium">AI writing assistant</h2>
       </div>
       <p className="text-xs leading-5 text-muted-foreground">
-        Choose an action to send the selected text or current section, with a
-        short summary of the brief. Usage is charged to your organization’s AI
-        credits. Review suggestions before using them; generated facts may need
-        verification.
+        Select text for rewrite actions. AI changes only that passage; other
+        writing actions add a suggestion at your cursor. The selected text or
+        current section is sent with a short summary of the brief. Usage is
+        charged to your organization’s AI credits. Review suggestions before
+        using them; generated facts may need verification.
       </p>
       {task ? (
         <div className="space-y-2 rounded-lg border bg-muted p-3 text-sm">
@@ -245,27 +265,44 @@ export function WriterAssistant({
           <Button
             type="button"
             size="sm"
-            disabled={disabled || !result.trim()}
+            disabled={
+              disabled ||
+              !result.trim() ||
+              !target ||
+              writerTargetMode(target.action) === "review"
+            }
             onClick={() => {
-              if (editor) {
-                editor
-                  .chain()
-                  .focus()
-                  .insertContent(result, { contentType: "markdown" })
-                  .run();
-              } else {
-                onUse(result);
+              if (
+                !editor ||
+                !target ||
+                !applyWriterTarget(editor, target, scope, result)
+              ) {
+                setError(
+                  "The article changed since this suggestion was generated. Select the passage and try again; nothing was overwritten.",
+                );
+                return;
               }
+              setResult("");
+              setTarget(null);
             }}
           >
-            Accept suggestion
+            {target && writerTargetMode(target.action) === "replace"
+              ? "Replace selected passage"
+              : "Insert at saved cursor"}
           </Button>
+          {target && writerTargetMode(target.action) === "review" ? (
+            <p className="text-xs text-muted-foreground">
+              Review and copy these notes manually; they do not replace your
+              article.
+            </p>
+          ) : null}
           <Button
             type="button"
             size="sm"
             variant="outline"
             onClick={() => {
               setResult("");
+              setTarget(null);
               mutation.reset();
               setError("");
             }}

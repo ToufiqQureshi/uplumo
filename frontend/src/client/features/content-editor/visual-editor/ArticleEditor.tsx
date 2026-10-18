@@ -94,12 +94,16 @@ export function ArticleEditor({
 
   useEffect(() => {
     onReady(editor);
-    setSessionEditor(editor);
     return () => {
       onReady(null);
-      setSessionEditor(null);
     };
-  }, [editor, onReady, setSessionEditor]);
+  }, [editor, onReady]);
+
+  // A visual selection is hidden in Markdown mode; never apply AI to it.
+  useEffect(() => {
+    setSessionEditor(markdownMode ? null : editor);
+    return () => setSessionEditor(null);
+  }, [editor, markdownMode, setSessionEditor]);
 
   useEffect(() => {
     editor?.setEditable(!disabled, false);

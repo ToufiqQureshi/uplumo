@@ -32,7 +32,6 @@ export function ContentEditorSidePanel({
   onNewDraft,
   onSelectDraft,
   onDeleteDraft,
-  onUseSuggestion,
 }: {
   projectId: string;
   draft: ContentDraftInput;
@@ -65,7 +64,6 @@ export function ContentEditorSidePanel({
   onNewDraft: () => void;
   onSelectDraft: (draft: ContentDraftSummary) => void;
   onDeleteDraft: (draft: ContentDraftSummary) => void;
-  onUseSuggestion: (content: string) => void;
 }) {
   const taskScope = `${draftId ?? "new"}:${draft.targetKeyword}`;
   const [writingTask, setWritingTask] = useState<{
@@ -181,7 +179,7 @@ export function ContentEditorSidePanel({
               onClearTask={() => setWritingTask(null)}
               brief={briefForWriter(brief)}
               disabled={editorBusy}
-              onUse={onUseSuggestion}
+              scope={taskScope}
             />
           </section>
         ) : null}

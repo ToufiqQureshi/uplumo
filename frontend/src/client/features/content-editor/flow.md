@@ -38,3 +38,11 @@ only its ID/mode and draft/topic scope → AI help resolves fresh check evidence
 an explicit action sends bounded task instructions with the selected passage.
 Preparing a task never generates or inserts content. Published articles link to
 free enquiry evidence and the existing explicit paid-tracking flows.
+
+AI rewrite actions require an explicit visual-editor selection. `writer-target.ts`
+captures that range and the document at request time: accepting replaces only
+the selected passage, and refuses a different draft or edits made meanwhile.
+Section/FAQ/gap actions insert at the saved cursor; outlines, title/meta options
+and fact-check notes are review-only. Markdown mode does not expose a hidden
+visual selection to the assistant. Never restore whole-article replacement as a
+fallback when the visual editor is unavailable.

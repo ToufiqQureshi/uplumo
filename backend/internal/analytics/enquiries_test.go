@@ -49,6 +49,38 @@ func TestEnquirySignalsDoNotInventLeadsOrBrokenForms(t *testing.T) {
 		}
 	}
 }
+
+func TestEnquiryBaselineUsesOneClockAcrossUTCMidnight(t *testing.T) {
+	ctx := t.Context()
+	f := newFixture(ctx, t)
+	site := f.addSite(ctx, t, "midnight.example")
+	if err := f.svc.SaveEnquiryGoal(ctx, site.project, "contact"); err != nil {
+		t.Fatal(err)
+	}
+	beforeMidnight := time.Date(2026, 10, 18, 23, 59, 59, 0, time.UTC)
+	calls := 0
+	f.svc.now = func() time.Time {
+		calls++
+		if calls == 1 {
+			return beforeMidnight
+		}
+		return beforeMidnight.Add(2 * time.Second)
+	}
+	id, err := f.svc.SaveEnquiryChange(ctx, site.project, "/contact", "Improve form copy", "midnight-key")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if calls != 1 {
+		t.Fatalf("clock called %d times, want one", calls)
+	}
+	var created, end time.Time
+	if err := f.svc.repo.db.QueryRow(ctx, `SELECT created_at,baseline_end FROM go_analytics_enquiry_changes WHERE id=$1`, id).Scan(&created, &end); err != nil {
+		t.Fatal(err)
+	}
+	if !created.Equal(beforeMidnight) || !end.Equal(beforeMidnight.Truncate(24*time.Hour)) {
+		t.Fatalf("mismatched baseline clock: created=%v end=%v", created, end)
+	}
+}
 func TestEnquiryEvidenceBaselinesAndProjectIsolation(t *testing.T) {
 	ctx := t.Context()
 	f := newFixture(ctx, t)
