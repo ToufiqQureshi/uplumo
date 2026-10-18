@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 )
 
 type fakeData struct {
@@ -121,6 +122,54 @@ func newResearchFixture(t *testing.T) researchFixture {
 	data, cache, registry := &fakeData{}, &memoryLocationCache{}, &fakeRegistry{names: []string{"Pune,Maharashtra,India"}}
 	svc := &ResearchService{Data: data, Cache: cache, Registry: registry, Metrics: SavedRepository{DB: f.pool}, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	return researchFixture{savedFixture: f, svc: svc, data: data, cache: cache, registry: registry}
+}
+
+func TestConcurrentKeywordResearchSharesOnePaidLookup(t *testing.T) {
+	f := newResearchFixture(t)
+	f.data.labsFn = func(LabsRequest) ([]LabsItem, error) {
+		time.Sleep(40 * time.Millisecond)
+		return items("idea", 5), nil
+	}
+	in := ResearchInput{OrganizationID: "org", ProjectID: f.project, Keywords: []string{"seed"}, LocationCode: 2840, LanguageCode: "en", ResultLimit: 150, Mode: "suggestions"}
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	for range 2 {
+		wg.Go(func() {
+			<-start
+			if _, err := f.svc.Research(context.Background(), in); err != nil {
+				t.Errorf("Research: %v", err)
+			}
+		})
+	}
+	close(start)
+	wg.Wait()
+	if got := len(f.data.labsCalls(SourceSuggestions)); got != 1 {
+		t.Fatalf("paid provider calls = %d, want one", got)
+	}
+}
+
+func TestConcurrentKeywordResearchKeepsOrganizationsSeparate(t *testing.T) {
+	f := newResearchFixture(t)
+	f.data.labsFn = func(LabsRequest) ([]LabsItem, error) {
+		time.Sleep(40 * time.Millisecond)
+		return items("idea", 5), nil
+	}
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	for _, org := range []string{"org-one", "org-two"} {
+		wg.Go(func() {
+			<-start
+			_, err := f.svc.Research(context.Background(), ResearchInput{OrganizationID: org, ProjectID: f.project, Keywords: []string{"seed"}, LocationCode: 2840, LanguageCode: "en", ResultLimit: 150, Mode: "suggestions"})
+			if err != nil {
+				t.Errorf("Research: %v", err)
+			}
+		})
+	}
+	close(start)
+	wg.Wait()
+	if got := len(f.data.labsCalls(SourceSuggestions)); got != 2 {
+		t.Fatalf("paid provider calls = %d, want one per organization", got)
+	}
 }
 
 func (f researchFixture) research(t *testing.T, mutate func(*ResearchInput)) (ResearchResult, error) {
@@ -427,9 +476,7 @@ func TestResearchPersistsMetricsForSavedKeywords(t *testing.T) {
 		t.Errorf("saved keyword = %+v, want the researched metrics", got)
 	}
 	// A metrics write that fails must not fail the research the user paid for.
-	broken := *f.svc
-	broken.Metrics = failingMetrics{}
-	broken.Cache = &memoryLocationCache{}
+	broken := &ResearchService{Data: f.svc.Data, Cache: &memoryLocationCache{}, Registry: f.svc.Registry, Metrics: failingMetrics{}, Logger: f.svc.Logger, Now: f.svc.Now}
 	if _, err := broken.Research(context.Background(), ResearchInput{OrganizationID: "org", ProjectID: f.project, Keywords: []string{"seed"}, LocationCode: 2840, LanguageCode: "en", ResultLimit: 150, Mode: "auto"}); err != nil {
 		t.Errorf("research failed because storing metrics did: %v", err)
 	}

@@ -6,4 +6,18 @@ Paid POSTs use `Client.Do(..., false)` and must not be automatically retried on 
 
 A domain overview may use one Labs operation; a Backlinks domain overview legitimately calls both summary and history. The initial Backlinks screen also loads a selected table. Assert provider operations separately in tests, rather than assuming one click equals one request. Validate tenant, scope, market, filters and pagination before reaching the provider. Recheck authorization on every HTTP request, even on cache hits. No test should consume live provider credits.
 
+Brand Lookup can issue six provider tasks (eight with competitor comparisons).
+Equivalent cold misses within one Go process now share that fan-out under an
+organization/project scoped key. Separate instances and Prompt Explorer can
+still buy identical work concurrently. Scheduled Rank Tracking task-post uses
+a stable run/chunk spend key; if its response is ambiguous, the worker records
+an error without live fallback for that chunk. Earlier accepted tasks are
+still collected. Explicitly rejected/failed/timed-out known tasks retain their
+documented fallback behavior.
+
+Keyword Research also shares equivalent cold misses per server instance; its
+key includes organization, project, market, location, mode, limits and options.
+Different tenants remain separate. SERP snapshots and Domain Research are
+still only cache-backed and can duplicate work on concurrent cold misses.
+
 Reported provider spend and customer credits are distinct. To validate plan economics, compare actual usage exports with `backend/internal/plans/catalog.go`, spend ceilings and billing policy. Do not infer customer margin from the credit face value alone; live plan profitability requires the provider cost CSV, representative usage, currency conversion and time window.

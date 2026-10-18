@@ -14,6 +14,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/market"
+	"golang.org/x/sync/singleflight"
 )
 
 // Research limits and cache lifetimes, as in the legacy app.
@@ -89,6 +90,7 @@ type ResearchService struct {
 	Metrics  MetricStore
 	Logger   *slog.Logger
 	Now      func() time.Time
+	flights  singleflight.Group
 }
 
 // NewResearchService builds a service that caches in Redis.
@@ -265,8 +267,27 @@ func (s *ResearchService) Research(ctx context.Context, in ResearchInput) (Resea
 	if s.cached(ctx, key, &hit) && len(hit.Rows) > 0 && validSource(hit.Source) {
 		return hit, nil
 	}
+	flight := s.flights.DoChan(key, func() (any, error) {
+		var recent ResearchResult
+		if s.cached(ctx, key, &recent) && len(recent.Rows) > 0 && validSource(recent.Source) {
+			return recent, nil
+		}
+		return s.researchUncached(ctx, in, key, seeds, ads)
+	})
+	select {
+	case <-ctx.Done():
+		return ResearchResult{}, ctx.Err()
+	case finished := <-flight:
+		if finished.Err != nil {
+			return ResearchResult{}, finished.Err
+		}
+		return finished.Val.(ResearchResult), nil
+	}
+}
 
+func (s *ResearchService) researchUncached(ctx context.Context, in ResearchInput, key string, seeds []string, ads bool) (ResearchResult, error) {
 	var result ResearchResult
+	var err error
 	switch {
 	case in.LocationName != nil:
 		result, err = s.researchLocal(ctx, in)

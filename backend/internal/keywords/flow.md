@@ -13,6 +13,10 @@ Handler validates seeds, market, options and limits; service chooses supported D
 
 ## Dependencies and cost boundary
 
+Equivalent concurrent keyword research cache misses join one in-flight lookup
+within a server instance. A local research request can additionally require
+national research and a city-scoped Ads volume call; both are still necessary.
+
 DataForSEO; Google Ads for selected markets; Postgres saved rows; Redis caches; platform market registry.
 
 ## Failure, security and data invariants

@@ -281,18 +281,18 @@ func TestQueuedRunFallsBackToLive(t *testing.T) {
 }
 
 func TestQueuedRunPostFailures(t *testing.T) {
-	t.Run("a failed post chunk goes live", func(t *testing.T) {
+	t.Run("an uncertain post response never buys a live fallback", func(t *testing.T) {
 		f := newQueuedFixture(t, "one")
 		f.queued.postFn = func(int, PostRequest) ([]PostedTask, error) { return nil, errors.New("post down") }
 		id, job := f.startScheduled(t)
 		if err := execute(t, f.checkFixture, job); err != nil {
 			t.Fatal(err)
 		}
-		if f.serp.count() != 2 {
-			t.Errorf("live calls = %d, want both pairs", f.serp.count())
+		if f.serp.count() != 0 {
+			t.Errorf("live calls = %d, want no duplicate paid work", f.serp.count())
 		}
-		if run := f.run(t, id); run.Status != "completed" {
-			t.Errorf("run = %+v", run)
+		if run := f.run(t, id); run.Status != "failed" || run.ErrorMessage == nil {
+			t.Errorf("run = %+v, want failed with the uncertain post reason", run)
 		}
 	})
 	t.Run("a billing error stops without paying twice", func(t *testing.T) {

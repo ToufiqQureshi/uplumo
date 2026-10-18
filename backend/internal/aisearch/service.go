@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"golang.org/x/sync/singleflight"
 
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/dataforseo"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/spend"
@@ -46,6 +47,7 @@ type Service struct {
 	redis    *redis.Client
 	logger   *slog.Logger
 	now      func() time.Time
+	flights  singleflight.Group
 }
 
 // NewService returns a Service that calls DataForSEO through client.
@@ -107,12 +109,38 @@ func (s *Service) BrandLookup(ctx context.Context, organizationID, projectID str
 		return cached, nil
 	}
 
+	flight := s.flights.DoChan(key, func() (any, error) {
+		var cached BrandLookupResult
+		if s.cacheGet(ctx, key, &cached) {
+			return cached, nil
+		}
+		return s.loadBrandLookup(ctx, organizationID, key, detected, research, groups, includeSubdomains, in)
+	})
+	select {
+	case <-ctx.Done():
+		return BrandLookupResult{}, ctx.Err()
+	case finished := <-flight:
+		if finished.Err != nil {
+			return BrandLookupResult{}, finished.Err
+		}
+		result := finished.Val.(BrandLookupResult)
+		// Equivalent normalized targets can have different display casing.
+		result.Query = in.Query
+		result.ResolvedTarget = detected.Value
+		if research != nil {
+			result.ResolvedTarget = research.Display
+		}
+		return result, nil
+	}
+}
+
+func (s *Service) loadBrandLookup(ctx context.Context, organizationID, key string, detected Target, research *ResearchTarget, groups []competitorGroup, includeSubdomains bool, in BrandLookupInput) (BrandLookupResult, error) {
 	var result BrandLookupResult
 	callCount := len(brandPlatforms) * 3
 	if len(groups) > 0 {
 		callCount += len(brandPlatforms)
 	}
-	err = s.provider.client.DoBudgeted(ctx, organizationID, spend.AIVisibility, float64(callCount)*0.5, func(request dataforseo.DoBudgetedRequest) error {
+	err := s.provider.client.DoBudgeted(ctx, organizationID, spend.AIVisibility, float64(callCount)*0.5, func(request dataforseo.DoBudgetedRequest) error {
 		budgetCtx := context.WithValue(ctx, budgetRequestContextKey{}, request)
 		platforms := make([]platformOutcome, len(brandPlatforms))
 		for i, platform := range brandPlatforms {
@@ -130,9 +158,10 @@ func (s *Service) BrandLookup(ctx context.Context, organizationID, projectID str
 
 		var cross []crossOutcome
 		if len(groups) > 0 {
-			cross, err = s.fetchCross(budgetCtx, organizationID, detected, groups, includeSubdomains, in)
-			if err != nil {
-				return err
+			var fetchErr error
+			cross, fetchErr = s.fetchCross(budgetCtx, organizationID, detected, groups, includeSubdomains, in)
+			if fetchErr != nil {
+				return fetchErr
 			}
 		}
 		competitorKeys := make([]string, len(groups))
