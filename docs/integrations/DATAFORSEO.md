@@ -27,9 +27,10 @@ Reported provider spend and customer credits are distinct. To validate plan econ
 The transport records every task's DataForSEO `cost`, including provider-billed
 failures. Successful task costs settle at **1,280 credits per USD**, rounded up
 per operation (`billing.CreditsForUSD`); a $1 successful task should consume
-1,280 credits. A multi-call preflight hold is an estimate, not a cap on actual
-successful charges. If the provider reports a higher cost, settlement charges
-available credits down to zero and logs any shortfall and estimate drift.
+1,280 credits. A multi-call (`DoBudgeted`) hold is also the most the customer
+pays: if the provider reports a higher successful cost, the customer is
+charged the held amount, Uplumo absorbs the rest, and the overage is logged so
+the estimate in `pricing.go` can be fixed.
 
 Provider-billed failed tasks still refund customer credits. Those are real
 Uplumo losses; the spend guard logs the unrecovered amount as an error so the

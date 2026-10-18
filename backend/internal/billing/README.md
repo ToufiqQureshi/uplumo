@@ -108,10 +108,10 @@ assistant. Rules that must never break:
   credits. If successful work costs more than was held and the balance cannot cover
   it, the balance is charged down to zero and a warning is logged: the work
   is already paid for, so it is never refused after the fact.
-  An estimate higher than actual releases unused credits. A reported cost
-  higher than the estimate is charged at the actual amount when credits are
-  available and logged; provider-billed failures left uncharged to customers
-  are logged separately for investigation.
+  An estimate higher than actual releases unused credits. For a multi-call
+  `DoBudgeted` operation the held ceiling is the most the customer pays: a
+  higher reported cost is capped there and logged. Provider-billed failures
+  left uncharged to customers are logged separately for investigation.
 - **It fails closed.** A ledger or database error stops the request. SAM
   refuses a turn whose credits cannot be checked.
 - **Per-workspace daily limit.** One workspace may spend at most a third

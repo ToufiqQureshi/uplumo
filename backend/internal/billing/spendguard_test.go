@@ -251,7 +251,9 @@ func TestSettleChargesDownToZeroWhenTheProviderCostMoreThanHeld(t *testing.T) {
 	}
 }
 
-func TestBudgetedProviderDollarChargesActualCreditsBeyondOldEstimate(t *testing.T) {
+// The customer was shown the held estimate, so a higher provider cost is
+// Uplumo's loss: it is recorded as provider spend but never charged.
+func TestBudgetedProviderOverageIsCappedAtTheHeldEstimate(t *testing.T) {
 	pool := setupTestDB(t)
 	ctx := t.Context()
 	ledger := NewCreditLedgerService(pool)
@@ -277,8 +279,8 @@ func TestBudgetedProviderDollarChargesActualCreditsBeyondOldEstimate(t *testing.
 	if providerCalls != 1 {
 		t.Fatalf("provider calls = %d, want one", providerCalls)
 	}
-	if got := balanceOf(ctx, t, ledger, org); got != 3000-CreditsForUSD(1) {
-		t.Fatalf("balance = %d, want $1 provider cost charged as %d credits", got, CreditsForUSD(1))
+	if got := balanceOf(ctx, t, ledger, org); got != 3000-CreditsForUSD(0.5) {
+		t.Fatalf("balance = %d, want only the $0.50 estimate charged (%d credits)", got, CreditsForUSD(0.5))
 	}
 	if total, _ := providerSpend(t, pool, org); total != 1 {
 		t.Fatalf("provider spend = $%v, want $1", total)
