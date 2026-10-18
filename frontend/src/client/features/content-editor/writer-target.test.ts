@@ -63,6 +63,40 @@ describe("AI suggestion target", () => {
     expect(editor.getMarkdown()).toContain("Second paragraph.");
   });
 
+  it("refuses a selection longer than the context sent to AI", () => {
+    const editor = new Editor({
+      extensions: [...articleExtensions({ placeholder: "" }), Markdown],
+      content: "x".repeat(5_001),
+    });
+    editors.push(editor);
+    editor.commands.setTextSelection({ from: 1, to: 5_002 });
+    expect(captureWriterTarget(editor, "tone_language", "draft-1")).toBeNull();
+  });
+
+  it("refuses a selection spanning multiple blocks", () => {
+    const editor = makeEditor();
+    editor.commands.setTextSelection({
+      from: 1,
+      to: editor.state.doc.content.size - 1,
+    });
+    expect(captureWriterTarget(editor, "answer_first", "draft-1")).toBeNull();
+  });
+
+  it("refuses to replace selected images with text", () => {
+    const editor = new Editor({
+      extensions: [...articleExtensions({ placeholder: "" }), Markdown],
+      content:
+        "A paragraph with ![alt](https://example.com/image.png) and an image.",
+      contentType: "markdown",
+    });
+    editors.push(editor);
+    editor.commands.setTextSelection({
+      from: 1,
+      to: editor.state.doc.content.size - 1,
+    });
+    expect(captureWriterTarget(editor, "tone_language", "draft-1")).toBeNull();
+  });
+
   it("inserts a new section at the saved cursor, preserving existing paragraphs", () => {
     const editor = makeEditor();
     editor.commands.setTextSelection(17);

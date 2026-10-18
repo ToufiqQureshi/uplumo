@@ -65,7 +65,7 @@ export function ContentEditorSidePanel({
   onSelectDraft: (draft: ContentDraftSummary) => void;
   onDeleteDraft: (draft: ContentDraftSummary) => void;
 }) {
-  const taskScope = `${draftId ?? "new"}:${draft.targetKeyword}`;
+  const taskScope = `${projectId}:${draftId ?? "new"}:${draft.targetKeyword}`;
   const [writingTask, setWritingTask] = useState<{
     id: string;
     scope: string;

@@ -12,6 +12,7 @@ Creates and edits SEO drafts, content briefs, author profiles, internal-link sug
 - Do not auto-save or publish unreviewed generated text to a customer site. _Why:_ These actions affect a customer account, site or external service and must follow an explicit user action with a clear result.
 - Uploaded images and generated HTML must be constrained to allowed storage/content types. _Why:_ User and provider content or URLs can be hostile; validation and escaping prevent unauthorized exposure or executable content.
 - Link suggestions use project-owned GSC/audit data and must never cross project boundaries. _Why:_ Explicit bounds prevent a large or abusive request from consuming shared memory, latency or service capacity.
+- AI rewrites require one selected plain-text block within the 5,000-character context sent to the model. _Why:_ Truncating the prompt while replacing a longer passage, or replacing a selection containing an image/table, could silently lose customer content.
 
 ## Verification pointers
 

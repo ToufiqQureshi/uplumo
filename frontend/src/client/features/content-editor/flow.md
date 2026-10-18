@@ -39,7 +39,9 @@ an explicit action sends bounded task instructions with the selected passage.
 Preparing a task never generates or inserts content. Published articles link to
 free enquiry evidence and the existing explicit paid-tracking flows.
 
-AI rewrite actions require an explicit visual-editor selection. `writer-target.ts`
+AI rewrite actions require an explicit visual-editor selection within one text
+block and at most 5,000 characters, with no images or other non-text nodes.
+`writer-target.ts`
 captures that range and the document at request time: accepting replaces only
 the selected passage, and refuses a different draft or edits made meanwhile.
 Section/FAQ/gap actions insert at the saved cursor; outlines, title/meta options

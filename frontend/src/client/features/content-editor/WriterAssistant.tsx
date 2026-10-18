@@ -118,7 +118,7 @@ export function WriterAssistant({
     const requestedTarget = captureWriterTarget(editor, action, scope);
     if (!requestedTarget) {
       setError(
-        "Select the exact passage you want AI to rewrite, then try again.",
+        "Select text within one paragraph (up to 5,000 characters, no images), then try again.",
       );
       return;
     }

@@ -41,7 +41,19 @@ export function captureWriterTarget(
 ): WriterTarget | null {
   const { from, to } = editor.state.selection;
   const selected = editor.state.doc.textBetween(from, to, "\n");
-  if (replacementActions.has(action) && !selected.trim()) return null;
+  if (replacementActions.has(action)) {
+    if (
+      !selected.trim() ||
+      selected.length > 5_000 ||
+      editor.state.selection.$from.parent !== editor.state.selection.$to.parent
+    )
+      return null;
+    let containsNonText = false;
+    editor.state.doc.nodesBetween(from, to, (node) => {
+      if (node.isLeaf && !node.isText) containsNonText = true;
+    });
+    if (containsNonText) return null;
+  }
   return {
     action,
     from,
