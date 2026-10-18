@@ -56,14 +56,15 @@ Last updated: 15 Oct 2026
 | `LOOPS_API_KEY` + 3 `LOOPS_TRANSACTIONAL_*_ID` | set | Email |
 | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_CONTENT_IMAGE_BUCKET` | set (14 Oct) | Content editor images (`content-images` bucket) |
 | `DATAFORSEO_API_KEY` | **set 14 Oct** | SEO data; the account is not verified yet |
-| `OPENROUTER_API_KEY`, `OPENROUTER_MODEL` | the variable exists; its value has not been checked | AI writing and assistant |
+| `OPENROUTER_API_KEY`, `OPENROUTER_MODEL` | set | AI writing and assistant |
 | `PAGESPEED_API_KEY` | **set 15 Oct** | Lighthouse in Site Audit (free, 200 checks per workspace per day) |
 | `CRUX_API_KEY` | **set 15 Oct** (same key) | Real-visitor Core Web Vitals |
-| `SENTRY_DSN`, `STAFF_EMAILS`, `PROVIDER_DAILY_LIMIT_USD`, `PORT` | set | Errors, staff access, emergency spending limit |
+| `SENTRY_DSN`, `STAFF_EMAILS`, `PORT` | set | Errors, staff access |
+| `PROVIDER_DAILY_LIMIT_USD` | set; **keep until the paid-call bugs are fixed**, then the owner removes it | Global emergency spending brake |
 | `TURNSTILE_SECRET_KEY` | not set | Bot check on sign-up |
 | `GOOGLE_TOKEN_ENCRYPTION_KEY` | not set (decision above) | — |
 
-Railway service settings: healthcheck `/readyz`, region Singapore, 1 replica.
+Railway project `jubilant-kindness`, service `uplumo`. Service settings: healthcheck `/readyz`, region Singapore, 1 replica.
 
 Google Cloud project `agentproject-473109`:
 
