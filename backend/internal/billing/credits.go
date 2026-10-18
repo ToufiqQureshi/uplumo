@@ -104,7 +104,13 @@ func grantUpToTx(ctx context.Context, tx pgx.Tx, orgID string, amount, ceiling i
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return fmt.Errorf("lock balance for grant: %w", err)
 	}
-	if grant := min(amount, ceiling-balance); grant > 0 {
+	// Bought top-ups are extra to the plan: they never count toward the plan's
+	// rollover ceiling, or buying one would shrink the next month's grant.
+	var topUp int64
+	if err := tx.QueryRow(ctx, `SELECT COALESCE(sum(remaining_credits), 0) FROM go_billing_credit_grants WHERE organization_id = $1 AND top_up AND expires_at > now()`, orgID).Scan(&topUp); err != nil {
+		return fmt.Errorf("sum top-up credits: %w", err)
+	}
+	if grant := min(amount, ceiling-max(balance-topUp, 0)); grant > 0 {
 		return grantCreditsTx(ctx, tx, orgID, grant, reason)
 	}
 	return nil
@@ -116,7 +122,9 @@ func grantCreditsTx(ctx context.Context, tx pgx.Tx, orgID string, amount int64, 
 	return grantCreditsExpiringTx(ctx, tx, orgID, amount, reason, nil)
 }
 
-func grantCreditsExpiringTx(ctx context.Context, tx pgx.Tx, orgID string, amount int64, reason string, expiry *time.Time) error {
+// grantCreditsExpiringTx grants plan credits (two-month expiry) when
+// topUpExpiry is nil, or a bought top-up that expires at *topUpExpiry.
+func grantCreditsExpiringTx(ctx context.Context, tx pgx.Tx, orgID string, amount int64, reason string, topUpExpiry *time.Time) error {
 	_, err := tx.Exec(ctx, `
 		INSERT INTO go_billing_credits (organization_id, balance_credits, updated_at)
 		VALUES ($1, $2, now())
@@ -134,9 +142,9 @@ func grantCreditsExpiringTx(ctx context.Context, tx pgx.Tx, orgID string, amount
 		return fmt.Errorf("insert ledger grant: %w", err)
 	}
 	_, err = tx.Exec(ctx, `
-		INSERT INTO go_billing_credit_grants (id, organization_id, granted_credits, remaining_credits, expires_at)
-		VALUES ($1, $2, $3, $3, COALESCE($4::timestamptz,now() + interval '2 months'))
-	`, generateID("grt"), orgID, amount, expiry)
+		INSERT INTO go_billing_credit_grants (id, organization_id, granted_credits, remaining_credits, expires_at, top_up)
+		VALUES ($1, $2, $3, $3, COALESCE($4::timestamptz, now() + interval '2 months'), $4::timestamptz IS NOT NULL)
+	`, generateID("grt"), orgID, amount, topUpExpiry)
 	if err != nil {
 		return fmt.Errorf("insert expiring credit grant: %w", err)
 	}

@@ -52,9 +52,12 @@ CREATE TABLE go_billing_topups (
     status text NOT NULL DEFAULT 'creating' CHECK(status IN ('creating','ready','paid','failed')),
     created_at timestamptz NOT NULL DEFAULT now()
 );
+-- Top-up grants are kept out of the plan's two-month rollover ceiling.
+ALTER TABLE go_billing_credit_grants ADD COLUMN top_up boolean NOT NULL DEFAULT false;
 CREATE UNIQUE INDEX go_billing_topups_pending ON go_billing_topups(organization_id) WHERE status IN ('creating','ready');
 
 -- +goose Down
+ALTER TABLE go_billing_credit_grants DROP COLUMN top_up;
 DROP TABLE go_billing_topups;
 DROP TABLE go_ai_tracking_answers;
 DROP TABLE go_ai_tracking_runs;

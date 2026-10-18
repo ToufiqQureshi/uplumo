@@ -188,8 +188,11 @@ catalog prices, feature gates and daily workspace limits are unaffected.
 - `GET /billing/topups`: configured packs; `POST /billing/topups/checkout` accepts
   only `packId`, requires an active paid plan and an owner/admin, and creates a
   server-priced INR order. One pending order per workspace is reused across
-  duplicate requests. A simultaneous creation returns 409 rather than creating
-  another payable order. Finish a pending pack before choosing a different one.
+  duplicate requests for the same pack. A simultaneous creation returns 409
+  rather than creating another payable order. Choosing a different pack
+  abandons the pending one (status `failed`) and creates a new order; a late
+  signed capture on the abandoned order still grants its credits, because the
+  webhook matches by order ID, not status.
 - `GET /billing/topups/{topupId}` is scoped to the active workspace. A browser
   checkout callback only starts verification polling; it never grants credits.
 - Subscribe the existing Razorpay webhook to `payment.captured`. Its original
@@ -197,6 +200,9 @@ catalog prices, feature gates and daily workspace limits are unaffected.
   status, amount and currency must match. Locking the top-up row, the grant,
   expiry and paid marker happen in one transaction; even concurrent events with
   different delivery IDs grant once. Subscription events keep their own flow.
+- Top-up grants are marked `go_billing_credit_grants.top_up`. The monthly
+  plan grant's two-month rollover ceiling counts plan credits only, so buying
+  a top-up never shrinks the next renewal (`grantUpToTx`).
 - Purchased grant expiry is snapshotted at checkout; changes to pack settings
   cannot change an existing purchase. Expired grants use the existing ledger
   expiry worker and FIFO consumption. Refunds/disputes require operator

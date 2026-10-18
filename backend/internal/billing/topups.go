@@ -106,19 +106,27 @@ func (s *Service) CheckoutTopUp(ctx context.Context, org, packID string) (TopUpC
 		if _, err := tx.Exec(ctx, `UPDATE go_billing_topups SET status='failed' WHERE organization_id=$1 AND status='creating' AND created_at<now()-interval '5 minutes'`, org); err != nil {
 			return err
 		}
+		var existing TopUpCheckout
 		var existingPack string
-		err := tx.QueryRow(ctx, `SELECT id,pack_id,COALESCE(order_id,''),amount_paise,credits,expires_after_days,status FROM go_billing_topups WHERE organization_id=$1 AND status IN ('creating','ready')`, org).Scan(&out.ID, &existingPack, &out.OrderID, &out.Amount, &out.Credits, &out.ExpiresAfterDays, &out.Status)
-		if err == nil {
-			if out.Status == "creating" {
-				return errTopUpPending
-			}
-			if existingPack != packID {
-				return fmt.Errorf("%w: finish the existing credit-pack checkout first", errTopUpPending)
-			}
-			return nil
-		}
-		if !errors.Is(err, pgx.ErrNoRows) {
+		err := tx.QueryRow(ctx, `SELECT id,pack_id,COALESCE(order_id,''),amount_paise,credits,expires_after_days,status FROM go_billing_topups WHERE organization_id=$1 AND status IN ('creating','ready')`, org).Scan(&existing.ID, &existingPack, &existing.OrderID, &existing.Amount, &existing.Credits, &existing.ExpiresAfterDays, &existing.Status)
+		switch {
+		case errors.Is(err, pgx.ErrNoRows):
+		case err != nil:
 			return err
+		case existing.Status == "creating":
+			return errTopUpPending
+		case existingPack == packID:
+			existing.KeyID = out.KeyID
+			existing.Currency = out.Currency
+			out = existing
+			return nil
+		default:
+			// The customer closed the payment window and chose another pack.
+			// Release the slot; the old order stays bound to this row, so a
+			// late signed capture on it still grants its credits.
+			if _, err := tx.Exec(ctx, `UPDATE go_billing_topups SET status='failed' WHERE id=$1`, existing.ID); err != nil {
+				return err
+			}
 		}
 		_, err = tx.Exec(ctx, `INSERT INTO go_billing_topups(id,organization_id,pack_id,amount_paise,credits,expires_after_days) VALUES($1,$2,$3,$4,$5,$6)`, out.ID, org, p.ID, out.Amount, out.Credits, out.ExpiresAfterDays)
 		fresh = err == nil
