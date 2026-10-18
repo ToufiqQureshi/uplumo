@@ -12,3 +12,10 @@ coalesced while different organizations are independent;
 the same keyword/device pair through live SERP fallback.
 `frontend/src/client/features/billing/credits/CreditsCard.test.ts` verifies
 UTC midnight billing dates render consistently across host timezones.
+
+`backend/internal/billing/spendguard_test.go` uses a fake DataForSEO response
+and real test Postgres to assert a $1 successful budgeted task charges 1,280
+credits even when the preflight estimate was $0.50. The provider guard suite
+checks billed failed tasks remain visible in spend telemetry but refund the
+customer. Use actual provider usage exports to reconcile production costs;
+these deterministic fixtures cannot establish plan profitability.

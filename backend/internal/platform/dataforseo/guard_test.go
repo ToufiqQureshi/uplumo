@@ -96,7 +96,7 @@ func TestDoBudgetedSettlesSuccessfulPartialProviderWork(t *testing.T) {
 	}
 }
 
-func TestDoBudgetedCapsProviderOverageAtReservedCeiling(t *testing.T) {
+func TestDoBudgetedChargesActualSuccessfulProviderCostBeyondEstimate(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = io.WriteString(w, `{"tasks":[{"path":["v3","serp"],"cost":0.02}]}`)
 	}))
@@ -110,8 +110,8 @@ func TestDoBudgetedCapsProviderOverageAtReservedCeiling(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DoBudgeted() error = %v, want the completed work returned", err)
 	}
-	if got := guard.Settled(); len(got) != 1 || got[0] != 0.007 {
-		t.Fatalf("settled = %v, want the approved ceiling", got)
+	if got := guard.Settled(); len(got) != 1 || got[0] != 0.02 {
+		t.Fatalf("settled = %v, want the provider-reported successful cost", got)
 	}
 }
 

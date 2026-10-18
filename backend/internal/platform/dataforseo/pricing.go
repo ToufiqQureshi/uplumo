@@ -7,11 +7,11 @@ import (
 	"strings"
 )
 
-// Price ceilings per task in USD, from DataForSEO's published prices. They are
-// what a task can cost at most, because they are held as credit before the
-// request is sent; the real price is charged afterwards and the rest is
-// released. A path this table does not know is held at unknownTaskUSD, so a
-// new endpoint costs a customer a large hold rather than costing Uplumo money.
+// Published per-task prices in USD. They are preflight estimates held as
+// credit before the request is sent, not guarantees of the final billed cost.
+// The provider's reported price is charged afterwards, even when its current
+// pricing exceeds this estimate; review discrepancies and update the table.
+// An unknown path is held at unknownTaskUSD per task.
 const (
 	serpLivePageUSD     = 0.002
 	serpLiveExtraUSD    = 0.002
@@ -49,7 +49,7 @@ var serpOperator = regexp.MustCompile(`(?i)(allinanchor|allintext|allintitle|all
 // freePaths are lookups DataForSEO does not charge for.
 var freePaths = []string{"/v3/appendix/", "/v3/serp/google/locations", "/v3/business_data/business_listings/categories"}
 
-// EstimateUSD returns the most a request to path with body can cost.
+// EstimateUSD returns the preflight estimate for a request to path with body.
 func EstimateUSD(path string, body []byte) float64 {
 	for _, free := range freePaths {
 		if strings.HasPrefix(path, free) {

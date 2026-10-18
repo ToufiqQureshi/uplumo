@@ -21,10 +21,11 @@ import (
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/spend"
 )
 
-// Brief limits. The ceiling is the worst case at DataForSEO's list prices:
+// Brief limits. The preflight estimate uses DataForSEO's list prices:
 // a depth-30 live SERP ($0.002 per 10 results = $0.006) plus eight content
 // parses ($0.00015 each = $0.0012). About 9.2 credits; the customer is
-// charged what the provider reports, never more than this.
+// charged the successful task cost reported by the provider; pricing drift
+// can exceed the estimate and is logged by the spend guard.
 const (
 	briefCacheTTL        = 30 * 24 * time.Hour
 	briefDepth           = 30

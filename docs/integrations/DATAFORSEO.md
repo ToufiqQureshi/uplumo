@@ -21,3 +21,26 @@ Different tenants remain separate. SERP snapshots and Domain Research are
 still only cache-backed and can duplicate work on concurrent cold misses.
 
 Reported provider spend and customer credits are distinct. To validate plan economics, compare actual usage exports with `backend/internal/plans/catalog.go`, spend ceilings and billing policy. Do not infer customer margin from the credit face value alone; live plan profitability requires the provider cost CSV, representative usage, currency conversion and time window.
+
+## Provider cost versus customer credits
+
+The transport records every task's DataForSEO `cost`, including provider-billed
+failures. Successful task costs settle at **1,280 credits per USD**, rounded up
+per operation (`billing.CreditsForUSD`); a $1 successful task should consume
+1,280 credits. A multi-call preflight hold is an estimate, not a cap on actual
+successful charges. If the provider reports a higher cost, settlement charges
+available credits down to zero and logs any shortfall and estimate drift.
+
+Provider-billed failed tasks still refund customer credits. Those are real
+Uplumo losses; the spend guard logs the unrecovered amount as an error so the
+endpoint, status and input validation can be investigated. Do not charge a
+customer for a provider failure without an explicit product policy. Ambiguous
+timeouts may have cost the provider but cannot be inferred from a missing
+response; never automatically retry the paid POST.
+
+To reconcile a paid workspace, compare `go_dataforseo_usage` task costs with
+`go_billing_credit_ledger.provider_cost_usd` and negative `amount_credits`
+per organization, feature, endpoint and time window. Include pending holds,
+refunded tasks, self-hosted/staff workspaces, credit expiry and rounding when
+explaining a difference. The user's provider CSV is needed to confirm any
+specific $1 discrepancy and Basic/Pro/Agency margins.

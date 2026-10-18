@@ -143,7 +143,7 @@ func NewClient(opts Options) (*Client, error) {
 // that are safe to replay: billed task-post calls must pass false to avoid
 // duplicate charges.
 //
-// Before anything is sent, the guard holds the most the request can cost
+// Before anything is sent, the guard holds the estimated request cost
 // against organizationID's credits; a refusal or a guard failure stops the
 // request and wraps spend.ErrNoCredits, spend.ErrPaused or the guard's error
 // together with ErrBillingIssue, so callers that stop on a provider billing
@@ -180,7 +180,9 @@ func (c *Client) Do(ctx context.Context, organizationID string, feature spend.Fe
 // DoBudgeted reserves one ceiling for a multi-request provider operation.
 // Provider task costs are still recorded individually; customer credits are
 // settled once after all requests, including successful partial work, finish.
-// Use only for bounded operations whose complete worst-case price is known.
+// Use only for bounded operations with a conservative preflight estimate.
+// Provider-reported successful costs can exceed that estimate and are still
+// settled at the actual amount after the work has completed.
 func (c *Client) DoBudgeted(ctx context.Context, organizationID string, feature spend.Feature, ceilingUSD float64, work func(DoBudgetedRequest) error) error {
 	if strings.TrimSpace(organizationID) == "" || len(organizationID) > 128 || strings.TrimSpace(string(feature)) == "" || math.IsNaN(ceilingUSD) || math.IsInf(ceilingUSD, 0) || ceilingUSD <= 0 || work == nil {
 		return fmt.Errorf("%w: invalid budgeted operation", ErrInvalidRequest)
@@ -235,12 +237,10 @@ func (c *Client) DoBudgeted(ctx context.Context, organizationID string, feature 
 	providerTotal, customerTotal := providerCost, customerCost
 	endpointPaths := append([]string(nil), endpoints...)
 	mu.Unlock()
-	if customerTotal > ceilingUSD {
-		// The customer was quoted the ceiling and the provider already did the
-		// work, so the result is returned and Uplumo absorbs the overage.
-		// Failing here would charge for nothing and repeat on every retry.
-		customerTotal = ceilingUSD
-	}
+	// The hold is an estimate that limits work before dispatch. If the provider
+	// reports a higher successful cost, settle the actual amount; the ledger
+	// charges available credits down to zero and records any shortfall. Capping
+	// here silently made Uplumo pay for the customer's completed request.
 	settleCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer cancel()
 	endpoint := strings.Join(endpointPaths, ",")
