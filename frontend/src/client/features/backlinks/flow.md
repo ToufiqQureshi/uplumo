@@ -26,3 +26,6 @@ Go packages: `backend/internal/backlinks`; optional free ratings use `backend/in
 - Backlink lookups are paid: validation and plan checks must happen before provider spend.
 - A subfolder or exact-page scope may not support every aggregate; preserve backend scope notes and null values.
 - Never silently retry paid POST requests or present missing provider data as zero.
+- `useBacklinksPageData.ts` loads overview and one selected tab; the four paid
+  queries set `retry: false`. `useBacklinksDomainExpansion.ts` does likewise.
+  `backlinks-paid-retry.test.ts` asserts a failed initial load is not amplified.

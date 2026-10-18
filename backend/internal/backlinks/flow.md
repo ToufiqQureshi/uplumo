@@ -20,3 +20,6 @@ DataForSEO paid endpoints and usage metering; project plan/credit checks.
 - Validate target/filter limits and verify plan before any billed provider task.
 - Preserve null/unsupported metrics by target scope; never present them as zero.
 - Do not retry a paid task automatically; partial provider limits must be visible.
+- The client overview and selected tab are separate paid operations. Their
+  query hooks disable automatic retries. Concurrent identical overview cache
+  misses share one in-flight service call on a server instance.

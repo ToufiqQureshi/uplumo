@@ -13,6 +13,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/dataforseo"
+	"golang.org/x/sync/singleflight"
 )
 
 const (
@@ -40,6 +41,7 @@ type Service struct {
 	cache    cache
 	logger   *slog.Logger
 	now      func() time.Time
+	flights  singleflight.Group
 }
 
 // NewService constructs a backlinks service using the shared DataForSEO client.
@@ -112,6 +114,27 @@ func (s *Service) Overview(ctx context.Context, org string, in lookupInput) (Ove
 	if s.readCache(ctx, key, &cached) {
 		return cached, nil
 	}
+	// A cold cache must not let simultaneous requests purchase the same
+	// summary and history twice. The key includes organization and scope.
+	result := s.flights.DoChan(key, func() (any, error) {
+		var recent Overview
+		if s.readCache(ctx, key, &recent) {
+			return recent, nil
+		}
+		return s.loadOverview(ctx, org, target, key)
+	})
+	select {
+	case <-ctx.Done():
+		return Overview{}, ctx.Err()
+	case finished := <-result:
+		if finished.Err != nil {
+			return Overview{}, finished.Err
+		}
+		return finished.Val.(Overview), nil
+	}
+}
+
+func (s *Service) loadOverview(ctx context.Context, org string, target Target, key string) (Overview, error) {
 	now := s.now().UTC()
 	result := Overview{Target: target.APITarget, DisplayTarget: target.Display, Scope: target.Scope, Trends: []Trend{}, NewLostTrends: []NewLostTrend{}, FetchedAt: timestamp(now)}
 	if target.Scope == ScopeSubfolder {

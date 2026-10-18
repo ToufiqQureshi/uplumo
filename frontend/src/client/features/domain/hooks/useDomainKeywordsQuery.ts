@@ -44,6 +44,7 @@ export function useDomainKeywordsQuery(input: DomainKeywordsQueryInput) {
   const filtersPayload = toFiltersPayload(input.appliedFilters);
   return useQuery({
     enabled: input.enabled && Boolean(input.domain),
+    retry: false,
     queryKey: [
       "domain-keywords",
       input.projectId,

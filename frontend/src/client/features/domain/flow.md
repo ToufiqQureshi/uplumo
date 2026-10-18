@@ -26,3 +26,6 @@ Go package: `backend/internal/domain`; provider requests use the shared DataForS
 - Domain research can incur provider charges; validate target, country and filter budget before calling the provider.
 - Keep project market defaults explicit and reject unsupported country/language pairs.
 - Never imply provider estimates are exact Search Console measurements.
+- The paid overview, keywords, pages and rank-tracking suggestions queries
+  disable automatic 5xx retries. `domain-paid-retry.test.ts` guards the
+  overview path; manual refetch is an explicit user decision.

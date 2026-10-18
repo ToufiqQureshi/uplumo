@@ -169,6 +169,7 @@ export function KeywordSuggestionStep({
   const labsSupported = isLabsLocationCode(locationCode);
   const suggestionsQuery = useQuery({
     queryKey: ["domainKeywordSuggestions", projectId, domain, locationCode],
+    retry: false, // This domain suggestion lookup purchases a Labs task.
     queryFn: () =>
       getDomainKeywordSuggestions({
         data: { projectId, domain, locationCode },

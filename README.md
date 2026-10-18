@@ -22,6 +22,7 @@ Each feature has its own `README.md` next to its code, under
 
 ## Development
 
+- Start with the [engineering docs index](./docs/INDEX.md) and [source map](./docs/FILE_MAP.md).
 - Run it locally: [`docs/LOCAL_DEVELOPMENT.md`](./docs/LOCAL_DEVELOPMENT.md)
 - Server settings and routes: [`backend/README.md`](./backend/README.md)
 - Deploy: [`docs/DEPLOY.md`](./docs/DEPLOY.md)

@@ -328,6 +328,36 @@ func TestConcurrentOrganizationRequestsAreRaceSafe(t *testing.T) {
 	}
 }
 
+func TestConcurrentEquivalentOverviewRequestsSharePaidProviderWork(t *testing.T) {
+	t.Parallel()
+	var calls atomic.Int32
+	server := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls.Add(1)
+		time.Sleep(40 * time.Millisecond)
+		if strings.HasSuffix(r.URL.Path, "/summary/live") {
+			providerOK(w, r.URL.Path, map[string]any{"backlinks": 5, "info": map[string]any{}})
+			return
+		}
+		providerOK(w, r.URL.Path, map[string]any{"items": []any{}})
+	})
+	svc := newService(testClient(t, server, &usageRecorder{}), &memoryCache{values: map[string][]byte{}}, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Now)
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	for range 8 {
+		wg.Go(func() {
+			<-start
+			if _, err := svc.Overview(context.Background(), "same-org", lookupInput{Target: "example.com", Scope: "domain"}); err != nil {
+				t.Error(err)
+			}
+		})
+	}
+	close(start)
+	wg.Wait()
+	if got := calls.Load(); got != 2 {
+		t.Fatalf("provider calls = %d, want the summary and history once each", got)
+	}
+}
+
 func TestFilterConditionsCountNestedGroups(t *testing.T) {
 	t.Parallel()
 	filters := prependInclude(buildRowsFilters(rowsFilters{Exclude: "a,b", MinLinkAuthority: new(float64(1))}), "url_from", "x,y")

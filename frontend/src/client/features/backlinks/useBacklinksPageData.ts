@@ -104,6 +104,8 @@ export function useBacklinksPageData({
   const overviewQuery = useQuery({
     queryKey: ["backlinksOverview", ...baseQueryKeyParts],
     enabled: targetReady,
+    // The POST may already have reached DataForSEO when a 5xx is returned.
+    retry: false,
     staleTime: BACKLINKS_QUERY_STALE_TIME_MS,
     queryFn: () => getBacklinksOverview({ projectId, target, scope }),
   });
@@ -136,6 +138,7 @@ export function useBacklinksPageData({
       searchState.includeSpam ?? false,
     ],
     enabled: targetReady && tab === "backlinks" && !rowsFilterError,
+    retry: false,
     staleTime: BACKLINKS_QUERY_STALE_TIME_MS,
     // Over-budget filters never run the query, so no rows (and no export) may
     // stand in for them.
@@ -172,6 +175,7 @@ export function useBacklinksPageData({
       domainsFilters,
     ],
     enabled: targetReady && tab === "domains",
+    retry: false,
     staleTime: BACKLINKS_QUERY_STALE_TIME_MS,
     placeholderData: keepSameTarget,
     queryFn: () =>
@@ -204,6 +208,7 @@ export function useBacklinksPageData({
       pagesFilters,
     ],
     enabled: targetReady && tab === "pages",
+    retry: false,
     staleTime: BACKLINKS_QUERY_STALE_TIME_MS,
     placeholderData: keepSameTarget,
     queryFn: () =>

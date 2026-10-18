@@ -14,6 +14,7 @@ export function useDomainOverviewQuery(input: Input) {
 
   return useQuery({
     enabled: trimmedDomain !== "",
+    retry: false, // The paid POST may already have completed when a 5xx reaches us.
     queryKey: [
       "domain-overview",
       input.projectId,
