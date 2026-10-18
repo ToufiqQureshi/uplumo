@@ -37,6 +37,9 @@ const (
 	promptMaxOutputTokens = 4096
 
 	cacheWriteTimeout = 2 * time.Second
+	// flightTimeout bounds shared paid work that no longer follows its first
+	// caller's context. Each provider request also has its own 60s limit.
+	flightTimeout = 3 * time.Minute
 )
 
 // Service runs brand lookups and prompt explorations for an organization's
@@ -110,11 +113,15 @@ func (s *Service) BrandLookup(ctx context.Context, organizationID, projectID str
 	}
 
 	flight := s.flights.DoChan(key, func() (any, error) {
+		// The shared purchase outlives any one waiter: another caller may still
+		// need it, and a cancelled paid call may already have been billed.
+		flightCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), flightTimeout)
+		defer cancel()
 		var cached BrandLookupResult
-		if s.cacheGet(ctx, key, &cached) {
+		if s.cacheGet(flightCtx, key, &cached) {
 			return cached, nil
 		}
-		return s.loadBrandLookup(ctx, organizationID, key, detected, research, groups, includeSubdomains, in)
+		return s.loadBrandLookup(flightCtx, organizationID, key, detected, research, groups, includeSubdomains, in)
 	})
 	select {
 	case <-ctx.Done():

@@ -22,4 +22,5 @@ DataForSEO paid endpoints and usage metering; project plan/credit checks.
 - Do not retry a paid task automatically; partial provider limits must be visible.
 - The client overview and selected tab are separate paid operations. Their
   query hooks disable automatic retries. Concurrent identical overview cache
-  misses share one in-flight service call on a server instance.
+  misses share one in-flight service call on a server instance; that call
+  is detached from the first caller's context (capped at three minutes).

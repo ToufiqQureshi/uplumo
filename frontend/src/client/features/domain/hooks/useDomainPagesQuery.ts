@@ -37,6 +37,8 @@ export function useDomainPagesQuery(input: DomainPagesQueryInput) {
   return useQuery({
     enabled: input.enabled && Boolean(input.domain),
     retry: false,
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
     queryKey: [
       "domain-pages",
       input.projectId,

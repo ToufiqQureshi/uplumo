@@ -1,5 +1,10 @@
 // @vitest-environment happy-dom
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  focusManager,
+  onlineManager,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -45,6 +50,8 @@ describe("backlinks paid query failures", () => {
     client.clear();
     host.remove();
     vi.restoreAllMocks();
+    focusManager.setFocused(undefined);
+    onlineManager.setOnline(true);
   });
 
   it("does not automatically resubmit either paid POST after an ambiguous server failure", async () => {
@@ -78,5 +85,14 @@ describe("backlinks paid query failures", () => {
         expect(fetchMock).toHaveBeenCalledTimes(2);
       });
     });
+    // Returning to the tab or reconnecting must not buy the lookup again.
+    await act(async () => {
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+      onlineManager.setOnline(false);
+      onlineManager.setOnline(true);
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });

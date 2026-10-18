@@ -28,6 +28,9 @@ const (
 	SerpShallowDepth  = 20
 	SerpDeepDepth     = 100
 	labsRelatedDepth  = 3
+	// flightTimeout bounds shared paid work that no longer follows its first
+	// caller's context. Each provider request also has its own 60s limit.
+	flightTimeout = 3 * time.Minute
 )
 
 // ResultLimits and Modes research accepts.
@@ -268,11 +271,15 @@ func (s *ResearchService) Research(ctx context.Context, in ResearchInput) (Resea
 		return hit, nil
 	}
 	flight := s.flights.DoChan(key, func() (any, error) {
+		// The shared purchase outlives any one waiter: another caller may still
+		// need it, and a cancelled paid call may already have been billed.
+		flightCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), flightTimeout)
+		defer cancel()
 		var recent ResearchResult
-		if s.cached(ctx, key, &recent) && len(recent.Rows) > 0 && validSource(recent.Source) {
+		if s.cached(flightCtx, key, &recent) && len(recent.Rows) > 0 && validSource(recent.Source) {
 			return recent, nil
 		}
-		return s.researchUncached(ctx, in, key, seeds, ads)
+		return s.researchUncached(flightCtx, in, key, seeds, ads)
 	})
 	select {
 	case <-ctx.Done():

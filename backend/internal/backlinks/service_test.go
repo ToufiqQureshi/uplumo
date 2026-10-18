@@ -358,6 +358,50 @@ func TestConcurrentEquivalentOverviewRequestsSharePaidProviderWork(t *testing.T)
 	}
 }
 
+func TestSharedOverviewSurvivesTheFirstCallerLeaving(t *testing.T) {
+	t.Parallel()
+	var calls atomic.Int32
+	entered := make(chan struct{}, 2)
+	release := make(chan struct{})
+	server := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls.Add(1)
+		entered <- struct{}{}
+		<-release
+		if strings.HasSuffix(r.URL.Path, "/summary/live") {
+			providerOK(w, r.URL.Path, map[string]any{"backlinks": 5, "info": map[string]any{}})
+			return
+		}
+		providerOK(w, r.URL.Path, map[string]any{"items": []any{}})
+	})
+	svc := newService(testClient(t, server, &usageRecorder{}), &memoryCache{values: map[string][]byte{}}, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Now)
+	in := lookupInput{Target: "example.com", Scope: "domain"}
+
+	firstCtx, leave := context.WithCancel(t.Context())
+	firstErr := make(chan error, 1)
+	go func() {
+		_, err := svc.Overview(firstCtx, "same-org", in)
+		firstErr <- err
+	}()
+	<-entered
+	second := make(chan error, 1)
+	go func() {
+		_, err := svc.Overview(t.Context(), "same-org", in)
+		second <- err
+	}()
+	time.Sleep(20 * time.Millisecond) // let the second caller join the flight
+	leave()
+	if err := <-firstErr; !errors.Is(err, context.Canceled) {
+		t.Fatalf("first caller error = %v, want context.Canceled", err)
+	}
+	close(release)
+	if err := <-second; err != nil {
+		t.Fatalf("second caller error = %v, want the shared result", err)
+	}
+	if got := calls.Load(); got != 2 {
+		t.Fatalf("provider calls = %d, want the summary and history once each", got)
+	}
+}
+
 func TestFilterConditionsCountNestedGroups(t *testing.T) {
 	t.Parallel()
 	filters := prependInclude(buildRowsFilters(rowsFilters{Exclude: "a,b", MinLinkAuthority: new(float64(1))}), "url_from", "x,y")

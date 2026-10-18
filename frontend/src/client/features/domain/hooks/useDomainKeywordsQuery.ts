@@ -45,6 +45,8 @@ export function useDomainKeywordsQuery(input: DomainKeywordsQueryInput) {
   return useQuery({
     enabled: input.enabled && Boolean(input.domain),
     retry: false,
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
     queryKey: [
       "domain-keywords",
       input.projectId,

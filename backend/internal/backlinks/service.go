@@ -20,6 +20,9 @@ const (
 	cacheTTL            = 6 * time.Hour
 	cacheWriteTimeout   = 2 * time.Second
 	maxFilterConditions = 8
+	// flightTimeout bounds shared paid work that no longer follows its first
+	// caller's context. Each provider request also has its own 60s limit.
+	flightTimeout = 3 * time.Minute
 )
 
 type cache interface {
@@ -117,11 +120,15 @@ func (s *Service) Overview(ctx context.Context, org string, in lookupInput) (Ove
 	// A cold cache must not let simultaneous requests purchase the same
 	// summary and history twice. The key includes organization and scope.
 	result := s.flights.DoChan(key, func() (any, error) {
+		// The shared purchase outlives any one waiter: another caller may still
+		// need it, and a cancelled paid call may already have been billed.
+		flightCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), flightTimeout)
+		defer cancel()
 		var recent Overview
-		if s.readCache(ctx, key, &recent) {
+		if s.readCache(flightCtx, key, &recent) {
 			return recent, nil
 		}
-		return s.loadOverview(ctx, org, target, key)
+		return s.loadOverview(flightCtx, org, target, key)
 	})
 	select {
 	case <-ctx.Done():

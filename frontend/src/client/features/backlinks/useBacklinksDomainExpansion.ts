@@ -56,6 +56,8 @@ export function useBacklinksDomainExpansion({
       ] as const,
       staleTime: DOMAIN_LINKS_STALE_TIME_MS,
       retry: false, // A failed expansion may already have consumed one paid provider task.
+      refetchOnReconnect: false,
+      refetchOnWindowFocus: false,
       queryFn: () =>
         getBacklinksRows({
           projectId,
