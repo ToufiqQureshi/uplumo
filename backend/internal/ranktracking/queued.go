@@ -96,11 +96,15 @@ func (c *Checks) executeQueued(ctx context.Context, e *execution) error {
 				e.firstError = runErrorText(err)
 				return c.finalize(ctx, e.run, e.firstError)
 			}
-			// Earlier chunks are already charged, so their results still have to
-			// be collected; this chunk goes to the live fallback.
+			// A failed response does not prove that task_post failed upstream.
+			// Collect earlier accepted chunks, but never buy a live fallback for
+			// this uncertain chunk: the provider may have charged every task.
 			c.Logger.WarnContext(ctx, "rank check task_post failed", "run", e.run.ID, "err", err)
-			for _, t := range chunk {
-				fallback = append(fallback, byKey[t.KeywordID+":"+t.Device])
+			if e.firstError == "" {
+				e.firstError = "Queued provider response was uncertain; no live retry was made."
+				if err := c.Runs.SetRunErrorIfEmpty(ctx, e.run.ID, e.firstError); err != nil {
+					return err
+				}
 			}
 			continue
 		}

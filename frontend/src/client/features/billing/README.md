@@ -16,3 +16,6 @@ Read [flow.md](flow.md) for the request path and [decision.md](decision.md) for 
 - `backend/internal/billing`
 - `backend/internal/plans`
 - `backend/internal/razorpay`
+
+Billing period end dates render as UTC calendar dates so a workspace west of
+UTC does not see the previous day for a midnight refill.

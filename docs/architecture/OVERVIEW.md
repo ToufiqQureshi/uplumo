@@ -1,0 +1,7 @@
+# Architecture and request lifecycle
+
+The Vite-built React SPA is served by the Go process. API routes under `/api/v1/` are mounted in `backend/internal/httpapi/httpapi.go`. Project routes pass session authentication and organization membership before feature handlers. Go handlers validate inputs, services apply feature rules, repositories use Postgres, and external calls pass through provider adapters. Redis supports short-lived caches and request limiting; it is not a tenant authorization source.
+
+For a Backlinks search: `BacklinksPage.tsx` opens route state; `useBacklinksPageData.ts` starts an overview and the selected table query; `backlinksApi.ts` sends paid POSTs; `backlinks/handler.go` checks project and plan; `service.go` checks an organization-scoped Redis cache, then `provider.go` invokes `platform/dataforseo`; returned data is mapped to the Zod-checked UI shape. A domain overview similarly uses `domain/hooks/useDomainOverviewQuery.ts` and `domain/handler.go` / service / provider. Distinct summary and table requests are intentional; retries of already dispatched paid POSTs are not.
+
+Postgres contains project and organization data, account and usage records, jobs and other feature tables. Goose SQL migrations under `backend/internal/database/migrations/` run on server startup. See `backend/internal/database/README.md`. Site audit and rank tracking use background workflows documented in their package flow files. The `Dockerfile` builds the frontend and server into one image; deploy details are in `docs/DEPLOY.md`.

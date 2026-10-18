@@ -5,14 +5,18 @@ Every coding agent (Claude, Codex, Cursor, others) follows this file.
 
 ## 0. Where Uplumo is today
 
-- Live at `https://uplumo.com` on Railway (one Go server that also serves
-  the React build, plus Postgres and Redis). Merging to `main` does **not**
+- Live at `https://uplumo.com` on Railway, project `jubilant-kindness`,
+  service `uplumo` (one Go server that also serves the React build, plus
+  Railway Redis and Supabase Postgres). Merging to `main` does **not**
   deploy: see `docs/DEPLOY.md`.
 - Razorpay is connected with **test-mode** keys: checkout works with test
   cards, no real money moves yet. Live keys go in only after a full test
   payment, renewal and cancel on the site.
-- `DATAFORSEO_API_KEY` and `OPENROUTER_API_KEY` are not set in production,
-  so paid data and AI answer `503` there.
+- `DATAFORSEO_API_KEY` and `OPENROUTER_API_KEY` **are set in production**.
+  Every DataForSEO task and every OpenRouter token is billed to Uplumo for
+  real, so a wasted call is lost money (section 3, "Money first").
+- `PROVIDER_DAILY_LIMIT_USD` is set as a global emergency brake. It stays
+  until the known paid-call bugs are fixed; only the owner removes it.
 - One person runs the company. You are the engineering team, QA, security,
   SRE and the person who thinks about money: act like it (section 3).
 
@@ -33,36 +37,25 @@ code before you trust this section.
 | Deploy, or change a production setting   | `docs/DEPLOY.md`                                                         |
 | Change email (Loops)                     | `backend/internal/email/README.md`                                       |
 | Hit repo friction (flaky script, gotcha) | Log it in `.agents/PAPERCUTS.md` with the `papercuts` skill              |
+| Touch anything that calls DataForSEO     | `docs/integrations/DATAFORSEO.md` (cost boundaries)                      |
+| Touch auth, tenancy or caching           | `docs/security/MODEL.md`                                                 |
+| Write or review tests                    | `docs/testing/REGRESSION.md`                                             |
 
 If a doc and the code disagree, the code is the truth: fix the doc in the same
 change.
 
 ### Docs map
 
-This map lists repo-wide guidance; feature docs stay next to their code so an
-agent can find them without scanning a long index. Each feature folder has a
-`README.md`, `flow.md` and `decision.md`; the docs-map test checks this set.
-Read only the docs for the feature being changed and its direct dependencies.
-Skills (`.agents/skills/`, mirrored in `.claude/skills/`) are listed by the
-harness and are not repeated here.
-
-Whole product: `README.md` (what Uplumo is), `ROADMAP.md` (status),
-`docs/PRODUCT.md` (why, for whom), `docs/LOCAL_DEVELOPMENT.md`,
-`docs/DEPLOY.md`, `docs/audits/` (dated reviews, read only when asked),
-`backend/README.md` (Go server, Razorpay billing rules, checks),
-`.agents/PAPERCUTS.md` (known repo friction), `AGENTS.md` and
-`.claude/CLAUDE.md` (both point here).
-
-Go package docs live beside the code in `backend/internal/<package>/`;
-`README.md` is the entry point, then read `flow.md` and `decision.md` before
-changing that package. Keep special references such as
+`docs/INDEX.md` lists every repo-wide document (the docs-map test checks it),
+and `docs/FILE_MAP.md` maps source and test files. Feature docs stay next to
+their code: each `backend/internal/<package>/` and
+`frontend/src/client/features/<feature>/` has `README.md`, `flow.md` and
+`decision.md`. Read only the docs for the feature being changed and its direct
+dependencies. Keep special references such as
 `backend/internal/analytics/geo/ATTRIBUTION.md` (licence) and
 `backend/internal/sam/product_fact_sheet.md` (SAM's approved product facts)
-intact and consult them when working in those areas.
-
-Frontend feature docs live in `frontend/src/client/features/<feature>/` next
-to the UI and API client. `ai-mcp/agentSetupPrompt.md` is product copy users
-paste into their agent; it is not internal engineering documentation.
+intact. Skills (`.agents/skills/`, mirrored in `.claude/skills/`) are listed
+by the harness and are not repeated here.
 
 ## 2. Layout
 
@@ -128,6 +121,37 @@ to the source files and explain behavior, dependencies, failure paths and why.
    goes wrong (migrations only move forward, so design for that).
 
 Then delete every line that does not earn its place.
+
+### Money first: no bug may cost the owner money
+
+DataForSEO and OpenRouter are live and billed per call. Customers have
+already seen one click buy many tasks and drain their credits, and Uplumo
+has paid for provider work on a Pro workspace that was within its limits.
+Treat any change that can add, repeat or widen a paid call as a finance
+change.
+
+- **One user action, the fewest paid calls.** Count the provider calls each
+  click makes, write the number in the feature's `flow.md`, and assert that
+  exact count in a test with a fake provider (including double clicks and
+  concurrent requests). Nothing paid fires on page load, tab switch, focus
+  or re-render without an explicit user action or an approved schedule.
+- **Never retry a paid call automatically.** Not on the server, not in the
+  browser: TanStack Query hooks that reach a paid endpoint set
+  `retry: false`. A failed response does not prove the provider did not
+  bill it.
+- **Cache and dedupe before buying.** Same workspace, same inputs: serve the
+  cached result. Concurrent identical requests share one provider call.
+- **Show what we paid for.** If the provider returns a field the customer
+  paid for, show it or stop requesting it. Dropping paid data on the way to
+  the screen is a bug.
+- **The customer pays what we showed them.** Never charge more credits than
+  the cost shown before the action without the owner's approval.
+- **Every paid call is recorded.** DataForSEO tasks go to
+  `go_dataforseo_usage` (workspace, endpoint, cost); every provider's spend,
+  OpenRouter included, goes through the spend guard into `go_provider_spend`
+  (workspace, feature, cost). The owner must be able to answer "where did
+  this dollar go" with one query; a paid call outside the spend guard is a
+  bug.
 
 ### Mistakes we already made (do not repeat them)
 

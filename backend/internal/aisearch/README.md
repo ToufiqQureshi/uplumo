@@ -60,6 +60,10 @@ not change shape.
   and it stops at the first failing call.
 - **Never cache a degraded result.** Brand lookups are cached 24 h only when
   every call succeeded and there is data; prompt answers 7 days, successes only.
+- Concurrent identical Brand Lookup cache misses share one six-call (or
+  competitor-expanded) fan-out within a server process. The key includes
+  organization and project; each caller keeps its own display query. This
+  does not coordinate multiple server instances or Prompt Explorer calls.
 - **Untrusted URLs.** Citations come from LLM answers. Only `http(s)` URLs without
   credentials are returned (`safeHTTPURL`), because the page renders them as links.
 - **ChatGPT is US/English only.** It is always queried with 2840/`en` and left out

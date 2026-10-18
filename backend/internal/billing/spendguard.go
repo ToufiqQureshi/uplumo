@@ -229,6 +229,18 @@ func (h *creditHold) SettleProviderCost(ctx context.Context, providerCostUSD, cu
 	if endpoint == "" {
 		endpoint = h.endpoint
 	}
+	if h.guard.chargeCredits && providerCostUSD > customerCostUSD+1e-9 {
+		// DataForSEO also bills some failed tasks. Keep that customer refund,
+		// but make the unrecovered spend visible so validation can be fixed.
+		h.guard.logger.ErrorContext(ctx, "provider billed work that was not charged to the customer",
+			"organization", h.org, "feature", h.feature, "endpoint", endpoint,
+			"provider_cost_usd", providerCostUSD, "customer_cost_usd", customerCostUSD)
+	}
+	if h.reservationID != "" && CreditsForUSD(customerCostUSD) > h.reserved {
+		h.guard.logger.WarnContext(ctx, "provider cost exceeded reserved estimate",
+			"organization", h.org, "feature", h.feature, "endpoint", endpoint,
+			"reserved_credits", h.reserved, "actual_credits", CreditsForUSD(customerCostUSD))
+	}
 	return h.guard.settle(ctx, h.org, h.feature, endpoint, h.reservationID, providerCostUSD, customerCostUSD)
 }
 

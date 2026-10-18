@@ -19,4 +19,6 @@ DataForSEO SERP; Postgres configs/runs/tasks/snapshots; Redis jobs/locks; billin
 
 - Check estimated ceiling again before execution; a browser estimate is never authority.
 - Use idempotency and task state to prevent duplicate paid work across retries/restarts.
+- When task-post returns an ambiguous error, do not buy live SERP for that
+  chunk; mark the run failed or partial and collect earlier accepted tasks.
 - Scope caps to the workspace causing spend; expose partial failures and enforce schedule/pause rules.

@@ -14,6 +14,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/market"
+	"golang.org/x/sync/singleflight"
 )
 
 // Research limits and cache lifetimes, as in the legacy app.
@@ -27,6 +28,9 @@ const (
 	SerpShallowDepth  = 20
 	SerpDeepDepth     = 100
 	labsRelatedDepth  = 3
+	// flightTimeout bounds shared paid work that no longer follows its first
+	// caller's context. Each provider request also has its own 60s limit.
+	flightTimeout = 3 * time.Minute
 )
 
 // ResultLimits and Modes research accepts.
@@ -89,6 +93,7 @@ type ResearchService struct {
 	Metrics  MetricStore
 	Logger   *slog.Logger
 	Now      func() time.Time
+	flights  singleflight.Group
 }
 
 // NewResearchService builds a service that caches in Redis.
@@ -265,8 +270,31 @@ func (s *ResearchService) Research(ctx context.Context, in ResearchInput) (Resea
 	if s.cached(ctx, key, &hit) && len(hit.Rows) > 0 && validSource(hit.Source) {
 		return hit, nil
 	}
+	flight := s.flights.DoChan(key, func() (any, error) {
+		// The shared purchase outlives any one waiter: another caller may still
+		// need it, and a cancelled paid call may already have been billed.
+		flightCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), flightTimeout)
+		defer cancel()
+		var recent ResearchResult
+		if s.cached(flightCtx, key, &recent) && len(recent.Rows) > 0 && validSource(recent.Source) {
+			return recent, nil
+		}
+		return s.researchUncached(flightCtx, in, key, seeds, ads)
+	})
+	select {
+	case <-ctx.Done():
+		return ResearchResult{}, ctx.Err()
+	case finished := <-flight:
+		if finished.Err != nil {
+			return ResearchResult{}, finished.Err
+		}
+		return finished.Val.(ResearchResult), nil
+	}
+}
 
+func (s *ResearchService) researchUncached(ctx context.Context, in ResearchInput, key string, seeds []string, ads bool) (ResearchResult, error) {
 	var result ResearchResult
+	var err error
 	switch {
 	case in.LocationName != nil:
 		result, err = s.researchLocal(ctx, in)

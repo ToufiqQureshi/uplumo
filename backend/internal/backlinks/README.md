@@ -25,6 +25,9 @@ Routes are `POST /api/v1/projects/{projectId}/backlinks/{overview,backlinks,refe
 - Never call DataForSEO before validating target, scope, filters, sort and pagination. Provider tasks are billed even on failure.
 - `Client.Do(..., false)` is mandatory: a replay can charge the organization twice.
 - Cache entries are organization-scoped; cache failures must not turn a valid provider call into an error.
+- Concurrent identical overview cache misses on one server share in-flight work;
+  the organization/scope/target key prevents cross-tenant sharing. Different
+  server instances may still race, and other tabs do not use this coalescing.
 - DataForSEO summary/history are whole-target endpoints. Subfolder counts must stay filtered and cannot claim unavailable rank/trend data.
 - UI response fields and nullability match the TypeScript schemas. New API contracts are validated with Zod.
 
@@ -33,3 +36,5 @@ Routes are `POST /api/v1/projects/{projectId}/backlinks/{overview,backlinks,refe
 `DATAFORSEO_API_KEY` configures the shared provider transport. No new environment variables or tables are required. Redis caches successful responses for six hours. Request bodies are limited to 32 KiB, filter strings to 500 bytes and provider filter expressions to eight conditions. Provider outbound timeouts and usage recording are enforced by `platform/dataforseo`.
 
 Tests cover target normalization, filter translation and budget, handler validation/plan checks, result mapping, provider errors, cache isolation/outages and cancellation. No database tenant-isolation test applies because this package has no repository; project authorization and organization-attributed provider usage are covered at the HTTP boundary.
+`service_test.go` also asserts that eight concurrent equivalent overviews issue
+only the required summary and history provider calls.

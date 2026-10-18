@@ -3,15 +3,19 @@ package billing
 import (
 	"context"
 	"crypto/rand"
+	"encoding/base64"
 	"errors"
 	"log/slog"
 	"math"
+	"net/http"
+	"net/http/httptest"
 	"sync"
 	"sync/atomic"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/toufiqqureshi/uplumo/backend/internal/platform/dataforseo"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/spend"
 )
 
@@ -244,6 +248,42 @@ func TestSettleChargesDownToZeroWhenTheProviderCostMoreThanHeld(t *testing.T) {
 	}
 	if total, _ := providerSpend(t, pool, org); total != 1 {
 		t.Fatalf("provider spend = %v, want the full dollar logged for the daily limit", total)
+	}
+}
+
+// The customer was shown the held estimate, so a higher provider cost is
+// Uplumo's loss: it is recorded as provider spend but never charged.
+func TestBudgetedProviderOverageIsCappedAtTheHeldEstimate(t *testing.T) {
+	pool := setupTestDB(t)
+	ctx := t.Context()
+	ledger := NewCreditLedgerService(pool)
+	org := spendOrg(ctx, t, pool, 3000)
+	guard := testGuard(t, pool, ledger, noDailyLimit, true)
+	providerCalls := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		providerCalls++
+		_, _ = w.Write([]byte(`{"tasks":[{"path":["v3","ai_optimization","chat_gpt","llm_responses","live"],"cost":1,"status_code":20000}]}`))
+	}))
+	defer server.Close()
+	client, err := dataforseo.NewClient(dataforseo.Options{BaseURL: server.URL, APIKey: base64.StdEncoding.EncodeToString([]byte("fixture:fixture")), Guard: guard, Recorder: dataforseo.NewUsageRecorder(pool)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = client.DoBudgeted(ctx, org, spend.AIVisibility, 0.5, func(request dataforseo.DoBudgetedRequest) error {
+		_, err := request(http.MethodPost, "/v3/ai_optimization/chat_gpt/llm_responses/live", []byte(`[{}]`), false)
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if providerCalls != 1 {
+		t.Fatalf("provider calls = %d, want one", providerCalls)
+	}
+	if got := balanceOf(ctx, t, ledger, org); got != 3000-CreditsForUSD(0.5) {
+		t.Fatalf("balance = %d, want only the $0.50 estimate charged (%d credits)", got, CreditsForUSD(0.5))
+	}
+	if total, _ := providerSpend(t, pool, org); total != 1 {
+		t.Fatalf("provider spend = $%v, want $1", total)
 	}
 }
 

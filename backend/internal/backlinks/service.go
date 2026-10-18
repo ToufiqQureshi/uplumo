@@ -13,12 +13,16 @@ import (
 
 	"github.com/redis/go-redis/v9"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/dataforseo"
+	"golang.org/x/sync/singleflight"
 )
 
 const (
 	cacheTTL            = 6 * time.Hour
 	cacheWriteTimeout   = 2 * time.Second
 	maxFilterConditions = 8
+	// flightTimeout bounds shared paid work that no longer follows its first
+	// caller's context. Each provider request also has its own 60s limit.
+	flightTimeout = 3 * time.Minute
 )
 
 type cache interface {
@@ -40,6 +44,7 @@ type Service struct {
 	cache    cache
 	logger   *slog.Logger
 	now      func() time.Time
+	flights  singleflight.Group
 }
 
 // NewService constructs a backlinks service using the shared DataForSEO client.
@@ -112,6 +117,31 @@ func (s *Service) Overview(ctx context.Context, org string, in lookupInput) (Ove
 	if s.readCache(ctx, key, &cached) {
 		return cached, nil
 	}
+	// A cold cache must not let simultaneous requests purchase the same
+	// summary and history twice. The key includes organization and scope.
+	result := s.flights.DoChan(key, func() (any, error) {
+		// The shared purchase outlives any one waiter: another caller may still
+		// need it, and a cancelled paid call may already have been billed.
+		flightCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), flightTimeout)
+		defer cancel()
+		var recent Overview
+		if s.readCache(flightCtx, key, &recent) {
+			return recent, nil
+		}
+		return s.loadOverview(flightCtx, org, target, key)
+	})
+	select {
+	case <-ctx.Done():
+		return Overview{}, ctx.Err()
+	case finished := <-result:
+		if finished.Err != nil {
+			return Overview{}, finished.Err
+		}
+		return finished.Val.(Overview), nil
+	}
+}
+
+func (s *Service) loadOverview(ctx context.Context, org string, target Target, key string) (Overview, error) {
 	now := s.now().UTC()
 	result := Overview{Target: target.APITarget, DisplayTarget: target.Display, Scope: target.Scope, Trends: []Trend{}, NewLostTrends: []NewLostTrend{}, FetchedAt: timestamp(now)}
 	if target.Scope == ScopeSubfolder {
