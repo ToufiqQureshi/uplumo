@@ -19,3 +19,11 @@ Postgres analytics tables; Redis daily salt/rate-limit counters; no paid SEO pro
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.
+
+## Enquiry interpretation
+
+Use complete equal UTC windows and matched pageview/event visitor-days so clicks
+and partial days cannot create spurious conversion lifts. Keep the selected
+goal in every immutable change snapshot; changing settings must not change what
+an old edit measured. Baselines use the transaction connection while holding the
+project lock to avoid pool starvation under concurrent saves.

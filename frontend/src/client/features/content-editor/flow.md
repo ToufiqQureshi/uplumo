@@ -30,3 +30,21 @@ Go packages: `contenteditor`, `contentauthors`, `linksuggest` and `sitepublish`;
 - Do not auto-save or publish unreviewed generated text to a customer site.
 - Uploaded images and generated HTML must be constrained to allowed storage/content types.
 - Link suggestions use project-owned GSC/audit data and must never cross project boundaries.
+
+## Focused issue handoff
+
+The writer selects one of the current unfinished score checks → sidebar stores
+only its ID/mode and draft/topic scope → AI help resolves fresh check evidence →
+an explicit action sends bounded task instructions with the selected passage.
+Preparing a task never generates or inserts content. Published articles link to
+free enquiry evidence and the existing explicit paid-tracking flows.
+
+AI rewrite actions require an explicit visual-editor selection within one text
+block and at most 5,000 characters, with no images or other non-text nodes.
+`writer-target.ts`
+captures that range and the document at request time: accepting replaces only
+the selected passage, and refuses a different draft or edits made meanwhile.
+Section/FAQ/gap actions insert at the saved cursor; outlines, title/meta options
+and fact-check notes are review-only. Markdown mode does not expose a hidden
+visual selection to the assistant. Never restore whole-article replacement as a
+fallback when the visual editor is unavailable.

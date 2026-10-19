@@ -109,7 +109,11 @@ function PublishActions({
     <div className="space-y-3">
       {published ? <PublishedLine publication={publication} /> : null}
       {published && publication.status === "publish" ? (
-        <TrackArticle projectId={projectId} targetKeyword={targetKeyword} />
+        <TrackArticle
+          projectId={projectId}
+          targetKeyword={targetKeyword}
+          publicationUrl={publication.url}
+        />
       ) : null}
       {hasUnsavedChanges ? (
         <p className="text-sm text-muted-foreground">
@@ -191,14 +195,40 @@ function PublishedLine({ publication }: { publication: SitePublication }) {
 function TrackArticle({
   projectId,
   targetKeyword,
+  publicationUrl,
 }: {
   projectId: string;
   targetKeyword: string;
+  publicationUrl?: string | null;
 }) {
   const topic = targetKeyword.trim();
   return (
     <div className="space-y-1.5 rounded-md bg-muted px-3 py-2.5 text-sm">
-      <p className="font-medium">Track this article</p>
+      <p className="font-medium">Measure this article</p>
+      <p className="text-xs text-muted-foreground">
+        Before the next edit, save an enquiry baseline. New articles need visits
+        before comparisons are useful.
+      </p>
+      <Link
+        to="/p/$projectId/enquiries"
+        params={{ projectId }}
+        search={{
+          path:
+            publicationUrl && URL.canParse(publicationUrl)
+              ? new URL(publicationUrl).pathname
+              : "",
+        }}
+        className="block text-primary underline-offset-4 hover:underline"
+      >
+        Measure enquiry actions on this page →
+      </Link>
+      <Link
+        to="/p/$projectId/prompt-tracking"
+        params={{ projectId }}
+        className="block text-primary underline-offset-4 hover:underline"
+      >
+        Monitor saved AI questions and citations →
+      </Link>
       <Link
         to="/p/$projectId/rank-tracking"
         params={{ projectId }}

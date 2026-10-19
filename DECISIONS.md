@@ -125,3 +125,9 @@ Google Cloud project `agentproject-473109`:
 - Owner requested two PRs: (1) AI question tracking, scheduled usage previews and self-service credit packs; (2) content editor improvements, published-page tracking and enquiry opportunities.
 - Reuse Go/Postgres jobs and the existing credit ledger. Paid features share workspace credits and retain daily limits. No subscription prices or grants are changed.
 - Credit-pack commercial terms require an explicit `BILLING_TOPUP_PACKS` configuration; no default pack price or new production configuration is activated by these PRs.
+
+- Owner requested two improvement PRs including the content editor and a paid
+  product differentiator. The second implements evidence → editorial fix →
+  enquiry measurement, reusing existing analytics and writing services. It adds
+  no plan-price change, new paid provider, automatic publishing or externally
+  delivered alerts. Competitor feature overlap is acknowledged in the PR.

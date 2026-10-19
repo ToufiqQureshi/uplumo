@@ -57,9 +57,6 @@ const slugFromTitle = (title: string) =>
     .replace(/[^a-z0-9]+/gu, "-")
     .replace(/^-|-$/gu, "")
     .slice(0, 300);
-const confirmSuggestionReplacement = (content: string) =>
-  !content.trim() ||
-  window.confirm("Replace the article with this AI suggestion?");
 
 export function ContentEditorPage({ projectId }: { projectId: string }) {
   const queryClient = useQueryClient();
@@ -376,10 +373,6 @@ export function ContentEditorPage({ projectId }: { projectId: string }) {
                 deleteMutation.mutate(saved.id);
               }
             }}
-            onUseSuggestion={(content) =>
-              confirmSuggestionReplacement(draft.content) &&
-              update("content", content)
-            }
           />
         </div>
       </div>

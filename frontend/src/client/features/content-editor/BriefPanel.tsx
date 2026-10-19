@@ -4,6 +4,7 @@ import { cn } from "cn";
 import { Button } from "@/client/components/ui/button";
 import { briefMatchesTopic, termUsage } from "./brief-view";
 import { fetchSearchBrief, type SearchBrief } from "./contentEditorApi";
+import { headings, normalizeText } from "./scoring-text";
 import { useEditorSession } from "./editor-session";
 
 // About 9 credits per new brief: one SERP plus up to eight page reads. The
@@ -44,6 +45,7 @@ export function BriefPanel({
   });
   const current = brief && briefMatchesTopic(brief, topic) ? brief : null;
   const usage = current ? termUsage(current, content) : [];
+  const articleHeadings = new Set(headings(content).map(normalizeText));
 
   if (!current) {
     return (
@@ -192,7 +194,9 @@ export function BriefPanel({
                 <Button
                   variant="ghost"
                   size="sm"
-                  disabled={!editor}
+                  disabled={
+                    !editor || articleHeadings.has(normalizeText(question))
+                  }
                   onClick={() =>
                     editor
                       ?.chain()
@@ -203,7 +207,9 @@ export function BriefPanel({
                       .run()
                   }
                 >
-                  Add as heading
+                  {articleHeadings.has(normalizeText(question))
+                    ? "Heading present"
+                    : "Add as heading"}
                 </Button>
               </li>
             ))}

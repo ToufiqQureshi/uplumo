@@ -31,6 +31,12 @@ const projectNavItems = [
     badge: "New",
   },
   {
+    to: "/p/$projectId/enquiries" as const,
+    label: "Missed Enquiries Finder",
+    icon: TrendingUp,
+    badge: "New",
+  },
+  {
     to: "/p/$projectId" as const,
     label: "Dashboard",
     icon: LayoutDashboard,
@@ -189,6 +195,7 @@ export function getProjectNavGroups(projectId: string): NavGroup[] {
       label: "Traffic & AI visibility",
       items: [
         item("/p/$projectId/analytics"),
+        item("/p/$projectId/enquiries"),
         item("/p/$projectId/search-performance"),
         item("/p/$projectId/brand-lookup"),
         item("/p/$projectId/prompt-tracking"),
