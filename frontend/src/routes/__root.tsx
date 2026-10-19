@@ -18,6 +18,7 @@ import { TooltipProvider } from "@/client/components/ui/tooltip";
 import { useSession } from "@/lib/auth-client";
 import { Toaster } from "sonner";
 import { queryClient } from "@/client/tanstack-db";
+import { showCreditsUsed } from "@/client/features/billing/credits/creditsUsedToast";
 import { getActiveOrganizationId } from "@/lib/auth-session";
 
 // Capture Google link error params before the router starts — a route loader
@@ -60,6 +61,7 @@ function PostHogBootstrap() {
 function AppLayout() {
   const showDevtools =
     import.meta.env.DEV && import.meta.env.VITE_SHOW_DEVTOOLS !== "false";
+  React.useEffect(() => showCreditsUsed(), []);
 
   return (
     <QueryClientProvider client={queryClient}>

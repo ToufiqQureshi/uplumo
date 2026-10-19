@@ -118,6 +118,12 @@ assistant. Rules that must never break:
   left uncharged to customers are logged separately for investigation.
 - **It fails closed.** A ledger or database error stops the request. SAM
   refuses a turn whose credits cannot be checked.
+- **The customer is told what an action cost.** Every credit settled for a
+  request is counted on its context (`spend.WithCreditMeter`, `RecordCredits`)
+  and `requireSession` sends the total as `X-Credits-Used` just before the
+  response starts; the browser shows it as a toast ("63 credits used") and
+  refreshes the balance. It is the ledger's settled amount, not the hold or the
+  hint. A streamed response (SAM) that charges after its first byte carries none.
 - **No per-workspace daily limit.** `Service.WorkspaceDailyLimitUSD` returns 0:
   a customer may spend the credits they bought in any order, and each call
   charges its real cost times 1.28, so spending cannot pass what was paid. The

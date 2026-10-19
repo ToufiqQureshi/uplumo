@@ -261,6 +261,7 @@ func (g *SpendGuard) settle(ctx context.Context, org string, feature spend.Featu
 			return fmt.Errorf("settle %s hold: %w", feature, err)
 		}
 		g.warnShort(ctx, org, feature, credits, charged)
+		spend.RecordCredits(ctx, charged)
 		return nil
 	}
 	if !g.chargeCredits || credits == 0 {
@@ -287,9 +288,11 @@ func (g *SpendGuard) chargeDown(ctx context.Context, org string, feature spend.F
 	if err != nil {
 		return fmt.Errorf("charge %d credits for %s: %w", credits, feature, err)
 	}
-	if _, err := g.ledger.SettleProviderUpTo(ctx, reservation.ID, credits, costUSD, endpoint); err != nil {
+	charged, err := g.ledger.SettleProviderUpTo(ctx, reservation.ID, credits, costUSD, endpoint)
+	if err != nil {
 		return fmt.Errorf("settle %s charge: %w", feature, err)
 	}
+	spend.RecordCredits(ctx, charged)
 	return nil
 }
 

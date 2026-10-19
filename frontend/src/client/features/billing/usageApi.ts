@@ -79,7 +79,7 @@ export function creditLevel(usage: BillingUsage): CreditLevel {
   return "ok";
 }
 
-const billingUsageQueryKey = ["billing", "usage"] as const;
+export const billingUsageQueryKey = ["billing", "usage"] as const;
 
 /** The active workspace's credits, spend this month and typical costs. */
 export function useBillingUsage({

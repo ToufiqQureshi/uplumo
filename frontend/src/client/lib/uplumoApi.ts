@@ -78,6 +78,26 @@ function messageForStatus(
  * the JSON response against `schema`. Throws `ApiError` for an error status
  * or a response that does not match the contract.
  */
+type CreditsUsedListener = (credits: number) => void;
+const creditsUsedListeners = new Set<CreditsUsedListener>();
+
+/**
+ * Calls listener with the credits a request charged, so the screen can tell the
+ * customer what an action cost them. The server sends them in X-Credits-Used.
+ */
+export function onCreditsUsed(listener: CreditsUsedListener) {
+  creditsUsedListeners.add(listener);
+  return () => {
+    creditsUsedListeners.delete(listener);
+  };
+}
+
+function announceCreditsUsed(response: Response) {
+  const credits = Number(response.headers.get("X-Credits-Used"));
+  if (!Number.isInteger(credits) || credits <= 0) return;
+  for (const listener of creditsUsedListeners) listener(credits);
+}
+
 export async function apiRequest<T>(
   path: string,
   schema: z.ZodType<T>,
@@ -105,6 +125,8 @@ export async function apiRequest<T>(
     },
     ...(requestBody === undefined ? {} : { body: requestBody }),
   });
+  // Credits are charged even when the answer then fails to parse.
+  announceCreditsUsed(response);
   // A proxy error page or an empty body is not JSON: treat it as no body.
   const body: unknown = await response.json().catch(() => undefined);
 

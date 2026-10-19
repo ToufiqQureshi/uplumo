@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/netip"
 	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/toufiqqureshi/uplumo/backend/internal/activation"
@@ -471,7 +472,8 @@ func requireSession(logger *slog.Logger, authn *auth.Service, next http.Handler)
 		}
 		ctx := spend.WithIdempotencyKey(r.Context(), r.Header.Get("Idempotency-Key"))
 		ctx = spend.WithUserID(ctx, user.ID)
-		next.ServeHTTP(w, r.WithContext(auth.WithUser(ctx, user)))
+		ctx = spend.WithCreditMeter(ctx)
+		next.ServeHTTP(&creditsUsedWriter{ResponseWriter: w, ctx: ctx}, r.WithContext(auth.WithUser(ctx, user)))
 	})
 }
 
@@ -532,3 +534,39 @@ func reportViewDeps(d Deps) reports.ViewDeps {
 	}
 	return v
 }
+
+// CreditsUsedHeader tells the browser how many credits the request charged, so
+// the screen can show the customer what an action cost them.
+const CreditsUsedHeader = "X-Credits-Used"
+
+// creditsUsedWriter adds CreditsUsedHeader to the response when the request
+// charged credits. The header is set just before the response starts, after
+// the handler's paid work finished; a streamed response that charges after its
+// first byte carries none.
+type creditsUsedWriter struct {
+	http.ResponseWriter
+	ctx   context.Context
+	wrote bool
+}
+
+func (w *creditsUsedWriter) setHeader() {
+	if w.wrote {
+		return
+	}
+	w.wrote = true
+	if credits := spend.CreditsCharged(w.ctx); credits > 0 {
+		w.Header().Set(CreditsUsedHeader, strconv.FormatInt(credits, 10))
+	}
+}
+
+func (w *creditsUsedWriter) WriteHeader(status int) {
+	w.setHeader()
+	w.ResponseWriter.WriteHeader(status)
+}
+
+func (w *creditsUsedWriter) Write(body []byte) (int, error) {
+	w.setHeader()
+	return w.ResponseWriter.Write(body)
+}
+
+func (w *creditsUsedWriter) Unwrap() http.ResponseWriter { return w.ResponseWriter }
