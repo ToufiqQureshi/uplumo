@@ -168,6 +168,59 @@ export function KeywordResearchTable({
         cell: ({ getValue }) => <ScoreBadge value={getValue()} />,
         meta: { headerClassName: "text-right", cellClassName: "text-right" },
       }),
+      keywordColumnHelper.display({
+        id: "topBid",
+        header: () => (
+          <span title="What advertisers pay (USD) for a top-of-page Google ad on this keyword.">
+            Top bid
+          </span>
+        ),
+        cell: ({ row }) => {
+          if (row.original.parentKeyword) return null;
+          const { topOfPageBidLow: low, topOfPageBidHigh: high } = row.original;
+          if (low == null || high == null) return "-";
+          return `${low.toFixed(2)}-${high.toFixed(2)}`;
+        },
+        meta: {
+          headerClassName: "text-right",
+          cellClassName:
+            "whitespace-nowrap text-right tabular-nums text-muted-foreground",
+        },
+      }),
+      keywordColumnHelper.accessor("referringDomains", {
+        header: () => (
+          <span title="Average number of domains linking to the pages ranking on Google's first page. More links usually means harder to outrank.">
+            Ref. domains
+          </span>
+        ),
+        cell: ({ row, getValue }) => {
+          if (row.original.parentKeyword) return null;
+          return formatNumber(getValue());
+        },
+        meta: {
+          headerClassName: "text-right",
+          cellClassName:
+            "whitespace-nowrap text-right tabular-nums text-muted-foreground",
+        },
+      }),
+      keywordColumnHelper.accessor("quarterlyChange", {
+        header: () => (
+          <span title="How search volume changed over the last 3 months.">
+            3-mo trend
+          </span>
+        ),
+        cell: ({ row, getValue }) => {
+          if (row.original.parentKeyword) return null;
+          const value = getValue();
+          if (value == null) return "-";
+          return `${value > 0 ? "+" : ""}${value}%`;
+        },
+        meta: {
+          headerClassName: "text-right",
+          cellClassName:
+            "whitespace-nowrap text-right tabular-nums text-muted-foreground",
+        },
+      }),
       keywordColumnHelper.accessor("intent", {
         header: "Intent",
         cell: ({ getValue }) => <IntentBadge intent={getValue()} />,

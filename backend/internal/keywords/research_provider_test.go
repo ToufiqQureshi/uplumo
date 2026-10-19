@@ -80,9 +80,11 @@ func okTask(result ...any) map[string]any {
 func TestLabsKeywordsRequestsAndParsing(t *testing.T) {
 	item := func(keyword string, volume int) map[string]any {
 		return map[string]any{"keyword": keyword,
-			"keyword_info": map[string]any{"search_volume": volume, "cpc": 1.5, "competition": 0.2, "monthly_searches": []any{map[string]any{"year": 2026, "month": 9, "search_volume": volume}, map[string]any{"year": nil}}},
+			"keyword_info": map[string]any{"search_volume": volume, "cpc": 1.5, "competition": 0.2, "monthly_searches": []any{map[string]any{"year": 2026, "month": 9, "search_volume": volume}, map[string]any{"year": nil}},
+				"low_top_of_page_bid": 0.5, "high_top_of_page_bid": 2.25, "search_volume_trend": map[string]any{"quarterly": -45}},
 			"keyword_info_normalized_with_clickstream": map[string]any{"search_volume": volume * 2},
 			"keyword_properties":                       map[string]any{"keyword_difficulty": 33},
+			"avg_backlinks_info":                       map[string]any{"referring_main_domains": 761.3},
 			"search_intent_info":                       map[string]any{"main_intent": "commercial"}}
 	}
 	ps, p := newProviderServer(t, func(path string) map[string]any {
@@ -108,6 +110,14 @@ func TestLabsKeywordsRequestsAndParsing(t *testing.T) {
 		if *got.Info.SearchVolume != 10 || *got.Clickstream.SearchVolume != 20 || *got.Difficulty != 33 || *got.MainIntent != "commercial" ||
 			len(got.Info.Monthly) != 2 || got.Info.Monthly[1].Year != 0 {
 			t.Errorf("%s item = %+v", source, got)
+		}
+		// The same call also returns these; they must reach the row, not be dropped.
+		if *got.Info.TopBidLow != 0.5 || *got.Info.TopBidHigh != 2.25 || *got.Info.QuarterlyChange != -45 || *got.ReferringDomains != 761.3 {
+			t.Errorf("%s paid fields = bid %v-%v, quarterly %v, referring domains %v", source, got.Info.TopBidLow, got.Info.TopBidHigh, got.Info.QuarterlyChange, got.ReferringDomains)
+		}
+		row := labsRows([]LabsItem{got})[0]
+		if *row.TopOfPageBidHigh != 2.25 || *row.ReferringDomains != 761 || *row.QuarterlyChange != -45 {
+			t.Errorf("%s row = %+v, want the bid range, rounded referring domains and quarterly change", source, row)
 		}
 		if last := ps.paths[len(ps.paths)-1]; last != wantPath {
 			t.Errorf("%s path = %s, want %s", source, last, wantPath)
