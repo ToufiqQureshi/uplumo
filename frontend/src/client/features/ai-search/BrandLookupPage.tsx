@@ -8,6 +8,7 @@ import {
 } from "@/client/features/ai-search/aiSearchApi";
 import { useHostedPlanGate } from "@/client/features/billing/HostedPlanGate";
 import { ResearchPageShell } from "@/client/features/ai-search/ResearchPageShell";
+import { AiVisibilityGuide } from "@/client/features/ai-search/AiVisibilityGuide";
 import { BrandLookupResults } from "@/client/features/ai-search/components/BrandLookupResults";
 import { BrandVisibilityHistoryCard } from "@/client/features/ai-search/components/BrandVisibilityHistoryCard";
 import { BrandLookupSearchCard } from "@/client/features/ai-search/components/BrandLookupSearchCard";
@@ -230,6 +231,7 @@ export function BrandLookupPage({
 
   return (
     <ResearchPageShell
+      guide={<AiVisibilityGuide current="brand-lookup" projectId={projectId} />}
       title="Brand Lookup"
       description="See how AI search cites any brand name or domain."
       planStatus={planStatus}

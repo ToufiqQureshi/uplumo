@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/client/components/ui/button";
 import { PageHeader } from "@/client/components/PageHeader";
 import { TrackingForm } from "./TrackingForm";
+import { AiVisibilityGuide } from "./AiVisibilityGuide";
 import { MarkdownAnswer } from "./components/MarkdownAnswer";
 
 const ENGINE_LABELS: Record<string, string> = {
@@ -96,6 +97,7 @@ export function PromptTrackingPage({ projectId }: { projectId: string }) {
   return (
     <div className="mx-auto max-w-7xl space-y-5 p-4 md:p-6">
       <PageHeader title="AI Visibility Tracker" />
+      <AiVisibilityGuide current="prompt-tracking" projectId={projectId} />
       <p className="text-sm text-muted-foreground">
         Save the questions your customers ask. Track fresh brand mentions,
         competitor appearances and website citations over time.
