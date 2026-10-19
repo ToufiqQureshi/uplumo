@@ -161,6 +161,55 @@ func TestSettleExpiresWorkspaceCreditsBeforeCharging(t *testing.T) {
 	}
 }
 
+// One action holds several results at once, so a hold for one call runs while
+// another call of the same action settles or is refunded. Both touch the
+// workspace balance and its credit grants and must lock them in the same order,
+// or Postgres aborts one with a deadlock and the customer sees an error for
+// work that was already paid for.
+func TestHoldAndSettleOfOneWorkspaceDoNotDeadlock(t *testing.T) {
+	pool := setupTestDB(t)
+	ctx := t.Context()
+	svc := NewCreditLedgerService(pool)
+	orgID := "org_deadlock_" + rand.Text()
+	if _, err := pool.Exec(ctx, `INSERT INTO organization (id, name, slug, created_at) VALUES ($1, 'Deadlock Org', $1, now())`, orgID); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _, _ = pool.Exec(context.Background(), `DELETE FROM organization WHERE id = $1`, orgID) })
+	if err := svc.AddCredits(ctx, orgID, 100000, "test grant"); err != nil {
+		t.Fatal(err)
+	}
+	const parallel = 8
+	for round := range 40 {
+		var held []CreditReservation
+		for range parallel {
+			res, err := svc.ReserveFor(ctx, orgID, 40, "", "backlinks")
+			if err != nil {
+				t.Fatalf("round %d: first hold: %v", round, err)
+			}
+			held = append(held, res)
+		}
+		errs := make(chan error, 2*parallel)
+		for _, res := range held {
+			go func() {
+				if round%2 == 0 {
+					errs <- svc.Refund(ctx, res.ID, "test")
+					return
+				}
+				errs <- svc.Settle(ctx, res.ID, 10)
+			}()
+			go func() {
+				_, err := svc.ReserveFor(ctx, orgID, 40, "", "backlinks")
+				errs <- err
+			}()
+		}
+		for range 2 * parallel {
+			if err := <-errs; err != nil {
+				t.Fatalf("round %d: %v", round, err)
+			}
+		}
+	}
+}
+
 func TestCreditLedgerService_Integration(t *testing.T) {
 	pool := setupTestDB(t)
 	if pool == nil {

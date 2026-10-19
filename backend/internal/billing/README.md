@@ -103,7 +103,10 @@ assistant. Rules that must never break:
   unknown endpoint is held at one dollar per task) is reserved from the
   workspace's credits. Not enough credits is `spend.ErrNoCredits`, answered
   `402 insufficient_credits`, and the provider is never called. Reservations
-  lock the balance row, so parallel requests cannot overspend it.
+  lock the balance row, so parallel requests cannot overspend it. Settling
+  and refunding lock the balance row before the credit grants too (`lockBalanceTx`);
+  one action holds and settles several results at once, and the opposite lock
+  order deadlocks (Postgres 40P01) and fails a paid action.
 - **The real successful-task cost is charged afterwards.** Failed DataForSEO
   tasks stay in provider spend telemetry but refund the customer's task
   credits. If successful work costs more than was held and the balance cannot cover
