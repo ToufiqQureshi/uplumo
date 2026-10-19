@@ -5,6 +5,10 @@
 - Research accepts 1–200 seeds, modes `auto`, `related`, `suggestions`, `ideas`, result limits 150/300/500, optional clickstream and grouping. Auto blends suggestions and ideas, alternating rows and deduplicating keywords; it falls back when fewer than five non-seed rows appear.
 - Labs countries use Labs keyword data. Countries marked Google Ads-only use Google Ads, which lacks difficulty and search intent. Local research validates the canonical city/region before spending; local volume replaces national volume rather than silently falling back. National metrics remain available for saved keywords.
 - Research and SERP cache keys include organization, project, market, area, seed, mode, depth, and options that change results. A deeper 100-result SERP snapshot answers a 20-result request; an empty deeper response must not evict a useful shallow snapshot.
+- Concurrent equivalent research cache misses share in-flight provider work
+  inside one Go process, keyed by the same organization/project/market/input
+  cache key. Different organizations cannot join a flight. Separate server
+  processes and live SERP misses are not coalesced.
 - Saving normalizes keywords by trim and lowercase, deduplicates, stores supplied metrics, and returns the exact saved row IDs. Tags can append or replace only on those rows; replace requires nonempty tags. Metric rows and tag assignments must remain project-scoped.
 - Saved keyword listing supports search, include/exclude terms, volume/CPC/difficulty ranges, tag IDs/names, seven sort fields, pagination at 50/100/250, and an export with the same filters. Rows preserve all nullable metrics, monthly searches, fetched timestamp and tag fields. Malformed monthly-search JSON becomes an empty array.
 - Tag assignment/removal supports batches; a tag rename/color edit is project-scoped, and deleting an in-use tag returns the assignment count instead of deleting it. Saved keyword removal accepts at most 2,000 IDs and affects only that project.
@@ -59,3 +63,9 @@ The Go DataForSEO provider now posts and collects `my_business_updates` tasks, k
 
 
 The local SERP provider also supports bounded Google Maps rank grids. It uses a fixed, latitude-aware zoom for comparable grid points and keeps each request independently metered.
+
+Auto research buys two legs in parallel (suggestions and ideas). If one leg
+fails but the other returned rows, `oneLegResult` answers with that leg
+(`source` is `suggestions` or `ideas`) and caches it for ten minutes
+(`partialResearchCacheTTL`) so a retry costs nothing; a credit refusal, a
+replay, a customer who left, or a working leg with no rows is still an error.

@@ -38,7 +38,8 @@ func (s Store) ScheduledCredits(ctx context.Context, org string, until time.Time
 			case "weekly":
 				next = next.AddDate(0, 0, 7)
 			case "monthly":
-				next = next.AddDate(0, 1, 0)
+				anchor := next
+				next = (Scheduler{Now: func() time.Time { return anchor }}).Next(Monthly, &anchor, nil)
 			default:
 				return 0, fmt.Errorf("unexpected scheduled interval %q", interval)
 			}

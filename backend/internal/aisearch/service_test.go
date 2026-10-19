@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -67,6 +68,59 @@ func TestBrandLookupPreflightsWholeFanoutAndCacheHitHasNoHold(t *testing.T) {
 	settled := guard.Settled()
 	if len(guard.Held()) != 1 || api.total() != 6 || len(settled) != 1 {
 		t.Fatalf("cache hit changed paid work: holds=%d settlements=%d calls=%d", len(guard.Held()), len(settled), api.total())
+	}
+}
+
+func TestConcurrentBrandLookupsSharePaidFanoutWithinOrganization(t *testing.T) {
+	api := newFakeAPI(t)
+	api.on(aggregatedPath, func(_ int, _ string) taskReply {
+		time.Sleep(30 * time.Millisecond)
+		return defaultReply(aggregatedPath)
+	})
+	svc := newTestService(t, api)
+	org := newOrg()
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	for range 2 {
+		wg.Go(func() {
+			<-start
+			if _, err := svc.BrandLookup(context.Background(), org, "p", lookupInput()); err != nil {
+				t.Errorf("BrandLookup: %v", err)
+			}
+		})
+	}
+	close(start)
+	wg.Wait()
+	if got := api.total(); got != 6 {
+		t.Fatalf("provider calls = %d, want one six-call fanout", got)
+	}
+	if got := api.recorder.count(); got != 6 {
+		t.Fatalf("recorded costs = %d, want six", got)
+	}
+}
+
+func TestConcurrentBrandLookupsDoNotShareAcrossOrganizations(t *testing.T) {
+	api := newFakeAPI(t)
+	api.on(aggregatedPath, func(_ int, _ string) taskReply {
+		time.Sleep(30 * time.Millisecond)
+		return defaultReply(aggregatedPath)
+	})
+	svc := newTestService(t, api)
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	for range 2 {
+		org := newOrg()
+		wg.Go(func() {
+			<-start
+			if _, err := svc.BrandLookup(context.Background(), org, "p", lookupInput()); err != nil {
+				t.Errorf("BrandLookup: %v", err)
+			}
+		})
+	}
+	close(start)
+	wg.Wait()
+	if got := api.total(); got != 12 {
+		t.Fatalf("provider calls = %d, want a separate six-call fanout per organization", got)
 	}
 }
 

@@ -280,6 +280,7 @@ func TestPagesHaveNoDeadLinks(t *testing.T) {
 		"developers.google.com": true,
 		"developers.openai.com": true,
 		"support.google.com":    true,
+		"www.google.com":        true,
 		"www.reddit.com":        true,
 		"www.w3.org":            true,
 	}

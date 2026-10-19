@@ -8,7 +8,7 @@ import { headings, normalizeText } from "./scoring-text";
 import { useEditorSession } from "./editor-session";
 
 // About 9 credits per new brief: one SERP plus up to eight page reads. The
-// server charges what the provider reports, never above this.
+// server settles the provider-reported successful cost; prices may drift.
 const BRIEF_CREDIT_NOTE = "about 9 credits";
 
 const usageTone = {

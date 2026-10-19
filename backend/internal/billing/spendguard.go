@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -229,6 +230,18 @@ func (h *creditHold) SettleProviderCost(ctx context.Context, providerCostUSD, cu
 	if endpoint == "" {
 		endpoint = h.endpoint
 	}
+	if h.guard.chargeCredits && providerCostUSD > customerCostUSD+1e-9 {
+		// DataForSEO also bills some failed tasks. Keep that customer refund,
+		// but make the unrecovered spend visible so validation can be fixed.
+		h.guard.logger.ErrorContext(ctx, "provider billed work that was not charged to the customer",
+			"organization", h.org, "feature", h.feature, "endpoint", endpoint,
+			"provider_cost_usd", providerCostUSD, "customer_cost_usd", customerCostUSD)
+	}
+	if h.reservationID != "" && CreditsForUSD(customerCostUSD) > h.reserved {
+		h.guard.logger.WarnContext(ctx, "provider cost exceeded reserved estimate",
+			"organization", h.org, "feature", h.feature, "endpoint", endpoint,
+			"reserved_credits", h.reserved, "actual_credits", CreditsForUSD(customerCostUSD))
+	}
 	return h.guard.settle(ctx, h.org, h.feature, endpoint, h.reservationID, providerCostUSD, customerCostUSD)
 }
 
@@ -311,7 +324,10 @@ func (g *SpendGuard) AIMeter(feature spend.Feature, endpoint ...string) AIMeter 
 // known once it answers, so holding the ceiling is what keeps parallel AI
 // work from spending past the workspace's credits.
 func (m AIMeter) Hold(ctx context.Context, org string, ceilingUSD float64) (spend.Hold, error) {
-	return m.guard.Hold(ctx, spend.Request{OrganizationID: org, Feature: m.feature, Endpoint: m.endpoint, IdempotencyKey: spend.IdempotencyKeyFromContext(ctx), EstimateUSD: ceilingUSD})
+	// A chat turn meters several model steps under one action key; numbering
+	// them keeps each step its own hold while a replayed turn is still refused.
+	key := spend.ScopedKey(ctx, []byte(m.feature), []byte(m.endpoint), []byte(strconv.FormatFloat(ceilingUSD, 'g', -1, 64)))
+	return m.guard.Hold(ctx, spend.Request{OrganizationID: org, Feature: m.feature, Endpoint: m.endpoint, IdempotencyKey: key, EstimateUSD: ceilingUSD})
 }
 
 // HoldWithIdempotencyKey reserves one model call under a stable request key.

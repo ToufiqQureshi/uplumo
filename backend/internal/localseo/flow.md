@@ -20,3 +20,7 @@ Handler verifies project and plan, validates coordinate/grid bounds, calls the s
 - Run plan, bounds and credit checks before paid provider calls.
 - Bound grid size to control worst-case provider spend and request time.
 - Preserve individual errors; do not convert provider failures into a rank of zero.
+- A credit refusal, provider billing problem or rejected credential stops further
+  paid searches but does not discard points already searched: the grid is
+  returned with the skipped points counted in `failedPoints` and the reason in
+  `summary.stoppedReason`; only a grid with no searched point is an error.

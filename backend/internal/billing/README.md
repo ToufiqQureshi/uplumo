@@ -82,7 +82,8 @@ remain available so the customer can resolve the overage without data loss.
 
 Each reserve, settle and refund ledger row records the workspace, initiating
 user, feature, provider endpoint, provider cost, cache flag and status. The
-request idempotency key is scoped to the workspace, so the same search from
+request idempotency key is scoped to the workspace and, inside one request, to each
+piece of provider work (`spend.ScopedKey`), so one action can buy several results and the same search from
 two customers cannot block or reuse the other's reservation.
 
 Monthly credits are shown on the public pricing page beside each plan's
@@ -108,6 +109,10 @@ assistant. Rules that must never break:
   credits. If successful work costs more than was held and the balance cannot cover
   it, the balance is charged down to zero and a warning is logged: the work
   is already paid for, so it is never refused after the fact.
+  An estimate higher than actual releases unused credits. For a multi-call
+  `DoBudgeted` operation the held ceiling is the most the customer pays: a
+  higher reported cost is capped there and logged. Provider-billed failures
+  left uncharged to customers are logged separately for investigation.
 - **It fails closed.** A ledger or database error stops the request. SAM
   refuses a turn whose credits cannot be checked.
 - **Per-workspace daily limit.** One workspace may spend at most a third
@@ -188,8 +193,11 @@ catalog prices, feature gates and daily workspace limits are unaffected.
 - `GET /billing/topups`: configured packs; `POST /billing/topups/checkout` accepts
   only `packId`, requires an active paid plan and an owner/admin, and creates a
   server-priced INR order. One pending order per workspace is reused across
-  duplicate requests. A simultaneous creation returns 409 rather than creating
-  another payable order. Finish a pending pack before choosing a different one.
+  duplicate requests for the same pack. A simultaneous creation returns 409
+  rather than creating another payable order. Choosing a different pack
+  abandons the pending one (status `failed`) and creates a new order; a late
+  signed capture on the abandoned order still grants its credits, because the
+  webhook matches by order ID, not status.
 - `GET /billing/topups/{topupId}` is scoped to the active workspace. A browser
   checkout callback only starts verification polling; it never grants credits.
 - Subscribe the existing Razorpay webhook to `payment.captured`. Its original
@@ -197,6 +205,9 @@ catalog prices, feature gates and daily workspace limits are unaffected.
   status, amount and currency must match. Locking the top-up row, the grant,
   expiry and paid marker happen in one transaction; even concurrent events with
   different delivery IDs grant once. Subscription events keep their own flow.
+- Top-up grants are marked `go_billing_credit_grants.top_up`. The monthly
+  plan grant's two-month rollover ceiling counts plan credits only, so buying
+  a top-up never shrinks the next renewal (`grantUpToTx`).
 - Purchased grant expiry is snapshotted at checkout; changes to pack settings
   cannot change an existing purchase. Expired grants use the existing ledger
   expiry worker and FIFO consumption. Refunds/disputes require operator

@@ -74,6 +74,12 @@ const (
 	shutdownTimeout = 15 * time.Second
 	// How long the last error reports get to leave before the process exits.
 	reportFlushTimeout = 2 * time.Second
+	// writeTimeout is how long a response may take. A paid lookup can make two
+	// provider calls in a row (a summary, then its history), each allowed
+	// dataforseo.RequestTimeout, so the answer must still be deliverable after
+	// both. A shorter limit closes the connection on a slow provider: the
+	// customer sees a generic error after the first call was already paid for.
+	writeTimeout = 2*dataforseo.RequestTimeout + 30*time.Second
 )
 
 func main() {
@@ -400,7 +406,7 @@ func run(logger *slog.Logger) (err error) {
 		}),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       30 * time.Second,
-		WriteTimeout:      30 * time.Second,
+		WriteTimeout:      writeTimeout,
 		IdleTimeout:       120 * time.Second,
 	}
 

@@ -14,6 +14,8 @@ import (
 
 	"github.com/redis/go-redis/v9"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/market"
+	"github.com/toufiqqureshi/uplumo/backend/internal/platform/spend"
+	"golang.org/x/sync/singleflight"
 )
 
 // Research limits and cache lifetimes, as in the legacy app.
@@ -21,12 +23,18 @@ const (
 	MaxResearchSeeds  = 200
 	minNonSeedForAuto = 5
 	researchCacheTTL  = 24 * time.Hour
-	serpCacheTTL      = 12 * time.Hour
-	researchCacheVer  = 5 // v5: auto mode blends suggestions and ideas
-	metricsBatchSize  = 700
-	SerpShallowDepth  = 20
-	SerpDeepDepth     = 100
-	labsRelatedDepth  = 3
+	// A one-leg answer is kept just long enough that a retry costs nothing, but
+	// not for a day, so the full blend is bought again once the provider recovers.
+	partialResearchCacheTTL = 10 * time.Minute
+	serpCacheTTL            = 12 * time.Hour
+	researchCacheVer        = 5 // v5: auto mode blends suggestions and ideas
+	metricsBatchSize        = 700
+	SerpShallowDepth        = 20
+	SerpDeepDepth           = 100
+	labsRelatedDepth        = 3
+	// flightTimeout bounds shared paid work that no longer follows its first
+	// caller's context. Each provider request also has its own 60s limit.
+	flightTimeout = 3 * time.Minute
 )
 
 // ResultLimits and Modes research accepts.
@@ -53,6 +61,8 @@ type ResearchResult struct {
 	Rows         []ResearchRow `json:"rows"`
 	Source       string        `json:"source"`
 	UsedFallback bool          `json:"usedFallback"`
+	// partial marks an auto result built from one leg because the other failed.
+	partial bool
 }
 
 // ResearchInput asks for keyword ideas around the first keyword.
@@ -89,6 +99,7 @@ type ResearchService struct {
 	Metrics  MetricStore
 	Logger   *slog.Logger
 	Now      func() time.Time
+	flights  singleflight.Group
 }
 
 // NewResearchService builds a service that caches in Redis.
@@ -265,8 +276,31 @@ func (s *ResearchService) Research(ctx context.Context, in ResearchInput) (Resea
 	if s.cached(ctx, key, &hit) && len(hit.Rows) > 0 && validSource(hit.Source) {
 		return hit, nil
 	}
+	flight := s.flights.DoChan(key, func() (any, error) {
+		// The shared purchase outlives any one waiter: another caller may still
+		// need it, and a cancelled paid call may already have been billed.
+		flightCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), flightTimeout)
+		defer cancel()
+		var recent ResearchResult
+		if s.cached(flightCtx, key, &recent) && len(recent.Rows) > 0 && validSource(recent.Source) {
+			return recent, nil
+		}
+		return s.researchUncached(flightCtx, in, key, seeds, ads)
+	})
+	select {
+	case <-ctx.Done():
+		return ResearchResult{}, ctx.Err()
+	case finished := <-flight:
+		if finished.Err != nil {
+			return ResearchResult{}, finished.Err
+		}
+		return finished.Val.(ResearchResult), nil
+	}
+}
 
+func (s *ResearchService) researchUncached(ctx context.Context, in ResearchInput, key string, seeds []string, ads bool) (ResearchResult, error) {
 	var result ResearchResult
+	var err error
 	switch {
 	case in.LocationName != nil:
 		result, err = s.researchLocal(ctx, in)
@@ -287,7 +321,11 @@ func (s *ResearchService) Research(ctx context.Context, in ResearchInput) (Resea
 	if result.Rows == nil {
 		result.Rows = []ResearchRow{}
 	}
-	s.store(ctx, key, result, researchCacheTTL)
+	ttl := researchCacheTTL
+	if result.partial {
+		ttl = partialResearchCacheTTL
+	}
+	s.store(ctx, key, result, ttl)
 	// Metrics are stored per country, so local rows are not persisted here.
 	if in.LocationName == nil {
 		s.persist(ctx, in, result.Rows)
@@ -328,14 +366,8 @@ func (s *ResearchService) autoRows(ctx context.Context, in ResearchInput, seed s
 	wg.Go(func() { suggestions, suggestionsErr = s.labsRows(ctx, in, SourceSuggestions, seed, half) })
 	wg.Go(func() { ideas, ideasErr = s.labsRows(ctx, in, SourceIdeas, seed, half) })
 	wg.Wait()
-	if suggestionsErr != nil {
-		if ideasErr != nil {
-			s.Logger.WarnContext(ctx, "keyword ideas leg failed", "err", ideasErr)
-		}
-		return ResearchResult{}, suggestionsErr
-	}
-	if ideasErr != nil {
-		return ResearchResult{}, ideasErr
+	if suggestionsErr != nil || ideasErr != nil {
+		return s.oneLegResult(ctx, suggestions, ideas, suggestionsErr, ideasErr)
 	}
 	blended := interleave(suggestions, ideas, in.ResultLimit)
 	if nonSeedCount(blended, seed) >= minNonSeedForAuto {
@@ -346,6 +378,35 @@ func (s *ResearchService) autoRows(ctx context.Context, in ResearchInput, seed s
 		return ResearchResult{}, err
 	}
 	return ResearchResult{Rows: interleave(blended, related, in.ResultLimit), Source: "blended", UsedFallback: true}, nil
+}
+
+// oneLegResult answers when an auto search lost a leg. The leg that worked was
+// billed, so its rows are returned instead of an error that would throw the
+// paid answer away and make the customer pay again on every retry. The answer
+// is marked partial: it is cached only briefly. The credit guard refusing a leg
+// (no credits, a replay, a paused day) and a customer who left are still
+// errors, and so is a lost leg with nothing from the other one.
+func (s *ResearchService) oneLegResult(ctx context.Context, suggestions, ideas []ResearchRow, suggestionsErr, ideasErr error) (ResearchResult, error) {
+	for _, err := range []error{suggestionsErr, ideasErr} {
+		if err != nil && (spend.Refused(err) || ctx.Err() != nil) {
+			return ResearchResult{}, err
+		}
+	}
+	switch {
+	case suggestionsErr != nil && ideasErr != nil:
+		s.Logger.WarnContext(ctx, "both keyword research legs failed", "suggestions_err", suggestionsErr, "ideas_err", ideasErr)
+		return ResearchResult{}, suggestionsErr
+	case suggestionsErr != nil && len(ideas) > 0:
+		s.Logger.WarnContext(ctx, "keyword suggestions leg failed; answering with ideas only", "err", suggestionsErr)
+		return ResearchResult{Rows: ideas, Source: string(SourceIdeas), partial: true}, nil
+	case ideasErr != nil && len(suggestions) > 0:
+		s.Logger.WarnContext(ctx, "keyword ideas leg failed; answering with suggestions only", "err", ideasErr)
+		return ResearchResult{Rows: suggestions, Source: string(SourceSuggestions), partial: true}, nil
+	case suggestionsErr != nil:
+		return ResearchResult{}, suggestionsErr
+	default:
+		return ResearchResult{}, ideasErr
+	}
 }
 
 // researchLocal takes ideas, difficulty and intent from the national research

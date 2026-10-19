@@ -28,7 +28,7 @@ Done (Go, tested against a real Postgres):
 - A paid plan is required when billing is configured; without billing the check runs ungated, as on a self-hosted install.
 
 - Scheduled checks: `Ticker.Tick` runs every five minutes on every instance. It lists due configs oldest first (joining the legacy `projects` table for the organization), claims each with a compare-and-set on `next_check_at`, then starts a run. The anchor moves before the run starts, so a failing start cannot make a config due again and bill twice; it moves by whole intervals from the due time, so a late tick does not drift the schedule. A plan error leaves the anchor alone (the retry), a missing plan or no keywords advances it with `plan_required` or `no_keywords`, a blocking run gives the slot back. Work per tick is capped at 1,000 tasks (the first start is always admitted) and 3 minutes.
-- Scheduled runs use the provider's task queue (about 30% of the live price): post up to 100 tasks per request, store every task id at once in `go_rank_check_tasks`, poll `task_get` (free, so it goes through `DoUnmetered` and is never recorded as spend) at 4, 6, 8, 10, 12 and 15 minutes, and look up rejected, failed or timed-out tasks live. A stable run-and-task-set idempotency key blocks a second paid post if a retry follows an uncertain post outcome. After a crash with task ids stored, the retry collects them instead of posting again.
+- Scheduled runs use the provider's task queue (about 30% of the live price): post up to 100 tasks per request, store every task id at once in `go_rank_check_tasks`, poll `task_get` (free, so it goes through `DoUnmetered` and is never recorded as spend) at 4, 6, 8, 10, 12 and 15 minutes, and look up explicitly rejected, failed or timed-out tasks live. A failed/ambiguous task-post response never triggers live fallback for that chunk: it may already be billed. The run records a visible error and still collects earlier accepted chunks. A stable run-and-task-set idempotency key blocks a second paid post if a retry follows an uncertain post outcome. After a crash with task ids stored, the retry collects them instead of posting again.
 - Keyword metric refresh is `POST /api/v1/projects/{projectId}/rank-tracking/keywords/metrics/refresh`. It requires the tracked config, reuses the keyword research provider's bounded batches and country-served language rules, and sends lowercased distinct terms so case variants do not duplicate billed work. City configs use city-scoped Ads volume/CPC and national Labs difficulty. Hosted deployments require a paid plan before any provider call; self-hosted deployments remain ungated. Metric writes are one config-scoped statement and update only rows still present.
 
 Not built: per-run credit holds (see the decisions below).
@@ -54,3 +54,7 @@ migration test phase.
 refill, including keyword operators, device pairs, depth and per-call rounding.
 The Billing page subtracts this and saved AI tracking estimates from the current
 balance. It is advisory; it makes no provider calls and creates no credit holds.
+
+Monthly usage forecasts use Scheduler.Next's existing month-end anchors,
+including timezone day shifts. Do not replace them with AddDate: January 31
+normalizes into March and can omit February's actual scheduled check.

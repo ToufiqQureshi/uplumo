@@ -3,15 +3,20 @@ package billing
 import (
 	"context"
 	"crypto/rand"
+	"encoding/base64"
 	"errors"
+	"fmt"
 	"log/slog"
 	"math"
+	"net/http"
+	"net/http/httptest"
 	"sync"
 	"sync/atomic"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/toufiqqureshi/uplumo/backend/internal/platform/dataforseo"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/spend"
 )
 
@@ -244,6 +249,158 @@ func TestSettleChargesDownToZeroWhenTheProviderCostMoreThanHeld(t *testing.T) {
 	}
 	if total, _ := providerSpend(t, pool, org); total != 1 {
 		t.Fatalf("provider spend = %v, want the full dollar logged for the daily limit", total)
+	}
+}
+
+// The customer was shown the held estimate, so a higher provider cost is
+// Uplumo's loss: it is recorded as provider spend but never charged.
+func TestBudgetedProviderOverageIsCappedAtTheHeldEstimate(t *testing.T) {
+	pool := setupTestDB(t)
+	ctx := t.Context()
+	ledger := NewCreditLedgerService(pool)
+	org := spendOrg(ctx, t, pool, 3000)
+	guard := testGuard(t, pool, ledger, noDailyLimit, true)
+	providerCalls := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		providerCalls++
+		_, _ = w.Write([]byte(`{"tasks":[{"path":["v3","ai_optimization","chat_gpt","llm_responses","live"],"cost":1,"status_code":20000}]}`))
+	}))
+	defer server.Close()
+	client, err := dataforseo.NewClient(dataforseo.Options{BaseURL: server.URL, APIKey: base64.StdEncoding.EncodeToString([]byte("fixture:fixture")), Guard: guard, Recorder: dataforseo.NewUsageRecorder(pool)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = client.DoBudgeted(ctx, org, spend.AIVisibility, 0.5, func(request dataforseo.DoBudgetedRequest) error {
+		_, err := request(http.MethodPost, "/v3/ai_optimization/chat_gpt/llm_responses/live", []byte(`[{}]`), false)
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if providerCalls != 1 {
+		t.Fatalf("provider calls = %d, want one", providerCalls)
+	}
+	if got := balanceOf(ctx, t, ledger, org); got != 3000-CreditsForUSD(0.5) {
+		t.Fatalf("balance = %d, want only the $0.50 estimate charged (%d credits)", got, CreditsForUSD(0.5))
+	}
+	if total, _ := providerSpend(t, pool, org); total != 1 {
+		t.Fatalf("provider spend = $%v, want $1", total)
+	}
+}
+
+// providerFixture is a DataForSEO client wired to the real spend guard and a
+// fake provider that answers every call with a successful $0.01 task.
+func providerFixture(t *testing.T, pool *pgxpool.Pool, guard *SpendGuard) (*dataforseo.Client, *atomic.Int32) {
+	t.Helper()
+	var calls atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls.Add(1)
+		_, _ = w.Write([]byte(`{"tasks":[{"path":["v3","serp"],"cost":0.01,"status_code":20000}]}`))
+	}))
+	t.Cleanup(server.Close)
+	client, err := dataforseo.NewClient(dataforseo.Options{BaseURL: server.URL, APIKey: base64.StdEncoding.EncodeToString([]byte("fixture:fixture")), Guard: guard, Recorder: dataforseo.NewUsageRecorder(pool)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return client, &calls
+}
+
+// One user action often buys several different results: a backlink summary and
+// then its history, two keyword legs in parallel, or nine map points. They all
+// carry the action's single Idempotency-Key, so each distinct provider call
+// must be its own purchase, not a replay of the first.
+func TestOneRequestCanBuyManyDifferentProviderCalls(t *testing.T) {
+	pool := setupTestDB(t)
+	ledger := NewCreditLedgerService(pool)
+	org := spendOrg(t.Context(), t, pool, 3000)
+	guard := testGuard(t, pool, ledger, noDailyLimit, true)
+	client, providerCalls := providerFixture(t, pool, guard)
+	ctx := spend.WithIdempotencyKey(t.Context(), "one-click")
+
+	type call struct{ path, body string }
+	sequential := []call{
+		{"/v3/backlinks/summary/live", `[{"target":"example.com"}]`},
+		{"/v3/backlinks/history/live", `[{"target":"example.com"}]`},
+	}
+	var grid []call
+	for i := range 9 {
+		grid = append(grid, call{"/v3/serp/google/maps/live/advanced", fmt.Sprintf(`[{"keyword":"dentist","location_coordinate":"28.6,77.%d"}]`, i)})
+	}
+	for _, c := range sequential {
+		if _, err := client.Do(ctx, org, spend.Backlinks, http.MethodPost, c.path, []byte(c.body), false); err != nil {
+			t.Fatalf("%s: %v", c.path, err)
+		}
+	}
+	var wg sync.WaitGroup
+	errs := make([]error, len(grid))
+	for i, c := range grid {
+		wg.Go(func() {
+			_, errs[i] = client.Do(ctx, org, spend.LocalSEO, http.MethodPost, c.path, []byte(c.body), false)
+		})
+	}
+	wg.Wait()
+	for i, err := range errs {
+		if err != nil {
+			t.Fatalf("map point %d: %v", i, err)
+		}
+	}
+	if got := providerCalls.Load(); got != 11 {
+		t.Fatalf("provider calls = %d, want 11", got)
+	}
+	want := 3000 - 11*CreditsForUSD(0.01)
+	if got := balanceOf(t.Context(), t, ledger, org); got != want {
+		t.Fatalf("balance = %d, want %d (every call charged once)", got, want)
+	}
+
+	// The same request sent again (a retry after a dropped response) must not
+	// buy anything twice.
+	retry := spend.WithIdempotencyKey(t.Context(), "one-click")
+	for _, c := range append(sequential, grid...) {
+		_, err := client.Do(retry, org, spend.Backlinks, http.MethodPost, c.path, []byte(c.body), false)
+		if !errors.Is(err, spend.ErrIdempotentReplay) {
+			t.Fatalf("replay of %s: err = %v, want ErrIdempotentReplay", c.path, err)
+		}
+	}
+	if got := providerCalls.Load(); got != 11 {
+		t.Fatalf("a replay reached the provider: %d calls, want 11", got)
+	}
+	if got := balanceOf(t.Context(), t, ledger, org); got != want {
+		t.Fatalf("replay charged credits: balance = %d, want %d", got, want)
+	}
+
+	// A new click (new key) is a new purchase.
+	second := spend.WithIdempotencyKey(t.Context(), "second-click")
+	if _, err := client.Do(second, org, spend.Backlinks, http.MethodPost, sequential[0].path, []byte(sequential[0].body), false); err != nil {
+		t.Fatalf("new request: %v", err)
+	}
+}
+
+// SAM answers in several model steps inside one chat request, and each step is
+// metered with the request's key.
+func TestOneRequestCanMeterManyAIModelSteps(t *testing.T) {
+	pool := setupTestDB(t)
+	ledger := NewCreditLedgerService(pool)
+	org := spendOrg(t.Context(), t, pool, 3000)
+	guard := testGuard(t, pool, ledger, noDailyLimit, true)
+	meter := guard.AIMeter(spend.AIAssistant, "openrouter/test")
+	ctx := spend.WithIdempotencyKey(t.Context(), "one-chat-turn")
+
+	for step := range 3 {
+		hold, err := meter.Hold(ctx, org, 0.01)
+		if err != nil {
+			t.Fatalf("step %d: %v", step, err)
+		}
+		if err := hold.Settle(ctx, 0.005); err != nil {
+			t.Fatal(err)
+		}
+	}
+	want := 3000 - 3*CreditsForUSD(0.005)
+	if got := balanceOf(t.Context(), t, ledger, org); got != want {
+		t.Fatalf("balance = %d, want %d", got, want)
+	}
+	replay := spend.WithIdempotencyKey(t.Context(), "one-chat-turn")
+	if _, err := meter.Hold(replay, org, 0.01); !errors.Is(err, spend.ErrIdempotentReplay) {
+		t.Fatalf("replayed turn: err = %v, want ErrIdempotentReplay", err)
 	}
 }
 

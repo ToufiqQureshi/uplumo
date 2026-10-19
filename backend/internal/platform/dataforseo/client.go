@@ -14,6 +14,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -23,8 +24,11 @@ import (
 
 const (
 	// APIBaseURL is the production DataForSEO API origin.
-	APIBaseURL       = "https://api.dataforseo.com"
-	requestTimeout   = 60 * time.Second
+	APIBaseURL = "https://api.dataforseo.com"
+	// RequestTimeout is the longest one provider call may take. A handler that
+	// makes several in a row must be allowed to answer after all of them, so the
+	// HTTP server's write timeout is set from it.
+	RequestTimeout   = 60 * time.Second
 	maxResponseBytes = 64 << 20
 )
 
@@ -113,7 +117,7 @@ func NewClient(opts Options) (*Client, error) {
 		return nil, errors.New("DataForSEO base URL must be an absolute HTTP(S) URL without credentials or query")
 	}
 	if opts.Timeout == 0 {
-		opts.Timeout = requestTimeout
+		opts.Timeout = RequestTimeout
 	}
 	if opts.Timeout < time.Second || opts.Timeout > 5*time.Minute {
 		return nil, errors.New("DataForSEO timeout must be between 1 second and 5 minutes")
@@ -159,7 +163,10 @@ func (c *Client) Do(ctx context.Context, organizationID string, feature spend.Fe
 	if _, err := c.endpoint(path); err != nil {
 		return nil, err
 	}
-	hold, err := c.guard.Hold(ctx, spend.Request{OrganizationID: organizationID, Feature: feature, Endpoint: path, IdempotencyKey: spend.IdempotencyKeyFromContext(ctx), EstimateUSD: EstimateUSD(path, body)})
+	// Each distinct request is its own purchase under the action's key, so an
+	// action that buys several results is not refused as a replay of its first.
+	key := spend.ScopedKey(ctx, []byte(method), []byte(path), body)
+	hold, err := c.guard.Hold(ctx, spend.Request{OrganizationID: organizationID, Feature: feature, Endpoint: path, IdempotencyKey: key, EstimateUSD: EstimateUSD(path, body)})
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrBillingIssue, err)
 	}
@@ -185,10 +192,17 @@ func (c *Client) DoBudgeted(ctx context.Context, organizationID string, feature 
 	if strings.TrimSpace(organizationID) == "" || len(organizationID) > 128 || strings.TrimSpace(string(feature)) == "" || math.IsNaN(ceilingUSD) || math.IsInf(ceilingUSD, 0) || ceilingUSD <= 0 || work == nil {
 		return fmt.Errorf("%w: invalid budgeted operation", ErrInvalidRequest)
 	}
-	hold, err := c.guard.Hold(ctx, spend.Request{OrganizationID: organizationID, Feature: feature, Endpoint: "multi", IdempotencyKey: spend.IdempotencyKeyFromContext(ctx), EstimateUSD: ceilingUSD})
+	key := spend.ScopedKey(ctx, []byte("budgeted"), []byte(feature), []byte(strconv.FormatFloat(ceilingUSD, 'g', -1, 64)))
+	hold, err := c.guard.Hold(ctx, spend.Request{OrganizationID: organizationID, Feature: feature, Endpoint: "multi", IdempotencyKey: key, EstimateUSD: ceilingUSD})
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrBillingIssue, err)
 	}
+	// The requests of one operation run one after another, so without a cap a
+	// slow provider could keep the customer waiting for minutes, past what the
+	// HTTP server lets a response take. Work not started in time fails and the
+	// finished part is still settled below.
+	workCtx, cancelWork := context.WithTimeout(ctx, 2*c.timeout)
+	defer cancelWork()
 	var mu sync.Mutex
 	var providerCost, customerCost float64
 	var endpoints []string
@@ -207,7 +221,7 @@ func (c *Client) DoBudgeted(ctx context.Context, organizationID string, feature 
 			endpointSet[path] = struct{}{}
 			endpoints = append(endpoints, path)
 		}
-		payload, cost, requestErr := c.do(ctx, organizationID, true, method, path, body, retrySafe)
+		payload, cost, requestErr := c.do(workCtx, organizationID, true, method, path, body, retrySafe)
 		providerCost += cost
 		if requestErr == nil {
 			customerCost += responseSuccessfulCost(payload)

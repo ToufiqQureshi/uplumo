@@ -13,12 +13,18 @@ import (
 
 	"github.com/redis/go-redis/v9"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/dataforseo"
+	"github.com/toufiqqureshi/uplumo/backend/internal/platform/spend"
+	"golang.org/x/sync/singleflight"
 )
 
 const (
 	cacheTTL            = 6 * time.Hour
+	partialCacheTTL     = 10 * time.Minute
 	cacheWriteTimeout   = 2 * time.Second
 	maxFilterConditions = 8
+	// flightTimeout bounds shared paid work that no longer follows its first
+	// caller's context. Each provider request also has its own 60s limit.
+	flightTimeout = 3 * time.Minute
 )
 
 type cache interface {
@@ -40,6 +46,7 @@ type Service struct {
 	cache    cache
 	logger   *slog.Logger
 	now      func() time.Time
+	flights  singleflight.Group
 }
 
 // NewService constructs a backlinks service using the shared DataForSEO client.
@@ -112,6 +119,31 @@ func (s *Service) Overview(ctx context.Context, org string, in lookupInput) (Ove
 	if s.readCache(ctx, key, &cached) {
 		return cached, nil
 	}
+	// A cold cache must not let simultaneous requests purchase the same
+	// summary and history twice. The key includes organization and scope.
+	result := s.flights.DoChan(key, func() (any, error) {
+		// The shared purchase outlives any one waiter: another caller may still
+		// need it, and a cancelled paid call may already have been billed.
+		flightCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), flightTimeout)
+		defer cancel()
+		var recent Overview
+		if s.readCache(flightCtx, key, &recent) {
+			return recent, nil
+		}
+		return s.loadOverview(flightCtx, org, target, key)
+	})
+	select {
+	case <-ctx.Done():
+		return Overview{}, ctx.Err()
+	case finished := <-result:
+		if finished.Err != nil {
+			return Overview{}, finished.Err
+		}
+		return finished.Val.(Overview), nil
+	}
+}
+
+func (s *Service) loadOverview(ctx context.Context, org string, target Target, key string) (Overview, error) {
 	now := s.now().UTC()
 	result := Overview{Target: target.APITarget, DisplayTarget: target.Display, Scope: target.Scope, Trends: []Trend{}, NewLostTrends: []NewLostTrend{}, FetchedAt: timestamp(now)}
 	if target.Scope == ScopeSubfolder {
@@ -136,12 +168,21 @@ func (s *Service) Overview(ctx context.Context, org string, in lookupInput) (Ove
 		return Overview{}, err
 	}
 	var history []providerHistory
+	historyLost := false
 	if target.Scope != ScopeExactURL {
 		dateTo := now.Truncate(24 * time.Hour).Add(-24 * time.Hour)
 		dateFrom := dateTo.AddDate(-1, 0, 0)
 		history, err = s.provider.history(ctx, org, target.APITarget, dateFrom.Format("2006-01-02"), dateTo.Format("2006-01-02"))
 		if err != nil {
-			return Overview{}, err
+			// The summary is already billed. Losing only the trend chart is no
+			// reason to throw it away and bill it again on the retry. A credit
+			// refusal, a provider billing problem or a customer who left still
+			// stop here, as they would for the first task.
+			if spend.Refused(err) || errors.Is(err, dataforseo.ErrBillingIssue) || ctx.Err() != nil {
+				return Overview{}, err
+			}
+			s.logger.WarnContext(ctx, "backlinks history failed; answering with the summary only", "err", err)
+			history, historyLost = nil, true
 		}
 	}
 	result.Summary = mapSummary(summary)
@@ -155,7 +196,13 @@ func (s *Service) Overview(ctx context.Context, org string, in lookupInput) (Ove
 			result.NewLostTrends = append(result.NewLostTrends, NewLostTrend{Date: date, NewBacklinks: item.NewBacklinks, LostBacklinks: item.LostBacklinks, NewReferringDomains: first(item.NewReferringDomains, item.NewReferringDomainsLegacy), LostReferringDomains: first(item.LostReferringDomains, item.LostReferringDomainsLegacy)})
 		}
 	}
-	s.writeCache(ctx, key, result)
+	ttl := cacheTTL
+	if historyLost {
+		// Kept just long enough that a retry costs nothing; the full report is
+		// bought again once the provider has recovered.
+		ttl = partialCacheTTL
+	}
+	s.writeCacheFor(ctx, key, result, ttl)
 	return result, nil
 }
 
@@ -309,6 +356,10 @@ func (s *Service) readCache(ctx context.Context, key string, dst any) bool {
 	return true
 }
 func (s *Service) writeCache(ctx context.Context, key string, value any) {
+	s.writeCacheFor(ctx, key, value, cacheTTL)
+}
+
+func (s *Service) writeCacheFor(ctx context.Context, key string, value any, ttl time.Duration) {
 	if s.cache == nil {
 		return
 	}
@@ -319,7 +370,7 @@ func (s *Service) writeCache(ctx context.Context, key string, value any) {
 	}
 	writeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), cacheWriteTimeout)
 	defer cancel()
-	if err := s.cache.Set(writeCtx, key, raw, cacheTTL); err != nil {
+	if err := s.cache.Set(writeCtx, key, raw, ttl); err != nil {
 		s.logger.WarnContext(ctx, "write backlinks cache", "err", err)
 	}
 }

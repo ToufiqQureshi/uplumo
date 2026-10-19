@@ -34,3 +34,13 @@ Rules that must never break:
 - Never send a request the provider would reject. If it still fails, refund
   that task's customer credits while retaining the actual provider cost.
 - Never return a provider error body or the API key to a client.
+- **Every `Do` is its own hold under the action's key.** The hold key comes from
+  `spend.ScopedKey(ctx, method, path, body)`, so an action that buys several
+  different results is not refused as a replay of its first call, while a
+  replayed action is refused call by call and never sent twice.
+- **A budgeted operation has a cap of twice `Options.Timeout`** (120s by
+  default). Its requests run one after another, so work that is not started in
+  time fails and what finished is still settled. `RequestTimeout` (60s) is the
+  longest one call may take; the HTTP server's `writeTimeout` in
+  `cmd/server/main.go` is derived from it, so a slow provider is answered, not a
+  closed connection.

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"golang.org/x/sync/singleflight"
 
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/dataforseo"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/spend"
@@ -36,6 +37,9 @@ const (
 	promptMaxOutputTokens = 4096
 
 	cacheWriteTimeout = 2 * time.Second
+	// flightTimeout bounds shared paid work that no longer follows its first
+	// caller's context. Each provider request also has its own 60s limit.
+	flightTimeout = 3 * time.Minute
 )
 
 // Service runs brand lookups and prompt explorations for an organization's
@@ -46,6 +50,7 @@ type Service struct {
 	redis    *redis.Client
 	logger   *slog.Logger
 	now      func() time.Time
+	flights  singleflight.Group
 }
 
 // NewService returns a Service that calls DataForSEO through client.
@@ -107,12 +112,42 @@ func (s *Service) BrandLookup(ctx context.Context, organizationID, projectID str
 		return cached, nil
 	}
 
+	flight := s.flights.DoChan(key, func() (any, error) {
+		// The shared purchase outlives any one waiter: another caller may still
+		// need it, and a cancelled paid call may already have been billed.
+		flightCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), flightTimeout)
+		defer cancel()
+		var cached BrandLookupResult
+		if s.cacheGet(flightCtx, key, &cached) {
+			return cached, nil
+		}
+		return s.loadBrandLookup(flightCtx, organizationID, key, detected, research, groups, includeSubdomains, in)
+	})
+	select {
+	case <-ctx.Done():
+		return BrandLookupResult{}, ctx.Err()
+	case finished := <-flight:
+		if finished.Err != nil {
+			return BrandLookupResult{}, finished.Err
+		}
+		result := finished.Val.(BrandLookupResult)
+		// Equivalent normalized targets can have different display casing.
+		result.Query = in.Query
+		result.ResolvedTarget = detected.Value
+		if research != nil {
+			result.ResolvedTarget = research.Display
+		}
+		return result, nil
+	}
+}
+
+func (s *Service) loadBrandLookup(ctx context.Context, organizationID, key string, detected Target, research *ResearchTarget, groups []competitorGroup, includeSubdomains bool, in BrandLookupInput) (BrandLookupResult, error) {
 	var result BrandLookupResult
 	callCount := len(brandPlatforms) * 3
 	if len(groups) > 0 {
 		callCount += len(brandPlatforms)
 	}
-	err = s.provider.client.DoBudgeted(ctx, organizationID, spend.AIVisibility, float64(callCount)*0.5, func(request dataforseo.DoBudgetedRequest) error {
+	err := s.provider.client.DoBudgeted(ctx, organizationID, spend.AIVisibility, float64(callCount)*0.5, func(request dataforseo.DoBudgetedRequest) error {
 		budgetCtx := context.WithValue(ctx, budgetRequestContextKey{}, request)
 		platforms := make([]platformOutcome, len(brandPlatforms))
 		for i, platform := range brandPlatforms {
@@ -130,9 +165,10 @@ func (s *Service) BrandLookup(ctx context.Context, organizationID, projectID str
 
 		var cross []crossOutcome
 		if len(groups) > 0 {
-			cross, err = s.fetchCross(budgetCtx, organizationID, detected, groups, includeSubdomains, in)
-			if err != nil {
-				return err
+			var fetchErr error
+			cross, fetchErr = s.fetchCross(budgetCtx, organizationID, detected, groups, includeSubdomains, in)
+			if fetchErr != nil {
+				return fetchErr
 			}
 		}
 		competitorKeys := make([]string, len(groups))
