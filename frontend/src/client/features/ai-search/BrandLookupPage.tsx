@@ -11,6 +11,7 @@ import { ResearchPageShell } from "@/client/features/ai-search/ResearchPageShell
 import { BrandLookupResults } from "@/client/features/ai-search/components/BrandLookupResults";
 import { BrandVisibilityHistoryCard } from "@/client/features/ai-search/components/BrandVisibilityHistoryCard";
 import { BrandLookupSearchCard } from "@/client/features/ai-search/components/BrandLookupSearchCard";
+import { useConfirmedCost } from "@/client/features/billing/credits/useConfirmedCost";
 import { RecentSearches } from "@/client/components/RecentSearches";
 import { BackLink } from "@/client/components/PageHeader";
 import { Badge } from "@/client/components/ui/badge";
@@ -151,6 +152,12 @@ export function BrandLookupPage({
     removeHistoryItem,
   } = useBrandLookupSearchHistory(projectId);
 
+  const confirmCost = useConfirmedCost(
+    "ai_visibility",
+    "brand_lookup",
+    "brand lookup",
+  );
+
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
     const trimmed = query.trim();
@@ -212,7 +219,9 @@ export function BrandLookupPage({
     const explicitScope = scopeTarget
       ? toScopeSearchParam(trimmed, selectedScope)
       : undefined;
-    onSearchChange(trimmed, competitors, explicitScope);
+    confirmCost.request(() =>
+      onSearchChange(trimmed, competitors, explicitScope),
+    );
   };
 
   // The project is part of both keys, so switching projects resets the form
@@ -231,24 +240,27 @@ export function BrandLookupPage({
         bullets: BRAND_LOOKUP_BULLETS,
       }}
       form={
-        <BrandLookupSearchCard
-          query={query}
-          onQueryChange={(next) => {
-            setQuery(next);
-            if (validationError) setValidationError(null);
-          }}
-          scope={selectedScope}
-          onScopeChange={setScopeChoice}
-          scopeDisabledReason={scopeDisabledReason}
-          competitors={competitorsInput}
-          onCompetitorsChange={(next) => {
-            setCompetitorsInput(next);
-            if (validationError) setValidationError(null);
-          }}
-          onSubmit={handleSubmit}
-          isLoading={hasActiveQuery && lookupQuery.isPending}
-          validationError={validationError}
-        />
+        <>
+          {confirmCost.dialog}
+          <BrandLookupSearchCard
+            query={query}
+            onQueryChange={(next) => {
+              setQuery(next);
+              if (validationError) setValidationError(null);
+            }}
+            scope={selectedScope}
+            onScopeChange={setScopeChoice}
+            scopeDisabledReason={scopeDisabledReason}
+            competitors={competitorsInput}
+            onCompetitorsChange={(next) => {
+              setCompetitorsInput(next);
+              if (validationError) setValidationError(null);
+            }}
+            onSubmit={handleSubmit}
+            isLoading={hasActiveQuery && lookupQuery.isPending}
+            validationError={validationError}
+          />
+        </>
       }
       query={lookupQuery}
       hasActiveQuery={hasActiveQuery}
