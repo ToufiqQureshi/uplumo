@@ -352,15 +352,14 @@ func (s *Service) MonthlyCreditLimit(ctx context.Context, orgID string) (int64, 
 }
 
 // WorkspaceDailyLimitUSD is the most orgID may spend at the providers in one
-// day: a third of its plan's monthly credits, so a busy day is fine but one
-// workspace cannot burn its month, or anyone else's share, in hours. 0 is no
-// limit (staff workspaces).
-func (s *Service) WorkspaceDailyLimitUSD(ctx context.Context, orgID string) (float64, error) {
-	definition, err := s.entitlement(ctx, orgID)
-	if err != nil {
-		return 0, err
-	}
-	return float64(definition.MonthlyCredits) / 3 / (CreditMarkupMultiplier * CreditsPerUSD), nil
+// day. There is none: a customer who paid for credits may spend them in any
+// order, and the credits are the limit (each call charges its real cost times
+// the 1.28 markup, so spending can never pass what was paid). A third-of-the-
+// month day cap stopped paying customers with a refusal that read "used
+// today's share". SpendGuard still enforces a limit when one is returned, and
+// the global emergency limit still applies. 0 is no limit.
+func (s *Service) WorkspaceDailyLimitUSD(context.Context, string) (float64, error) {
+	return 0, nil
 }
 
 // SerpDepthLimit returns how deep orgID's rank tracking may look; 0 is no
