@@ -521,11 +521,11 @@ func reportViewDeps(d Deps) reports.ViewDeps {
 	return v
 }
 
-// CreditsUsedHeader tells the browser how many credits the request charged, so
+// usageHeaderName (X-Credits-Used) tells the browser how many credits the request charged, so
 // the screen can show the customer what an action cost them.
-const CreditsUsedHeader = "X-Credits-Used"
+const usageHeaderName = "X-Credits-Used"
 
-// creditsUsedWriter adds CreditsUsedHeader to the response when the request
+// creditsUsedWriter adds usageHeaderName to the response when the request
 // charged credits. The header is set just before the response starts, after
 // the handler's paid work finished; a streamed response that charges after its
 // first byte carries none.
@@ -541,7 +541,7 @@ func (w *creditsUsedWriter) setHeader() {
 	}
 	w.wrote = true
 	if credits := spend.CreditsCharged(w.ctx); credits > 0 {
-		w.Header().Set(CreditsUsedHeader, strconv.FormatInt(credits, 10))
+		w.Header().Set(usageHeaderName, strconv.FormatInt(credits, 10))
 	}
 }
 
