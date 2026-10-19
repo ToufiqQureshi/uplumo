@@ -7,10 +7,51 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/spend"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/spend/spendtest"
 )
+
+// A slow provider must not hold a customer past the HTTP server's write
+// timeout: the connection would close, the customer would see a generic error
+// and the work already bought would be lost. A budgeted operation stops
+// starting requests after twice the per-request timeout, and what finished is
+// still settled.
+func TestDoBudgetedStopsStartingRequestsPastItsCapAndSettlesWhatFinished(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case <-time.After(1600 * time.Millisecond):
+			_, _ = io.WriteString(w, `{"tasks":[{"path":["v3","serp"],"cost":0.001}]}`)
+		case <-r.Context().Done():
+		}
+	}))
+	defer server.Close()
+	guard := &spendtest.Guard{}
+	client := guardedClient(t, server, &testRecorder{}, guard, 0) // 2s per request, so a 4s cap
+	started := time.Now()
+	var failures []error
+	err := client.DoBudgeted(context.Background(), "org-1", spend.AIVisibility, 0.01, func(request DoBudgetedRequest) error {
+		for range 4 {
+			if _, err := request(http.MethodPost, "/v3/serp/google/organic/live/advanced", []byte(`[{}]`), false); err != nil {
+				failures = append(failures, err)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if elapsed := time.Since(started); elapsed > 5200*time.Millisecond {
+		t.Fatalf("operation ran %v, want it cut off near its 4s cap", elapsed)
+	}
+	if len(failures) == 0 || !errors.Is(failures[len(failures)-1], context.DeadlineExceeded) {
+		t.Fatalf("failures = %v, want the late requests to fail on the deadline", failures)
+	}
+	if settled := guard.Settled(); len(settled) != 1 || settled[0] < 0.0019 || settled[0] > 0.0021 {
+		t.Fatalf("settled = %v, want the two finished requests (0.002) settled once", settled)
+	}
+}
 
 func TestDoSendsNothingWhenTheGuardRefuses(t *testing.T) {
 	for _, refusal := range []error{spend.ErrNoCredits, spend.ErrPaused, errors.New("ledger unreachable")} {

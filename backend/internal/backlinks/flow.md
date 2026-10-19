@@ -24,3 +24,5 @@ DataForSEO paid endpoints and usage metering; project plan/credit checks.
   query hooks disable automatic retries. Concurrent identical overview cache
   misses share one in-flight service call on a server instance; that call
   is detached from the first caller's context (capped at three minutes).
+- A history failure after a billed summary answers with the summary and no
+  trend, cached ten minutes; a credit refusal still fails the request.

@@ -32,6 +32,10 @@ Last updated: 15 Oct 2026
 | 15 Oct | The AI writer always uses `openai/gpt-4.1-mini`, whatever `OPENROUTER_MODEL` says. Free OpenRouter models are not used. | The per-action credit ceilings are priced for that model. Free models have tight rate limits and may train on customer content. |
 | 15 Oct | "Track this article" opens Rank Tracking and Prompt Explorer after publishing; no separate scheduled tracking yet. | Reuses the existing tools and their credit checks instead of a second scheduler. |
 | 15 Oct | Migration `00023` is the brief cache. The next migration (Buffy's author tables) must be `00024`. | Two PRs used `00023`; goose refuses a gap or a duplicate. |
+| 19 Oct | **A paid action that loses one call keeps what was already paid for.** Keyword Research answers with the leg that worked, Backlinks with the summary and no trend, Local SEO with the points already searched; each is cached ten minutes only. Credit refusals, replays and a departed customer still fail. | Before, the customer paid for the first call and saw an error, and the retry paid again. |
+| 19 Oct | Each paid call in one user action holds credits under its own key (`spend.ScopedKey`); the browser's `Idempotency-Key` identifies the action, not the hold. | The 17 Oct change reused one key for every call in a request, so Backlinks overview, Local SEO grids, SAM turns and Keyword Research failed after the first call was charged. |
+| 19 Oct | HTTP `writeTimeout` is 150s (was 30s) and a budgeted operation stops starting calls after 120s. | A provider call can take 60s; at 30s the connection closed and the customer saw a generic error after paying. |
+| 19 Oct | The "about N credits" hints are the live measured cost of one click (keyword search 61, domain tab 40, backlink report 64, 3×3 map grid 27). AI Visibility is still 128 and is wrong for Brand Lookup (about 900): waiting for the owner. | Customers saw 26 and paid 40. |
 
 ## 2. Waiting for the owner
 

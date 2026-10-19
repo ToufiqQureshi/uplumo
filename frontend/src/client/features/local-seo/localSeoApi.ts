@@ -19,6 +19,9 @@ const gridResult = z.object({
     top3Count: z.number(),
     top10Count: z.number(),
     failedPoints: z.number(),
+    // Present when the grid ended before every point was searched, for example
+    // because the credits ran out; the points already paid for are still shown.
+    stoppedReason: z.string().optional(),
   }),
   estimatedRequests: z.number(),
 });

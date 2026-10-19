@@ -6,8 +6,13 @@ package spend
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"net/http"
+	"strconv"
+	"sync"
 
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/httpx"
 )
@@ -70,15 +75,61 @@ type (
 	userIDContextKey         struct{}
 )
 
-// WithIdempotencyKey attaches a request key for the next provider spend hold.
-func WithIdempotencyKey(ctx context.Context, key string) context.Context {
-	return context.WithValue(ctx, idempotencyKeyContextKey{}, key)
+// idempotencyScope is one user action's key and how often each piece of its
+// work has been held so far. It is shared by every context derived from the
+// one WithIdempotencyKey returned, so parallel legs of an action count together.
+type idempotencyScope struct {
+	key  string
+	mu   sync.Mutex
+	uses map[[sha256.Size]byte]int
 }
 
-// IdempotencyKeyFromContext reads a request key previously attached to ctx.
+// WithIdempotencyKey attaches the key of one user action (the browser's
+// Idempotency-Key) to ctx. Every hold made for that action derives its own key
+// from it with ScopedKey; the key itself is never used as a hold key, because
+// one action can legitimately buy several different results.
+func WithIdempotencyKey(ctx context.Context, key string) context.Context {
+	return context.WithValue(ctx, idempotencyKeyContextKey{}, &idempotencyScope{key: key, uses: map[[sha256.Size]byte]int{}})
+}
+
+// IdempotencyKeyFromContext reads the action key previously attached to ctx.
 func IdempotencyKeyFromContext(ctx context.Context) string {
-	key, _ := ctx.Value(idempotencyKeyContextKey{}).(string)
-	return key
+	scope, _ := ctx.Value(idempotencyKeyContextKey{}).(*idempotencyScope)
+	if scope == nil {
+		return ""
+	}
+	return scope.key
+}
+
+// ScopedKey is the idempotency key for one piece of billed work inside the
+// action in ctx, identified by parts (for example the method, path and body of
+// a provider request). It is "" when ctx carries no action key, so background
+// work without a key is never deduplicated.
+//
+// The same work in a replay of the same action always gets the same key, so a
+// retry cannot buy it twice. Different work in one action gets different keys,
+// so one action can buy a summary and its history, or nine map points. Identical
+// work repeated inside one action is numbered, so the second copy is its own
+// purchase on the first run and the same two keys again on a replay.
+func ScopedKey(ctx context.Context, parts ...[]byte) string {
+	scope, _ := ctx.Value(idempotencyKeyContextKey{}).(*idempotencyScope)
+	if scope == nil || scope.key == "" {
+		return ""
+	}
+	digest := sha256.New()
+	digest.Write([]byte(scope.key))
+	var length [binary.MaxVarintLen64]byte
+	for _, part := range parts {
+		digest.Write(length[:binary.PutUvarint(length[:], uint64(len(part)))])
+		digest.Write(part)
+	}
+	var sum [sha256.Size]byte
+	digest.Sum(sum[:0])
+	scope.mu.Lock()
+	occurrence := scope.uses[sum]
+	scope.uses[sum] = occurrence + 1
+	scope.mu.Unlock()
+	return hex.EncodeToString(sum[:]) + "." + strconv.Itoa(occurrence)
 }
 
 // WithUserID attaches the authenticated user for credit ledger attribution.

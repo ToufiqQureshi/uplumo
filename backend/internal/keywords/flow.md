@@ -24,3 +24,5 @@ DataForSEO; Google Ads for selected markets; Postgres saved rows; Redis caches; 
 - Validate every billed task before provider call; no blind retries of paid task-post endpoints.
 - Cache keys include project/organization, geography and all result-changing options.
 - Keep saved keyword rows and tags project-scoped; guard batches/caps and null metrics.
+- Auto research never discards a billed leg: one failed leg yields the other's
+  rows as a short-lived partial answer, not an error and not a day-long cache.

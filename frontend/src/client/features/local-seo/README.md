@@ -10,3 +10,7 @@ Read [flow.md](flow.md) for the request path and [decision.md](decision.md) for 
 - `localSeoApi.ts`
 - `backend/internal/localseo/handler.go`
 - `backend/internal/keywords/local_serp.go`
+
+A grid that stopped before every point was searched (credits ran out) shows
+`summary.stoppedReason` under the grid summary; the points already searched
+stay visible.
