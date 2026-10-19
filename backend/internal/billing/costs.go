@@ -17,17 +17,22 @@ type ActionCost struct {
 	Credits int64 `json:"credits"`
 }
 
-// typicalUSD is the provider cost of one typical action, per feature.
+// typicalUSD is the provider cost of one typical action, per feature. The
+// lookups were measured on the live site (what the provider billed for one
+// click), not taken from a price list, because one click buys several tasks:
+// a keyword search is suggestions, ideas and a SERP; a domain report is a rank
+// overview and its keyword rows; a backlink report is a summary and its rows;
+// a 3x3 map grid is nine searches of $0.002.
 var typicalUSD = []struct {
 	feature spend.Feature
 	unit    string
 	usd     float64
 }{
 	{spend.RankTracking, "keyword check (top 30, scheduled)", dataforseo.SerpCostUSD(30, true)},
-	{spend.KeywordResearch, "keyword search", 0.02},
-	{spend.LocalSEO, "local lookup", 0.01},
-	{spend.DomainResearch, "domain report tab", 0.02},
-	{spend.Backlinks, "backlink report", 0.03},
+	{spend.KeywordResearch, "keyword search", 0.047},
+	{spend.LocalSEO, "3×3 map grid (9 searches)", 0.021},
+	{spend.DomainResearch, "domain report tab", 0.031},
+	{spend.Backlinks, "backlink report", 0.05},
 	{spend.AIVisibility, "AI visibility check", 0.1},
 	{spend.AIAssistant, "AI assistant reply", 0.03},
 	{spend.AIWriting, "AI writing action", 0.01},

@@ -17,6 +17,8 @@ import {
 const refillDate = new Intl.DateTimeFormat("en-IN", {
   day: "numeric",
   month: "short",
+  // Billing periods are UTC calendar dates; avoid a previous-day refill west of UTC.
+  timeZone: "UTC",
 });
 
 /** Credits left, the monthly allowance, and when they refill. */

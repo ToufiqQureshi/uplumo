@@ -24,6 +24,8 @@ Redis cache; DataForSEO AI endpoints; plans/billing.
 - Plan and request validation must happen before provider spend.
 - Keep all billed calls attributed to the project organization; never blindly retry paid POSTs.
 - Cache only successful complete results; preserve per-platform partial failures and safe citation URLs.
+- On one server, an organization-scoped in-flight key coalesces concurrent
+  identical Brand Lookups before the six/eight paid tasks are reserved.
 - A cached prompt may contain user-entered text; retain expiry and privacy-erasure limitations in the feature README.
 
 ## Saved prompt tracking

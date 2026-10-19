@@ -54,6 +54,37 @@ describe("runLocalGrid", () => {
     });
   });
 
+  it("keeps the reason a grid stopped before every point was searched", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      Response.json({
+        grid: [],
+        summary: {
+          pointsSearched: 9,
+          pointsFound: 3,
+          averageRank: 2,
+          top3Count: 3,
+          top10Count: 3,
+          failedPoints: 6,
+          stoppedReason: "You have used this month's credits.",
+        },
+        estimatedRequests: 9,
+      }),
+    );
+    const result = await runLocalGrid({
+      projectId: "p1",
+      keyword: "dentist",
+      target: { name: "Clinic" },
+      center: { latitude: 0, longitude: 0 },
+      gridSize: 3,
+      spacingKm: 1,
+      device: "mobile",
+      languageCode: "en",
+    });
+    expect(result.summary.stoppedReason).toBe(
+      "You have used this month's credits.",
+    );
+  });
+
   it("surfaces upstream failures through the shared API error contract", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       Response.json(

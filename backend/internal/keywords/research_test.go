@@ -10,6 +10,9 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
+
+	"github.com/toufiqqureshi/uplumo/backend/internal/platform/spend"
 )
 
 type fakeData struct {
@@ -121,6 +124,54 @@ func newResearchFixture(t *testing.T) researchFixture {
 	data, cache, registry := &fakeData{}, &memoryLocationCache{}, &fakeRegistry{names: []string{"Pune,Maharashtra,India"}}
 	svc := &ResearchService{Data: data, Cache: cache, Registry: registry, Metrics: SavedRepository{DB: f.pool}, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	return researchFixture{savedFixture: f, svc: svc, data: data, cache: cache, registry: registry}
+}
+
+func TestConcurrentKeywordResearchSharesOnePaidLookup(t *testing.T) {
+	f := newResearchFixture(t)
+	f.data.labsFn = func(LabsRequest) ([]LabsItem, error) {
+		time.Sleep(40 * time.Millisecond)
+		return items("idea", 5), nil
+	}
+	in := ResearchInput{OrganizationID: "org", ProjectID: f.project, Keywords: []string{"seed"}, LocationCode: 2840, LanguageCode: "en", ResultLimit: 150, Mode: "suggestions"}
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	for range 2 {
+		wg.Go(func() {
+			<-start
+			if _, err := f.svc.Research(context.Background(), in); err != nil {
+				t.Errorf("Research: %v", err)
+			}
+		})
+	}
+	close(start)
+	wg.Wait()
+	if got := len(f.data.labsCalls(SourceSuggestions)); got != 1 {
+		t.Fatalf("paid provider calls = %d, want one", got)
+	}
+}
+
+func TestConcurrentKeywordResearchKeepsOrganizationsSeparate(t *testing.T) {
+	f := newResearchFixture(t)
+	f.data.labsFn = func(LabsRequest) ([]LabsItem, error) {
+		time.Sleep(40 * time.Millisecond)
+		return items("idea", 5), nil
+	}
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	for _, org := range []string{"org-one", "org-two"} {
+		wg.Go(func() {
+			<-start
+			_, err := f.svc.Research(context.Background(), ResearchInput{OrganizationID: org, ProjectID: f.project, Keywords: []string{"seed"}, LocationCode: 2840, LanguageCode: "en", ResultLimit: 150, Mode: "suggestions"})
+			if err != nil {
+				t.Errorf("Research: %v", err)
+			}
+		})
+	}
+	close(start)
+	wg.Wait()
+	if got := len(f.data.labsCalls(SourceSuggestions)); got != 2 {
+		t.Fatalf("paid provider calls = %d, want one per organization", got)
+	}
 }
 
 func (f researchFixture) research(t *testing.T, mutate func(*ResearchInput)) (ResearchResult, error) {
@@ -276,18 +327,87 @@ func TestResearchAutoLegErrors(t *testing.T) {
 	if len(f.data.labsCalls(SourceIdeas)) != 1 {
 		t.Error("the ideas leg did not run to completion; its spend would be unaccounted for")
 	}
-	g := newResearchFixture(t)
-	g.data.labsFn = func(req LabsRequest) ([]LabsItem, error) {
-		if req.Source == SourceIdeas {
-			return nil, boom2
-		}
-		return items("sug", 6), nil
-	}
-	if _, err := g.research(t, nil); !errors.Is(err, boom2) {
-		t.Errorf("ideas failing returned %v, want the ideas error", err)
-	}
-	if g.cache.size() != 0 {
+	if f.cache.size() != 0 {
 		t.Error("a failed research was cached")
+	}
+}
+
+// Each leg is billed on its own. When one is lost, answering with the other's
+// rows keeps what the customer already paid for; an error would throw it away
+// and make the retry buy it again.
+func TestResearchAutoAnswersWithTheLegThatWorked(t *testing.T) {
+	boom := errors.New("provider down")
+	for _, tc := range []struct {
+		name            string
+		failing, worked LabsSource
+	}{
+		{"ideas lost", SourceIdeas, SourceSuggestions},
+		{"suggestions lost", SourceSuggestions, SourceIdeas},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newResearchFixture(t)
+			f.data.labsFn = func(req LabsRequest) ([]LabsItem, error) {
+				if req.Source == tc.failing {
+					return nil, boom
+				}
+				return items(string(tc.worked), 6), nil
+			}
+			got, err := f.research(t, nil)
+			if err != nil {
+				t.Fatalf("research failed although the %s leg answered: %v", tc.worked, err)
+			}
+			if got.Source != string(tc.worked) || len(got.Rows) != 6 {
+				t.Fatalf("got source %q with %d rows, want the %s leg's 6 rows", got.Source, len(got.Rows), tc.worked)
+			}
+			if ttl := f.cache.onlyTTL(); ttl != partialResearchCacheTTL {
+				t.Fatalf("a one-leg answer is cached for %v, want %v", ttl, partialResearchCacheTTL)
+			}
+			before := len(f.data.labs)
+			if again, err := f.research(t, nil); err != nil || len(f.data.labs) != before || len(again.Rows) != 6 {
+				t.Errorf("a retry bought the answer again (calls %d -> %d, err %v)", before, len(f.data.labs), err)
+			}
+		})
+	}
+}
+
+func TestResearchAutoStaysAnErrorWhenAFailedLegLeavesNothingToShow(t *testing.T) {
+	boom := errors.New("provider down")
+	for name, tc := range map[string]struct {
+		suggestions func() ([]LabsItem, error)
+		ideas       func() ([]LabsItem, error)
+		want        error
+	}{
+		"the other leg found nothing": {
+			suggestions: func() ([]LabsItem, error) { return nil, nil },
+			ideas:       func() ([]LabsItem, error) { return nil, boom },
+			want:        boom,
+		},
+		"the credit guard refused the lost leg": {
+			suggestions: func() ([]LabsItem, error) { return items("sug", 6), nil },
+			ideas:       func() ([]LabsItem, error) { return nil, fmt.Errorf("hold: %w", spend.ErrNoCredits) },
+			want:        spend.ErrNoCredits,
+		},
+		"the replayed request was refused": {
+			suggestions: func() ([]LabsItem, error) { return nil, fmt.Errorf("hold: %w", spend.ErrIdempotentReplay) },
+			ideas:       func() ([]LabsItem, error) { return items("idea", 6), nil },
+			want:        spend.ErrIdempotentReplay,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			f := newResearchFixture(t)
+			f.data.labsFn = func(req LabsRequest) ([]LabsItem, error) {
+				if req.Source == SourceSuggestions {
+					return tc.suggestions()
+				}
+				return tc.ideas()
+			}
+			if _, err := f.research(t, nil); !errors.Is(err, tc.want) {
+				t.Fatalf("research returned %v, want %v", err, tc.want)
+			}
+			if f.cache.size() != 0 {
+				t.Error("a failed research was cached")
+			}
+		})
 	}
 }
 
@@ -427,9 +547,7 @@ func TestResearchPersistsMetricsForSavedKeywords(t *testing.T) {
 		t.Errorf("saved keyword = %+v, want the researched metrics", got)
 	}
 	// A metrics write that fails must not fail the research the user paid for.
-	broken := *f.svc
-	broken.Metrics = failingMetrics{}
-	broken.Cache = &memoryLocationCache{}
+	broken := &ResearchService{Data: f.svc.Data, Cache: &memoryLocationCache{}, Registry: f.svc.Registry, Metrics: failingMetrics{}, Logger: f.svc.Logger, Now: f.svc.Now}
 	if _, err := broken.Research(context.Background(), ResearchInput{OrganizationID: "org", ProjectID: f.project, Keywords: []string{"seed"}, LocationCode: 2840, LanguageCode: "en", ResultLimit: 150, Mode: "auto"}); err != nil {
 		t.Errorf("research failed because storing metrics did: %v", err)
 	}

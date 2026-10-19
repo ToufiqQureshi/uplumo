@@ -293,6 +293,11 @@ function RankGridResults({ result }: { result: LocalGridResult }) {
           value={`${result.summary.top10Count} / ${result.summary.pointsSearched}`}
         />
         <Metric label="Failed searches" value={result.summary.failedPoints} />
+        {result.summary.stoppedReason ? (
+          <p role="status" className="text-sm text-muted-foreground">
+            {result.summary.stoppedReason}
+          </p>
+        ) : null}
       </div>
     </section>
   );

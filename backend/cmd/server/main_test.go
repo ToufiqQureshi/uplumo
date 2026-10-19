@@ -4,7 +4,14 @@ import (
 	"testing"
 
 	"github.com/toufiqqureshi/uplumo/backend/internal/billing"
+	"github.com/toufiqqureshi/uplumo/backend/internal/platform/dataforseo"
 )
+
+func TestWriteTimeoutOutlastsTwoSlowProviderCalls(t *testing.T) {
+	if writeTimeout <= 2*dataforseo.RequestTimeout {
+		t.Fatalf("writeTimeout = %v, want more than two provider calls (%v) so a slow provider is answered, not a closed connection", writeTimeout, 2*dataforseo.RequestTimeout)
+	}
+}
 
 func TestLivePlanGatesRemainActiveWithoutCheckout(t *testing.T) {
 	payments := &billing.Service{}

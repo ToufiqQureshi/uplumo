@@ -1,0 +1,7 @@
+# Security model and review boundaries
+
+`backend/internal/httpapi/httpapi.go` wraps `/api/v1/` in session authentication and project paths in `requireProjectAccess`. `auth.Service.AuthorizeProject` checks organization membership. A feature handler must use that authorized organization for plan checks, provider usage records and cache keys. Client-provided project IDs are not proof of authorization. Public analytics ingestion and Razorpay webhooks follow separate routes; the webhook handler bounds the body and validates the raw-body HMAC before billing changes. Read `backend/internal/billing/handler.go` and `backend/internal/razorpay/razorpay.go` before changing it.
+
+Maintain bounded request bodies and paging, query parameter validation, outbound timeouts, safe URL handling, escaped output, and error responses without provider credentials or bodies. Changes to SQL require parameterized queries and organization-scoped predicates. Redis cache keys must include organization and all result-affecting inputs. Billing uses an organization spend hold and recorded task cost; tests should cover cross-tenant behavior and failed provider calls.
+
+This is a code-level model, not a production penetration test. A sampled audit of Backlinks/Domain authorization, DataForSEO transport and billing webhook found no confirmed new vulnerability in those paths. Other feature routes, database RLS/roles, SSRF surfaces, dependency advisories and deployed configuration have not been exhaustively verified. Review each affected surface before release.

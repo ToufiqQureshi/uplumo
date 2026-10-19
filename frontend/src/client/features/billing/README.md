@@ -23,3 +23,5 @@ and refreshes credits only after `paid`. Subscription and one-time order checkou
 share the lazy-loaded provider script. Daily limits still apply after purchase.
 `CreditsCard.tsx` explains upcoming scheduled usage and the estimated balance
 remaining after checks; negative estimates warn before schedules exhaust it.
+Billing period end dates render as UTC calendar dates so a workspace west of
+UTC does not see the previous day for a midnight refill.

@@ -76,7 +76,6 @@ mean each one has been tried on production with real provider keys.
 | ---------------------------------------------------------------------------------------- | ------ |
 | Changing from one paid plan to another without writing to support                        | ⏳     |
 | Agency: client access, and extra sites at ₹400 each                                      | ⏳     |
-| Live usage on the Billing page                                                           | ⏳     |
 | AI Visibility: saved prompts, daily/weekly/monthly checks, history and in-app drop warnings | ✅ built; real-provider acceptance pending |
 | AI Visibility sentiment classification | ⏳ |
 | "Seen in AI" next to "visitors from AI" (AI Visibility joined with Analytics)            | ⏳     |

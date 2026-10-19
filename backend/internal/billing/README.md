@@ -82,7 +82,8 @@ remain available so the customer can resolve the overage without data loss.
 
 Each reserve, settle and refund ledger row records the workspace, initiating
 user, feature, provider endpoint, provider cost, cache flag and status. The
-request idempotency key is scoped to the workspace, so the same search from
+request idempotency key is scoped to the workspace and, inside one request, to each
+piece of provider work (`spend.ScopedKey`), so one action can buy several results and the same search from
 two customers cannot block or reuse the other's reservation.
 
 Monthly credits are shown on the public pricing page beside each plan's
@@ -108,6 +109,10 @@ assistant. Rules that must never break:
   credits. If successful work costs more than was held and the balance cannot cover
   it, the balance is charged down to zero and a warning is logged: the work
   is already paid for, so it is never refused after the fact.
+  An estimate higher than actual releases unused credits. For a multi-call
+  `DoBudgeted` operation the held ceiling is the most the customer pays: a
+  higher reported cost is capped there and logged. Provider-billed failures
+  left uncharged to customers are logged separately for investigation.
 - **It fails closed.** A ledger or database error stops the request. SAM
   refuses a turn whose credits cannot be checked.
 - **Per-workspace daily limit.** One workspace may spend at most a third

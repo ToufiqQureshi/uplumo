@@ -90,8 +90,9 @@ Google or predict rankings.
 - One brief = a depth-30 Google SERP plus up to 8 competitor pages read with
   DataForSEO content parsing, **one page per call** (the live endpoint takes
   one task). Unreadable pages are skipped; fewer than 3 readable pages means
-  no brief and no charge. Worst case $0.0072 (about 9.2 credits); the customer
-  pays what DataForSEO reports, never more. Any overage is Uplumo's.
+  no brief and no charge. Published-rate estimate $0.0072 (about 9.2 credits); the customer
+  pays the successful task cost DataForSEO reports; unexpected price drift
+  above the preflight estimate is logged for investigation.
 - The cache (`go_content_brief_cache`) is shared by every workspace for 30
   days, keyed by keyword, location and language. A cache hit is free; two
   requests for the same key at once make one provider call (advisory lock).

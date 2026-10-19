@@ -1,8 +1,8 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-// Repo-wide docs are listed in CLAUDE.md. Feature docs are colocated with code
+// Repo-wide docs are listed in docs/INDEX.md. Feature docs are colocated with code
 // so an agent can find the local README/flow/decision set without a long index.
 const repoRoot = resolve(import.meta.dirname, "../..");
 const skipDirs = new Set([
@@ -55,21 +55,29 @@ function markdownFiles(dir: string): string[] {
   });
 }
 
-describe("CLAUDE.md docs map", () => {
+describe("documentation map", () => {
   it("lists every Markdown file in the repository", () => {
-    const claude = readFileSync(join(repoRoot, "CLAUDE.md"), "utf8");
+    const index = readFileSync(join(repoRoot, "docs/INDEX.md"), "utf8");
     const listed = (path: string) =>
       isColocatedFeatureDoc(path) ||
       (path.startsWith(blogPosts) && !path.endsWith("/README.md")) ||
-      claude.includes(`\`${path}\``) ||
-      (path.startsWith("docs/audits/") && claude.includes("`docs/audits/`")) ||
+      index.includes(`\`${path}\``) ||
+      (path.startsWith("docs/audits/") && index.includes("`docs/audits/`")) ||
       (path.startsWith(frontendFeatures) &&
-        claude.includes(`\`${path.slice(frontendFeatures.length)}\``));
+        index.includes(`\`${path.slice(frontendFeatures.length)}\``));
 
     const missing = markdownFiles(repoRoot).filter(
-      (path) => path !== "CLAUDE.md" && !listed(path),
+      (path) => path !== "docs/INDEX.md" && !listed(path),
     );
-    expect(missing, "add these to the Docs map in CLAUDE.md").toEqual([]);
+    expect(missing, "add these to docs/INDEX.md").toEqual([]);
+  });
+
+  it("resolves local Markdown links in the docs index", () => {
+    const index = readFileSync(join(repoRoot, "docs/INDEX.md"), "utf8");
+    const broken = [...index.matchAll(/\[[^\]]+\]\(([^)]+\.md(?:#[^)]*)?)\)/g)]
+      .map((match) => match[1].split("#")[0])
+      .filter((path) => !existsSync(resolve(repoRoot, "docs", path)));
+    expect(broken).toEqual([]);
   });
 
   it("keeps the three internal docs beside every frontend feature", () => {

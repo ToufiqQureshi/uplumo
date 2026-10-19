@@ -1,0 +1,17 @@
+# Source map
+
+Read the linked README, flow and decision in each feature folder; they contain the detailed route, storage and provider boundaries. Paths below are relative to the repository root.
+
+| Area | Source and responsibility | Tests / contract | Feature docs |
+| --- | --- | --- | --- |
+| Routing and identity | `backend/internal/httpapi/httpapi.go` mounts `/api/v1/`, session and project middleware; `backend/internal/auth/auth.go` checks project membership | `backend/internal/httpapi/*_test.go`, `backend/internal/auth/auth_test.go` | `backend/internal/httpapi/README.md`, `backend/internal/auth/README.md` |
+| Backlinks | `frontend/src/client/features/backlinks/BacklinksPage.tsx`, `useBacklinksPageData.ts`, `backlinksApi.ts`; `backend/internal/backlinks/handler.go`, `service.go`, `provider.go` | `backlinks-paid-retry.test.ts`, `backend/internal/backlinks/service_test.go`, handler tests | `backend/internal/backlinks/README.md`, `frontend/src/client/features/backlinks/flow.md` |
+| Domain research | `frontend/src/client/features/domain/hooks/`, `domainApi.ts`; `backend/internal/domain/handler.go`, `service.go`, `provider.go` | `domain-paid-retry.test.ts`, `backend/internal/domain/*_test.go` | `backend/internal/domain/README.md`, `frontend/src/client/features/domain/flow.md` |
+| Keywords, rankings, AI visibility | `frontend/src/client/features/keywords/`, `rank-tracking/`, `ai-search/`; `backend/internal/keywords/`, `ranktracking/`, `aisearch/` | Tests colocated with these packages; `backend/api/keywords.yaml`, `ranktracking.yaml`, `ai-tracking.yaml` | Corresponding feature READMEs and flow files |
+| Site audits and content | `frontend/src/client/features/audit/`, `content-editor/`; `backend/internal/audit/`, `contenteditor/` | Colocated tests; `backend/api/audit.yaml` | Corresponding feature READMEs and flow files |
+| Provider spend | `backend/internal/platform/dataforseo/client.go` sends and records billed calls; `backend/internal/platform/spend/` handles holds and limits | `backend/internal/platform/dataforseo/*_test.go`, spend tests | `backend/internal/platform/dataforseo/README.md`, `docs/integrations/DATAFORSEO.md` |
+| Billing, jobs, database | `backend/internal/billing/`, `platform/jobs/`, `database/migrations/` | Colocated tests; `backend/api/billing.yaml` | Their package READMEs |
+| Frontend API/cache | `frontend/src/client/lib/uplumoApi.ts`, `frontend/src/client/features/*/*Api.ts`, query hooks | Feature tests, `frontend/scripts/docs-map.test.ts` | `docs/api/CONVENTIONS.md` |
+| Build and deploy | `Dockerfile`, `railway.json`, `.github/workflows/ci.yml` | CI; local verification commands | `docs/DEPLOY.md`, `docs/testing/REGRESSION.md` |
+
+Feature code is grouped by responsibility, not a fixed file count. Search exact handlers and tests before changing a path. Backend SQL migrations live under `backend/internal/database/migrations/` and are applied at startup.
