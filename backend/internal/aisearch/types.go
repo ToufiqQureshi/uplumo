@@ -41,15 +41,29 @@ type brandEntity struct {
 	Title *string `json:"title"`
 }
 
+// mentionSearchResult is a page the platform retrieved while answering, which
+// may or may not have been cited in the answer.
+type mentionSearchResult struct {
+	Title       *string `json:"title"`
+	URL         *string `json:"url"`
+	Description *string `json:"description"`
+}
+
 // mentionItem is one LLM answer that matched the target.
 type mentionItem struct {
-	Question        *string         `json:"question"`
-	Sources         []mentionSource `json:"sources"`
-	AISearchVolume  *float64        `json:"ai_search_volume"`
-	MonthlySearches []monthlySearch `json:"monthly_searches"`
-	FirstResponseAt *string         `json:"first_response_at"`
-	LastResponseAt  *string         `json:"last_response_at"`
-	BrandEntities   []brandEntity   `json:"brand_entities"`
+	Question *string `json:"question"`
+	// ModelName, Answer, SearchResults and FanOutQueries come with the same
+	// mentions call, so they are read and shown, not re-bought.
+	ModelName       *string               `json:"model_name"`
+	Answer          *string               `json:"answer"`
+	SearchResults   []mentionSearchResult `json:"search_results"`
+	FanOutQueries   []string              `json:"fan_out_queries"`
+	Sources         []mentionSource       `json:"sources"`
+	AISearchVolume  *float64              `json:"ai_search_volume"`
+	MonthlySearches []monthlySearch       `json:"monthly_searches"`
+	FirstResponseAt *string               `json:"first_response_at"`
+	LastResponseAt  *string               `json:"last_response_at"`
+	BrandEntities   []brandEntity         `json:"brand_entities"`
 }
 
 type groupElement struct {
@@ -156,6 +170,14 @@ type CitedSource struct {
 	Title  *string `json:"title"`
 }
 
+// RetrievedPage is a page the platform looked at while answering a prompt.
+type RetrievedPage struct {
+	URL         string  `json:"url"`
+	Domain      *string `json:"domain"`
+	Title       *string `json:"title"`
+	Description *string `json:"description"`
+}
+
 // TopQuery is a prompt whose answer mentioned the target.
 type TopQuery struct {
 	Question        string        `json:"question"`
@@ -165,6 +187,12 @@ type TopQuery struct {
 	LastSeenAt      *string       `json:"lastSeenAt"`
 	CitedSources    []CitedSource `json:"citedSources"`
 	BrandsMentioned []string      `json:"brandsMentioned"`
+	// Model is the AI model that answered, Answer what it said, RetrievedPages
+	// the pages it looked at and FanOutQueries the searches it ran for it.
+	Model          *string         `json:"model"`
+	Answer         *string         `json:"answer"`
+	RetrievedPages []RetrievedPage `json:"retrievedPages"`
+	FanOutQueries  []string        `json:"fanOutQueries"`
 }
 
 // MonthlyVolume is the summed AI search volume of one month.

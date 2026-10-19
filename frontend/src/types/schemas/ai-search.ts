@@ -109,6 +109,22 @@ const brandTopQuerySchema = z.object({
     )
     .max(10),
   brandsMentioned: z.array(z.string().max(200)).max(20),
+  // The AI's answer, the pages it looked at and the searches it ran. Optional:
+  // results cached before they were kept do not have them.
+  model: z.string().max(60).nullable().optional(),
+  answer: z.string().max(6000).nullable().optional(),
+  retrievedPages: z
+    .array(
+      z.object({
+        url: z.string().max(2048),
+        domain: z.string().max(253).nullable(),
+        title: z.string().max(300).nullable(),
+        description: z.string().max(240).nullable(),
+      }),
+    )
+    .max(20)
+    .optional(),
+  fanOutQueries: z.array(z.string().max(500)).max(10).optional(),
 });
 
 const brandMonthlyVolumeSchema = z.object({
