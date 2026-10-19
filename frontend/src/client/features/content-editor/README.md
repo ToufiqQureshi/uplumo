@@ -96,12 +96,16 @@ TanStack Query/Router. `EditorPanels.tsx` contains the shared toolbar and previe
   `{"keyword", "refresh"}` (backend: `contenteditor/brief*.go`). Only when the
   writer presses the button: a brief costs credits, so it never runs on its
   own, and it is never fetched while typing.
-- One brief = a depth-30 Google SERP plus up to 8 competitor pages read with
-  DataForSEO content parsing, **one page per call** (the live endpoint takes
-  one task). Unreadable pages are skipped; fewer than 3 readable pages means
-  no brief and no charge. Published-rate estimate $0.0072 (about 9.2 credits); the customer
-  pays the successful task cost DataForSEO reports; unexpected price drift
-  above the preflight estimate is logged for investigation.
+- One brief = a depth-30 Google SERP plus up to 8 readable competitor pages
+  read with DataForSEO content parsing, **one page per call** (the live
+  endpoint takes one task). Shop and marketplace results often parse to no
+  text, so up to 16 results are tried, stopping at 8 readable pages. Fewer
+  than 3 readable pages means no brief and **no charge**: the work returns
+  `dataforseo.ErrNothingDelivered` and `DoBudgeted` settles 0 customer
+  credits while the provider cost is still recorded. Published-rate estimate
+  $0.0072 (about 9.2 credits); the customer pays the successful task cost
+  DataForSEO reports, capped at that ceiling, so the extra parses (at most
+  $0.0012) are Uplumo's.
 - The cache (`go_content_brief_cache`) is shared by every workspace for 30
   days, keyed by keyword, location and language. A cache hit is free; two
   requests for the same key at once make one provider call (advisory lock).

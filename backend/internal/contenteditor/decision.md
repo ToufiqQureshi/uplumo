@@ -12,6 +12,9 @@ Owns project drafts, content briefs, assistant generation, image upload and draf
 - Apply output/input/image bounds and do not publish generated content automatically. _Why:_ These actions affect a customer account, site or external service and must follow an explicit user action with a clear result.
 - Project authorization and draft IDs must be checked together; do not trust the caller’s project field alone. _Why:_ This keeps the behavior explicit so future changes do not silently alter customer-visible results.
 
+- A brief with fewer than 3 readable competitor pages charges the customer nothing (`dataforseo.ErrNothingDelivered`); the provider cost stays recorded. _Why:_ The editor promises "no brief, no charge", and a customer must not pay for an error screen.
+- A brief tries up to 16 results to read 8 pages, with the customer charge capped at the quoted 8-page ceiling. _Why:_ Shop and marketplace results parse to no text, which made briefs fail for whole niches; the extra parses cost Uplumo at most $0.0012.
+
 ## Dependencies
 
 Postgres drafts/brief cache/authors; configured AI/DataForSEO providers; object storage for images; billing.
