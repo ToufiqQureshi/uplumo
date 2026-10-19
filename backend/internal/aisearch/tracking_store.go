@@ -112,7 +112,8 @@ func (s *Tracking) Answers(ctx context.Context, org, project, runID string) ([]T
 		if err = json.Unmarshal(citations, &a.Citations); err != nil {
 			return nil, err
 		}
-		if err = json.Unmarshal(brands, &a.Brands); err != nil {
+		a.Brands, a.Recommended, err = splitStoredBrands(brands)
+		if err != nil {
 			return nil, err
 		}
 		out = append(out, a)
@@ -257,4 +258,22 @@ func (s *Tracking) Tick(ctx context.Context) error {
 	// Retention bounds stored customer research; history reads never collect answers.
 	_, err = s.DB.Exec(ctx, `DELETE FROM go_ai_tracking_runs WHERE id IN (SELECT id FROM go_ai_tracking_runs WHERE created_at<now()-interval '13 months' AND status NOT IN ('queued','running') LIMIT 100)`)
 	return err
+}
+
+// splitStoredBrands separates the tracked brands' observations from the brands
+// the AI recommended, which share the brands column.
+func splitStoredBrands(raw []byte) ([]BrandObservation, []RecommendedBrand, error) {
+	var stored []storedBrand
+	if err := json.Unmarshal(raw, &stored); err != nil {
+		return nil, nil, err
+	}
+	tracked, recommended := []BrandObservation{}, []RecommendedBrand{}
+	for _, b := range stored {
+		if b.Recommended {
+			recommended = append(recommended, RecommendedBrand{Name: b.Name, Category: b.Category, Position: b.Position})
+			continue
+		}
+		tracked = append(tracked, b.BrandObservation)
+	}
+	return tracked, recommended, nil
 }

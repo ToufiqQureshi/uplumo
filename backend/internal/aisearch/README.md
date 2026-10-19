@@ -139,6 +139,13 @@ configuration and evidence for 13 months. Organization/project deletion cascades
   collection queue even for Run now. Answers arrive asynchronously. Claude and
   Perplexity use their model APIs and can differ from consumer apps. Their
   country is passed to web search; their language follows the question itself.
+- Each collected answer keeps what the scraper returns with it: the answer's
+  markdown (rendered, with AI-vendor images shown as links, not loaded), its
+  cited sources with publisher name and date, and the businesses the AI named
+  (`brand_entities`, in order, up to 20). Those are stored in the `brands`
+  column after the tracked brands, flagged `recommended`, so no migration was
+  needed; `splitStoredBrands` separates them on read. Tracked brands stay
+  first because rate queries read `brands->0`.
 - A full run reserves its ceiling before any paid call. Consumer collection is
   budgeted at $0.0012 per answer; model API collection holds $0.10
   per answer. Actual successful usage settles after submission. No automatic

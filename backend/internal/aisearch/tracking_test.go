@@ -85,7 +85,7 @@ func TestTrackingEstimateAndFairScope(t *testing.T) {
 	}
 }
 func TestTrackingEvidenceSeparatesCitationsFromMentions(t *testing.T) {
-	text, citations, err := parseTrackingAnswer([]byte(`{"markdown":"Compare services [acme.com](https://acme.com).","sources":[{"url":"javascript:alert(1)"},{"url":"https://acme.com/guide"},{"url":"https://acme.com/guide"}]}`), "gemini")
+	text, citations, _, err := parseTrackingAnswer([]byte(`{"markdown":"Compare services [acme.com](https://acme.com).","sources":[{"url":"javascript:alert(1)"},{"url":"https://acme.com/guide"},{"url":"https://acme.com/guide"}]}`), "gemini")
 	if err != nil || len(citations) != 1 {
 		t.Fatalf("citations=%+v err=%v", citations, err)
 	}
@@ -95,7 +95,7 @@ func TestTrackingEvidenceSeparatesCitationsFromMentions(t *testing.T) {
 	if !mentionsBrand(trackingProse("**Acme** is named here."), "Acme") {
 		t.Fatal("genuine mention disappeared")
 	}
-	text, _, err = parseTrackingAnswer([]byte(`{"items":[{"type":"organic","markdown":"Acme"}]}`), "google_ai_overview")
+	text, _, _, err = parseTrackingAnswer([]byte(`{"items":[{"type":"organic","markdown":"Acme"}]}`), "google_ai_overview")
 	if err != nil || text != "" {
 		t.Fatal("organic result treated as AI Overview")
 	}
@@ -323,5 +323,42 @@ func TestTrackingMissingPlanGateRefusesAndMonthlyClamps(t *testing.T) {
 	next := nextTrackingCheck(time.Date(2026, 1, 31, 10, 0, 0, 0, time.UTC), "monthly")
 	if next.Month() != time.February || next.Day() != 28 {
 		t.Fatal("monthly check skipped February", next)
+	}
+}
+
+// The ChatGPT scraper names the businesses it recommends (brand_entities) and
+// the publisher of each source; they come with the paid answer and are kept.
+func TestTrackingKeepsTheBrandsTheAIRecommendedAndSourceNames(t *testing.T) {
+	raw := `{"markdown":"Shortlist **MMR Hotels** and **Revnomix**.",
+		"sources":[{"url":"https://www.axisrooms.com/blog/x","title":"Guide","source_name":"AxisRooms","publication_date":"2026-09-03 00:00:00 +00:00"}],
+		"items":[
+			{"type":"chat_gpt_text","brand_entities":[{"title":"MMR Hotels","category":"local_business"}]},
+			{"type":"chat_gpt_images","markdown":"![x](https://images.example/x.png)"},
+			{"type":"chat_gpt_text","brand_entities":[{"title":"Revnomix","category":"local_business"},{"title":" mmr hotels ","category":"local_business"},{"title":"  "}]}]}`
+	_, citations, recommended, err := parseTrackingAnswer([]byte(raw), "chat_gpt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(recommended) != 2 || recommended[0] != (RecommendedBrand{Name: "MMR Hotels", Category: "local_business", Position: 1}) || recommended[1].Name != "Revnomix" || recommended[1].Position != 2 {
+		t.Fatalf("recommended = %+v, want MMR Hotels then Revnomix, duplicates and blanks dropped", recommended)
+	}
+	if len(citations) != 1 || derefOr(citations[0].Source, "") != "AxisRooms" || derefOr(citations[0].PublishedAt, "") == "" {
+		t.Fatalf("citations = %+v, want the publisher name and date kept", citations)
+	}
+	// An AI Overview result lists organic results too: their brands were not named by the AI.
+	_, _, recommended, _ = parseTrackingAnswer([]byte(`{"items":[{"type":"organic","brand_entities":[{"title":"Organic Co"}]},{"type":"ai_overview","markdown":"x","brand_entities":[{"title":"Overview Co"}]}]}`), "google_ai_overview")
+	if len(recommended) != 1 || recommended[0].Name != "Overview Co" {
+		t.Fatalf("AI Overview recommended = %+v, want only the overview's brand", recommended)
+	}
+}
+
+func TestStoredBrandsSplitTrackedFromRecommendedAndReadOldRows(t *testing.T) {
+	tracked, recommended, err := splitStoredBrands([]byte(`[{"name":"Acme","domain":"acme.com","mentioned":true,"cited":false},{"name":"Rival","recommended":true,"category":"company","position":1}]`))
+	if err != nil || len(tracked) != 1 || tracked[0].Name != "Acme" || !tracked[0].Mentioned || len(recommended) != 1 || recommended[0].Name != "Rival" {
+		t.Fatalf("tracked = %+v, recommended = %+v, err = %v", tracked, recommended, err)
+	}
+	tracked, recommended, err = splitStoredBrands([]byte(`[{"name":"Acme","domain":"acme.com","mentioned":false,"cited":true}]`))
+	if err != nil || len(tracked) != 1 || !tracked[0].Cited || len(recommended) != 0 {
+		t.Fatalf("a row saved before recommendations: tracked = %+v, recommended = %+v, err = %v", tracked, recommended, err)
 	}
 }
