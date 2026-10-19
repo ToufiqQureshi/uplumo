@@ -27,7 +27,8 @@ type ActionCost struct {
 // a keyword search is suggestions, ideas and a SERP; a domain report is a rank
 // overview and its keyword rows; a backlink report is a summary and its rows;
 // a 3x3 map grid is nine searches of $0.002; a brand lookup is six AI-mentions
-// tasks (two platforms of search $0.151, aggregated $0.101, top pages $0.101).
+// tasks per platform (search $0.151, aggregated $0.101, top pages $0.101); a
+// lookup asks ChatGPT only unless the customer also picks Google.
 var typicalUSD = []struct {
 	feature spend.Feature
 	action  string
@@ -40,7 +41,7 @@ var typicalUSD = []struct {
 	{spend.DomainResearch, "", "domain report tab", 0.031},
 	{spend.Backlinks, "", "backlink report", 0.05},
 	{spend.AIVisibility, ActionPromptExplorer, "prompt on 4 AI models", 0.1},
-	{spend.AIVisibility, ActionBrandLookup, "brand lookup (more with competitors)", 0.71},
+	{spend.AIVisibility, ActionBrandLookup, "brand lookup per AI platform", 0.353},
 	{spend.AIAssistant, "", "AI assistant reply", 0.03},
 	{spend.AIWriting, "", "AI writing action", 0.01},
 }

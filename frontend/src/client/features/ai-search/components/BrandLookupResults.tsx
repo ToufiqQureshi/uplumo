@@ -22,6 +22,10 @@ import { RESEARCH_SCOPE_LABELS } from "@/shared/researchScope";
 type Props = {
   result: BrandLookupResult;
   projectId: string;
+  /** Buys the lookup again; the saved result is shown free until then. */
+  onRefresh?: () => void;
+  refreshing?: boolean;
+  refreshError?: string;
 };
 
 type PlatformRow = BrandLookupResult["perPlatform"][number];
@@ -30,7 +34,13 @@ type MetricKey = "mentions" | "aiSearchVolume";
 const DOMAIN_LEVEL_TIP =
   "AI search providers report mentions per domain, not per page. This number covers the whole domain — the cited pages below are limited to your scope.";
 
-export function BrandLookupResults({ result, projectId }: Props) {
+export function BrandLookupResults({
+  result,
+  projectId,
+  onRefresh,
+  refreshing = false,
+  refreshError,
+}: Props) {
   if (!result.hasData) {
     const erroredPlatforms = result.perPlatform.filter(
       (p) => p.status === "error",
@@ -77,7 +87,12 @@ export function BrandLookupResults({ result, projectId }: Props) {
 
   return (
     <Card className="gap-0 py-0">
-      <BrandHeader result={result} />
+      <BrandHeader
+        result={result}
+        onRefresh={onRefresh}
+        refreshing={refreshing}
+        refreshError={refreshError}
+      />
 
       {/* One shared grid so the panels align by construction: stats left,
           trend right, Share of Voice flowing into the next free half-width
@@ -108,7 +123,17 @@ export function BrandLookupResults({ result, projectId }: Props) {
   );
 }
 
-function BrandHeader({ result }: { result: BrandLookupResult }) {
+function BrandHeader({
+  result,
+  onRefresh,
+  refreshing,
+  refreshError,
+}: {
+  result: BrandLookupResult;
+  onRefresh?: () => void;
+  refreshing?: boolean;
+  refreshError?: string;
+}) {
   return (
     <section className="px-4 pt-4 pb-3">
       <div className="flex flex-wrap items-center gap-2">
@@ -122,7 +147,25 @@ function BrandHeader({ result }: { result: BrandLookupResult }) {
       </div>
       <p className="text-xs text-muted-foreground">
         Updated {formatRelative(result.fetchedAt)}
+        {onRefresh ? (
+          <>
+            {" · "}
+            <button
+              type="button"
+              className="underline underline-offset-2 disabled:opacity-50"
+              disabled={refreshing}
+              onClick={onRefresh}
+            >
+              {refreshing ? "Refreshing…" : "Refresh (uses credits)"}
+            </button>
+          </>
+        ) : null}
       </p>
+      {refreshError ? (
+        <p role="alert" className="text-xs text-destructive">
+          {refreshError}
+        </p>
+      ) : null}
     </section>
   );
 }

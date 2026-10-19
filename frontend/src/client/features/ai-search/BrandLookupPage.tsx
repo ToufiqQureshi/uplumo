@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { BarChart3, Quote, Sparkles, TrendingUp } from "lucide-react";
 import {
@@ -34,10 +34,12 @@ type Props = {
   initialQuery: string;
   initialCompetitors: string[];
   initialScope: ResearchScope | undefined;
+  initialBothPlatforms: boolean;
   onSearchChange: (
     nextQuery: string,
     nextCompetitors: string[],
     nextScope: ResearchScope | undefined,
+    nextBothPlatforms: boolean,
   ) => void;
 };
 
@@ -66,9 +68,13 @@ export function BrandLookupPage({
   initialQuery,
   initialCompetitors,
   initialScope,
+  initialBothPlatforms,
   onSearchChange,
 }: Props) {
   const planStatus = useHostedPlanGate();
+  const queryClient = useQueryClient();
+  // Google AI Overviews doubles the paid tasks, so it is opt-in.
+  const [bothPlatforms, setBothPlatforms] = useState(initialBothPlatforms);
   const [query, setQuery] = useState(initialQuery);
   // The user's explicit scope pick, or undefined to follow the input's default.
   const [scopeChoice, setScopeChoice] = useState<ResearchScope | undefined>(
@@ -114,8 +120,17 @@ export function BrandLookupPage({
       scope: initialScope,
       locationCode: 2840,
       languageCode: "en",
+      platforms: (initialBothPlatforms
+        ? ["chat_gpt", "google"]
+        : ["chat_gpt"]) as ("chat_gpt" | "google")[],
     }),
-    [projectId, trimmedInitialQuery, competitorKey, initialScope],
+    [
+      projectId,
+      trimmedInitialQuery,
+      competitorKey,
+      initialScope,
+      initialBothPlatforms,
+    ],
   );
   const lookupQuery = useQuery({
     queryKey: [
@@ -124,6 +139,7 @@ export function BrandLookupPage({
       trimmedInitialQuery,
       competitorKey,
       initialScope ?? "",
+      initialBothPlatforms,
     ],
     queryFn: () => lookupBrand(lookupInput),
     // Client-side gate is a UX optimization only; the paywall is enforced
@@ -157,7 +173,28 @@ export function BrandLookupPage({
     "ai_visibility",
     "brand_lookup",
     "brand lookup",
+    bothPlatforms ? 2 : 1,
   );
+  // A saved lookup is shown free for 30 days; Refresh buys it again.
+  const refresh = useMutation({
+    mutationFn: () =>
+      lookupBrand({
+        ...lookupInput,
+        refresh: true,
+      }),
+    onSuccess: (fresh) =>
+      queryClient.setQueryData(
+        [
+          "brand-lookup",
+          projectId,
+          trimmedInitialQuery,
+          competitorKey,
+          initialScope ?? "",
+          initialBothPlatforms,
+        ],
+        fresh,
+      ),
+  });
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -221,7 +258,7 @@ export function BrandLookupPage({
       ? toScopeSearchParam(trimmed, selectedScope)
       : undefined;
     confirmCost.request(() =>
-      onSearchChange(trimmed, competitors, explicitScope),
+      onSearchChange(trimmed, competitors, explicitScope, bothPlatforms),
     );
   };
 
@@ -254,6 +291,8 @@ export function BrandLookupPage({
             onScopeChange={setScopeChoice}
             scopeDisabledReason={scopeDisabledReason}
             competitors={competitorsInput}
+            bothPlatforms={bothPlatforms}
+            onBothPlatformsChange={setBothPlatforms}
             onCompetitorsChange={(next) => {
               setCompetitorsInput(next);
               if (validationError) setValidationError(null);
@@ -298,7 +337,13 @@ export function BrandLookupPage({
       }
       renderResults={(result) => (
         <div className="space-y-4">
-          <BrandLookupResults result={result} projectId={projectId} />
+          <BrandLookupResults
+            result={result}
+            projectId={projectId}
+            onRefresh={() => confirmCost.request(() => refresh.mutate())}
+            refreshing={refresh.isPending}
+            refreshError={refresh.error?.message}
+          />
           <BrandVisibilityHistoryCard
             projectId={projectId}
             snapshots={visibilityHistoryQuery.data}

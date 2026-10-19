@@ -1,6 +1,9 @@
 package aisearch
 
-import "time"
+import (
+	"slices"
+	"time"
+)
 
 // Platform names a source of AI answers as the provider spells it.
 const (
@@ -122,6 +125,26 @@ type BrandLookupInput struct {
 	Scope        Scope
 	LocationCode int
 	LanguageCode string
+	// Platforms is the AI platforms to query, a subset of brandPlatforms; empty
+	// means ChatGPT only. Each platform is three or four paid tasks, so the
+	// customer chooses whether Google AI Overviews is worth the credits.
+	Platforms []string
+	// Refresh buys the lookup again even when a saved result exists.
+	Refresh bool
+}
+
+// lookupPlatforms is the platforms to query, in display order.
+func (in BrandLookupInput) lookupPlatforms() []string {
+	platforms := []string{}
+	for _, p := range brandPlatforms {
+		if slices.Contains(in.Platforms, p) {
+			platforms = append(platforms, p)
+		}
+	}
+	if len(platforms) == 0 {
+		return []string{platformChatGPT}
+	}
+	return platforms
 }
 
 // PlatformBreakdown is one platform's totals, or its failure.

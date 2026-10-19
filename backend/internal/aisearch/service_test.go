@@ -16,7 +16,7 @@ import (
 )
 
 func lookupInput() BrandLookupInput {
-	return BrandLookupInput{Query: "acme.com", LocationCode: 2826, LanguageCode: "en"}
+	return BrandLookupInput{Query: "acme.com", LocationCode: 2826, LanguageCode: "en", Platforms: []string{platformChatGPT, platformGoogle}}
 }
 
 func TestBrandLookupFetchesBothPlatformsAndShapesTheResult(t *testing.T) {
@@ -325,7 +325,7 @@ func TestBrandLookupReportsAFailedPlatformWithoutLosingTheOther(t *testing.T) {
 		return defaultReply(mentionsSearchPath)
 	})
 
-	result, err := svc.BrandLookup(context.Background(), newOrg(), "p", BrandLookupInput{Query: "acme.com", LocationCode: 2840, LanguageCode: "en"})
+	result, err := svc.BrandLookup(context.Background(), newOrg(), "p", BrandLookupInput{Query: "acme.com", LocationCode: 2840, LanguageCode: "en", Platforms: []string{platformChatGPT, platformGoogle}})
 	if err != nil {
 		t.Fatalf("BrandLookup() error = %v, want the surviving platform's data", err)
 	}
@@ -602,5 +602,78 @@ func TestBrandLookupAllSubCallsFailingMarksThePlatformFailed(t *testing.T) {
 	}
 	if got := result.PerPlatform[1]; got.Status != "success" {
 		t.Errorf("google row = %+v, want success", got)
+	}
+}
+
+// A lookup asks ChatGPT only unless Google is chosen: three paid tasks, not six.
+func TestBrandLookupAsksChatGPTOnlyByDefault(t *testing.T) {
+	api := newFakeAPI(t)
+	svc := newTestService(t, api)
+	in := lookupInput()
+	in.Platforms = nil
+	result, err := svc.BrandLookup(context.Background(), newOrg(), "p", in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := api.total(); got != 3 {
+		t.Errorf("provider calls = %d, want 3 (ChatGPT only)", got)
+	}
+	if len(result.PerPlatform) != 1 || result.PerPlatform[0].Platform != platformChatGPT {
+		t.Errorf("per platform = %+v, want ChatGPT only", result.PerPlatform)
+	}
+}
+
+// A saved lookup is free to look at again; Refresh is the only way to buy it again.
+func TestBrandLookupIsFreeAgainUntilRefreshed(t *testing.T) {
+	api := newFakeAPI(t)
+	svc := newTestService(t, api)
+	org := newOrg()
+	in := lookupInput()
+	for range 2 {
+		if _, err := svc.BrandLookup(context.Background(), org, "p", in); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if got := api.total(); got != 6 {
+		t.Fatalf("provider calls after a repeat = %d, want 6 (the repeat served from the saved result)", got)
+	}
+	in.Refresh = true
+	if _, err := svc.BrandLookup(context.Background(), org, "p", in); err != nil {
+		t.Fatal(err)
+	}
+	if got := api.total(); got != 12 {
+		t.Fatalf("provider calls after Refresh = %d, want 12", got)
+	}
+	in.Refresh = false
+	if _, err := svc.BrandLookup(context.Background(), org, "p", in); err != nil {
+		t.Fatal(err)
+	}
+	if got := api.total(); got != 12 {
+		t.Fatalf("provider calls after looking again = %d, want 12 (the refreshed result is saved)", got)
+	}
+	if brandLookupTTL < 30*24*time.Hour {
+		t.Fatalf("saved lookups last %v, want 30 days", brandLookupTTL)
+	}
+}
+
+// Choosing platforms must not orphan what was saved before it was possible:
+// both platforms keep the old key; one platform gets its own.
+func TestBrandLookupKeyKeepsTheBothPlatformsKey(t *testing.T) {
+	both := lookupInput()
+	bothKey, err := brandLookupKey("org", "p", both)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := cacheKey("brand-lookup", "org", "p", "domain", "acme.com", "", "2826", "en", "subdomains", ""); bothKey != want {
+		t.Fatalf("both platforms key = %q, want the key used before platforms existed %q", bothKey, want)
+	}
+	one := both
+	one.Platforms = []string{platformChatGPT}
+	oneKey, _ := brandLookupKey("org", "p", one)
+	none := both
+	none.Platforms = nil
+	noneKey, _ := brandLookupKey("org", "p", none)
+	if oneKey == bothKey || oneKey != noneKey {
+		t.Fatalf("ChatGPT-only key %q must differ from both %q and equal the default %q", oneKey, bothKey, noneKey)
 	}
 }

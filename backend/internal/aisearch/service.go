@@ -22,7 +22,10 @@ import (
 
 const (
 	// Brand lookup data refreshes daily; the provider updates it monthly.
-	brandLookupTTL       = 24 * time.Hour
+	// The mentions data DataForSEO serves changes about monthly, so a lookup
+	// is kept 30 days: looking at the same brand again is free, and Refresh
+	// buys it again when the customer asks.
+	brandLookupTTL       = 30 * 24 * time.Hour
 	visibilityHistoryTTL = 400 * 24 * time.Hour
 	// An LLM answer is stable enough for a week.
 	promptResponseTTL = 7 * 24 * time.Hour
@@ -81,29 +84,13 @@ func (s *Service) BrandLookup(ctx context.Context, organizationID, projectID str
 	includeSubdomains := research == nil || research.Scope == ScopeSubdomains
 	groups := resolveCompetitorGroups(detected.Value, in.Competitors)
 
-	competitorValues := make([]string, len(groups))
-	for i, g := range groups {
-		competitorValues[i] = strings.ToLower(g.detected.Value)
+	key, err := brandLookupKey(organizationID, projectID, in)
+	if err != nil {
+		return BrandLookupResult{}, err
 	}
-	slices.Sort(competitorValues)
-	// Scope changes both the provider call and the page filtering. The path
-	// only matters under URL scopes: keying it for a domain scope would re-buy
-	// an identical lookup for example.com and example.com/blog.
-	scope, path := "", ""
-	if research != nil {
-		scope = string(research.Scope)
-		if research.Scope.usesPath() {
-			path = research.Path
-		}
-	}
-	key := cacheKey("brand-lookup", organizationID, projectID, string(detected.Type),
-		// Lowercased to match the provider's matching, so equivalent casing and
-		// order share one paid cache entry.
-		strings.ToLower(detected.Value), strings.Join(competitorValues, "|"),
-		strconv.Itoa(in.LocationCode), in.LanguageCode, scope, path)
 
 	var cached BrandLookupResult
-	if s.cacheGet(ctx, key, &cached) {
+	if !in.Refresh && s.cacheGet(ctx, key, &cached) {
 		cached.Query = in.Query
 		cached.ResolvedTarget = detected.Value
 		if research != nil {
@@ -118,7 +105,7 @@ func (s *Service) BrandLookup(ctx context.Context, organizationID, projectID str
 		flightCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), flightTimeout)
 		defer cancel()
 		var cached BrandLookupResult
-		if s.cacheGet(flightCtx, key, &cached) {
+		if !in.Refresh && s.cacheGet(flightCtx, key, &cached) {
 			return cached, nil
 		}
 		return s.loadBrandLookup(flightCtx, organizationID, key, detected, research, groups, includeSubdomains, in)
@@ -143,14 +130,15 @@ func (s *Service) BrandLookup(ctx context.Context, organizationID, projectID str
 
 func (s *Service) loadBrandLookup(ctx context.Context, organizationID, key string, detected Target, research *ResearchTarget, groups []competitorGroup, includeSubdomains bool, in BrandLookupInput) (BrandLookupResult, error) {
 	var result BrandLookupResult
-	callCount := len(brandPlatforms) * 3
+	lookupPlatforms := in.lookupPlatforms()
+	callCount := len(lookupPlatforms) * 3
 	if len(groups) > 0 {
-		callCount += len(brandPlatforms)
+		callCount += len(lookupPlatforms)
 	}
 	err := s.provider.client.DoBudgeted(ctx, organizationID, spend.AIVisibility, float64(callCount)*dataforseo.AIMentionsCeilingUSD, func(request dataforseo.DoBudgetedRequest) error {
 		budgetCtx := context.WithValue(ctx, budgetRequestContextKey{}, request)
-		platforms := make([]platformOutcome, len(brandPlatforms))
-		for i, platform := range brandPlatforms {
+		platforms := make([]platformOutcome, len(lookupPlatforms))
+		for i, platform := range lookupPlatforms {
 			bundle, fetchErr := s.fetchPlatform(budgetCtx, organizationID, platform, detected, includeSubdomains, in)
 			if blocking(budgetCtx, fetchErr) {
 				return fetchErr
@@ -288,9 +276,17 @@ func brandLookupKey(organizationID, projectID string, in BrandLookupInput) (stri
 			path = research.Path
 		}
 	}
-	return cacheKey("brand-lookup", organizationID, projectID, string(detected.Type),
+	parts := []string{string(detected.Type),
+		// Lowercased to match the provider's matching, so equivalent casing and
+		// order share one paid cache entry.
 		strings.ToLower(detected.Value), strings.Join(competitorValues, "|"),
-		strconv.Itoa(in.LocationCode), in.LanguageCode, scope, path), nil
+		strconv.Itoa(in.LocationCode), in.LanguageCode, scope, path}
+	// A lookup of both platforms keeps the key it had before platforms could
+	// be chosen, so saved results and the monthly history stay reachable.
+	if platforms := in.lookupPlatforms(); len(platforms) != len(brandPlatforms) {
+		parts = append(parts, strings.Join(platforms, ","))
+	}
+	return cacheKey("brand-lookup", organizationID, append([]string{projectID}, parts...)...), nil
 }
 
 // resolveResearchTarget scopes domain and URL queries; a brand keyword has no
@@ -364,8 +360,9 @@ func (s *Service) fetchCross(ctx context.Context, organizationID string, detecte
 		groups = append(groups, crossGroup{key: c.label, target: buildLLMTarget(c.detected, includeSubdomains)})
 	}
 
-	outcomes := make([]crossOutcome, len(brandPlatforms))
-	for i, platform := range brandPlatforms {
+	lookupPlatforms := in.lookupPlatforms()
+	outcomes := make([]crossOutcome, len(lookupPlatforms))
+	for i, platform := range lookupPlatforms {
 		location, lang := in.LocationCode, in.LanguageCode
 		if platform == platformChatGPT {
 			location, lang = chatGPTLocationCode, chatGPTLanguageCode

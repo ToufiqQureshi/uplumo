@@ -16,8 +16,8 @@ func TestTypicalCostHintsAreNotBelowWhatALiveClickBilled(t *testing.T) {
 		string(spend.DomainResearch):  0.03012,           // domain_rank_overview 0.01212 + ranked_keywords 0.018
 		string(spend.Backlinks):       0.024036 + 0.0258, // summary + backlinks rows
 		string(spend.LocalSEO):        9 * 0.002,         // nine maps searches
-		// Brand lookup, 16 Oct: mentions search 2 x 0.151, aggregated 2 x 0.101, top pages 2 x 0.101.
-		string(spend.AIVisibility) + ":" + ActionBrandLookup: 2*0.151 + 2*0.101 + 2*0.101,
+		// Brand lookup, 16 Oct, per platform: mentions search 0.151, aggregated 0.101, top pages 0.101.
+		string(spend.AIVisibility) + ":" + ActionBrandLookup: 0.151 + 0.101 + 0.101,
 	}
 	hints := map[string]int64{}
 	for _, cost := range ActionCosts() {

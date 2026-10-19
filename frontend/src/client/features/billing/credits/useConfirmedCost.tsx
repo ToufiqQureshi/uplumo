@@ -20,12 +20,14 @@ export function useConfirmedCost(
   feature: CreditFeature,
   action: string,
   what: string,
+  /** How many of the action's units this run buys (e.g. AI platforms). */
+  units = 1,
 ): { request: (run: () => void) => void; dialog: ReactNode } {
   const { data: usage } = useBillingUsage();
   const [pending, setPending] = useState<(() => void) | null>(null);
   const credits =
-    usage?.costs.find((c) => c.feature === feature && c.action === action)
-      ?.credits ?? 0;
+    (usage?.costs.find((c) => c.feature === feature && c.action === action)
+      ?.credits ?? 0) * units;
   const asks =
     usage !== undefined &&
     creditLevel(usage) !== "not_charged" &&

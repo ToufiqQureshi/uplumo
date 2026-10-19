@@ -15,6 +15,8 @@ type Props = {
   scopeDisabledReason: string | undefined;
   competitors: string;
   onCompetitorsChange: (next: string) => void;
+  bothPlatforms: boolean;
+  onBothPlatformsChange: (next: boolean) => void;
   onSubmit: (event: FormEvent) => void;
   isLoading: boolean;
   validationError: { field: "query" | "competitors"; message: string } | null;
@@ -36,6 +38,8 @@ export function BrandLookupSearchCard({
   scopeDisabledReason,
   competitors,
   onCompetitorsChange,
+  bothPlatforms,
+  onBothPlatformsChange,
   onSubmit,
   isLoading,
   validationError,
@@ -71,6 +75,16 @@ export function BrandLookupSearchCard({
                 Voice.
               </FieldDescription>
             </Field>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={bothPlatforms}
+                onChange={(event) =>
+                  onBothPlatformsChange(event.target.checked)
+                }
+              />
+              Also check Google AI Overviews (doubles the credits)
+            </label>
             {hasCompetitors ? (
               <p className="text-xs text-muted-foreground tabular-nums">
                 Comparing competitors adds about{" "}
@@ -100,6 +114,10 @@ export function BrandLookupSearchCard({
         />
       </SearchCard>
       <CreditCostHint feature="ai_visibility" action="brand_lookup" />
+      <p className="text-xs text-muted-foreground">
+        Asks ChatGPT. A brand you looked up in the last 30 days opens free; use
+        Refresh on the result for new data.
+      </p>
     </div>
   );
 }

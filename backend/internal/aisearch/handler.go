@@ -58,6 +58,8 @@ type brandLookupRequest struct {
 	Scope        Scope    `json:"scope"`
 	LocationCode *int     `json:"locationCode"`
 	LanguageCode *string  `json:"languageCode"`
+	Platforms    []string `json:"platforms"`
+	Refresh      bool     `json:"refresh"`
 }
 
 // validate trims and checks the request and fills in the defaults.
@@ -68,6 +70,19 @@ func (r brandLookupRequest) validate() (BrandLookupInput, string) {
 		Scope:        r.Scope,
 		LocationCode: defaultLocationCode,
 		LanguageCode: defaultLanguageCode,
+		Refresh:      r.Refresh,
+	}
+	if len(r.Platforms) > len(brandPlatforms) {
+		return in, "platforms must list each platform at most once."
+	}
+	for _, p := range r.Platforms {
+		if !slices.Contains(brandPlatforms, p) {
+			return in, "platforms must be chat_gpt or google."
+		}
+		if slices.Contains(in.Platforms, p) {
+			return in, "platforms must list each platform at most once."
+		}
+		in.Platforms = append(in.Platforms, p)
 	}
 	if n := utf16Len(in.Query); n < 1 || n > maxQueryChars {
 		return in, "query must be 1 to 250 characters."

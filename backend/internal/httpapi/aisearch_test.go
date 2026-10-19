@@ -87,7 +87,7 @@ func TestAISearchEndToEnd(t *testing.T) {
 		Site:     pages,
 	})
 	lookup := func(projectID string, signedIn bool) *httptest.ResponseRecorder {
-		req := httptest.NewRequestWithContext(ctx, http.MethodPost, "/api/v1/projects/"+projectID+"/ai-search/brand-lookup", strings.NewReader(`{"query":"acme.com"}`))
+		req := httptest.NewRequestWithContext(ctx, http.MethodPost, "/api/v1/projects/"+projectID+"/ai-search/brand-lookup", strings.NewReader(`{"query":"acme.com","platforms":["chat_gpt","google"]}`))
 		if signedIn {
 			req.AddCookie(&http.Cookie{Name: "__Secure-better-auth.session_token", Value: sign(token), HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode})
 		}

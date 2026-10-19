@@ -50,6 +50,10 @@ export const brandLookupInputSchema = z.object({
   scope: researchScopeSchema.optional(),
   locationCode: z.number().int().positive().default(2840),
   languageCode: z.string().min(2).max(8).default("en"),
+  // AI platforms to ask; the server asks ChatGPT only when none are listed.
+  platforms: z.array(z.enum(["chat_gpt", "google"])).optional(),
+  // Buy the lookup again instead of showing the saved one.
+  refresh: z.boolean().optional(),
 });
 
 export type BrandLookupInput = z.infer<typeof brandLookupInputSchema>;
@@ -282,6 +286,8 @@ export type PromptExplorerResult = z.infer<typeof promptExplorerResultSchema>;
  */
 export const brandLookupSearchSchema = z.object({
   q: z.string().optional(),
+  // "both" also asks Google AI Overviews; absent asks ChatGPT only.
+  ai: z.literal("both").optional().catch(undefined),
   scope: researchScopeSchema.optional().catch(undefined),
   c: z
     .union([z.string(), z.array(z.string())])

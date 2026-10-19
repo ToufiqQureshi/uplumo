@@ -137,7 +137,7 @@ assistant. Rules that must never break:
   error reaches Sentry. With per-workspace limits it should only trip on a
   bug; set it above the sum of your clients' daily limits.
 - **AI visibility.** Its two actions have separate hints (`ActionCost.Action`:
-  `prompt_explorer` about 128 credits, `brand_lookup` about 910), because a brand
+  `prompt_explorer` about 128 credits, `brand_lookup` about 452 per AI platform), because a brand
   lookup bills seven times a prompt run. Their holds use per-endpoint ceilings
   (`dataforseo.AIResponseCeilingUSD` $0.10, `AIMentionsCeilingUSD` $0.25), above
   what live calls billed; a flat $0.50 held more than a Pro workspace's day.

@@ -70,6 +70,9 @@ func TestBrandLookupRequestValidation(t *testing.T) {
 		{"zero location", `{"query":"a.com","locationCode":0}`, "locationCode must be a positive number."},
 		{"one letter language", `{"query":"a.com","languageCode":"e"}`, "languageCode must be 2 to 8 characters."},
 		{"scope that does not fit the query", `{"query":"acme.com","scope":"subfolder"}`, "Add a path to use Subfolder (e.g. example.com/blog)"},
+		{"unknown platform", `{"query":"a.com","platforms":["bing"]}`, "platforms must be chat_gpt or google."},
+		{"repeated platform", `{"query":"a.com","platforms":["google","google"]}`, "platforms must list each platform at most once."},
+		{"too many platforms", `{"query":"a.com","platforms":["google","chat_gpt","google"]}`, "platforms must list each platform at most once."},
 		{"too large", `{"query":"a.com","pad":"` + strings.Repeat("x", maxBody) + `"}`, "The request is too large."},
 	}
 	api := newFakeAPI(t)

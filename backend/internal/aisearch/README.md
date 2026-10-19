@@ -13,8 +13,11 @@ Analytics. Those site-wide visits are kept separate from citation counts and
 are not matched to specific cited URLs.
 Each top query keeps what the mentions call returns with it: the AI model, its
 full answer (6,000 characters), the pages it retrieved (20, with description)
-and the searches it ran (`TopQuery`, shown under "See the AI answer"). A real
-Brand Lookup is six tasks and bills about $0.71 (search $0.151 x2, aggregated
+and the searches it ran (`TopQuery`, shown under "See the AI answer"). A lookup asks ChatGPT
+only unless the customer also picks Google (`BrandLookupInput.Platforms`), is
+kept 30 days (`brandLookupTTL`; `Refresh` buys it again), and a two-platform
+lookup keeps the cache key it had before platforms could be chosen. A real
+two-platform Brand Lookup is six tasks and bills about $0.71 (search $0.151 x2, aggregated
 $0.101 x2, top pages $0.101 x2); its hold is six AI-mentions ceilings of $0.25.
 A Prompt Explorer run holds $0.10 per model answer (twice that with web
 search, which may retry once); a real ChatGPT answer with web search bills $0.03.
