@@ -24,7 +24,7 @@ export function GrowthActions({ projectId }: { projectId: string }) {
   return (
     <details
       onToggle={(e) => setOpened(e.currentTarget.open)}
-      className="rounded-lg border p-3"
+      className="rounded-lg border border-border p-3"
     >
       <summary className="cursor-pointer text-sm font-medium">
         Saved actions and results
@@ -79,7 +79,7 @@ function SavedAction({
     retry: false,
   });
   return (
-    <article className="space-y-2 rounded border p-3 text-sm">
+    <article className="space-y-2 rounded border border-border p-3 text-sm">
       <p className="break-all font-medium">{action.page}</p>
       <p>{action.note}</p>
       <Badge variant="secondary">{action.status}</Badge>

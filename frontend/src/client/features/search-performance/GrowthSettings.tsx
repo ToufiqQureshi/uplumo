@@ -30,7 +30,7 @@ export function GrowthSettings({
         <label className="grid gap-1 text-sm">
           What matters to your business?
           <select
-            className="min-w-52 rounded-md border bg-background p-2"
+            className="min-w-52 rounded-md border border-border bg-background p-2"
             value={goalEvent}
             onChange={(e) =>
               onChange({ ...settings, goalEvent: e.target.value })
@@ -92,7 +92,7 @@ export function GrowthSettings({
           <label className="grid gap-1">
             Comparison window
             <select
-              className="rounded-md border bg-background p-2"
+              className="rounded-md border border-border bg-background p-2"
               value={days}
               onChange={(e) =>
                 onChange({ ...settings, days: Number(e.target.value) })
@@ -105,7 +105,7 @@ export function GrowthSettings({
           <label className="grid gap-1">
             Compare with
             <select
-              className="rounded-md border bg-background p-2"
+              className="rounded-md border border-border bg-background p-2"
               value={comparison}
               onChange={(e) =>
                 onChange({ ...settings, comparison: e.target.value })

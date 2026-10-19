@@ -73,7 +73,7 @@ export function GrowthPageCard({
       queryKind === "all" || (queryKind === "branded" ? q.branded : !q.branded),
   );
   return (
-    <article className="space-y-3 rounded-xl border p-4">
+    <article className="space-y-3 rounded-xl border border-border p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="break-all text-sm font-medium">
           {url ? (
@@ -173,7 +173,7 @@ export function GrowthPageCard({
           <label className="grid gap-1">
             Optional unchanged comparison page
             <select
-              className="max-w-full rounded border bg-background p-2"
+              className="max-w-full rounded border border-border bg-background p-2"
               value={controlPage}
               onChange={(e) => setControlPage(e.target.value)}
             >

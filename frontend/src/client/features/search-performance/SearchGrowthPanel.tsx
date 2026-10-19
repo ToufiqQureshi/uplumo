@@ -140,7 +140,7 @@ export function SearchGrowthPanel({ projectId }: { projectId: string }) {
               press Send to run it.
             </p>
             {pages.length === 0 ? (
-              <p className="rounded-lg border p-4 text-sm">
+              <p className="rounded-lg border border-border p-4 text-sm">
                 No strong opportunities met the evidence thresholds in this
                 report. This does not mean your site has no issues; review
                 coverage and tracking before drawing conclusions.
@@ -193,7 +193,7 @@ export function SearchGrowthPanel({ projectId }: { projectId: string }) {
                 </Button>
               </div>
             ) : null}
-            <details className="rounded-lg border p-3 text-sm">
+            <details className="rounded-lg border border-border p-3 text-sm">
               <summary className="cursor-pointer">
                 Data coverage and query filters
               </summary>
@@ -201,7 +201,7 @@ export function SearchGrowthPanel({ projectId }: { projectId: string }) {
                 <label className="flex items-center gap-2">
                   Query evidence
                   <select
-                    className="rounded border bg-background p-1"
+                    className="rounded border border-border bg-background p-1"
                     value={queryKind}
                     onChange={(e) => setQueryKind(e.target.value)}
                   >

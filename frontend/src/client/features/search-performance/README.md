@@ -48,3 +48,14 @@ or disables weekly in-app checks explicitly. It displays the last dated digest,
 three next actions and meaningful drop alerts. It does not send email or paid AI.
 `GrowthPageCard.tsx` can freeze a user-selected unchanged comparison page alongside
 the saved goal/baseline; `GrowthActions.tsx` explains descriptive relative movement.
+
+## Responsive investigation UI
+
+`GrowthInvestigation.tsx` groups each topic into a native named disclosure, so
+opening one closes its sibling without a new request or losing loaded results.
+`GrowthDeviceEvidence.tsx` owns the device drill-down; `GrowthMobileResults.tsx`
+shows fully labeled journey/device/query cards below 640px, with desktop tables
+above that breakpoint. Funnel steps use separate editable inputs with explicit
+add/remove controls. Secondary interpretation and sitemap submission details are
+collapsed; error/limited-data signals remain visible. Long action labels and
+URLs wrap, and borders use the existing theme token instead of current text color.

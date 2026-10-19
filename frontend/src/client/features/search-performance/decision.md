@@ -42,3 +42,9 @@ Uses first-party Search Console data to prioritize content review and explain in
 - Expanded coverage must not render thousands of cards or an options list per
   source row. Browse 10 candidates/page and cap comparison options at 100;
   competing-page examples cap at five while the returned-page count stays visible.
+
+- Small-screen result values must be readable without horizontal table scrolling.
+  Use labeled cards below 640px and retain all desktop table metrics. Keep one
+  investigation topic open at a time to avoid a long wall of forms and caveats.
+- Use the existing border-border theme token on feature surfaces; bare Tailwind
+  borders inherit text color and create unnecessarily heavy nested outlines.

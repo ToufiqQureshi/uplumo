@@ -2,9 +2,10 @@ UPLUMO — PR #166 DEVELOPER HANDOVER
 =================================
 Purpose: help a user understand search problems, choose a useful business action,
 and observe the result. This file covers the complete Search Growth workflow,
-including the original analyst implementation and the goal/diagnosis extension.
+including the original Search Performance changes from #165, the analyst
+implementation, goal/diagnosis extension and mobile usability fixes.
 PR: https://github.com/ToufiqQureshi/uplumo/pull/166
-Base branch: feat/search-performance-actionable (PR #165).
+Base branch: main. This single PR contains both #165 and #166; #165 is superseded.
 Application stack: Go API, React/Vite UI, Postgres; existing Google OAuth and SAM.
 
 1. STARTING PROBLEM AND PRODUCT DECISIONS
@@ -20,6 +21,12 @@ all Google UI reports have APIs, or that missing rows mean measured zero.
 Avoid automatic paid research, automatic publishing and a dashboard of every
 possible metric. Use goal-led defaults with explicit evidence drill-downs.
 
+The original #165 changes are included unchanged in the combined branch:
+custom calendar dates and source/device/country/query/page filters; period totals,
+trend and country evidence; the content-refresh queue and editor handoff; and
+bounded stored-index inspection. Review SearchPerformancePage/Selects/Totals/
+Trend/Indexing and backend/internal/gsc/performance.go for that foundation.
+
 2. COMPLETE USER JOURNEY
 ------------------------
 a. Project -> Search Performance -> Search Growth panel.
@@ -33,7 +40,8 @@ d. Click Find opportunities. Default view shows three candidates with evidence
 e. Why clicks are low/falling: explicit two-window, exact-page query evidence,
    low-visibility/position/CTR observations. A separate button inspects only this
    page's stored Google index status. Missing queries remain unknown.
-f. Investigation panel: measurement configuration, observed host/referral rows,
+f. Investigation panel: choose a collapsed topic; only one opens at a time.
+   Measurement configuration, observed host/referral rows,
    real ordered-event funnel, device rates, submitted sitemap status and saved
    prompt citations. All are explicit reads with independent source limitations.
 g. AI brief opens an editable, scoped SAM draft; no model call until Send. The
@@ -57,7 +65,10 @@ Frontend feature directory: frontend/src/client/features/search-performance/
 - GrowthPageCard.tsx: headline evidence, baseline save and comparison-page choice.
 - GrowthClickDiagnosis.tsx: query diagnosis and separate one-URL inspection.
 - indexingGuidance.ts: shared indexing advice, also used by SearchPerformanceIndexing.
-- GrowthEvidencePanel.tsx: tracking/device checks and investigation composition.
+- GrowthEvidencePanel.tsx: investigation navigation, with one topic open at a time.
+- GrowthInvestigation.tsx: native accessible disclosure group, no fetch on opening.
+- GrowthDeviceEvidence.tsx: device data and desktop/mobile result presentation.
+- GrowthMobileResults.tsx: labeled mobile cards for journey/device/query values.
 - GrowthFunnel.tsx: actual event-name steps, ordered users and device breakdown.
 - GrowthSitemaps.tsx: sitemap counts/status with interpretation and Google link.
 - GrowthCitationEvidence.tsx: saved prompt evidence vs native Google AI reporting.
@@ -80,6 +91,11 @@ Backend GSC: internal/gsc/growth_rows.go, sitemaps.go, performance_handler.go.
 MCP: internal/mcp/ga4_tools.go shares goal/comparison/coverage inputs and cache.
 Worker wiring: backend/cmd/server/main.go, one due project per minute.
 API contracts: backend/api/ga4.yaml and backend/api/gsc.yaml.
+Mobile presentation: journey, device and query results use labeled cards below
+640px; desktop tables retain all metrics. Each funnel step has its own input,
+with accessible add/remove controls. Long buttons/URLs wrap inside the card.
+Use explicit border-border tokens: bare Tailwind borders inherit text color and
+made the previous view look like a dense black grid. No global theme changes.
 Read local README.md, flow.md and decision.md for the maintained invariants.
 
 4. DATA MEANING AND PROVIDER READ BOUNDS
@@ -163,9 +179,12 @@ Automated checks (recorded for this change):
 - Focused GA4/GSC/MCP/server race tests after subsequent changes.
 - Module consistency, gofmt, go vet, staticcheck, golangci-lint, deadcode,
   govulncheck; frontend ci:check, complete Vitest suite and production build.
-- Playwright desktop/mobile flow with stubbed Google/AI responses: goal payload,
+- Playwright desktop flow plus 320px/390px mobile regressions with stubbed
+  Google/AI responses: goal payload,
   analyze/save, diagnosis/index inspection, tracking, funnel, sitemap status,
   monitor on/off, editor reference and explicit paid SAM Send boundary.
+  Mobile assertions verify complete drop-off counts/rates, per-step form controls,
+  independently collapsed investigation topics and no document-wide overflow.
 - Mutation: removing limited-report alert suppression makes the guard test fail.
 
 Regression sources:

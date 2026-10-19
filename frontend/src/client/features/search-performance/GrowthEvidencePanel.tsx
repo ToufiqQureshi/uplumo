@@ -1,9 +1,11 @@
+import { useId } from "react";
+import { GrowthDeviceEvidence } from "./GrowthDeviceEvidence";
+import { GrowthInvestigation } from "./GrowthInvestigation";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/client/components/ui/button";
 import { QueryError } from "@/client/components/QueryState";
 
 import {
-  getGrowthDevices,
   getGrowthHealth,
   getGrowthTracking,
   type GrowthReport,
@@ -31,17 +33,10 @@ export function GrowthEvidencePanel({
   projectId: string;
   report: GrowthReport;
 }) {
+  const group = useId();
   const tracking = useMutation({
     mutationFn: () =>
       getGrowthTracking(projectId, {
-        ...report.range,
-        goalEvent: report.goalEvent,
-      }),
-    retry: false,
-  });
-  const devices = useMutation({
-    mutationFn: () =>
-      getGrowthDevices(projectId, {
         ...report.range,
         goalEvent: report.goalEvent,
       }),
@@ -53,12 +48,16 @@ export function GrowthEvidencePanel({
   });
 
   return (
-    <details className="rounded-lg border p-3 text-sm">
+    <details className="min-w-0 rounded-xl border border-border bg-muted/20 p-3 text-sm sm:p-4">
       <summary className="cursor-pointer font-medium">
         Investigate tracking, devices and AI citations
       </summary>
-      <div className="mt-3 space-y-4">
-        <section className="space-y-2">
+      <div className="mt-4 min-w-0 space-y-3">
+        <GrowthInvestigation
+          name={group}
+          title="Measurement setup"
+          description="Check that your chosen outcome is configured."
+        >
           <Button
             variant="outline"
             size="sm"
@@ -76,7 +75,7 @@ export function GrowthEvidencePanel({
           {health.data ? (
             <div className="space-y-2 text-xs">
               <p>
-                {health.data.keyEvents.length} configured key events.
+                Configured key events: {health.data.keyEvents.length}.
                 Configuration does not prove that events fire correctly or
                 represent real sales.
               </p>
@@ -91,22 +90,31 @@ export function GrowthEvidencePanel({
                   {healthMessages[issue] ?? issue.replaceAll("_", " ")}
                 </p>
               ))}
-              <p>
-                Validate your chosen successful outcome in GA4 DebugView and
-                confirm it fires only after success. Form clicks and scrolls are
-                not automatically leads.
-              </p>
+              <details>
+                <summary className="cursor-pointer font-medium">
+                  Verify event accuracy
+                </summary>{" "}
+                <p>
+                  Validate your chosen successful outcome in GA4 DebugView and
+                  confirm it fires only after success. Form clicks and scrolls
+                  are not automatically leads.
+                </p>
+              </details>
             </div>
           ) : null}
-        </section>
-        <section className="space-y-2">
+        </GrowthInvestigation>
+        <GrowthInvestigation
+          name={group}
+          title="Attribution and tracking"
+          description="Investigate referral sources and tracking gaps."
+        >
           <Button
             size="sm"
             variant="outline"
             disabled={tracking.isPending}
             onClick={() => tracking.mutate()}
           >
-            Investigate attribution and tracking
+            Check attribution
           </Button>
           {tracking.isError ? (
             <QueryError
@@ -151,85 +159,35 @@ export function GrowthEvidencePanel({
               </details>
             </div>
           ) : null}
-        </section>
-        <GrowthFunnel projectId={projectId} report={report} />
-        <GrowthSitemaps projectId={projectId} />
-        <section className="space-y-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={devices.isPending}
-            onClick={() => devices.mutate()}
-          >
-            Compare Google organic traffic by device
-          </Button>
-          {devices.isError ? (
-            <QueryError
-              error={devices.error}
-              fallback="Could not inspect device performance."
-            />
-          ) : null}
-          {devices.data ? (
-            <div className="space-y-2 text-xs">
-              {devices.data.limited ? (
-                <p>
-                  Analytics data is limited. Avoid drawing business conclusions
-                  from these rates.
-                </p>
-              ) : null}
-              {devices.data.rows.length === 0 ? (
-                <p>No device rows returned.</p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left">
-                    <caption className="sr-only">
-                      Google organic traffic by device
-                    </caption>
-                    <thead>
-                      <tr>
-                        <th className="p-2">Device</th>
-                        <th className="p-2">Sessions</th>
-                        <th className="p-2">All key events</th>
-                        <th className="p-2">
-                          {report.goalEvent
-                            ? `${report.goalEvent} session rate`
-                            : "Session key-event rate"}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {devices.data.rows.map((row) => (
-                        <tr key={row.deviceCategory}>
-                          <td className="p-2">{row.deviceCategory}</td>
-                          <td className="p-2">
-                            {row.sessions ?? "Unavailable"}
-                          </td>
-                          <td className="p-2">
-                            {row.keyEvents ?? "Unavailable"}
-                          </td>
-                          <td className="p-2">
-                            {(report.goalEvent
-                              ? row.goalRate
-                              : row.sessionKeyEventRate) == null
-                              ? "Unavailable"
-                              : `${((report.goalEvent ? (row.goalRate ?? 0) : (row.sessionKeyEventRate ?? 0)) * 100).toFixed(1)}%`}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-              <p>
-                Site-wide comparison for {report.range.startDate} –{" "}
-                {report.range.endDate}. Small samples and different
-                audience/page mixes can explain differences. This does not
-                measure speed or establish a cause.
-              </p>
-            </div>
-          ) : null}
-        </section>
-        <GrowthCitationEvidence projectId={projectId} report={report} />
+        </GrowthInvestigation>
+        <GrowthInvestigation
+          name={group}
+          title="Visitor journey"
+          description="See which tracked steps users complete."
+        >
+          <GrowthFunnel projectId={projectId} report={report} />
+        </GrowthInvestigation>
+        <GrowthInvestigation
+          name={group}
+          title="Sitemap health"
+          description="Review Google’s submitted sitemap status."
+        >
+          <GrowthSitemaps projectId={projectId} />
+        </GrowthInvestigation>
+        <GrowthInvestigation
+          name={group}
+          title="Performance by device"
+          description="Compare the selected outcome on mobile and desktop."
+        >
+          <GrowthDeviceEvidence projectId={projectId} report={report} />
+        </GrowthInvestigation>
+        <GrowthInvestigation
+          name={group}
+          title="AI visibility evidence"
+          description="Review saved citations and Google’s native reports."
+        >
+          <GrowthCitationEvidence projectId={projectId} report={report} />
+        </GrowthInvestigation>
       </div>
     </details>
   );

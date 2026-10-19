@@ -55,3 +55,8 @@ query reads; Check stored index -> one URL Inspection read. Attribution, funnels
 sitemaps and device checks remain separate explicit clicks. No drill-down calls a
 paid provider. Weekly configuration reads only on panel open; scheduling requires
 a separate enable click and shows its own stored goal/date scope.
+
+Investigation navigation opens one topic at a time and does not fetch by itself.
+Button actions retain their existing endpoints and call counts. Journey step
+inputs submit the same event-name array; changing viewport only switches result
+presentation between mobile metric cards and desktop tables, without refetching.

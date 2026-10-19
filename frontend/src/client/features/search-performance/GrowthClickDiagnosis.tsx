@@ -8,6 +8,7 @@ import {
   type GrowthReport,
   type GrowthPage,
 } from "./growthApi";
+import { GrowthMobileResults } from "./GrowthMobileResults";
 import { growthCount, growthRate } from "./growthFormat";
 
 export function GrowthClickDiagnosis({
@@ -41,6 +42,7 @@ export function GrowthClickDiagnosis({
         </p>
         <div className="flex flex-wrap gap-2">
           <Button
+            className="h-auto min-h-9 max-w-full whitespace-normal py-2 text-left"
             size="sm"
             variant="outline"
             disabled={diagnosis.isPending}
@@ -51,6 +53,7 @@ export function GrowthClickDiagnosis({
               : "Investigate this page's clicks"}
           </Button>
           <Button
+            className="h-auto min-h-9 max-w-full whitespace-normal py-2 text-left"
             size="sm"
             variant="ghost"
             disabled={inspection.isPending}
@@ -79,7 +82,7 @@ export function GrowthClickDiagnosis({
           </p>
         ) : null}
         {inspection.isSuccess ? (
-          <div className="rounded border p-2 text-xs">
+          <div className="rounded border border-border p-2 text-xs">
             {index ? (
               <>
                 <p>
@@ -112,7 +115,7 @@ export function GrowthClickDiagnosis({
               </p>
             ) : null}
             {diagnosis.data.findings.map((f) => (
-              <div key={f.kind} className="rounded border p-3">
+              <div key={f.kind} className="rounded border border-border p-3">
                 <p className="font-medium">{f.title}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {f.evidence}
@@ -124,45 +127,73 @@ export function GrowthClickDiagnosis({
               </div>
             ))}
             {diagnosis.data.queries.length ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <caption className="sr-only">
-                    Returned query evidence, previous to current
-                  </caption>
-                  <thead>
-                    <tr>
-                      <th className="p-2">Query</th>
-                      <th className="p-2">Clicks before → now</th>
-                      <th className="p-2">Impressions before → now</th>
-                      <th className="p-2">CTR before → now</th>
-                      <th className="p-2">Position before → now</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {diagnosis.data.queries.map((q) => (
-                      <tr key={q.query}>
-                        <td className="p-2">{q.query}</td>
-                        <td className="p-2">
-                          {growthCount(q.previous?.clicks ?? null)} →{" "}
-                          {growthCount(q.current?.clicks ?? null)}
-                        </td>
-                        <td className="p-2">
-                          {growthCount(q.previous?.impressions ?? null)} →{" "}
-                          {growthCount(q.current?.impressions ?? null)}
-                        </td>
-                        <td className="p-2">
-                          {growthRate(q.previous?.ctr ?? null)} →{" "}
-                          {growthRate(q.current?.ctr ?? null)}
-                        </td>
-                        <td className="p-2">
-                          {q.previous?.position.toFixed(1) ?? "Unknown"} →{" "}
-                          {q.current?.position.toFixed(1) ?? "Unknown"}
-                        </td>
+              <>
+                <GrowthMobileResults
+                  label="Query comparison results"
+                  rows={diagnosis.data.queries.map((q) => ({
+                    key: q.query,
+                    title: q.query,
+                    subtitle: "Previous → current",
+                    metrics: [
+                      {
+                        label: "Clicks",
+                        value: `${growthCount(q.previous?.clicks ?? null)} → ${growthCount(q.current?.clicks ?? null)}`,
+                      },
+                      {
+                        label: "Impressions",
+                        value: `${growthCount(q.previous?.impressions ?? null)} → ${growthCount(q.current?.impressions ?? null)}`,
+                      },
+                      {
+                        label: "Click-through rate",
+                        value: `${growthRate(q.previous?.ctr ?? null)} → ${growthRate(q.current?.ctr ?? null)}`,
+                      },
+                      {
+                        label: "Average position",
+                        value: `${q.previous?.position.toFixed(1) ?? "Unknown"} → ${q.current?.position.toFixed(1) ?? "Unknown"}`,
+                      },
+                    ],
+                  }))}
+                />
+                <div className="hidden overflow-x-auto sm:block">
+                  <table className="w-full text-left text-xs">
+                    <caption className="sr-only">
+                      Returned query evidence, previous to current
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th className="p-2">Query</th>
+                        <th className="p-2">Clicks before → now</th>
+                        <th className="p-2">Impressions before → now</th>
+                        <th className="p-2">CTR before → now</th>
+                        <th className="p-2">Position before → now</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {diagnosis.data.queries.map((q) => (
+                        <tr key={q.query}>
+                          <td className="p-2">{q.query}</td>
+                          <td className="p-2">
+                            {growthCount(q.previous?.clicks ?? null)} →{" "}
+                            {growthCount(q.current?.clicks ?? null)}
+                          </td>
+                          <td className="p-2">
+                            {growthCount(q.previous?.impressions ?? null)} →{" "}
+                            {growthCount(q.current?.impressions ?? null)}
+                          </td>
+                          <td className="p-2">
+                            {growthRate(q.previous?.ctr ?? null)} →{" "}
+                            {growthRate(q.current?.ctr ?? null)}
+                          </td>
+                          <td className="p-2">
+                            {q.previous?.position.toFixed(1) ?? "Unknown"} →{" "}
+                            {q.current?.position.toFixed(1) ?? "Unknown"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             ) : (
               <p className="text-xs">
                 No query rows returned; query-level reasons are unknown.

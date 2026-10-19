@@ -30,7 +30,7 @@ export function GrowthMonitor({
   const state = monitor.data;
   return (
     <details
-      className="rounded-lg border p-3"
+      className="rounded-lg border border-border p-3"
       onToggle={(e) => setOpened(e.currentTarget.open)}
     >
       <summary className="cursor-pointer text-sm font-medium">
@@ -106,7 +106,7 @@ export function GrowthMonitor({
                 {state.digest.alerts.map((alert, i) => (
                   <div
                     key={`${alert.kind}:${i}`}
-                    className="rounded border p-3"
+                    className="rounded border border-border p-3"
                     role="status"
                   >
                     <p className="font-medium">{alert.title}</p>
@@ -116,7 +116,10 @@ export function GrowthMonitor({
                 ))}
                 {state.digest.pages.length ? (
                   state.digest.pages.map((page) => (
-                    <article key={page.page} className="rounded border p-3">
+                    <article
+                      key={page.page}
+                      className="rounded border border-border p-3"
+                    >
                       <p className="break-all font-medium">{page.page}</p>
                       <p className="mt-1">{page.findings[0]?.title}</p>
                       <p className="text-xs text-muted-foreground">

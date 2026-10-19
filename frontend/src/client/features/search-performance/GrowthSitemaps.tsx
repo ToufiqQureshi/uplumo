@@ -10,9 +10,10 @@ export function GrowthSitemaps({ projectId }: { projectId: string }) {
     retry: false,
   });
   return (
-    <section className="space-y-2">
+    <section className="min-w-0 space-y-3">
       <h4 className="font-medium">Can Google read your submitted sitemaps?</h4>
       <Button
+        className="h-auto min-h-9 max-w-full whitespace-normal py-2 text-left"
         size="sm"
         variant="outline"
         disabled={sitemaps.isPending}
@@ -30,7 +31,15 @@ export function GrowthSitemaps({ projectId }: { projectId: string }) {
       ) : null}
       {sitemaps.data ? (
         <div className="space-y-2 text-xs">
-          <p>{sitemaps.data.message}</p>
+          <p className="text-muted-foreground">
+            Sitemap submission does not confirm that a page is indexed.
+          </p>
+          <details>
+            <summary className="cursor-pointer font-medium">
+              What this status means
+            </summary>
+            <p className="mt-2 leading-relaxed">{sitemaps.data.message}</p>
+          </details>
           {sitemaps.data.truncated ? (
             <p>Only the first 200 sitemap entries are shown.</p>
           ) : null}
@@ -38,7 +47,10 @@ export function GrowthSitemaps({ projectId }: { projectId: string }) {
             sitemaps.data.sitemaps.map((s) => {
               const url = safeHttpUrl(s.path);
               return (
-                <article key={s.path} className="space-y-1 rounded border p-2">
+                <article
+                  key={s.path}
+                  className="min-w-0 space-y-3 rounded-xl border border-border p-3"
+                >
                   <p className="break-all">
                     {url ? (
                       <a
@@ -54,27 +66,43 @@ export function GrowthSitemaps({ projectId }: { projectId: string }) {
                     )}
                     {s.isIndex ? " · Sitemap index" : ""}
                   </p>
-                  <p>
+                  <p className="text-muted-foreground">
                     {s.pending
                       ? "Google processing pending"
-                      : "Not marked pending"}{" "}
-                    · Errors: {s.errors} · Warnings: {s.warnings} ·{" "}
-                    {s.contents?.length === 0
-                      ? "Submitted counts unavailable"
-                      : `${s.submitted} submitted entries (not unique indexed pages)`}
+                      : "Not marked pending"}
                   </p>
-                  <p>
-                    {s.contents
-                      ?.map(
-                        (content) =>
-                          `${content.type || "Unspecified type"}: ${content.submitted}`,
-                      )
-                      .join(" · ")}
-                  </p>
-                  <p>
-                    Last submitted: {s.lastSubmitted || "Unknown"}. Last
-                    downloaded: {s.lastDownloaded || "Unknown"}.
-                  </p>
+                  <div className="grid grid-cols-2 gap-2 py-2">
+                    <p className="rounded-lg bg-muted/50 p-2">
+                      Errors:{" "}
+                      <strong className="tabular-nums">{s.errors}</strong>
+                    </p>
+                    <p className="rounded-lg bg-muted/50 p-2">
+                      Warnings:{" "}
+                      <strong className="tabular-nums">{s.warnings}</strong>
+                    </p>
+                  </div>
+                  <details>
+                    <summary className="cursor-pointer font-medium">
+                      Submission and download details
+                    </summary>
+                    <div className="mt-2 space-y-2 leading-relaxed">
+                      <p>
+                        {s.contents?.length === 0
+                          ? "Submitted counts unavailable"
+                          : `${s.submitted} submitted entries; these are not unique indexed pages.`}
+                      </p>
+                      <p>
+                        {s.contents
+                          ?.map(
+                            (content) =>
+                              `${content.type || "Unspecified type"}: ${content.submitted}`,
+                          )
+                          .join(" · ")}
+                      </p>
+                      <p>Last submitted: {s.lastSubmitted || "Unknown"}.</p>
+                      <p>Last downloaded: {s.lastDownloaded || "Unknown"}.</p>
+                    </div>
+                  </details>
                   {s.errors > 0 ? (
                     <p>
                       Open the Sitemaps report in Search Console for the

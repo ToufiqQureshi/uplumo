@@ -52,6 +52,7 @@ export function GrowthCitationEvidence({
         </a>
       </p>
       <Button
+        className="h-auto min-h-9 max-w-full whitespace-normal py-2 text-left"
         variant="outline"
         size="sm"
         disabled={ai.isPending}
@@ -82,7 +83,10 @@ export function GrowthCitationEvidence({
               .filter((a) => a.status === "completed" && a.answer.trim())
               .slice(0, 10)
               .map((answer) => (
-                <details key={answer.id} className="rounded border p-2">
+                <details
+                  key={answer.id}
+                  className="rounded border border-border p-2"
+                >
                   <summary className="cursor-pointer">
                     {answer.prompt} · {answer.engine}
                   </summary>
