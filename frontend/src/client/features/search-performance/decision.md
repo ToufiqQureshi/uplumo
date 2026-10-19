@@ -1,50 +1,48 @@
-# Search Console performance: decisions
+# Search Performance and Search Growth: decisions
 
-> Internal guide for developers and coding agents. Update this file in the same PR when a behavior or invariant changes.
+Read this before changing the GSC page, combined GA4 analysis or mobile
+investigations. These decisions explain the intended user experience and the
+constraints an implementation must preserve. Exact provider/storage bounds live
+in the linked feature READMEs; do not silently change them during a UI refactor.
 
-## Feature purpose
+## Product and report scope
 
-Uses first-party Search Console data to prioritize content review and explain index/crawl status without claiming Google will rank or index a page.
+| Decision                                                                                                                | Why                                                                                                                                | Code / related contract                                                                   |
+| ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Start with the user's business goal, an explicit analysis action and three next-action candidates.                      | A solo owner needs a useful decision before a large report. More metrics alone do not deliver value.                               | `SearchGrowthPanel.tsx`, `GrowthSettings.tsx`                                             |
+| Keep the detailed GSC report's dates/filters in the URL, and label the growth analysis's independent date/source scope. | Shareable investigation filters must not silently reinterpret a saved GA4 finding.                                                 | `SearchPerformancePage.tsx`, `searchPerformanceQueries.ts`                                |
+| Keep all-event counts, selected-goal session rates, ordered user funnels and AI evidence separately labeled.            | They have different denominators and collection scopes; combining labels can invent business outcomes.                             | `growthApi.ts`, `GrowthPageCard.tsx`, `GrowthFunnel.tsx`                                  |
+| Show measured evidence, possible explanations and a next check; keep missing/limited values explicit.                   | Search averages do not establish why a person did not click, and unavailable data is not measured zero.                            | `GrowthClickDiagnosis.tsx`, backend `ga4/growth_clicks.go`                                |
+| Reuse returned GSC query/page evidence for the refresh queue and brand/competing-page candidates.                       | Reusing first-party data avoids redundant calls; multiple ranking pages are not proof of harmful cannibalization or stale content. | `contentRefreshQueue.ts`, `ContentRefreshQueuePanel.tsx`                                  |
+| Keep complete-period comparisons and their history-floor limitations visible.                                           | A partial previous window can look like growth even when the underlying comparison is invalid.                                     | `SearchPerformanceTotals.tsx`, `SearchPerformanceTrend.tsx`, backend `gsc/performance.go` |
 
-## Decisions to preserve
+## Mobile usability and investigation depth
 
-- Search Console has provider quotas; preserve bounded read retries and avoid redundant refetches. _Why:_ Google limits read volume, so bounded queries and no refetch loops preserve quota for useful reports.
-- Every request uses the project's selected property and OAuth grant; never accept a property from another project. _Why:_ A valid Google grant for one project does not authorize reading another project's property.
-- Google returns sampled/limited rows; preserve response metadata and do not claim exhaustive totals. _Why:_ Unavailable or partial data is not a measured zero; keeping status visible prevents false customer decisions.
-- Build the refresh queue from the already loaded Search Console rows and keep its position/impression thresholds and page cap explicit. _Why:_ Reusing report data avoids extra quota use and keeps the queue bounded.
-- Label the rows as review candidates, not confirmed stale content, and keep content edits separate from this read-only queue. _Why:_ Search metrics identify opportunities but do not prove a page is outdated or authorize a site change.
-- Keep the report to at most four Search Analytics reads and reuse its query-page rows for candidate grouping; cap surfaced queries at 1,000 and exports at 25,000 rows. _Why:_ More history and surfaced candidates must not create an unbounded quota or memory cost. Skip an unavailable full-period comparison at the 16-month history floor.
-- URL inspection runs only after an explicit user action and inspects at most 10 URLs; it reports stored index data and cannot request indexing or inspect live indexability. _Why:_ Customers must not mistake a diagnostic for a Google crawl request.
-- Seed Content Editor drafts only from an explicit row action, and pass only the selected query as the topic. _Why:_ This carries evidence into the next workflow without generating text, spending credits or mutating a published site.
-- Do not add general-page submissions through Google's Indexing API. Google documents it for JobPosting and livestream BroadcastEvent pages and requires separate service-account ownership setup. _Why:_ Enabling the API in a Cloud project does not authorize arbitrary URLs.
+| Decision                                                                                                                            | Why                                                                                                                                                                  | Code / verification                                                                                                  |
+| ----------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Use labeled result cards below 640px, retaining every metric from desktop tables.                                                   | The original narrow funnel table clipped the drop-off column. Users must read complete journey, device and query evidence without scrolling the whole page sideways. | `GrowthMobileResults.tsx`, `GrowthDeviceEvidence.tsx`, `GrowthClickDiagnosis.tsx`; 320px/390px Playwright assertions |
+| Open one investigation topic at a time using native named disclosures. Opening a topic does not fetch data.                         | The original expanded panel exposed a wall of unrelated forms and caveats. Focused sections reduce cognitive load while keeping loaded results available.            | `GrowthInvestigation.tsx`, `GrowthEvidencePanel.tsx`                                                                 |
+| Give each funnel step its own labeled input and accessible add/remove controls.                                                     | A comma-separated field truncated meaningful event names on mobile and made the sequence difficult to edit. The API still receives the same event-name array.        | `GrowthFunnel.tsx`, `tests/search-growth.spec.ts`                                                                    |
+| Keep material error/limited-data signals visible; place secondary interpretation and sitemap submission details behind disclosures. | Users need the problem and next action first, with the explanation still available rather than removed.                                                              | `GrowthSitemaps.tsx`, `GrowthFunnel.tsx`                                                                             |
+| Use the app's `border-border` token and wrap long action labels/URLs.                                                               | Bare Tailwind borders inherit text color, creating heavy black nested outlines. Long labels must not widen a phone viewport.                                         | `Growth*.tsx`, `SearchGrowthPanel.tsx`                                                                               |
+| Browse additional candidates in bounded pages and bound comparison-page choices.                                                    | Expanded source coverage must not create thousands of cards or quadratic option lists in the browser. See `README.md` for the current bounds.                        | `SearchGrowthPanel.tsx`, `GrowthPageCard.tsx`                                                                        |
 
-## Verification pointers
+## Actions, safety and follow-up
 
-- `searchPerformanceQueries.test.ts`
-- `contentRefreshQueue.test.ts`
-- `backend/internal/gsc/performance_test.go`
+| Decision                                                                                                                                | Why                                                                                                                                                                                       | Code / related decision                                                                                           |
+| --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Provider drill-downs require an explicit button; weekly checks require a separate enable action.                                        | Viewing a panel must not trigger paid work, redundant Google reads or an unwanted schedule.                                                                                               | `GrowthEvidencePanel.tsx`, `GrowthMonitor.tsx`; backend `ga4/decision.md`                                         |
+| Treat URL Inspection as Google's stored index evidence and sitemap counts as sitemap-level metadata.                                    | Neither can request general-page indexing, prove live indexability or guarantee rankings. General URL submissions through Google's restricted Indexing API are not part of this workflow. | `SearchPerformanceIndexing.tsx`, `indexingGuidance.ts`; backend `gsc/decision.md`                                 |
+| Keep AI drafts and editor references validated, project-scoped and expiring in tab storage. Send/apply/publish remain explicit actions. | Another project must not inherit evidence; opening a brief must not spend credits or overwrite customer work. A basic refresh-queue keyword seeds only a blank, clean draft.              | `growthBrief.ts`, `sam/analystDraft.ts`, `content-editor/searchContext.ts`; content-editor and SAM decision files |
+| Save immutable server-derived baselines and preserve the selected goal/comparison context.                                              | A later configuration change or repeated click must not rewrite the evidence used to assess a page edit. Before/after and unchanged-page comparisons remain observational.                | `GrowthActions.tsx`, `GrowthPageCard.tsx`; backend `ga4/decision.md`                                              |
+| Separate saved prompt citations from Google's native AI report and optional BigQuery setup.                                             | These sources do not share coverage. External entry points must not be presented as implemented automatic ingestion or a complete AI visibility picture.                                  | `GrowthCitationEvidence.tsx`, `SearchGrowthPanel.tsx`                                                             |
 
-- Show three prioritized growth candidates first, with optional evidence and
-  configuration drill-downs. Independent analysis dates/source are labeled so
-  GSC table filters cannot silently change the meaning of a saved GA4 finding.
-- Never invent missing GA4 metrics, query-to-outcome attribution or expected
-  revenue. Competing pages are investigation candidates, not proof of harm.
-- AI drafts and editor context stay in project-scoped tab storage for 30 minutes,
-  not report-bearing URLs. Opening a draft makes no paid call or site change.
+## Verification and future changes
 
-- Keep the main view small: business goal, analyze, top three next actions.
-  Technical evidence and optional segmentation belong in named drill-downs.
-- All-event counts, selected-goal rates, user funnels, Google AI impressions and
-  tracked prompt citations have distinct scopes; never merge their labels.
-- Never describe absent queries, a missing funnel step or a successful sitemap
-  submission as proof of zero demand, real abandonment or successful indexing.
-
-- Expanded coverage must not render thousands of cards or an options list per
-  source row. Browse 10 candidates/page and cap comparison options at 100;
-  competing-page examples cap at five while the returned-page count stays visible.
-
-- Small-screen result values must be readable without horizontal table scrolling.
-  Use labeled cards below 640px and retain all desktop table metrics. Keep one
-  investigation topic open at a time to avoid a long wall of forms and caveats.
-- Use the existing border-border theme token on feature surfaces; bare Tailwind
-  borders inherit text color and create unnecessarily heavy nested outlines.
+- Preserve explicit-action/no-paid-call boundaries in `SearchGrowthPanel.test.ts`
+  and `tests/search-growth.spec.ts`.
+- Browser regressions must verify full mobile metric values, form editing,
+  disclosure behavior and no document-wide overflow, as well as desktop tables.
+- Update this file in the same commit whenever this feature changes. State the
+  choice, reason, affected code, trade-off and verification/constraints; replace
+  superseded statements rather than accumulating contradictory appendices.

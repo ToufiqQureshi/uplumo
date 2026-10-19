@@ -246,3 +246,17 @@ Before rolling back application code, disable weekly monitoring. Revert code
 without removing applied migration history/tables. Existing pre-extension readers
 ignore added JSON fields. No customer website was automatically rewritten.
 Keep this handover with the PR; maintain ongoing behavior in feature docs.
+
+10. MAINTAINED DECISION RECORDS
+------------------------------
+CLAUDE.md section 7 requires a relevant decision.md update in the same commit
+for every repository-changing task. Record the choice, reason, trade-offs,
+constraints and verification, replacing superseded decisions. Repository-wide
+owner/rule decisions live in DECISIONS.md; do not create a second root file
+with different capitalization. This handover does not replace maintained docs.
+
+Read the Search Performance decision.md for product/mobile choices; GA4/GSC
+for measurement and diagnosis; database for persistence/worker races; MCP and
+backend/frontend SAM for authorization and paid-action boundaries; content-editor
+for reviewed handoffs. Exact operational bounds stay in the relevant README.
+This rule is an agent instruction; no new automatic CI enforcement was added.

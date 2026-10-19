@@ -22,3 +22,24 @@ Use the package tests next to the source files in `README.md`. For changes cross
 
 - Classify Search Growth as GoogleData and read-only. Its result contains
   evidence and candidates, not query-level conversion attribution or causal claims.
+
+## Search Growth tool contract
+
+- **Decision:** reuse `ga4.Service.GetGrowthReport` from the registered read-only
+  `get_search_growth_report` tool, including goal/comparison/coverage inputs.
+  **Why:** the browser and analyst must use the same validation, source semantics,
+  cache identity and quota bounds rather than separate inference logic.
+  **Trace:** `ga4_tools.go`, GA4 `decision.md` and `README.md`.
+- **Decision:** authorize the project before dispatch, retain GoogleData feature
+  classification and bind SAM's active project server-side. **Why:** a model or
+  external MCP client cannot grant itself another workspace's data access.
+- **Decision:** make expanded coverage explicit in the schema and describe its
+  larger free-Google read bound. **Why:** read-only does not mean unlimited quota;
+  schema changes must not silently turn a routine report into deeper research.
+- **Decision:** expose only registered capabilities and report source limitations
+  as evidence. **Why:** a UI drill-down or external report link is not proof that
+  an equivalent MCP tool/API integration exists. Do not claim automatic native
+  AI-report ingestion, causal attribution or query-level conversions.
+
+Update this decision file with tool-schema, access or cost-bound changes, and
+verify schema validation and project binding through the existing MCP/SAM tests.

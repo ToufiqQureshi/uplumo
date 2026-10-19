@@ -296,6 +296,41 @@ Propose with a recommendation; do not decide silently.
   same change when one of those changes.
 - Never put secrets in a document.
 
+### Mandatory decision record for every change
+
+For **every task that changes repository files**, update the relevant feature or
+package `decision.md` **in the same commit**. This includes UI/UX, calculations,
+APIs, database/schema, jobs, provider/cost controls, configuration, tests,
+refactors and documentation changes. It is part of finishing the task, not an
+optional follow-up. Read the current decisions before editing code.
+
+Each entry must make sense to a developer or AI with no conversation history:
+
+- **Decision:** what was chosen or changed, and the affected user behavior/scope.
+- **Why:** the problem or evidence behind it, and any meaningful trade-off or
+  alternative rejected. Do not invent alternatives just to fill a template.
+- **Preserve:** the data, money, authorization, UX and failure invariants that
+  future edits must respect. For a behavior-preserving refactor or docs/test
+  change, explain its purpose and which constraints remain in force.
+- **Trace:** point to the implementing files/contracts and the relevant
+  verification. State limitations and unfinished real-provider validation.
+
+Update or replace an existing decision when it is superseded; do not append a
+contradiction or a generic "docs updated" line. Keep exact operational values in
+one canonical document and link to it. Update each affected layer's decision file
+when a change crosses frontend/backend boundaries; use links instead of copying
+one explanation across unrelated features. If a feature lacks `decision.md`,
+create it next to its README/flow and check the documentation map rules.
+
+For repository-wide rules or owner preferences with no feature folder, update
+root `DECISIONS.md`. It records why this documentation rule exists; `CLAUDE.md`
+is the authoritative instruction. Changes to this rule update both files.
+
+Before committing, check the diff against the affected decision files. A change
+without its relevant decision update is unfinished. Summarize material decisions
+and changes to agent rules in the PR description; a handover TXT or chat message
+does not replace the maintained decision records.
+
 **Docs change with the code, in the same commit.** A PR that changes
 behaviour, a rule, an env var, a limit, an endpoint or a table also updates
 the README of that feature (and `ROADMAP.md`, `docs/DEPLOY.md` or the Docs

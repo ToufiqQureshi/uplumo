@@ -24,3 +24,18 @@ Creates and edits SEO drafts, content briefs, author profiles, internal-link sug
 - Search Growth evidence is a read-only reference, not imported HTML or an
   instruction to overwrite the draft. Validate URL scheme, lengths and expiry
   before displaying the tab-local context.
+
+## Search Growth evidence reference
+
+- **Decision:** carry a bounded source URL, query themes, dates and findings as a
+  validated project-scoped tab-local reference, preserving existing draft text.
+  **Why:** the writer needs the reason for a suggested edit; navigating from an
+  opportunity is not permission to import arbitrary HTML or overwrite work.
+- **Decision:** retain the existing selected-text AI review/apply and explicit
+  publish workflow. **Why:** an analyst recommendation is evidence for the
+  writer's decision, not an automatic content or paid-generation instruction.
+  **Trace:** `searchContext.ts`, `ContentEditorPage.tsx`, Search Growth handoff
+  tests and backend SAM's execution-boundary decision.
+
+Keep this file updated when the reference schema, draft-preservation behavior or
+review/apply boundary changes.
