@@ -14,6 +14,8 @@ Creates and edits SEO drafts, content briefs, author profiles, internal-link sug
 - Link suggestions use project-owned GSC/audit data and must never cross project boundaries. _Why:_ Explicit bounds prevent a large or abusive request from consuming shared memory, latency or service capacity.
 - AI rewrites require one selected plain-text block within the 5,000-character context sent to the model. _Why:_ Truncating the prompt while replacing a longer passage, or replacing a selection containing an image/table, could silently lose customer content.
 
+- Accept a Search Performance `keyword` handoff only as a bounded topic seed on a blank, clean draft. _Why:_ It carries evidence to the editor without overwriting customer work or starting a paid action.
+
 ## Verification pointers
 
 - `ArticlePreview.test.ts`

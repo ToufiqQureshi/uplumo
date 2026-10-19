@@ -16,10 +16,11 @@ import (
 const (
 	defaultSearchRowLimit = 250
 	maxSearchRowLimit     = 1000
+	maxReportRowLimit     = 25_000
 	strikingDistanceLimit = 1000
-	dailyRowLimit         = 200
+	dailyRowLimit         = 1000
 	countryRowLimit       = 25
-	exportRowLimit        = 1000
+	exportRowLimit        = maxReportRowLimit
 )
 
 type dateRange string
@@ -36,8 +37,9 @@ const (
 // PerformanceInput describes the public search-performance filters and range.
 type PerformanceInput struct {
 	DateRange   dateRange   `json:"dateRange,omitempty"`
-	StartDate   string      `json:"-"`
-	EndDate     string      `json:"-"`
+	SearchType  string      `json:"searchType,omitempty"`
+	StartDate   string      `json:"startDate,omitempty"`
+	EndDate     string      `json:"endDate,omitempty"`
 	Device      string      `json:"device,omitempty"`
 	Country     string      `json:"country,omitempty"`
 	PageFilter  *TextFilter `json:"pageFilter,omitempty"`
@@ -127,6 +129,10 @@ func resolveDateRange(input PerformanceInput, today time.Time) (dateWindow, erro
 		if !ok1 || !ok2 || start.After(end) {
 			return dateWindow{}, validationError("Dates must be valid YYYY-MM-DD values with startDate on or before endDate.")
 		}
+		latest := today.AddDate(0, 0, -3).Format("2006-01-02")
+		if input.EndDate > latest || input.EndDate < floor {
+			return dateWindow{}, validationError("endDate must be within Search Console's available 16-month history and data delay.")
+		}
 		startDate := input.StartDate
 		if startDate < floor {
 			startDate = floor
@@ -184,8 +190,8 @@ func BuildSearchAnalyticsRequest(input PerformanceInput, dimensions []string, ro
 	if rowLimit < 1 {
 		rowLimit = 1
 	}
-	if rowLimit > maxSearchRowLimit {
-		rowLimit = maxSearchRowLimit
+	if rowLimit > maxReportRowLimit {
+		rowLimit = maxReportRowLimit
 	}
 	if startRow < 0 || startRow > 1_000_000 {
 		return SearchRequest{}, validationError("startRow must be between 0 and 1000000.")
@@ -193,7 +199,11 @@ func BuildSearchAnalyticsRequest(input PerformanceInput, dimensions []string, ro
 	if len(dimensions) == 0 {
 		dimensions = []string{"query"}
 	}
-	request := SearchRequest{StartDate: rangeDates.StartDate, EndDate: rangeDates.EndDate, Dimensions: dimensions, RowLimit: rowLimit, Type: "web", DataState: "all"}
+	searchType := input.SearchType
+	if searchType == "" {
+		searchType = "web"
+	}
+	request := SearchRequest{StartDate: rangeDates.StartDate, EndDate: rangeDates.EndDate, Dimensions: dimensions, RowLimit: rowLimit, Type: searchType, DataState: "all"}
 	if startRow > 0 {
 		request.StartRow = startRow
 	}
@@ -249,20 +259,13 @@ func (s *Service) GetPerformance(ctx context.Context, organizationID, projectID 
 	if err != nil {
 		return nil, err
 	}
+	comparisonAvailable := previous.StartDate >= subtractUTCMonths(now, 16).Format("2006-01-02")
 	currentInput := input
 	currentInput.StartDate = window.StartDate
 	currentInput.EndDate = window.EndDate
 	currentInput.DateRange = ""
 	nonCountry := withoutCountry(currentInput)
 	filtersRequest, err := BuildSearchAnalyticsRequest(currentInput, []string{"date"}, dailyRowLimit, 0, now)
-	if err != nil {
-		return nil, err
-	}
-	previousInput := currentInput
-	previousInput.StartDate = previous.StartDate
-	previousInput.EndDate = previous.EndDate
-	previousInput.DateRange = ""
-	previousRequest, err := BuildSearchAnalyticsRequest(previousInput, []string{"date"}, dailyRowLimit, 0, now)
 	if err != nil {
 		return nil, err
 	}
@@ -274,7 +277,21 @@ func (s *Service) GetPerformance(ctx context.Context, organizationID, projectID 
 	if err != nil {
 		return nil, err
 	}
-	rowsByRequest, err := s.fetchFour(ctx, client, connection.SiteURL, filtersRequest, previousRequest, queryPages, countryRequest)
+	requests := []SearchRequest{filtersRequest}
+	if comparisonAvailable {
+		previousInput := currentInput
+		previousInput.StartDate = previous.StartDate
+		previousInput.EndDate = previous.EndDate
+		previousInput.DateRange = ""
+		previousRequest, buildErr := BuildSearchAnalyticsRequest(previousInput, []string{"date"}, dailyRowLimit, 0, now)
+		if buildErr != nil {
+			return nil, buildErr
+		}
+		requests = append(requests, previousRequest)
+	}
+	queryPagesIndex := len(requests)
+	requests = append(requests, queryPages, countryRequest)
+	rowsByRequest, err := s.fetchSearchAnalyticsRows(ctx, client, connection.SiteURL, requests...)
 	if err != nil {
 		mapped := mapProviderError(err)
 		if expectedGrantFailure(mapped) {
@@ -282,8 +299,26 @@ func (s *Service) GetPerformance(ctx context.Context, organizationID, projectID 
 		}
 		return nil, mapped
 	}
-	currentRows, previousRows, queryRows, countryRows := rowsByRequest[0], rowsByRequest[1], rowsByRequest[2], rowsByRequest[3]
-	return map[string]any{"connected": true, "range": map[string]string{"startDate": window.StartDate, "endDate": window.EndDate, "prevStartDate": previous.StartDate, "prevEndDate": previous.EndDate}, "totals": sumSearchTotals(currentRows), "prevTotals": sumSearchTotals(previousRows), "strikingDistance": buildStrikingDistanceRows(queryRows, 100), "countries": toDimensionRows(countryRows)}, nil
+	currentRows := rowsByRequest[0]
+	previousRows := []SearchRow(nil)
+	if comparisonAvailable {
+		previousRows = rowsByRequest[1]
+	} else {
+		previous = dateWindow{}
+	}
+	queryRows, countryRows := rowsByRequest[queryPagesIndex], rowsByRequest[queryPagesIndex+1]
+	return map[string]any{"connected": true, "range": map[string]any{"startDate": window.StartDate, "endDate": window.EndDate, "prevStartDate": previous.StartDate, "prevEndDate": previous.EndDate, "comparisonAvailable": comparisonAvailable}, "totals": sumSearchTotals(currentRows), "prevTotals": sumSearchTotals(previousRows), "daily": toDailyRows(currentRows), "strikingDistance": buildStrikingDistanceRows(queryRows, strikingDistanceLimit), "countries": toDimensionRows(countryRows)}, nil
+}
+
+func toDailyRows(rows []SearchRow) []map[string]any {
+	daily := make([]map[string]any, 0, len(rows))
+	for _, row := range rows {
+		if len(row.Keys) != 1 {
+			continue
+		}
+		daily = append(daily, map[string]any{"date": row.Keys[0], "clicks": row.Clicks, "impressions": row.Impressions})
+	}
+	return daily
 }
 
 // GetMCPPerformance runs one bounded Search Analytics query for the MCP tool.
@@ -416,7 +451,7 @@ func mathRound(value float64, digits int) float64 {
 	return math.Round(value*factor) / factor
 }
 
-func (s *Service) fetchFour(ctx context.Context, client SearchClient, siteURL string, requests ...SearchRequest) ([][]SearchRow, error) {
+func (s *Service) fetchSearchAnalyticsRows(ctx context.Context, client SearchClient, siteURL string, requests ...SearchRequest) ([][]SearchRow, error) {
 	type answer struct {
 		index int
 		rows  []SearchRow
@@ -494,7 +529,7 @@ func (s *Service) GetTable(ctx context.Context, organizationID, projectID string
 	return map[string]any{"connected": true, "dimension": input.Dimension, "page": page, "pageSize": size, "hasNextPage": hasNext, "totalCount": total, "rows": fetched}, nil
 }
 
-// ExportTable returns at most 1000 query or page rows.
+// ExportTable returns at most 25,000 query or page rows.
 func (s *Service) ExportTable(ctx context.Context, organizationID, projectID string, input ExportInput) (map[string]any, error) {
 	if input.Dimension != "query" && input.Dimension != "page" {
 		return nil, validationError("dimension must be query or page.")

@@ -78,7 +78,7 @@ paths:
   /projects/{projectId}/gsc/search-performance/export:
     post:
       operationId: gsc_search_performance_export
-      summary: Export up to 1000 query or page rows
+      summary: Export up to 25,000 query or page rows
       parameters:
         - $ref: "#/components/parameters/ProjectId"
       requestBody:
@@ -107,9 +107,12 @@ components:
         dateRange:
           {
             type: string,
-            enum: [last_7_days, last_28_days, last_3_months],
+            enum: [last_7_days, last_28_days, last_3_months, last_6_months, last_12_months, last_16_months],
             default: last_28_days,
           }
+        searchType: { type: string, enum: [web, image, video, news], default: web }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
         device: { type: string, enum: [DESKTOP, MOBILE, TABLET] }
         country: { type: string, minLength: 3, maxLength: 3 }
         pageFilter: { $ref: "#/components/schemas/TextFilter" }

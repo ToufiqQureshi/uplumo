@@ -1,14 +1,13 @@
 # Search Console performance
 
-Reads Search Console metrics by date range and dimensions such as query, page, country and device.
+Turns first-party Search Console data into a review workflow: compare periods, find pages with queries ranking 5-20, start a focused content draft, and inspect Google's stored index status.
 
-Read [flow.md](flow.md) for the request path and [decision.md](decision.md) for the rules that protect user data, provider spend and customer trust.
+Read [flow.md](flow.md) for the user workflow and API limits. Search Console opportunities are evidence for review, not a ranking promise or proof that content is stale.
 
 ## Code map
 
 - `SearchPerformancePage.tsx`
-- `searchPerformanceQueries.ts`
-- `searchPerformanceApi.ts`
+- `searchPerformanceQueries.ts` and `searchPerformanceApi.ts`
+- `SearchPerformanceTrend.tsx` and `SearchPerformanceIndexing.tsx`
+- `ContentRefreshQueuePanel.tsx` and `contentRefreshQueue.ts`
 - `backend/internal/gsc/performance.go`
-
-- `ContentRefreshQueue.tsx` and `contentRefreshQueue.ts` (read-only candidates from loaded report rows)

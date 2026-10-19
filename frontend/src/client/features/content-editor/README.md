@@ -161,3 +161,7 @@ Google or predict rankings.
   rank tracking and enquiry evidence with a clean page path. Before another edit,
   save a measurement baseline there; new articles need data before a comparison
   means anything. Opening any follow-up makes no paid check or site change.
+
+## Search Console handoff
+
+The Search Performance refresh queue can open a new draft with that page's strongest query prefilled as the target topic. This is only a draft seed: it does not fetch a brief, call AI, overwrite an existing draft or publish. The editor accepts the optional `keyword` route search value only up to 200 characters and applies it only while the current draft is clean and blank.

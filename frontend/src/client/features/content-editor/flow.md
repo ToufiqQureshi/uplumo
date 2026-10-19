@@ -48,3 +48,7 @@ Section/FAQ/gap actions insert at the saved cursor; outlines, title/meta options
 and fact-check notes are review-only. Markdown mode does not expose a hidden
 visual selection to the assistant. Never restore whole-article replacement as a
 fallback when the visual editor is unavailable.
+
+## Search Performance handoff
+
+A user explicitly chooses Start draft on a Search Console refresh candidate -> TanStack route passes the strongest query as `keyword` -> the editor seeds the target topic on a blank draft. The route never starts a brief or AI call; editing, saving, and publishing retain their existing explicit workflows.

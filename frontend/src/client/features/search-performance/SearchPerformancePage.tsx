@@ -31,11 +31,13 @@ import {
   exportDimensionRows,
   exportStriking,
   StrikingDistanceTable,
-  TotalsCards,
   type ExportTarget,
 } from "@/client/features/search-performance/SearchPerformanceParts";
+import { TotalsCards } from "@/client/features/search-performance/SearchPerformanceTotals";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { ContentRefreshQueue } from "@/client/features/search-performance/ContentRefreshQueuePanel";
+import { SearchPerformanceTrend } from "@/client/features/search-performance/SearchPerformanceTrend";
+import { SearchPerformanceIndexing } from "@/client/features/search-performance/SearchPerformanceIndexing";
 import { buildContentRefreshQueue } from "@/client/features/search-performance/contentRefreshQueue";
 import {
   exportSearchPerformanceTable,
@@ -55,15 +57,30 @@ function tabDimension(
   return tab === "pages" ? "page" : "query";
 }
 
-function buildFilterInput({
-  range = "last_28_days",
-  device,
-  country,
-}: Pick<SearchPerformanceSearch, "range" | "device" | "country">): FilterInput {
+function activeFilterCount(
+  search: SearchPerformanceSearch,
+  filters: TextFilters,
+): number {
+  const { country, device, searchType, range, startDate, endDate } = search;
+  return (
+    Number(Boolean(filters.pageFilter)) +
+    Number(Boolean(filters.queryFilter)) +
+    Number(Boolean(country)) +
+    Number(Boolean(device)) +
+    Number(Boolean(searchType && searchType !== "web")) +
+    Number(Boolean(startDate && endDate) || (range && range !== "last_28_days"))
+  );
+}
+
+function buildFilterInput(search: SearchPerformanceSearch): FilterInput {
   return {
-    dateRange: range,
-    ...(device ? { device } : {}),
-    ...(country ? { country } : {}),
+    dateRange: search.range ?? "last_28_days",
+    searchType: search.searchType ?? "web",
+    ...(search.startDate && search.endDate
+      ? { startDate: search.startDate, endDate: search.endDate }
+      : {}),
+    ...(search.device ? { device: search.device } : {}),
+    ...(search.country ? { country: search.country } : {}),
   };
 }
 
@@ -77,7 +94,6 @@ export function SearchPerformancePage({
   onSearchChange: (update: Partial<SearchPerformanceSearch>) => void;
 }) {
   const queryClient = useQueryClient();
-  const { range, device, country } = search;
   const textFilters = useMemo<TextFilters>(
     () => ({
       pageFilter: search.pageText
@@ -97,18 +113,13 @@ export function SearchPerformancePage({
   );
   const [showFilters, setShowFilters] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  const activeFilterCount =
-    Number(Boolean(textFilters.pageFilter)) +
-    Number(Boolean(textFilters.queryFilter)) +
-    Number(Boolean(country)) +
-    Number(Boolean(device)) +
-    Number(range !== undefined && range !== "last_28_days");
+  const filterCount = activeFilterCount(search, textFilters);
   const tab = search.tab ?? "striking";
   const page = search.page ?? 1;
   const pageSize = search.size ?? SEARCH_PERFORMANCE_DEFAULT_PAGE_SIZE;
 
   const filterInput = {
-    ...buildFilterInput({ range, device, country }),
+    ...buildFilterInput(search),
     ...textFilters,
   };
 
@@ -119,7 +130,6 @@ export function SearchPerformancePage({
     placeholderData: keepPreviousData,
   });
   const report = reportQuery.data;
-
   const isTableTab = tab === "queries" || tab === "pages";
   const dimension = tabDimension(tab);
   const tableQuery = useQuery({
@@ -144,18 +154,10 @@ export function SearchPerformancePage({
         "query",
         1,
         SEARCH_PERFORMANCE_DEFAULT_PAGE_SIZE,
-        { ...buildFilterInput({ range, device, country }), ...textFilters },
+        { ...buildFilterInput(search), ...textFilters },
       ),
     );
-  }, [
-    report?.connected,
-    projectId,
-    range,
-    device,
-    country,
-    textFilters,
-    queryClient,
-  ]);
+  }, [report?.connected, projectId, search, textFilters, queryClient]);
 
   const handleExport = async (target: ExportTarget) => {
     if (!report?.connected || reportQuery.isPlaceholderData || isExporting)
@@ -195,6 +197,9 @@ export function SearchPerformancePage({
       country: undefined,
       device: undefined,
       range: undefined,
+      startDate: undefined,
+      endDate: undefined,
+      searchType: undefined,
     });
 
   const reportError = (
@@ -211,7 +216,7 @@ export function SearchPerformancePage({
       // Remount on URL changes (back/forward) so the draft matches.
       key={JSON.stringify(textFilters)}
       value={textFilters}
-      activeFilterCount={activeFilterCount}
+      activeFilterCount={filterCount}
       onApply={(filters) => {
         onSearchChange({
           page: undefined,
@@ -266,6 +271,15 @@ export function SearchPerformancePage({
             ) : (
               <TotalsCards report={report} />
             )}
+            {!reportQuery.isPlaceholderData ? (
+              <SearchPerformanceTrend report={report} />
+            ) : null}
+            <SearchPerformanceIndexing
+              projectId={projectId}
+              strikingDistance={
+                report?.connected ? report.strikingDistance : []
+              }
+            />
             <div className="overflow-hidden rounded-xl border border-border bg-card">
               <DataTableTabs
                 value={tab}
@@ -306,8 +320,8 @@ export function SearchPerformancePage({
                 >
                   <SlidersHorizontal data-icon="inline-start" />
                   Filters
-                  {activeFilterCount > 0 ? (
-                    <Badge size="sm">{activeFilterCount}</Badge>
+                  {filterCount > 0 ? (
+                    <Badge size="sm">{filterCount}</Badge>
                   ) : null}
                 </Button>
                 {reportQuery.isFetching && !reportQuery.isPending ? (
@@ -316,6 +330,7 @@ export function SearchPerformancePage({
                 <SearchPerformanceSelects
                   search={search}
                   countries={report.countries}
+                  reportRange={report.range}
                   onSearchChange={onSearchChange}
                 />
               </div>
@@ -337,7 +352,7 @@ export function SearchPerformancePage({
                   onPageSizeChange={(size) =>
                     onSearchChange({ page: undefined, size })
                   }
-                  isFiltered={activeFilterCount > 0}
+                  isFiltered={filterCount > 0}
                   onClearFilters={resetFilters}
                 />
               ) : tab === "refresh" ? (
@@ -360,7 +375,7 @@ export function SearchPerformancePage({
                   onPageSizeChange={(size) =>
                     onSearchChange({ page: undefined, size })
                   }
-                  isFiltered={activeFilterCount > 0}
+                  isFiltered={filterCount > 0}
                   onClearFilters={resetFilters}
                 />
               )}

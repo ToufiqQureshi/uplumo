@@ -4,10 +4,11 @@
 
 ## User and request flow
 
-1. User selects date window, property, filters and dimension tabs.
+1. User selects the GSC property, calendar date range, search type, device, country and query/page filters. Date and filter state stays in the URL so the view is shareable.
 2. `searchPerformanceQueries.ts` keys requests by the full filter set and `searchPerformanceApi.ts` calls Go GSC routes.
-3. Go verifies project access and selected property, validates Google API filters and executes a bounded read.
-4. UI renders rows, totals and pagination; query changes do not mutate GSC data.
+3. Go verifies project access and selected property, validates dates and filters, and runs up to four bounded Search Analytics reads (three when no full prior period is available inside the 16-month history). Results include current totals, an optional period comparison, daily trend, country rows and up to 1,000 returned query-page rows.
+4. The page groups those returned rows into striking-distance and content-refresh candidates. Candidate pages can be opened for review, or the strongest query can seed a new Content Editor draft. This does not call AI, publish, or change the site.
+5. URL inspection can load up to 10 priority URLs with an explicit click. It displays Google's stored index/crawl result and a cautious next step; it does not request a crawl, index a live page, or guarantee ranking.
 
 ## Implementation map
 
@@ -15,17 +16,20 @@
 - `searchPerformanceQueries.ts`
 - `searchPerformanceApi.ts`
 - `backend/internal/gsc/performance.go`
+- `backend/internal/gsc/inspection.go`
+- Content Editor handoff: `ContentRefreshQueuePanel.tsx`, `content-editor.tsx`, `ContentEditorPage.tsx`
 
 ## API and service dependencies
 
 Go package: `backend/internal/gsc`; tokens and selected-property ownership are managed by `backend/internal/google` and `gsc`.
 
-## Content refresh queue
+## Content refresh and draft handoff
 
-The queue reuses the current Search Console report rows; it does not make another Google request. From the report's 100 highest-impression striking-distance query rows, `contentRefreshQueue.ts` keeps queries at average position 5–20 with at least 50 impressions, groups them by page, sums clicks/impressions and computes impression-weighted position. It shows the three strongest query themes per page and the first 25 candidate pages. Review links are accepted only for safe HTTP(S) URLs. These are investigation candidates, not proof that content is stale; the user decides whether to update a page.
+The queue reuses the report's query-page rows; it makes no extra Search Console request. `contentRefreshQueue.ts` keeps rows at average position 5-20 with at least 50 impressions, groups them by page, sums clicks/impressions and computes impression-weighted position. It shows the three strongest query themes per page and the first 25 candidate pages. Search Console can omit rows, so the queue is incomplete by design. A row can open the page or start a new Content Editor draft seeded with its strongest query. The seed is a plain draft topic; no AI call or publish happens.
 
 ## Cost, security and failure boundaries
 
-- Search Console has provider quotas; preserve bounded read retries and avoid redundant refetches.
-- Every request uses the project’s selected property and OAuth grant; never accept a property from another project.
-- Google returns sampled/limited rows; preserve response metadata and do not claim exhaustive totals.
+- Search Console has per-site, per-user and per-project quotas; keep the four report reads and exports bounded, and avoid refetch loops.
+- Every request uses the project's selected property and OAuth grant; never accept a property from another project.
+- Google returns sampled/limited rows; report totals and candidate rows are different views and candidate lists are not exhaustive.
+- URL inspection is an explicitly clicked read-only call, capped at 10 URLs per request.
