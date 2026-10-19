@@ -487,6 +487,19 @@ func consumeCreditBucketsTx(ctx context.Context, tx pgx.Tx, orgID string, amount
 	return ErrInsufficientBalance
 }
 
+// lockBalanceTx takes the workspace balance row lock. Every transaction that
+// touches both the balance and the credit grants takes the balance first, as
+// reserveTx does; two transactions that took them in opposite orders would
+// deadlock when one action holds and settles several results at once.
+func lockBalanceTx(ctx context.Context, tx pgx.Tx, orgID string) error {
+	var balance int64
+	err := tx.QueryRow(ctx, `SELECT balance_credits FROM go_billing_credits WHERE organization_id = $1 FOR UPDATE`, orgID).Scan(&balance)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return fmt.Errorf("lock balance: %w", err)
+	}
+	return nil
+}
+
 func restoreReservationCreditsTx(ctx context.Context, tx pgx.Tx, reservationID string, amount int64) (int64, error) {
 	rows, err := tx.Query(ctx, `SELECT a.grant_id, a.amount_credits, g.expires_at FROM go_billing_credit_reservation_grants a JOIN go_billing_credit_grants g ON g.id = a.grant_id WHERE a.reservation_id = $1 ORDER BY g.expires_at DESC, g.created_at DESC FOR UPDATE OF g`, reservationID)
 	if err != nil {
@@ -626,6 +639,9 @@ func (s *CreditLedgerService) settle(ctx context.Context, reservationID string, 
 			}
 		}
 	} else if refundAmount > 0 {
+		if err := lockBalanceTx(ctx, tx, orgID); err != nil {
+			return 0, err
+		}
 		restored, restoreErr := restoreReservationCreditsTx(ctx, tx, reservationID, refundAmount)
 		if restoreErr != nil {
 			return 0, fmt.Errorf("restore unused credit grants: %w", restoreErr)
@@ -690,6 +706,9 @@ func (s *CreditLedgerService) Refund(ctx context.Context, reservationID string, 
 		return ErrReservationAlreadyClosed
 	}
 
+	if err := lockBalanceTx(ctx, tx, orgID); err != nil {
+		return err
+	}
 	restored, err := restoreReservationCreditsTx(ctx, tx, reservationID, reservedAmount)
 	if err != nil {
 		return fmt.Errorf("restore refunded credit grants: %w", err)
