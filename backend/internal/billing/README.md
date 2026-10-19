@@ -118,11 +118,12 @@ assistant. Rules that must never break:
   left uncharged to customers are logged separately for investigation.
 - **It fails closed.** A ledger or database error stops the request. SAM
   refuses a turn whose credits cannot be checked.
-- **Per-workspace daily limit.** One workspace may spend at most a third
-  of its plan's monthly credits (in provider dollars) in a UTC day
-  (`Service.WorkspaceDailyLimitUSD`); past it, only that workspace gets
-  `spend.ErrWorkspaceDailyLimit` (`429 daily_credit_limit`) until midnight
-  UTC. One heavy client never pauses anyone else. Staff workspaces have none.
+- **No per-workspace daily limit.** `Service.WorkspaceDailyLimitUSD` returns 0:
+  a customer may spend the credits they bought in any order, and each call
+  charges its real cost times 1.28, so spending cannot pass what was paid. The
+  guard can still enforce a limit when a value is set
+  (`spend.ErrWorkspaceDailyLimit`, `429 daily_credit_limit`), but nothing sets
+  one. Running out of credits is `402 insufficient_credits`.
 - **Global emergency limit.** Every settled cost, staff included, is logged
   in `go_provider_spend`. Once today's total across all workspaces plus a
   request's estimate passes `PROVIDER_DAILY_LIMIT_USD` (default $100), every
@@ -146,8 +147,7 @@ assistant. Rules that must never break:
   which was Uplumo's money. SAM stops a turn at one dollar. When OpenRouter
   reports no cost, a conservative estimate from tokens (or from the streamed
   text) is charged instead of nothing.
-- Without payments (self-hosted) nobody is charged credits, but the daily
-  limit still applies.
+- Without payments (self-hosted) nobody is charged credits.
 
 Edge cases: two requests racing the last credits are decided by the row
 lock, so one is refused. Both daily limits count today's open holds at their
