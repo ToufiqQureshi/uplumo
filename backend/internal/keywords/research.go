@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"strings"
 	"sync"
 	"time"
@@ -52,6 +53,22 @@ type ResearchRow struct {
 	CPC               *float64        `json:"cpc"`
 	Competition       *float64        `json:"competition"`
 	Intent            string          `json:"intent"`
+	// These come with the same Labs call, so showing them costs nothing more.
+	TopOfPageBidLow  *float64 `json:"topOfPageBidLow"`
+	TopOfPageBidHigh *float64 `json:"topOfPageBidHigh"`
+	// ReferringDomains is the average links-from-domains of the page-one
+	// results; QuarterlyChange is the volume change over three months, percent.
+	ReferringDomains *int `json:"referringDomains"`
+	QuarterlyChange  *int `json:"quarterlyChange"`
+}
+
+// roundedInt rounds a provider average to a whole number, or nil when absent.
+func roundedInt(v *float64) *int {
+	if v == nil {
+		return nil
+	}
+	n := int(math.Round(*v))
+	return &n
 }
 
 // ResearchResult is what research returns and caches. Source says where the
@@ -143,6 +160,8 @@ func labsRows(items []LabsItem) []ResearchRow {
 		rows = append(rows, ResearchRow{
 			Keyword: k, SearchVolume: volume.SearchVolume, Trend: nonNilMonths(volume.Monthly), KeywordDifficulty: it.Difficulty,
 			CPC: it.Info.CPC, Competition: it.Info.Competition, Intent: normalizeIntent(it.MainIntent),
+			TopOfPageBidLow: it.Info.TopBidLow, TopOfPageBidHigh: it.Info.TopBidHigh,
+			ReferringDomains: roundedInt(it.ReferringDomains), QuarterlyChange: roundedInt(it.Info.QuarterlyChange),
 		})
 	}
 	return rows

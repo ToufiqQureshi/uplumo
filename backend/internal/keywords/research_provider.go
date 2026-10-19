@@ -20,6 +20,11 @@ type Info struct {
 	Competition      *float64 // 0-1 paid-competition ratio
 	CompetitionLevel *string
 	Monthly          []MonthlySearch
+	// TopBidLow and TopBidHigh are the range advertisers pay for a top-of-page
+	// ad (USD); QuarterlyChange is the volume change over the last three months,
+	// in percent.
+	TopBidLow, TopBidHigh *float64
+	QuarterlyChange       *float64
 }
 
 // LabsItem is a keyword from DataForSEO Labs. Clickstream is set only when the
@@ -30,6 +35,9 @@ type LabsItem struct {
 	Clickstream *Info
 	Difficulty  *int
 	MainIntent  *string
+	// ReferringDomains is the average number of domains linking to the pages
+	// that rank on page one for the keyword.
+	ReferringDomains *float64
 }
 
 // AdsItem is a keyword from Google Ads: volume, CPC and a 0-100 competition
@@ -144,13 +152,25 @@ type wireInfo struct {
 	Competition      *float64      `json:"competition"`
 	CompetitionLevel *string       `json:"competition_level"`
 	Monthly          []wireMonthly `json:"monthly_searches"`
+	LowTopOfPageBid  *float64      `json:"low_top_of_page_bid"`
+	HighTopOfPageBid *float64      `json:"high_top_of_page_bid"`
+	Trend            *struct {
+		Quarterly *float64 `json:"quarterly"`
+	} `json:"search_volume_trend"`
 }
 
 func (w *wireInfo) info() Info {
 	if w == nil {
 		return Info{Monthly: []MonthlySearch{}}
 	}
-	return Info{SearchVolume: w.SearchVolume, CPC: w.CPC, Competition: w.Competition, CompetitionLevel: w.CompetitionLevel, Monthly: monthly(w.Monthly)}
+	out := Info{
+		SearchVolume: w.SearchVolume, CPC: w.CPC, Competition: w.Competition, CompetitionLevel: w.CompetitionLevel, Monthly: monthly(w.Monthly),
+		TopBidLow: w.LowTopOfPageBid, TopBidHigh: w.HighTopOfPageBid,
+	}
+	if w.Trend != nil {
+		out.QuarterlyChange = w.Trend.Quarterly
+	}
+	return out
 }
 
 type wireLabsItem struct {
@@ -163,6 +183,9 @@ type wireLabsItem struct {
 	SearchIntentInfo *struct {
 		MainIntent *string `json:"main_intent"`
 	} `json:"search_intent_info"`
+	AvgBacklinksInfo *struct {
+		ReferringMainDomains *float64 `json:"referring_main_domains"`
+	} `json:"avg_backlinks_info"`
 	// Related keywords wrap the payload one level deeper.
 	KeywordData *wireLabsItem `json:"keyword_data"`
 }
@@ -181,6 +204,9 @@ func (w wireLabsItem) item() (LabsItem, bool) {
 	}
 	if w.SearchIntentInfo != nil {
 		out.MainIntent = w.SearchIntentInfo.MainIntent
+	}
+	if w.AvgBacklinksInfo != nil {
+		out.ReferringDomains = w.AvgBacklinksInfo.ReferringMainDomains
 	}
 	return out, true
 }

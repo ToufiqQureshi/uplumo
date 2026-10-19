@@ -19,6 +19,10 @@ export type KeywordResearchRow = {
   cpc: number | null;
   competition: number | null;
   intent: KeywordIntent;
+  topOfPageBidLow?: number | null;
+  topOfPageBidHigh?: number | null;
+  referringDomains?: number | null;
+  quarterlyChange?: number | null;
 };
 
 export type SavedKeywordRow = {

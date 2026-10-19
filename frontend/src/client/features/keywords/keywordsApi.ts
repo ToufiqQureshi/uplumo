@@ -100,6 +100,11 @@ const researchRowSchema = z.object({
     "navigational",
     "unknown",
   ]),
+  // Missing in results cached before these were shown.
+  topOfPageBidLow: z.number().nullable().optional(),
+  topOfPageBidHigh: z.number().nullable().optional(),
+  referringDomains: z.number().nullable().optional(),
+  quarterlyChange: z.number().nullable().optional(),
 });
 
 const researchResultSchema = z.object({

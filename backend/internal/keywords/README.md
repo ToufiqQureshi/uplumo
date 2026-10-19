@@ -3,7 +3,7 @@
 ## Legacy behavior and edge cases found before porting
 
 - Research accepts 1–200 seeds, modes `auto`, `related`, `suggestions`, `ideas`, result limits 150/300/500, optional clickstream and grouping. Auto blends suggestions and ideas, alternating rows and deduplicating keywords; it falls back when fewer than five non-seed rows appear.
-- Labs countries use Labs keyword data. Countries marked Google Ads-only use Google Ads, which lacks difficulty and search intent. Local research validates the canonical city/region before spending; local volume replaces national volume rather than silently falling back. National metrics remain available for saved keywords.
+- Labs countries use Labs keyword data. Countries marked Google Ads-only use Google Ads, which lacks difficulty and search intent. Local research validates the canonical city/region before spending; local volume replaces national volume rather than silently falling back. National metrics remain available for saved keywords. Labs rows also carry the top-of-page bid range, the average referring domains of page-one results and the 3-month volume change (`ResearchRow`, shown as the Top bid, Ref. domains and 3-mo trend columns); they come in the same call, so a field the provider already returned is shown, not re-bought. Google Ads-only rows leave them empty.
 - Research and SERP cache keys include organization, project, market, area, seed, mode, depth, and options that change results. A deeper 100-result SERP snapshot answers a 20-result request; an empty deeper response must not evict a useful shallow snapshot.
 - Concurrent equivalent research cache misses share in-flight provider work
   inside one Go process, keyed by the same organization/project/market/input

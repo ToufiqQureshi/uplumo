@@ -64,6 +64,38 @@ describe("keyword research API", () => {
     );
   });
 
+  it("keeps the paid bid range, referring domains and trend of a row", async () => {
+    reply({
+      rows: [
+        {
+          keyword: "seo",
+          searchVolume: 1200,
+          trend: [],
+          keywordDifficulty: null,
+          cpc: null,
+          competition: null,
+          intent: "unknown",
+          topOfPageBidLow: 0.5,
+          topOfPageBidHigh: 2.25,
+          referringDomains: 761,
+          quarterlyChange: -45,
+        },
+      ],
+      source: "blended",
+      usedFallback: false,
+    });
+    const { rows } = await researchKeywords({
+      projectId: "p1",
+      keywords: ["seo"],
+    });
+    expect(rows[0]).toMatchObject({
+      topOfPageBidLow: 0.5,
+      topOfPageBidHigh: 2.25,
+      referringDomains: 761,
+      quarterlyChange: -45,
+    });
+  });
+
   it("rejects a research row without an intent", async () => {
     reply({ rows: [{ keyword: "seo" }], source: "auto", usedFallback: false });
     await expect(
