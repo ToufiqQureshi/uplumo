@@ -256,7 +256,7 @@ export function PromptExplorerForm({
             </Button>
           </div>
 
-          <CreditCostHint feature="ai_visibility" />
+          <CreditCostHint feature="ai_visibility" action="prompt_explorer" />
           {validationError ? (
             <p role="alert" className="text-sm text-destructive">
               {validationError}

@@ -14,6 +14,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/toufiqqureshi/uplumo/backend/internal/billing"
+	"github.com/toufiqqureshi/uplumo/backend/internal/platform/dataforseo"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/market"
 )
 
@@ -194,7 +195,7 @@ func (c TrackingConfig) estimate() TrackingEstimate {
 	for _, engine := range c.Engines {
 		cost := 0.0012
 		if engine == "claude" || engine == "perplexity" {
-			cost = 0.5
+			cost = dataforseo.AIResponseCeilingUSD
 		}
 		usd += float64(n) * cost
 	}

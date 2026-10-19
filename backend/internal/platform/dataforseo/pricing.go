@@ -21,14 +21,19 @@ const (
 	serpPriorityFactor  = 2
 	serpOperatorFactor  = 5
 	// DataForSEO Labs and Backlinks rates reflect their July 1, 2026 updates.
-	labsTaskUSD                     = 0.012
-	labsRowUSD                      = 0.00012
-	labsDefaultRows                 = 1000
-	backlinksTaskUSD                = 0.024
-	backlinksRowUSD                 = 0.000036
-	backlinksDefaultRows            = 1000
-	googleAdsTaskUSD                = 0.09
-	aiOptimizationUSD               = 0.5
+	labsTaskUSD          = 0.012
+	labsRowUSD           = 0.00012
+	labsDefaultRows      = 1000
+	backlinksTaskUSD     = 0.024
+	backlinksRowUSD      = 0.000036
+	backlinksDefaultRows = 1000
+	googleAdsTaskUSD     = 0.09
+	// AI optimization tasks were held at a flat $0.50, 10-17 times what they
+	// bill (live, Oct 2026: a ChatGPT answer with web search $0.03, the dearest
+	// answer seen $0.05; a mentions search $0.151, aggregated and top pages
+	// $0.101, the dearest seen $0.173). The ceilings below sit above those.
+	AIResponseCeilingUSD            = 0.10
+	AIMentionsCeilingUSD            = 0.25
 	lighthouseTaskUSD               = 0.005
 	googleBusinessInfoUSD           = 0.0054
 	googleBusinessReviewPerTenUSD   = 0.0015
@@ -97,8 +102,10 @@ func taskCeiling(path string, task map[string]any) float64 {
 		return backlinksTaskUSD + backlinksRowUSD*rows(task, backlinksDefaultRows)
 	case strings.HasPrefix(path, "/v3/keywords_data/"):
 		return googleAdsTaskUSD
+	case strings.HasPrefix(path, "/v3/ai_optimization/") && strings.Contains(path, "/llm_responses/"):
+		return AIResponseCeilingUSD
 	case strings.HasPrefix(path, "/v3/ai_optimization/"):
-		return aiOptimizationUSD
+		return AIMentionsCeilingUSD
 	case strings.HasPrefix(path, "/v3/on_page/content_parsing/live"):
 		return contentParsePageUSD
 	case strings.HasPrefix(path, "/v3/on_page/lighthouse"):

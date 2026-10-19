@@ -123,7 +123,7 @@ export function BrandLookupSearchCard({
           disabledReason={scopeDisabledReason}
         />
       </SearchCard>
-      <CreditCostHint feature="ai_visibility" />
+      <CreditCostHint feature="ai_visibility" action="brand_lookup" />
     </div>
   );
 }
