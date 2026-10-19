@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { sortBy } from "remeda";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { projectsQueryOptions } from "@/client/features/projects/projectQueries";
 import {
@@ -32,6 +32,7 @@ import {
   type EditorTab,
 } from "./ContentEditorSidePanel";
 import { isArticleContentWithinLimit } from "./content-limits";
+import { draftAfterSave, sameDraft } from "./draft-save";
 import { primaryTargetTopic } from "./target-topics";
 
 const blankDraft: ContentDraftInput = {
@@ -98,7 +99,9 @@ export function ContentEditorPage({
   const [imageUploadBusy, setImageUploadBusy] = useState(false);
   const [scoredDraft, setScoredDraft] = useState(draft);
   const [slugEdited, setSlugEdited] = useState(false);
-  const dirty = JSON.stringify(draft) !== JSON.stringify(savedSnapshot);
+  const dirty = !sameDraft(draft, savedSnapshot);
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
   useEffect(() => {
     const timer = window.setTimeout(() => setScoredDraft(draft), 300);
     return () => window.clearTimeout(timer);
@@ -139,12 +142,20 @@ export function ContentEditorPage({
   }, []);
 
   const saveMutation = useMutation({
-    mutationFn: (input: ContentDraftInput) =>
+    mutationFn: (sent: ContentDraftInput) =>
       saveContentDraft({
-        data: { ...input, projectId, ...(draftId ? { id: draftId } : {}) },
+        data: { ...sent, projectId, ...(draftId ? { id: draftId } : {}) },
       }),
-    onSuccess: async (saved) => {
-      restoreDraft(saved);
+    onSuccess: async (saved, sent) => {
+      // The writer keeps typing while an autosave is in flight: take the
+      // server copy only when nothing changed since it was sent.
+      const snapshot = asInput(saved);
+      if (draftAfterSave(draftRef.current, sent, snapshot) === snapshot) {
+        restoreDraft(saved);
+      } else {
+        setDraftId(saved.id);
+        setSavedSnapshot(snapshot);
+      }
       await queryClient.cancelQueries({
         queryKey: contentEditorQueryKeys.drafts(projectId),
         exact: true,
@@ -178,7 +189,6 @@ export function ContentEditorPage({
         });
       }
       onDraftIdChange(saved.id);
-      toast.success("Draft saved");
     },
     onError: (error) =>
       toast.error(
@@ -269,11 +279,11 @@ export function ContentEditorPage({
     dirty,
     onRestore: restoreDraft,
   });
-  const editorBusy =
-    saveMutation.isPending ||
-    openMutation.isPending ||
-    deleteMutation.isPending ||
-    imageUploadBusy;
+  // Saving never locks the writing fields: an autosave runs every few
+  // seconds, and locking them dropped focus and the keys typed meanwhile.
+  const writingLocked =
+    openMutation.isPending || deleteMutation.isPending || imageUploadBusy;
+  const editorBusy = saveMutation.isPending || writingLocked;
 
   const startNewDraft = () => {
     if (
@@ -330,7 +340,11 @@ export function ContentEditorPage({
             Boolean(draft.title.trim() || draft.content.trim())
           }
           onPreview={() => setPreviewOpen(true)}
-          onSave={() => saveMutation.mutate(draft)}
+          onSave={() =>
+            saveMutation.mutate(draft, {
+              onSuccess: () => toast.success("Draft saved"),
+            })
+          }
           onPublish={() => setTab("publish")}
         />
 
@@ -346,7 +360,7 @@ export function ContentEditorPage({
                   ? `/p/${projectId}/keywords?q=${encodeURIComponent(primaryTargetTopic(draft.targetKeyword))}`
                   : undefined
               }
-              disabled={editorBusy}
+              disabled={writingLocked}
               onImageUploadStateChange={setImageUploadBusy}
               onChange={update}
               previewOpen={previewOpen}
