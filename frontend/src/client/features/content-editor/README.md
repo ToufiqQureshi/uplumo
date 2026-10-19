@@ -16,17 +16,32 @@ TanStack Query/Router. `EditorPanels.tsx` contains the shared toolbar and previe
   cached input; until one is available, the editor says it is using only
   brief-independent checks. Fixtures used by tests are never loaded into the
   product UI.
-- With a brief, SEO uses the approved 100-point weights: term coverage (30),
-  term ranges (10), topic placement (15), depth (10), brief subtopics (10),
-  list/table (5), sources and internal links (8), readability (7), and image
-  alt text (5). Terms are selected by competitor-domain prevalence. Depth uses
-  the 25th–75th percentile of available competitor article lengths, with a
-  bounded fallback when there are no samples.
-- Without a brief, SEO displays only local checks, scaled against the points
-  available in that mode. It does not imply competitor coverage or article
-  depth has been checked. AEO remains separately scored against its direct
-  answer, definition, question coverage, structure, sources, FAQ, entities and
-  freshness checks.
+- The checks follow Google's own guidance (people-first content, E-E-A-T,
+  "no ideal length", "no need to chunk content for AI"). Both scores are the
+  points earned out of the points that apply, scaled to 100; a check that
+  does not apply yet (no images, no brief questions) has weight 0.
+- With a brief, SEO weights: term coverage (30), term ranges (10), topic
+  placement (15), depth (10), brief subtopics (10), list/table (5), sources
+  and internal links (8), readability (7), image alt text (5), search
+  description written (5), own experience (10). Terms are selected by
+  competitor-domain prevalence. Depth uses the 25th–75th percentile of
+  competitor article lengths, with a bounded fallback when there are no
+  samples. Without a brief, SEO shows only the local checks.
+- Topic placement looks at the title (the page's H1; a body H1 is not
+  needed), the opening 100 words, any H2/H3 and the search description. The
+  topic matches as the exact phrase or all its meaningful words in any order,
+  so writers are never pushed to repeat an exact keyword.
+- AEO weights (100 with a brief): direct answer (15: opening paragraph of
+  25–120 words that names the topic), plain definition (10: a sentence that
+  starts with the topic and says "is/means", or Hinglish "hota hai/matlab";
+  questions and headings do not count), brief questions answered (20; not
+  applicable without a brief), list/table (5), sources (15), FAQ with a real
+  question and an answer of 8+ words (5; the inserted template text does not
+  count), named entities (5), own experience (10), author selected (10),
+  reviewed within 12 months (5).
+- Links count as sources; image sources (`![alt](url)`) never do.
+- "Own experience" looks for first-person evidence ("we tested", "I wore",
+  "maine dekha"), the Experience in E-E-A-T. It is a nudge, not proof.
 - Readability is scored only when the draft contains no Devanagari script and
   fewer than 5% common Hindi/Hinglish markers. Other language drafts receive no
   readability penalty. Image alt text remains checked against the existing
