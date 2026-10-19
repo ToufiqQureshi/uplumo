@@ -93,6 +93,25 @@ paths:
         "404": { $ref: "#/components/responses/Error" }
         "502": { $ref: "#/components/responses/Error" }
         "503": { $ref: "#/components/responses/Error" }
+  /projects/{projectId}/gsc/search-performance/sitemaps:
+    post:
+      operationId: gscSubmittedSitemaps
+      summary: Read submitted sitemap metadata, not full page-indexing reasons
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: false }
+      responses:
+        "200": { description: Selected site URL, up to 200 submitted entries, truncation and interpretation guidance. Nested files are not fetched. }
+        "400": { description: Invalid request }
+        "401": { description: Authentication required }
+        "502": { description: Search Console unavailable }
 components:
   parameters:
     ProjectId:

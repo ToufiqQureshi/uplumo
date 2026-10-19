@@ -29,7 +29,7 @@ type Deps struct {
 func Mount(mux *http.ServeMux, d Deps) {
 	protect := func(h http.Handler) http.Handler { return d.WithSession(d.WithProjectAccess(h)) }
 	base := "POST /api/v1/projects/{projectId}/ga4/"
-	for _, action := range []string{"report", "devices", "list", "save", "update", "delete", "compare"} {
+	for _, action := range []string{"report", "devices", "list", "save", "update", "delete", "compare", "goals", "funnel", "tracking", "monitor", "monitor-save", "clicks"} {
 		mux.Handle(base+"growth/"+action, protect(d.growthHandler(action)))
 	}
 	mux.Handle(base+"connection/status", protect(http.HandlerFunc(d.connectionStatus)))

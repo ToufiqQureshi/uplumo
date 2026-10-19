@@ -26,3 +26,8 @@ them byte-identical when merging that PR: shipping 31 ahead of absent lower
 versions would make a later startup encounter out-of-order migrations. These
 nullable columns and indexes alone do not enable session tracking or change
 existing analytics ingestion behavior.
+
+Migration 32 adds `go_search_growth_monitors`: one scoped opt-in configuration
+and last in-app digest per project. A partial due-time index supports bounded
+worker claims; a revision token fences concurrent/disabled updates. RLS is enabled
+with no public-client policies; the trusted server/migration owner operates it.

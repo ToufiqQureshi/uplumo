@@ -22,6 +22,9 @@ type GrowthInput struct {
 	StartDate  string   `json:"startDate,omitempty"`
 	EndDate    string   `json:"endDate,omitempty"`
 	BrandTerms []string `json:"brandTerms,omitempty"`
+	GoalEvent  string   `json:"goalEvent,omitempty"`
+	Comparison string   `json:"comparison,omitempty"`
+	Expanded   bool     `json:"expanded,omitempty"`
 }
 
 // GrowthMetrics separates Search Console totals from nullable Analytics outcomes.
@@ -35,16 +38,18 @@ type GrowthMetrics struct {
 	KeyEventRate   *float64 `json:"keyEventRate"`
 	EngagementRate *float64 `json:"engagementRate"`
 	Revenue        *float64 `json:"revenue"`
+	GoalRate       *float64 `json:"goalRate"`
 }
 
 // GrowthQuery carries bounded query evidence without conversion attribution.
 type GrowthQuery struct {
-	Query          string   `json:"query"`
-	Clicks         float64  `json:"clicks"`
-	Impressions    float64  `json:"impressions"`
-	Position       float64  `json:"position"`
-	Branded        bool     `json:"branded"`
-	CompetingPages []string `json:"competingPages"`
+	Query              string   `json:"query"`
+	Clicks             float64  `json:"clicks"`
+	Impressions        float64  `json:"impressions"`
+	Position           float64  `json:"position"`
+	Branded            bool     `json:"branded"`
+	CompetingPages     []string `json:"competingPages"`
+	CompetingPageCount int      `json:"competingPageCount"`
 }
 
 // GrowthFinding explains an observation and a next investigation step.
@@ -69,6 +74,10 @@ type GrowthPage struct {
 // GrowthReport preserves source identity and coverage alongside every finding.
 type GrowthReport struct {
 	ID            string       `json:"id"`
+	GoalEvent     string       `json:"goalEvent"`
+	Comparison    string       `json:"comparison"`
+	RowLimit      int          `json:"rowLimit"`
+	Control       *GrowthPage  `json:"control,omitempty"`
 	GeneratedAt   time.Time    `json:"generatedAt"`
 	Range         DateRange    `json:"range"`
 	PreviousRange DateRange    `json:"previousRange"`
@@ -87,6 +96,12 @@ type GrowthReport struct {
 }
 
 func validateGrowthInput(in GrowthInput) error {
+	if in.GoalEvent != "" && !validGrowthEvent(in.GoalEvent) {
+		return invalid("Choose a valid GA4 event name (up to 40 letters, digits or underscores).")
+	}
+	if in.Comparison != "" && in.Comparison != "previous" && in.Comparison != "year" {
+		return invalid("Choose previous period or the same weekdays last year.")
+	}
 	if len(in.BrandTerms) > 10 {
 		return invalid("Use at most 10 brand terms.")
 	}
@@ -121,6 +136,13 @@ func (s *Service) GetGrowthReport(ctx context.Context, searchConsole *gsc.Servic
 	if err != nil {
 		return GrowthReport{}, err
 	}
+	if in.Comparison == "" {
+		in.Comparison = "previous"
+	}
+	rowLimit := 1000
+	if in.Expanded {
+		rowLimit = 5000
+	}
 	now := s.now().UTC()
 	pacific, zoneErr := time.LoadLocation(searchConsoleTimeZone)
 	if zoneErr != nil {
@@ -132,7 +154,7 @@ func (s *Service) GetGrowthReport(ctx context.Context, searchConsole *gsc.Servic
 		dates = DateRange{StartDate: end.AddDate(0, 0, -27).Format("2006-01-02"), EndDate: latest}
 	}
 	// Both periods must fit inside GSC's available final-data window.
-	previous, err := previousPeriod(dates)
+	previous, err := growthComparisonPeriod(dates, in.Comparison)
 	if err != nil {
 		return GrowthReport{}, err
 	}
@@ -155,7 +177,7 @@ func (s *Service) GetGrowthReport(ctx context.Context, searchConsole *gsc.Servic
 	if err != nil {
 		return GrowthReport{}, mapOpportunityGSCErr(err)
 	}
-	keyBytes, err := json.Marshal([]any{org, project, connection, scope, dates, in.BrandTerms})
+	keyBytes, err := json.Marshal([]any{"growth-v2", org, project, connection, scope, dates, in.BrandTerms, in.GoalEvent, in.Comparison, rowLimit})
 	if err != nil {
 		return GrowthReport{}, fmt.Errorf("encode growth cache key: %w", err)
 	}
@@ -174,29 +196,44 @@ func (s *Service) GetGrowthReport(ctx context.Context, searchConsole *gsc.Servic
 		}
 		work, cancel := context.WithTimeout(ctx, 90*time.Second)
 		defer cancel()
-		_, currentGSC, err := searchConsole.GetPageRows(work, org, project, dates.StartDate, dates.EndDate)
+		if in.GoalEvent != "" {
+			if err := s.validateGrowthGoal(work, connection, in.GoalEvent); err != nil {
+				return nil, err
+			}
+		}
+		currentGSC, err := searchConsole.GetGrowthRows(work, org, project, dates.StartDate, dates.EndDate, false, rowLimit)
 		if err != nil {
 			return nil, mapOpportunityGSCErr(err)
 		}
-		_, previousGSC, err := searchConsole.GetPageRows(work, org, project, previous.StartDate, previous.EndDate)
+		previousGSC, err := searchConsole.GetGrowthRows(work, org, project, previous.StartDate, previous.EndDate, false, rowLimit)
 		if err != nil {
 			return nil, mapOpportunityGSCErr(err)
 		}
-		queries, err := searchConsole.GetQueryPageRows(work, org, project, dates.StartDate, dates.EndDate)
+		queries, err := searchConsole.GetGrowthRows(work, org, project, dates.StartDate, dates.EndDate, true, rowLimit)
 		if err != nil {
 			return nil, mapOpportunityGSCErr(err)
 		}
-		currentGA, err := s.growthLandingReport(work, connection, dates)
+		currentGA, err := s.growthLandingReport(work, connection, dates, in.GoalEvent, rowLimit)
 		if err != nil {
 			return nil, err
 		}
-		previousGA, err := s.growthLandingReport(work, connection, previous)
+		previousGA, err := s.growthLandingReport(work, connection, previous, in.GoalEvent, rowLimit)
 		if err != nil {
 			return nil, err
 		}
 		report, err := buildGrowthReport(currentGSC, previousGSC, queries, currentGA, previousGA, in.BrandTerms)
 		if err != nil {
 			return nil, err
+		}
+		report.GoalEvent = in.GoalEvent
+		report.Comparison = in.Comparison
+		report.RowLimit = rowLimit
+		report.Truncated = len(currentGSC) >= rowLimit || len(previousGSC) >= rowLimit || len(queries) >= rowLimit || currentGA.TotalRowCount > len(currentGA.Rows) || previousGA.TotalRowCount > len(previousGA.Rows)
+		if in.Comparison == "year" {
+			report.Warnings = append(report.Warnings, "Comparison is shifted by 364 days to match weekdays. Holidays, campaigns and audience changes can still differ.")
+		}
+		if report.Truncated {
+			report.Warnings = append(report.Warnings, fmt.Sprintf("Analysis reached its %d-row coverage bound. Missing rows remain unknown; Search Console can omit rows even below this bound.", rowLimit))
 		}
 		report.ID = cacheKey
 		report.GeneratedAt = s.now().UTC()
@@ -220,19 +257,34 @@ func (s *Service) GetGrowthReport(ctx context.Context, searchConsole *gsc.Servic
 	return result.(GrowthReport), nil
 }
 
-func (s *Service) growthLandingReport(ctx context.Context, c Connection, dates DateRange) (normalizedReport, error) {
+func (s *Service) growthLandingReport(ctx context.Context, c Connection, dates DateRange, goal string, rowLimit int) (normalizedReport, error) {
 	request := buildRequest(ReportInput{Kind: LandingPages, Channel: "organic_search"}, dates, definitions[LandingPages], 1000, 0)
-	// Match Google organic traffic, rather than combining Bing with GSC clicks.
 	request.DimensionFilter = googleOrganicFilter(request.DimensionFilter)
-	response, err := s.runProvider(ctx, c, request)
-	if err != nil {
-		return normalizedReport{}, mapProviderError(err)
+	applyGrowthGoal(&request, goal)
+	result := normalizedReport{Rows: []map[string]any{}}
+	for offset := 0; offset < rowLimit; offset += 1000 {
+		request.Offset = fmt.Sprint(offset)
+		response, err := s.runProvider(ctx, c, request)
+		if err != nil {
+			return normalizedReport{}, mapProviderError(err)
+		}
+		page, err := normalize(response, request)
+		if err != nil || len(page.Rows) > 1000 || page.TotalRowCount < 0 {
+			return normalizedReport{}, reportErr("ga4_malformed_response", "Google Analytics returned an invalid report.")
+		}
+		if err := labelGrowthGoal(page.Rows, goal); err != nil {
+			return normalizedReport{}, err
+		}
+		result.Rows = append(result.Rows, page.Rows...)
+		result.TotalRowCount = max(result.TotalRowCount, page.TotalRowCount)
+		if page.Metadata.HasLimitedData {
+			result.Metadata.HasLimitedData = true
+		}
+		if len(page.Rows) < 1000 || len(result.Rows) >= page.TotalRowCount {
+			break
+		}
 	}
-	normalized, err := normalize(response, request)
-	if err != nil {
-		return normalizedReport{}, reportErr("ga4_malformed_response", "Google Analytics returned an invalid report.")
-	}
-	return normalized, nil
+	return result, nil
 }
 
 func metricPointer(row map[string]any, key string) *float64 {
@@ -244,7 +296,7 @@ func metricPointer(row map[string]any, key string) *float64 {
 func positive(v *float64) bool { return v != nil && *v > 0 }
 
 func growthMetrics(row gsc.SearchRow, ga map[string]any) GrowthMetrics {
-	return GrowthMetrics{Clicks: row.Clicks, Impressions: row.Impressions, CTR: row.CTR, Position: row.Position, Sessions: metricPointer(ga, "sessions"), KeyEvents: metricPointer(ga, "keyEvents"), KeyEventRate: metricPointer(ga, "sessionKeyEventRate"), EngagementRate: metricPointer(ga, "engagementRate"), Revenue: metricPointer(ga, "purchaseRevenue")}
+	return GrowthMetrics{Clicks: row.Clicks, Impressions: row.Impressions, CTR: row.CTR, Position: row.Position, Sessions: metricPointer(ga, "sessions"), KeyEvents: metricPointer(ga, "keyEvents"), KeyEventRate: metricPointer(ga, "sessionKeyEventRate"), EngagementRate: metricPointer(ga, "engagementRate"), Revenue: metricPointer(ga, "purchaseRevenue"), GoalRate: metricPointer(ga, "goalRate")}
 }
 
 // Duplicate normalized GA4 rows are deliberately unmatched. Rates and users
@@ -317,6 +369,8 @@ func buildGrowthReport(current, previous, queryRows []gsc.SearchRow, ga, prevGA 
 		return report, err
 	}
 	currentAnalytics, previousAnalytics := growthAnalytics(ga.Rows), growthAnalytics(prevGA.Rows)
+	decisionAnalytics := growthOutcomeRows(currentAnalytics)
+	previousDecision := growthOutcomeRows(previousAnalytics)
 	queries := map[string][]GrowthQuery{}
 	queryPages := map[string]map[string]bool{}
 	for _, row := range queryRows {
@@ -343,11 +397,20 @@ func buildGrowthReport(current, previous, queryRows []gsc.SearchRow, ga, prevGA 
 			queryPages[query][key] = true
 		}
 	}
+	queryPageKeys := make(map[string][]string, len(queryPages))
+	for query, pages := range queryPages {
+		keys := make([]string, 0, len(pages))
+		for page := range pages {
+			keys = append(keys, page)
+		}
+		sort.Strings(keys)
+		queryPageKeys[query] = keys
+	}
 	// Baseline uses only joined, sufficiently observed pages; rate comparisons
 	// are investigation candidates, never statistical or causal conclusions.
 	var sessions, successfulSessions float64
 	for key := range curr {
-		row := currentAnalytics[key]
+		row := decisionAnalytics[key]
 		n, rate := metricPointer(row, "sessions"), metricPointer(row, "sessionKeyEventRate")
 		if n != nil && *n >= 100 && rate != nil {
 			sessions += *n
@@ -366,12 +429,18 @@ func buildGrowthReport(current, previous, queryRows []gsc.SearchRow, ga, prevGA 
 		sort.SliceStable(p.Queries, func(i, j int) bool { return p.Queries[i].Impressions > p.Queries[j].Impressions })
 		for i := range p.Queries {
 			q := &p.Queries[i]
-			for other := range queryPages[q.Query] {
+			q.CompetingPageCount = len(queryPages[q.Query])
+			if queryPages[q.Query][key] {
+				q.CompetingPageCount--
+			}
+			for _, other := range queryPageKeys[q.Query] {
 				if other != key {
 					q.CompetingPages = append(q.CompetingPages, "https://"+other)
 				}
+				if len(q.CompetingPages) >= 5 {
+					break
+				}
 			}
-			sort.Strings(q.CompetingPages)
 		}
 		if len(p.Queries) > 10 {
 			p.Queries = p.Queries[:10]
@@ -389,15 +458,25 @@ func buildGrowthReport(current, previous, queryRows []gsc.SearchRow, ga, prevGA 
 		if p.Previous != nil && p.Previous.Clicks >= 30 && p.Current.Clicks <= p.Previous.Clicks*.8 {
 			add("traffic_loss", "Search clicks are falling", fmt.Sprintf("%.0f → %.0f Google clicks across equal-length periods.", p.Previous.Clicks, p.Current.Clicks), "Review lost queries and search intent; check indexing before rewriting. Seasonality and search-result changes may contribute.")
 		}
+		outcomeLabel := "key events"
+		if _, selectedGoal := currentAnalytics[key]["goalRate"]; selectedGoal {
+			outcomeLabel = "estimated sessions reaching the selected goal"
+		}
+		decision := growthMetrics(row, decisionAnalytics[key])
+		var prior *GrowthMetrics
+		if p.Previous != nil {
+			value := growthMetrics(prev[key], previousDecision[key])
+			prior = &value
+		}
 		enough := p.Current.Sessions != nil && *p.Current.Sessions >= 100
-		if !report.Limited && enough && positive(p.Current.KeyEvents) && *p.Current.KeyEvents >= 5 && positive(p.Current.KeyEventRate) && *p.Current.KeyEventRate >= baseline && row.Position >= 8 && row.Position <= 20 && row.Impressions >= 100 {
-			add("grow_winner", "A performing page could reach more searchers", fmt.Sprintf("%.0f Google organic sessions, %.0f key events, %.1f%% session key-event rate; average position %.1f.", *p.Current.Sessions, *p.Current.KeyEvents, *p.Current.KeyEventRate*100, row.Position), "Review the related query themes and relevant internal links. Confirm that these key events represent a useful business outcome.")
+		if !report.Limited && enough && positive(decision.KeyEvents) && *decision.KeyEvents >= 5 && positive(decision.KeyEventRate) && *decision.KeyEventRate >= baseline && row.Position >= 8 && row.Position <= 20 && row.Impressions >= 100 {
+			add("grow_winner", "A performing page could reach more searchers", fmt.Sprintf("%.0f Google organic sessions, %.0f %s, %.1f%% session outcome rate; average position %.1f.", *p.Current.Sessions, *decision.KeyEvents, outcomeLabel, *decision.KeyEventRate*100, row.Position), "Review the related query themes and relevant internal links. Confirm that the selected event records a useful completed outcome.")
 		}
-		if !report.Limited && enough && baseline > 0 && p.Current.KeyEventRate != nil && *p.Current.KeyEventRate < baseline*.5 && len(currentAnalytics) >= 3 {
-			add("outcome_gap", "Traffic is arriving; review the next step", fmt.Sprintf("%.0f Google organic sessions; key-event rate %.1f%% versus %.1f%% across observed site pages.", *p.Current.Sessions, *p.Current.KeyEventRate*100, baseline*100), "Verify event tracking first, then review intent, offer and CTA. Different page types can have different expected rates.")
+		if !report.Limited && enough && baseline > 0 && decision.KeyEventRate != nil && *decision.KeyEventRate < baseline*.5 && len(currentAnalytics) >= 3 {
+			add("outcome_gap", "Traffic is arriving; review the next step", fmt.Sprintf("%.0f Google organic sessions; outcome rate %.1f%% versus %.1f%% across observed site pages.", *p.Current.Sessions, *decision.KeyEventRate*100, baseline*100), "Verify event tracking first, then review intent, offer and CTA. Different page types can have different expected rates.")
 		}
-		if !report.Limited && enough && p.Previous != nil && p.Previous.Sessions != nil && *p.Previous.Sessions >= 100 && p.Previous.KeyEvents != nil && *p.Previous.KeyEvents >= 5 && positive(p.Previous.KeyEventRate) && p.Current.KeyEventRate != nil && *p.Current.KeyEventRate < *p.Previous.KeyEventRate*.7 {
-			add("rate_decline", "Key-event rate has dropped", fmt.Sprintf("%.1f%% → %.1f%% session key-event rate.", *p.Previous.KeyEventRate*100, *p.Current.KeyEventRate*100), "Check event setup and audience mix, then inspect the page and conversion path. This does not establish a cause.")
+		if !report.Limited && enough && p.Previous != nil && p.Previous.Sessions != nil && *p.Previous.Sessions >= 100 && prior.KeyEvents != nil && *prior.KeyEvents >= 5 && positive(prior.KeyEventRate) && decision.KeyEventRate != nil && *decision.KeyEventRate < *prior.KeyEventRate*.7 {
+			add("rate_decline", "Outcome rate has dropped", fmt.Sprintf("%.1f%% → %.1f%% session outcome rate.", *prior.KeyEventRate*100, *decision.KeyEventRate*100), "Check event setup and audience mix, then inspect the page and conversion path. This does not establish a cause.")
 		}
 		if !report.Limited && p.Previous != nil && positive(p.Previous.Revenue) && p.Current.Revenue != nil && numberField(previousAnalytics[key], "transactions") >= 5 && *p.Current.Revenue < *p.Previous.Revenue*.8 {
 			add("revenue_decline", "Recorded purchase revenue has fallen", fmt.Sprintf("GA4 recorded purchase revenue %.2f → %.2f in the property's currency across equal-length periods.", *p.Previous.Revenue, *p.Current.Revenue), "Verify purchase/refund tracking and review traffic mix and the purchase path before attributing this change to content.")
@@ -418,8 +497,8 @@ func buildGrowthReport(current, previous, queryRows []gsc.SearchRow, ga, prevGA 
 		if !report.Limited && p.Previous != nil && positive(p.Previous.Revenue) {
 			p.Priority += math.Min(math.Log1p(*p.Previous.Revenue), 10) * 2
 		}
-		if !report.Limited && p.Previous != nil && positive(p.Previous.KeyEvents) {
-			p.Priority += math.Min(*p.Previous.KeyEvents, 100)
+		if !report.Limited && prior != nil && positive(prior.KeyEvents) {
+			p.Priority += math.Min(*prior.KeyEvents, 100)
 		}
 		report.Pages = append(report.Pages, p)
 	}
@@ -432,9 +511,7 @@ func buildGrowthReport(current, previous, queryRows []gsc.SearchRow, ga, prevGA 
 	if report.Limited {
 		report.Warnings = append(report.Warnings, "Analytics reports are limited, sampled, thresholded or restricted. Business-rate recommendations are suppressed.")
 	}
-	if report.Truncated {
-		report.Warnings = append(report.Warnings, "Reports contain at most 1,000 rows per source. Missing rows are unknown, not zero; opportunities are not exhaustive.")
-	}
+
 	if len(brands) == 0 {
 		report.Warnings = append(report.Warnings, "No brand terms were supplied; query branding is unclassified.")
 	}
@@ -471,6 +548,12 @@ func (s *Service) GetGrowthDevices(ctx context.Context, project string, in Growt
 	request := buildRequest(ReportInput{Kind: LandingPages, Channel: "organic_search"}, dates, definitions[LandingPages], 100, 0)
 	request.Dimensions = []Name{{Name: "deviceCategory"}}
 	request.DimensionFilter = googleOrganicFilter(request.DimensionFilter)
+	if in.GoalEvent != "" {
+		if err := s.validateGrowthGoal(ctx, c, in.GoalEvent); err != nil {
+			return nil, err
+		}
+		applyGrowthGoal(&request, in.GoalEvent)
+	}
 	work, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	response, err := s.runProvider(work, c, request)
@@ -480,6 +563,9 @@ func (s *Service) GetGrowthDevices(ctx context.Context, project string, in Growt
 	report, err := normalize(response, request)
 	if err != nil {
 		return nil, reportErr("ga4_malformed_response", "Analytics returned an invalid device report.")
+	}
+	if err := labelGrowthGoal(report.Rows, in.GoalEvent); err != nil {
+		return nil, err
 	}
 	return map[string]any{"rows": report.Rows, "limited": report.Metadata.HasLimitedData, "range": dates}, nil
 }

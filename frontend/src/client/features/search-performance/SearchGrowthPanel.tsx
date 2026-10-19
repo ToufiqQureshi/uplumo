@@ -3,7 +3,6 @@ import { useMutation } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Button } from "@/client/components/ui/button";
-import { Input } from "@/client/components/ui/input";
 import {
   Card,
   CardContent,
@@ -15,14 +14,23 @@ import { saveAnalystDraft } from "@/client/features/sam/analystDraft";
 import { growthAnalystPrompt } from "./growthBrief";
 import { analyzeGrowth, type GrowthPage } from "./growthApi";
 import { GrowthPageCard } from "./GrowthPageCard";
+import { GrowthSettings, type GrowthSettingsValue } from "./GrowthSettings";
+import { GrowthMonitor } from "./GrowthMonitor";
 import { GrowthActions } from "./GrowthActions";
 import { GrowthEvidencePanel } from "./GrowthEvidencePanel";
 
 export function SearchGrowthPanel({ projectId }: { projectId: string }) {
-  const [brands, setBrands] = useState("");
-  const [days, setDays] = useState(28);
+  const [settings, setSettings] = useState<GrowthSettingsValue>({
+    brands: "",
+    goalEvent: "",
+    days: 28,
+    comparison: "previous",
+    expanded: false,
+  });
+  const { brands, goalEvent, days, comparison, expanded } = settings;
   const [queryKind, setQueryKind] = useState("all");
   const [showAll, setShowAll] = useState(false);
+  const [pageNumber, setPageNumber] = useState(0);
   const navigate = useNavigate();
   const analysis = useMutation({
     mutationFn: () => {
@@ -33,6 +41,9 @@ export function SearchGrowthPanel({ projectId }: { projectId: string }) {
       return analyzeGrowth(projectId, {
         startDate: start.toISOString().slice(0, 10),
         endDate: end.toISOString().slice(0, 10),
+        goalEvent,
+        comparison,
+        expanded,
         brandTerms: brands
           .split(",")
           .map((x) => x.trim())
@@ -40,6 +51,10 @@ export function SearchGrowthPanel({ projectId }: { projectId: string }) {
       });
     },
     retry: false,
+    onSuccess: () => {
+      setShowAll(false);
+      setPageNumber(0);
+    },
   });
   const report = analysis.data;
   const pages = report?.pages.filter((page) => page.findings.length > 0) ?? [];
@@ -77,37 +92,11 @@ export function SearchGrowthPanel({ projectId }: { projectId: string }) {
                 : "Find opportunities"}
           </Button>
         </div>
-        <details className="mt-3 text-sm">
-          <summary className="cursor-pointer text-muted-foreground">
-            Analysis settings
-          </summary>
-          <div className="mt-3 flex flex-wrap items-end gap-3">
-            <label className="grid gap-1">
-              Brand names, separated by commas
-              <Input
-                value={brands}
-                maxLength={1000}
-                placeholder="Your brand, alternate spelling"
-                onChange={(e) => setBrands(e.target.value)}
-              />
-            </label>
-            <label className="grid gap-1">
-              Comparison window
-              <select
-                className="rounded-md border bg-background p-2"
-                value={days}
-                onChange={(e) => setDays(Number(e.target.value))}
-              >
-                <option value={14}>14 days</option>
-                <option value={28}>28 days</option>
-              </select>
-            </label>
-            <p className="text-xs text-muted-foreground">
-              Google organic traffic only. Independent of the report filters
-              below. No AI credits used.
-            </p>
-          </div>
-        </details>
+        <GrowthSettings
+          projectId={projectId}
+          settings={settings}
+          onChange={setSettings}
+        />
       </CardHeader>
       <CardContent className="space-y-4 pt-4">
         {analysis.isError ? (
@@ -139,7 +128,8 @@ export function SearchGrowthPanel({ projectId }: { projectId: string }) {
                 {report.previousRange.startDate} –{" "}
                 {report.previousRange.endDate} · {report.matchedPages}/
                 {report.gscPageCount} Search Console pages matched ·{" "}
-                {report.propertyId}
+                {report.propertyId} · Goal:{" "}
+                {report.goalEvent || "all key events"}
               </p>
               <Button variant="outline" size="sm" onClick={() => openAnalyst()}>
                 Ask AI analyst
@@ -156,9 +146,12 @@ export function SearchGrowthPanel({ projectId }: { projectId: string }) {
                 coverage and tracking before drawing conclusions.
               </p>
             ) : null}
-            {(showAll ? pages : pages.slice(0, 3)).map((page) => (
+            {(showAll
+              ? pages.slice(pageNumber * 10, (pageNumber + 1) * 10)
+              : pages.slice(0, 3)
+            ).map((page) => (
               <GrowthPageCard
-                key={page.page}
+                key={`${report.id}:${page.page}`}
                 projectId={projectId}
                 report={report}
                 page={page}
@@ -174,8 +167,31 @@ export function SearchGrowthPanel({ projectId }: { projectId: string }) {
               >
                 {showAll
                   ? "Show top 3"
-                  : `Show all ${pages.length} opportunities`}
+                  : `Browse ${pages.length} opportunities, 10 at a time`}
               </Button>
+            ) : null}
+            {showAll ? (
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={pageNumber === 0}
+                  onClick={() => setPageNumber((n) => n - 1)}
+                >
+                  Previous opportunities
+                </Button>
+                <span>
+                  Page {pageNumber + 1} of {Math.ceil(pages.length / 10)}
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={(pageNumber + 1) * 10 >= pages.length}
+                  onClick={() => setPageNumber((n) => n + 1)}
+                >
+                  Next opportunities
+                </Button>
+              </div>
             ) : null}
             <details className="rounded-lg border p-3 text-sm">
               <summary className="cursor-pointer">
@@ -199,6 +215,19 @@ export function SearchGrowthPanel({ projectId }: { projectId: string }) {
                   outcomes or page totals. Refresh analysis after changing brand
                   terms.
                 </p>
+                <p className="text-xs text-muted-foreground">
+                  Coverage bound: {report.rowLimit ?? 1000} rows per source.
+                  Search Console can withhold queries even below this bound.
+                </p>
+                <a
+                  className="text-xs underline"
+                  href="https://support.google.com/webmasters/answer/12918484"
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
+                  Large site? Review Google's optional BigQuery bulk export
+                  (Google Cloud charges may apply).
+                </a>
                 {report.warnings.map((warning) => (
                   <p key={warning} className="text-xs text-muted-foreground">
                     {warning}
@@ -220,6 +249,7 @@ export function SearchGrowthPanel({ projectId }: { projectId: string }) {
             report={report}
           />
         ) : null}
+        <GrowthMonitor projectId={projectId} goalEvent={goalEvent} />
         <GrowthActions projectId={projectId} />
       </CardContent>
     </Card>

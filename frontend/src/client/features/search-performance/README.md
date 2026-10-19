@@ -26,3 +26,25 @@ sent until Send. `growthBrief.ts` asks for measured evidence, hypotheses, a
 page-specific brief, title/meta options, useful direct answers and observed
 internal links. AEO readiness is distinct from observed tracked citations. The
 existing editor's selection-based writer remains the review/apply surface.
+
+## Goal-led investigations
+
+`GrowthSettings.tsx` owns the controlled analysis settings. The goal selector discovers event-specific metrics only after Load my GA4 goals.
+Changing settings does not fetch reports. Analysis keeps all-event counts separate
+from the selected goal rate and labels previous-period vs 364-day comparison.
+Expanded coverage is explicit and bounded to 5,000 rows/source; optional BigQuery
+setup stays an external link with its Google Cloud cost caveat.
+
+`GrowthClickDiagnosis.tsx` shows possible click-loss patterns and returned query
+comparisons, plus a separate one-URL stored-index inspection. Shared guidance is
+in `indexingGuidance.ts`. `GrowthSitemaps.tsx` explains sitemap-level status without
+claiming indexing. `GrowthFunnel.tsx` uses editable actual event names, ordered
+users and optional device breakdown; example events must be instrumented first.
+`GrowthCitationEvidence.tsx` separates saved prompt samples from Google's native
+AI report (external property/help links; no automatic import).
+
+`GrowthMonitor.tsx` reads persisted configuration on opening its panel and enables
+or disables weekly in-app checks explicitly. It displays the last dated digest,
+three next actions and meaningful drop alerts. It does not send email or paid AI.
+`GrowthPageCard.tsx` can freeze a user-selected unchanged comparison page alongside
+the saved goal/baseline; `GrowthActions.tsx` explains descriptive relative movement.

@@ -86,7 +86,7 @@ function SavedAction({
       <p className="text-xs text-muted-foreground">
         Baseline: {action.baselineRange.startDate} –{" "}
         {action.baselineRange.endDate}. Key events reflect the connected
-        property's setup.
+        property's setup. Goal: {action.source.goalEvent || "all key events"}.
       </p>
       <div className="flex flex-wrap gap-2">
         {action.status !== "applied" ? (
@@ -153,9 +153,18 @@ function SavedAction({
                   →{" "}
                   {comparison.data.afterClicksPerDay?.toFixed(1) ??
                     "Unavailable"}{" "}
-                  · Session key-event rate{" "}
-                  {rate(comparison.data.baseline.keyEventRate)} →{" "}
-                  {rate(comparison.data.after.keyEventRate)}
+                  · Session outcome rate{" "}
+                  {rate(
+                    action.source.goalEvent
+                      ? (comparison.data.baseline.goalRate ?? null)
+                      : comparison.data.baseline.keyEventRate,
+                  )}{" "}
+                  →{" "}
+                  {rate(
+                    action.source.goalEvent
+                      ? (comparison.data.after.goalRate ?? null)
+                      : comparison.data.after.keyEventRate,
+                  )}
                 </p>
               ) : (
                 <p>
@@ -163,6 +172,15 @@ function SavedAction({
                   Results are unknown.
                 </p>
               )}
+              {comparison.data.controlPage ? (
+                <p className="break-all">
+                  Unchanged comparison page: {comparison.data.controlPage}.{" "}
+                  {comparison.data.controlMessage}{" "}
+                  {comparison.data.controlAdjustedClickChange != null
+                    ? `Relative click movement: ${(comparison.data.controlAdjustedClickChange * 100).toFixed(1)}% (ratio of before/after changes).`
+                    : ""}
+                </p>
+              ) : null}
               {comparison.data.limited ? (
                 <p>
                   Analytics data is limited; avoid drawing business conclusions.

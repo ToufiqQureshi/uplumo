@@ -29,6 +29,54 @@ func (d Deps) growthHandler(action string) http.HandlerFunc {
 		var result any
 		var err error
 		switch action {
+		case "clicks":
+			var in struct {
+				ReportID string `json:"reportId"`
+				Page     string `json:"page"`
+			}
+			if err = decodeRequest(w, r, &in); err == nil {
+				result, err = d.Service.DiagnoseGrowthClicks(r.Context(), d.SearchConsole, org, project, in.ReportID, in.Page)
+			} else {
+				err = invalid("Choose a valid report page.")
+			}
+		case "goals":
+			var in struct{}
+			if err = decodeRequest(w, r, &in); err == nil {
+				result, err = d.Service.GetGrowthGoals(r.Context(), project)
+			} else {
+				err = invalid("Expected an empty object.")
+			}
+		case "funnel":
+			var in GrowthFunnelInput
+			if err = decodeRequest(w, r, &in); err == nil {
+				result, err = d.Service.GetGrowthFunnel(r.Context(), project, in)
+			} else {
+				err = invalid("Choose valid funnel steps and dates.")
+			}
+		case "tracking":
+			var in GrowthInput
+			if err = decodeRequest(w, r, &in); err == nil {
+				result, err = d.Service.GetGrowthTracking(r.Context(), project, in)
+			} else {
+				err = invalid("Choose valid tracking inputs.")
+			}
+		case "monitor":
+			var in struct{}
+			if err = decodeRequest(w, r, &in); err == nil {
+				result, err = d.Service.Growth.Monitor(r.Context(), org, project)
+			} else {
+				err = invalid("Expected an empty object.")
+			}
+		case "monitor-save":
+			var in struct {
+				Enabled   *bool  `json:"enabled"`
+				GoalEvent string `json:"goalEvent"`
+			}
+			if err = decodeRequest(w, r, &in); err == nil && in.Enabled != nil {
+				result, err = d.Service.SaveGrowthMonitor(r.Context(), d.SearchConsole, org, project, GrowthMonitorInput{Enabled: *in.Enabled, GoalEvent: in.GoalEvent})
+			} else {
+				err = invalid("Choose a valid monitoring configuration.")
+			}
 		case "report":
 			var in GrowthInput
 			if err = decodeRequest(w, r, &in); err != nil {
@@ -52,16 +100,17 @@ func (d Deps) growthHandler(action string) http.HandlerFunc {
 			result, err = d.Service.Growth.Actions(r.Context(), org, project)
 		case "save":
 			var in struct {
-				ReportID string `json:"reportId"`
-				Page     string `json:"page"`
-				Note     string `json:"note"`
+				ReportID    string `json:"reportId"`
+				Page        string `json:"page"`
+				Note        string `json:"note"`
+				ControlPage string `json:"controlPage,omitempty"`
 			}
 			if err = decodeRequest(w, r, &in); err != nil {
 				err = invalid("Choose a report page and add a note.")
 				break
 			}
 			var id string
-			id, err = d.Service.Growth.SaveAction(r.Context(), org, project, in.ReportID, in.Page, in.Note)
+			id, err = d.Service.Growth.SaveAction(r.Context(), org, project, in.ReportID, in.Page, in.Note, in.ControlPage)
 			result = map[string]string{"id": id}
 		case "update":
 			var in struct {
@@ -182,6 +231,12 @@ func (s *Service) CompareGrowthAction(ctx context.Context, searchConsole *gsc.Se
 		map[string]any{"filter": map[string]any{"fieldName": "landingPage", "stringFilter": map[string]any{"matchType": "FULL_REGEXP", "value": pathExpression, "caseSensitive": true}}},
 	}}}
 
+	if selected.Source.GoalEvent != "" {
+		if err := s.validateGrowthGoal(work, connection, selected.Source.GoalEvent); err != nil {
+			return nil, err
+		}
+		applyGrowthGoal(&request, selected.Source.GoalEvent)
+	}
 	response, err := s.runProvider(work, connection, request)
 	if err != nil {
 		return nil, mapProviderError(err)
@@ -189,6 +244,9 @@ func (s *Service) CompareGrowthAction(ctx context.Context, searchConsole *gsc.Se
 	ga, err := normalize(response, request)
 	if err != nil {
 		return nil, reportErr("ga4_malformed_response", "Analytics returned an invalid report.")
+	}
+	if err := labelGrowthGoal(ga.Rows, selected.Source.GoalEvent); err != nil {
+		return nil, err
 	}
 	rows, err := growthSearchRows(gscRows)
 	if err != nil {
@@ -208,6 +266,27 @@ func (s *Service) CompareGrowthAction(ctx context.Context, searchConsole *gsc.Se
 	if exists {
 		result["after"] = growthMetrics(row, growthAnalytics(ga.Rows)[key])
 		result["afterClicksPerDay"] = row.Clicks / float64(days)
+	}
+	if selected.Source.Control != nil {
+		control := selected.Source.Control
+		controlRows, readErr := searchConsole.GetFilteredPageRows(work, org, project, first, last, control.Page)
+		if readErr != nil {
+			return nil, mapOpportunityGSCErr(readErr)
+		}
+		controlMap, readErr := growthSearchRows(controlRows)
+		if readErr != nil {
+			return nil, readErr
+		}
+		controlKey, valid := normalizePageKey(control.Page)
+		afterControl, present := controlMap[controlKey]
+		result["controlPage"] = control.Page
+		result["controlAdjustedClickChange"] = nil
+		result["controlMessage"] = "Descriptive comparison with a user-selected unchanged page, not a controlled experiment. Similar intent, trends and no edits are assumptions to verify."
+		if valid && present && exists && control.Current.Clicks >= 30 && selected.Baseline.Current.Clicks >= 30 && afterControl.Clicks >= 30 {
+			result["controlAdjustedClickChange"] = (row.Clicks/selected.Baseline.Current.Clicks)/(afterControl.Clicks/control.Current.Clicks) - 1
+		} else {
+			result["controlMessage"] = "Comparison needs returned rows and at least 30 baseline clicks on each page plus 30 post-change clicks on the comparison page. Missing rows remain unknown."
+		}
 	}
 	result["limited"] = ga.Metadata.HasLimitedData || selected.Source.Limited
 	return result, nil

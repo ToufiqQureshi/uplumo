@@ -196,3 +196,15 @@ Secrets go into Railway variables only, never into the repo or chat.
   read-only analyst mode. Existing editor tools keep review/apply explicit.
 - Before/after differences are observational; GA4 key events require correct
   customer configuration and are not automatically confirmed leads or sales.
+
+## Goal-led search diagnosis
+
+- Built: registered GA4 business-goal selection, goal-specific session rates,
+  low-click/query diagnosis, submitted-sitemap status and explicit stored-index
+  checks, actual ordered GA4 funnels, attribution investigation, weekday-aligned
+  year comparisons and optional unchanged-page comparison baselines.
+- Built: explicit expanded growth coverage (5,000 rows/source) and opt-in weekly
+  in-app top-three actions/drop alerts, with no scheduled paid AI or email.
+- Google native generative-AI reporting and optional BigQuery setup are external
+  entry points; automatic ingestion is not implemented. Real-account Google
+  reconciliation and production acceptance remain pending.

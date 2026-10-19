@@ -270,10 +270,10 @@ func handleMeasurementHealth(ctx context.Context, raw json.RawMessage, env *call
 }
 
 func growthInputSchema() json.RawMessage {
-	return json.RawMessage(`{"type":"object","properties":{"projectId":{"type":"string","minLength":1},"startDate":{"type":"string","pattern":"^\\d{4}-\\d{2}-\\d{2}$"},"endDate":{"type":"string","pattern":"^\\d{4}-\\d{2}-\\d{2}$"},"brandTerms":{"type":"array","maxItems":10,"items":{"type":"string","minLength":1,"maxLength":100}}},"required":["projectId"],"additionalProperties":false}`)
+	return json.RawMessage(`{"type":"object","properties":{"projectId":{"type":"string","minLength":1},"startDate":{"type":"string","pattern":"^\\d{4}-\\d{2}-\\d{2}$"},"endDate":{"type":"string","pattern":"^\\d{4}-\\d{2}-\\d{2}$"},"brandTerms":{"type":"array","maxItems":10,"items":{"type":"string","minLength":1,"maxLength":100}},"goalEvent":{"type":"string","pattern":"^[A-Za-z][A-Za-z0-9_]{0,39}$"},"comparison":{"type":"string","enum":["previous","year"]},"expanded":{"type":"boolean"}},"required":["projectId"],"additionalProperties":false}`)
 }
 func searchGrowthTool() *tool {
-	return &tool{Name: "get_search_growth_report", Title: "Analyze search growth", Description: "Read evidence-backed GSC and Google organic GA4 page opportunities, current and previous metrics, query themes and data limitations. Up to five bounded Google reads on a cache miss; no paid SEO provider or AI credits. Query rows are not attributable to conversions. Returns review candidates, not causal conclusions.", InputSchema: growthInputSchema(), OutputSchema: json.RawMessage(`{"type":"object","additionalProperties":true}`), Annotations: readOnlyAnnotations(), Handler: handleSearchGrowth}
+	return &tool{Name: "get_search_growth_report", Title: "Analyze search growth", Description: "Read evidence-backed GSC and Google organic GA4 page opportunities, current and previous metrics, query themes and data limitations. Standard: five Google report reads plus one metadata read when a goal is selected; expanded coverage: at most 25 report reads plus metadata on a cache miss; no paid SEO provider or AI credits. Query rows are not attributable to conversions. Returns review candidates, not causal conclusions.", InputSchema: growthInputSchema(), OutputSchema: json.RawMessage(`{"type":"object","additionalProperties":true}`), Annotations: readOnlyAnnotations(), Handler: handleSearchGrowth}
 }
 func handleSearchGrowth(ctx context.Context, raw json.RawMessage, env *callEnv) (*callResult, error) {
 	var args struct {

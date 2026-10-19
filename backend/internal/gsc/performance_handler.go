@@ -29,6 +29,7 @@ type PerformanceDeps struct {
 func MountPerformance(mux *http.ServeMux, d PerformanceDeps) {
 	protect := func(h http.Handler) http.Handler { return d.WithSession(d.WithProjectAccess(h)) }
 	base := "POST /api/v1/projects/{projectId}/gsc/search-performance/"
+	mux.Handle(base+"sitemaps", protect(performanceHandler(d, runSitemaps)))
 	mux.Handle(base+"report", protect(performanceHandler(d, runPerformanceReport)))
 	mux.Handle(base+"table", protect(performanceHandler(d, runPerformanceTable)))
 	mux.Handle(base+"export", protect(performanceHandler(d, runPerformanceExport)))
@@ -216,4 +217,12 @@ func PublicError(err error) (code, message string, ok bool) {
 		return connection.Code, connection.Message, true
 	}
 	return "", "", false
+}
+
+func runSitemaps(s *Service, w http.ResponseWriter, r *http.Request, org, project string) (any, error) {
+	var in struct{}
+	if err := decodePerformance(w, r, &in); err != nil {
+		return nil, err
+	}
+	return s.GetSitemaps(r.Context(), org, project)
 }

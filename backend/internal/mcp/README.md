@@ -106,3 +106,9 @@ The Go MCP registry also owns `get_local_rank_grid`. It uses the Go local SERP p
 GSC/Google-organic growth analysis. Classified as `GoogleData`, it uses no paid
 SEO provider or AI completion and preserves coverage warnings and nullable
 metrics. SAM binds its project server-side and uses it in read-only analyst mode.
+
+Search growth accepts `goalEvent`, `comparison` (`previous`/`year`) and explicit
+`expanded` coverage. The shared service validates registered goal metrics before
+reads and keys its cache by all three. Standard uses at most 5 report reads plus
+1 goal metadata read; expanded at most 25 + metadata. SAM's draft includes the
+selected goal/comparison so the analyst does not silently switch outcome scope.

@@ -98,3 +98,22 @@ provider bound needs a separate contract review.
   bounded retries only for read-only operations.
 - A provider 401 triggers one token refresh and one retry.
 - Every repository query must include the project organization and user scope.
+
+## Growth investigations
+
+`growth_rows.go` adds a separate internal bounded pagination path for explicit
+GSC/GA4 analysis: standard 1,000 rows or expanded 5,000, in 1,000-row pages, final
+Web data only. Existing reports and exports keep their original limits.
+
+`POST .../gsc/search-performance/sitemaps` is an empty-body, authenticated,
+project-scoped read of submitted sitemap metadata. `sitemaps.go` uses the selected
+property/grant, a 30-second service timeout and 2 MiB provider response bound.
+It shows at most 200 submitted entries, errors/warnings, pending state, submitted
+counts by content type and last download date. It does not fetch sitemap URLs/XML, expand nested
+indexes, submit sitemaps, request indexing, or claim submitted URLs are indexed.
+No submitted entries is not proof that discovery or indexing failed. The API
+provides sitemap-level counts; detailed reasons remain in Google's report.
+
+`GetPageQueryRows` returns at most 1,000 final Web query rows for one exact URL,
+used by explicit click diagnosis. It retains the provider's 1,024-byte page-filter
+bound. Missing/withheld queries are unknown, not zero-click searches.

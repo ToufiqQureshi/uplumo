@@ -54,7 +54,7 @@ func (r *GrowthRepository) StoreReport(ctx context.Context, org, project string,
 }
 
 // SaveAction freezes a server-derived page baseline once, including concurrent saves.
-func (r *GrowthRepository) SaveAction(ctx context.Context, org, project, reportID, page, note string) (string, error) {
+func (r *GrowthRepository) SaveAction(ctx context.Context, org, project, reportID, page, note string, controlPages ...string) (string, error) {
 	note = strings.TrimSpace(note)
 	if utf8.RuneCountInString(note) < 1 || utf8.RuneCountInString(note) > 1000 || strings.ContainsRune(note, 0) {
 		return "", invalid("Add a change note of 1–1,000 characters.")
@@ -78,6 +78,22 @@ func (r *GrowthRepository) SaveAction(ctx context.Context, org, project, reportI
 	}
 	source := report
 	source.Pages = nil
+	if len(controlPages) > 0 && controlPages[0] != "" {
+		controlPage := controlPages[0]
+		if controlPage == page {
+			return "", invalid("Choose a different unchanged comparison page.")
+		}
+		for i := range report.Pages {
+			if report.Pages[i].Page == controlPage {
+				control := report.Pages[i]
+				source.Control = &control
+				break
+			}
+		}
+		if source.Control == nil {
+			return "", invalid("Choose a comparison page from this analysis.")
+		}
+	}
 	id, err := ids.New()
 	if err != nil {
 		return "", err

@@ -13,6 +13,7 @@ import {
   type GrowthPage,
   type GrowthReport,
 } from "./growthApi";
+import { GrowthClickDiagnosis } from "./GrowthClickDiagnosis";
 import { growthCount as count, growthRate as rate } from "./growthFormat";
 
 export function GrowthPageCard({
@@ -29,6 +30,7 @@ export function GrowthPageCard({
   onAnalyst: () => void;
 }) {
   const [note, setNote] = useState("");
+  const [controlPage, setControlPage] = useState("");
   const navigate = useNavigate();
   function openEditor() {
     try {
@@ -55,7 +57,8 @@ export function GrowthPageCard({
   }
   const client = useQueryClient();
   const save = useMutation({
-    mutationFn: () => saveGrowthAction(projectId, report.id, page.page, note),
+    mutationFn: () =>
+      saveGrowthAction(projectId, report.id, page.page, note, controlPage),
     retry: false,
     onSuccess: () => {
       toast.success("Action and baseline saved");
@@ -96,11 +99,19 @@ export function GrowthPageCard({
           <strong>{count(page.current.sessions)}</strong> GA4 sessions
         </span>
         <span>
-          <strong>{count(page.current.keyEvents)}</strong> key events
+          <strong>{count(page.current.keyEvents)}</strong> all key events
         </span>
         <span>
-          <strong>{rate(page.current.keyEventRate)}</strong> session key-event
-          rate
+          <strong>
+            {rate(
+              report.goalEvent
+                ? (page.current.goalRate ?? null)
+                : page.current.keyEventRate,
+            )}
+          </strong>{" "}
+          {report.goalEvent
+            ? `${report.goalEvent} session rate`
+            : "session key-event rate"}
         </span>
       </div>
       {page.current.revenue !== null &&
@@ -128,6 +139,7 @@ export function GrowthPageCard({
           Improve this page in editor
         </Button>
       </div>
+      <GrowthClickDiagnosis projectId={projectId} report={report} page={page} />
       <details className="text-sm">
         <summary className="cursor-pointer text-muted-foreground">
           Query evidence and save action
@@ -147,7 +159,7 @@ export function GrowthPageCard({
                   {q.position.toFixed(1)}
                   {q.branded ? " · Branded" : ""}
                   {q.competingPages.length
-                    ? ` · Also appears on ${q.competingPages.length} other returned pages`
+                    ? ` · Also appears on ${q.competingPageCount ?? q.competingPages.length} other returned pages`
                     : ""}
                 </li>
               ))}
@@ -158,6 +170,28 @@ export function GrowthPageCard({
               by Google.
             </p>
           )}
+          <label className="grid gap-1">
+            Optional unchanged comparison page
+            <select
+              className="max-w-full rounded border bg-background p-2"
+              value={controlPage}
+              onChange={(e) => setControlPage(e.target.value)}
+            >
+              <option value="">No comparison page</option>
+              {report.pages
+                .filter((p) => p.page !== page.page)
+                .slice(0, 100)
+                .map((p) => (
+                  <option key={p.page} value={p.page}>
+                    {p.page}
+                  </option>
+                ))}
+            </select>
+          </label>
+          <p className="text-xs text-muted-foreground">
+            Choose a similar page you will leave unchanged. This helps
+            contextualize demand changes, but does not establish causation.
+          </p>
           <label className="grid gap-1">
             What will you change?
             <Input

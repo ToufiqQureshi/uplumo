@@ -19,3 +19,8 @@ Google Search Console API; encrypted Google grants; selected property in Postgre
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.
+
+- Sitemap submitted counts and download status do not establish indexing. Keep
+  sitemap-level errors distinct from URL Inspection's stored page-level evidence.
+- Growth-only expanded pagination preserves legacy limits and remains bounded;
+  source privacy limits mean a short response still cannot establish all queries.

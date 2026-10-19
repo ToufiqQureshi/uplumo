@@ -1,228 +1,11 @@
-import { expect, test, type Route } from "@playwright/test";
-
-const metrics = { clicks: 60, impressions: 1000, ctr: 0.06, position: 9 };
-const current = {
-  ...metrics,
-  sessions: 200,
-  keyEvents: 10,
-  keyEventRate: 0.05,
-  engagementRate: 0.7,
-  revenue: 0,
-};
-const range = { startDate: "2026-09-18", endDate: "2026-10-15" };
-const previousRange = { startDate: "2026-08-21", endDate: "2026-09-17" };
-const pageEvidence = {
-  page: "https://example.com/guide",
-  current,
-  previous: { ...current, clicks: 100 },
-  queries: [
-    {
-      query: "booking guide",
-      clicks: 30,
-      impressions: 500,
-      position: 9,
-      branded: false,
-      competingPages: [],
-    },
-  ],
-  findings: [
-    {
-      kind: "traffic_loss",
-      title: "Search clicks are falling",
-      evidence: "100 → 60 Google clicks across equal-length periods.",
-      action: "Review lost queries and search intent.",
-      confidence: "Review candidate",
-    },
-  ],
-  priority: 30,
-};
-const report = {
-  id: "report-a",
-  generatedAt: "2026-10-19T12:00:00Z",
-  range,
-  previousRange,
-  siteUrl: "https://example.com/",
-  propertyId: "properties/123",
-  currency: "USD",
-  timeZone: "UTC",
-  brandTerms: [],
-  pages: [pageEvidence],
-  warnings: [
-    "Key events reflect your configuration, not automatically verified leads.",
-  ],
-  limited: false,
-  truncated: false,
-  matchedPages: 1,
-  gscPageCount: 1,
-  ga4PageCount: 1,
-};
+import { expect, test } from "@playwright/test";
+import { installGrowthFixtures } from "./search-growth.fixtures";
 
 test("search growth stays explicit and carries evidence through save, analyst and editor", async ({
   page,
 }) => {
-  const requests: string[] = [];
-  const paid: string[] = [];
-  let saved = false;
-  const chatModes: unknown[] = [];
-  await page.addInitScript(() => localStorage.setItem("sam-beta-opt-in", "1"));
-  await page.route("**/api/**", async (route: Route) => {
-    const path = new URL(route.request().url()).pathname;
-    requests.push(path);
-    if (
-      /sam\/sessions\/chat|assistant\/generate|content\/brief|ai-search\/tracking\/run|keywords\/research/u.test(
-        path,
-      )
-    )
-      paid.push(path);
-    if (path.endsWith("/sam/sessions/chat")) {
-      const input: unknown = route.request().postDataJSON();
-      if (typeof input === "object" && input !== null && "mode" in input)
-        chatModes.push(input.mode);
-      await route.fulfill({
-        status: 200,
-        headers: {
-          "content-type": "text/event-stream",
-          "x-vercel-ai-ui-message-stream": "v1",
-        },
-        body: 'data: {"type":"start","messageId":"reply-a"}\n\ndata: {"type":"text-start","id":"text-a"}\n\ndata: {"type":"text-delta","id":"text-a","delta":"Review the observed traffic decline first."}\n\ndata: {"type":"text-end","id":"text-a"}\n\ndata: {"type":"finish"}\n\ndata: [DONE]\n\n',
-      });
-      return;
-    }
-    const now = new Date().toISOString();
-    let body: unknown = {};
-    if (path === "/api/auth/get-session")
-      body = {
-        user: {
-          id: "e2e-user",
-          name: "Growth Test",
-          email: "growth@example.com",
-          emailVerified: true,
-          createdAt: now,
-          updatedAt: now,
-        },
-        session: {
-          id: "e2e-session",
-          userId: "e2e-user",
-          expiresAt: new Date(Date.now() + 3600000).toISOString(),
-          token: "playwright-session",
-          createdAt: now,
-          updatedAt: now,
-        },
-      };
-    else if (path.endsWith("/projects/e2e-project/get"))
-      body = {
-        id: "e2e-project",
-        name: "Example site",
-        domain: "example.com",
-        locationCode: 2840,
-        languageCode: "en",
-        createdAt: now,
-      };
-    else if (path.endsWith("/gsc/search-performance/report"))
-      body = {
-        connected: true,
-        range: {
-          ...range,
-          prevStartDate: previousRange.startDate,
-          prevEndDate: previousRange.endDate,
-          comparisonAvailable: true,
-        },
-        totals: metrics,
-        prevTotals: metrics,
-        daily: [{ date: range.startDate, clicks: 5, impressions: 100 }],
-        strikingDistance: [],
-        countries: [],
-      };
-    else if (path.endsWith("/ga4/growth/report")) body = report;
-    else if (path.endsWith("/ga4/growth/list"))
-      body = saved
-        ? [
-            {
-              id: "action-a",
-              page: pageEvidence.page,
-              note: "Review the enquiry CTA",
-              status: "planned",
-              baseline: pageEvidence,
-              source: report,
-              baselineRange: range,
-              createdAt: now,
-              appliedAt: null,
-            },
-          ]
-        : [];
-    else if (path.endsWith("/ga4/growth/save")) {
-      saved = true;
-      body = { id: "action-a" };
-    } else if (path.endsWith("/ga4/growth/devices"))
-      body = {
-        rows: [
-          {
-            deviceCategory: "mobile",
-            sessions: 120,
-            keyEvents: 4,
-            sessionKeyEventRate: 0.03,
-          },
-        ],
-        limited: false,
-        range,
-      };
-    else if (path.endsWith("/ga4/measurement-health"))
-      body = { issues: ["no_key_events_configured"], keyEvents: [] };
-    else if (path.endsWith("/ai-search/tracking"))
-      body = {
-        configuration: null,
-        nextCheckAt: null,
-        runs: [],
-        providerConfigured: true,
-      };
-    else if (path.endsWith("/sam/sessions/list"))
-      body = [
-        {
-          id: "session-a",
-          title: "SEO analyst",
-          createdAt: now,
-          updatedAt: now,
-        },
-      ];
-    else if (
-      path.endsWith("/sam/sessions/messages") ||
-      path.endsWith("/content/drafts/list")
-    )
-      body = [];
-    else if (path === "/api/v1/billing/usage")
-      body = {
-        plan: "pro",
-        unlimited: false,
-        chargesCredits: true,
-        balanceCredits: 9000,
-        monthlyCredits: 10000,
-        periodStart: now,
-        periodEnd: null,
-        spent: [],
-        costs: [{ feature: "ai_assistant", unit: "reply", credits: 40 }],
-      };
-    else if (path === "/api/v1/billing/status")
-      body = {
-        plan: "pro",
-        status: "active",
-        currentPeriodEnd: null,
-        cancelAtPeriodEnd: false,
-        unlimited: false,
-        paymentsConfigured: false,
-        availablePlans: ["basic", "pro", "agency"],
-        usage: {
-          sites: { used: 1, limit: 5, exceeded: false },
-          members: { used: 1, limit: 5, exceeded: false },
-          trackedKeywords: { used: 0, limit: 100, exceeded: false },
-        },
-      };
-    else if (path === "/api/v1/billing/plans") body = { plans: [] };
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify(body),
-    });
-  });
+  const { requests, paid, chatModes, growthInputs } =
+    await installGrowthFixtures(page);
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/p/e2e-project/search-performance");
   const analyze = page.getByRole("button", { name: "Find opportunities" });
@@ -230,7 +13,16 @@ test("search growth stays explicit and carries evidence through save, analyst an
   expect(requests.filter((p) => p.endsWith("/ga4/growth/report"))).toHaveLength(
     0,
   );
+  await page.getByRole("button", { name: "Load my GA4 goals" }).click();
+  await page
+    .getByLabel("What matters to your business?")
+    .selectOption("generate_lead");
   await analyze.click();
+  expect(growthInputs[0]).toMatchObject({
+    goalEvent: "generate_lead",
+    comparison: "previous",
+    expanded: false,
+  });
   await expect(
     page.getByRole("heading", { name: "Search clicks are falling" }),
   ).toBeVisible();
@@ -255,7 +47,7 @@ test("search growth stays explicit and carries evidence through save, analyst an
     .getByRole("button", { name: "Check GA4 measurement setup" })
     .click();
   await expect(
-    page.getByText("No key events are configured.", { exact: false }),
+    page.getByText("1 configured key events.", { exact: false }),
   ).toBeVisible();
   await page
     .getByRole("button", { name: "Compare Google organic traffic by device" })
@@ -269,6 +61,51 @@ test("search growth stays explicit and carries evidence through save, analyst an
   await expect(
     page.getByText("No completed AI tracking run is saved yet."),
   ).toBeVisible();
+  await page
+    .getByText("Why are clicks low or falling?", { exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Investigate this page's clicks" })
+    .click();
+  await expect(
+    page.getByText("Fewer impressions are becoming clicks", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Check Google's stored index status" })
+    .click();
+  await expect(
+    page.getByText("Submitted and indexed", { exact: false }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Investigate attribution and tracking" })
+    .click();
+  await expect(
+    page.getByText("Verify your completed lead event in DebugView."),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Inspect tracked journey" }).click();
+  await expect(
+    page.getByRole("cell", { name: "1. page_view", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Check submitted sitemap status" })
+    .click();
+  await expect(page.getByText("Errors: 2", { exact: false })).toBeVisible();
+  await page
+    .getByText("Weekly actions and important drop alerts", { exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Enable weekly checks for selected goal" })
+    .click();
+  await expect(
+    page.getByText("Weekly checks enabled for generate_lead.", {
+      exact: false,
+    }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Turn off weekly checks" }).click();
+  await expect(
+    page.getByText("Weekly checks are off.", { exact: false }),
+  ).toBeVisible();
+  expect(paid).toEqual([]);
   await page.screenshot({
     path: "/workspace/search-growth-desktop.png",
     fullPage: true,

@@ -31,3 +31,14 @@ Uses first-party Search Console data to prioritize content review and explain in
   revenue. Competing pages are investigation candidates, not proof of harm.
 - AI drafts and editor context stay in project-scoped tab storage for 30 minutes,
   not report-bearing URLs. Opening a draft makes no paid call or site change.
+
+- Keep the main view small: business goal, analyze, top three next actions.
+  Technical evidence and optional segmentation belong in named drill-downs.
+- All-event counts, selected-goal rates, user funnels, Google AI impressions and
+  tracked prompt citations have distinct scopes; never merge their labels.
+- Never describe absent queries, a missing funnel step or a successful sitemap
+  submission as proof of zero demand, real abandonment or successful indexing.
+
+- Expanded coverage must not render thousands of cards or an options list per
+  source row. Browse 10 candidates/page and cap comparison options at 100;
+  competing-page examples cap at five while the returned-page count stays visible.

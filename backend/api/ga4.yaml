@@ -268,7 +268,7 @@ paths:
         required: true
         content:
           application/json:
-            schema: { type: object, additionalProperties: false, required: [reportId, page, note], properties: { reportId: { type: string }, page: { type: string, maxLength: 2048 }, note: { type: string, minLength: 1, maxLength: 1000 } } }
+            schema: { type: object, additionalProperties: false, required: [reportId, page, note], properties: { reportId: { type: string }, page: { type: string, maxLength: 2048 }, note: { type: string, minLength: 1, maxLength: 1000 }, controlPage: { type: string, maxLength: 2048, description: Optional unchanged page from this server report } } }
       responses:
         "200": { description: Scoped evidence or action result; missing metrics remain null. Comparisons may be waiting for complete data. }
         "400": { description: Invalid or expired report input }
@@ -335,6 +335,126 @@ paths:
         "401": { description: Authentication required }
         "404": { description: Project, connection or action not found }
         "502": { description: Google report unavailable }
+  /api/v1/projects/{projectId}/ga4/growth/goals:
+    post:
+      operationId: ga4GrowthGoals
+      summary: Discover registered outcome-specific rates
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: false }
+      responses:
+        "200": { description: Scoped evidence or monitoring state with source limitations. No paid provider is called. }
+        "400": { description: Invalid or unsupported inputs or expired server report }
+        "401": { description: Authentication required }
+        "404": { description: Project or connection unavailable }
+        "502": { description: Google reporting unavailable }
+  /api/v1/projects/{projectId}/ga4/growth/tracking:
+    post:
+      operationId: ga4GrowthTracking
+      summary: Inspect observed attribution evidence and measurement checklist
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GrowthRequest' }
+      responses:
+        "200": { description: Scoped evidence or monitoring state with source limitations. No paid provider is called. }
+        "400": { description: Invalid or unsupported inputs or expired server report }
+        "401": { description: Authentication required }
+        "404": { description: Project or connection unavailable }
+        "502": { description: Google reporting unavailable }
+  /api/v1/projects/{projectId}/ga4/growth/funnel:
+    post:
+      operationId: ga4GrowthFunnel
+      summary: Read an ordered user funnel from tracked GA4 events
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: false, required: [startDate, endDate, steps], properties: { startDate: { type: string, format: date }, endDate: { type: string, format: date }, steps: { type: array, minItems: 2, maxItems: 5, uniqueItems: true, items: { type: string, pattern: '^[A-Za-z][A-Za-z0-9_]{0,39}$' } }, byDevice: { type: boolean } } }
+      responses:
+        "200": { description: Scoped evidence or monitoring state with source limitations. No paid provider is called. }
+        "400": { description: Invalid or unsupported inputs or expired server report }
+        "401": { description: Authentication required }
+        "404": { description: Project or connection unavailable }
+        "502": { description: Google reporting unavailable }
+  /api/v1/projects/{projectId}/ga4/growth/clicks:
+    post:
+      operationId: ga4GrowthClicks
+      summary: Investigate low or falling clicks for a trusted report page
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: false, required: [reportId, page], properties: { reportId: { type: string }, page: { type: string } } }
+      responses:
+        "200": { description: Scoped evidence or monitoring state with source limitations. No paid provider is called. }
+        "400": { description: Invalid or unsupported inputs or expired server report }
+        "401": { description: Authentication required }
+        "404": { description: Project or connection unavailable }
+        "502": { description: Google reporting unavailable }
+  /api/v1/projects/{projectId}/ga4/growth/monitor:
+    post:
+      operationId: ga4GrowthMonitor
+      summary: Read weekly in-app monitoring state
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: false }
+      responses:
+        "200": { description: Scoped evidence or monitoring state with source limitations. No paid provider is called. }
+        "400": { description: Invalid or unsupported inputs or expired server report }
+        "401": { description: Authentication required }
+        "404": { description: Project or connection unavailable }
+        "502": { description: Google reporting unavailable }
+  /api/v1/projects/{projectId}/ga4/growth/monitor-save:
+    post:
+      operationId: ga4GrowthMonitorSave
+      summary: Explicitly enable or disable weekly in-app Google-data checks
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: false, required: [enabled], properties: { enabled: { type: boolean }, goalEvent: { type: string, maxLength: 40 } } }
+      responses:
+        "200": { description: Scoped evidence or monitoring state with source limitations. No paid provider is called. }
+        "400": { description: Invalid or unsupported inputs or expired server report }
+        "401": { description: Authentication required }
+        "404": { description: Project or connection unavailable }
+        "502": { description: Google reporting unavailable }
 components:
   schemas:
     GrowthRequest:
@@ -344,6 +464,9 @@ components:
         startDate: { type: string, format: date }
         endDate: { type: string, format: date }
         brandTerms: { type: array, maxItems: 10, items: { type: string, minLength: 1, maxLength: 100 } }
+        goalEvent: { type: string, pattern: '^[A-Za-z][A-Za-z0-9_]{0,39}$', description: Registered successful outcome; raw keyEvents remains all events. }
+        comparison: { type: string, enum: [previous, year], description: year shifts both endpoints 364 days to preserve weekdays. }
+        expanded: { type: boolean, default: false, description: Explicitly page up to 5000 rows per source instead of 1000. }
     ReportRequest:
       type: object
       additionalProperties: false

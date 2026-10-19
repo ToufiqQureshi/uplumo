@@ -257,6 +257,9 @@ func run(logger *slog.Logger) (err error) {
 	ga4Setup := &ga4.ConnectionOperations{Store: ga4.SetupRepository{DB: db}, OAuthReady: cfg.GoogleClientID != "" && cfg.GoogleClientSecret != ""}
 	if googleOAuthSvc != nil {
 		ga4Svc = &ga4.Service{Growth: &ga4.GrowthRepository{DB: db}, Connections: ga4.ConnectionRepository{DB: db}, Google: &google.APIClient{Tokens: googleOAuthSvc.Tokens}}
+		if gateSvc != nil {
+			ga4Svc.GrowthMonitorAllowed = gateSvc.Gate(planCatalog.GoogleData).HasPaidPlan
+		}
 		ga4Setup.NewAdmin = func(userID, accountID string) ga4.PropertyAdmin {
 			return ga4.GooglePropertyAdmin{API: googleAPIClient, UserID: userID, AccountID: accountID}
 		}
@@ -302,6 +305,22 @@ func run(logger *slog.Logger) (err error) {
 	authService := auth.NewService(db, cfg.BetterAuthSecret)
 	savedKeywordsSvc := &keywords.SavedService{Store: keywords.SavedRepository{DB: db}}
 	gscService := buildGSCService(db, googleAPIClient)
+	if ga4Svc != nil && gscService != nil {
+		go func() {
+			timer := time.NewTicker(time.Minute)
+			defer timer.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-timer.C:
+					if err := ga4Svc.CheckGrowthMonitors(ctx, gscService); err != nil {
+						logger.Error("search growth monitor failed", "err", err)
+					}
+				}
+			}
+		}()
+	}
 	contentAuthors := &contentauthors.Repository{DB: db}
 	linkSuggestSvc := &linksuggest.Service{
 		Sources: []linksuggest.Source{linksuggest.GSC{Service: gscService}, linksuggest.AuditSource{DB: db}},

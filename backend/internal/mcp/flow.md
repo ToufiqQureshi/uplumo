@@ -22,4 +22,4 @@ API keys, OAuth/Postgres token tables, project auth, feature services and provid
 - Bound JSON bodies, tool output, call ceilings and OAuth tokens; classify read-only vs spend/mutation tools explicitly.
 
 Search growth calls validate dates/brand terms, authorize the project, then reuse
-`ga4.Service.GetGrowthReport`, its scoped ten-minute cache and five-read bound.
+`ga4.Service.GetGrowthReport`, its scoped ten-minute cache and standard/expanded read bounds in `ga4/README.md`.

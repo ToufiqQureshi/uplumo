@@ -47,3 +47,11 @@ Send explicitly enables server-enforced search_growth mode: read-only Google
 and guarded site tools; ordinary SAM model metering still applies. Editor
 handoff carries the source URL, query cluster, date range and finding evidence
 through validated tab storage, preserving existing drafts.
+
+Load goals -> choose a registered successful outcome -> explicit analysis -> top
+three candidates. Settings and reports preserve separate goal labels, and report
+changes reset page-level saves/diagnosis state. Why clicks are low -> two exact-page
+query reads; Check stored index -> one URL Inspection read. Attribution, funnels,
+sitemaps and device checks remain separate explicit clicks. No drill-down calls a
+paid provider. Weekly configuration reads only on panel open; scheduling requires
+a separate enable click and shows its own stored goal/date scope.

@@ -1,17 +1,17 @@
 import { useMutation } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import { Button } from "@/client/components/ui/button";
 import { QueryError } from "@/client/components/QueryState";
-import { safeHttpUrl } from "@/shared/safe-url";
-import {
-  trackingApi,
-  type TrackingAnswer,
-} from "@/client/features/ai-search/trackingApi";
+
 import {
   getGrowthDevices,
   getGrowthHealth,
+  getGrowthTracking,
   type GrowthReport,
 } from "./growthApi";
+
+import { GrowthCitationEvidence } from "./GrowthCitationEvidence";
+import { GrowthSitemaps } from "./GrowthSitemaps";
+import { GrowthFunnel } from "./GrowthFunnel";
 
 const healthMessages: Record<string, string> = {
   no_web_stream:
@@ -31,23 +31,27 @@ export function GrowthEvidencePanel({
   projectId: string;
   report: GrowthReport;
 }) {
+  const tracking = useMutation({
+    mutationFn: () =>
+      getGrowthTracking(projectId, {
+        ...report.range,
+        goalEvent: report.goalEvent,
+      }),
+    retry: false,
+  });
   const devices = useMutation({
-    mutationFn: () => getGrowthDevices(projectId, report.range),
+    mutationFn: () =>
+      getGrowthDevices(projectId, {
+        ...report.range,
+        goalEvent: report.goalEvent,
+      }),
     retry: false,
   });
   const health = useMutation({
     mutationFn: () => getGrowthHealth(projectId),
     retry: false,
   });
-  const ai = useMutation({
-    mutationFn: async () => {
-      const state = await trackingApi.state(projectId);
-      const run = state.runs.find((r) => r.status === "completed");
-      if (!run) return { run: null, answers: [] as TrackingAnswer[] };
-      return { run, answers: await trackingApi.answers(projectId, run.id) };
-    },
-    retry: false,
-  });
+
   return (
     <details className="rounded-lg border p-3 text-sm">
       <summary className="cursor-pointer font-medium">
@@ -97,6 +101,61 @@ export function GrowthEvidencePanel({
         </section>
         <section className="space-y-2">
           <Button
+            size="sm"
+            variant="outline"
+            disabled={tracking.isPending}
+            onClick={() => tracking.mutate()}
+          >
+            Investigate attribution and tracking
+          </Button>
+          {tracking.isError ? (
+            <QueryError
+              error={tracking.error}
+              fallback="Could not inspect tracking evidence."
+            />
+          ) : null}
+          {tracking.data ? (
+            <div className="space-y-2 text-xs">
+              {tracking.data.limited ? (
+                <p>
+                  Returned tracking evidence is limited; missing referral rows
+                  are unknown.
+                </p>
+              ) : null}
+              {tracking.data.findings.map((finding, i) => (
+                <p key={`${finding.kind}:${i}`}>
+                  <strong>{finding.title}:</strong> {finding.evidence}{" "}
+                  {finding.action}
+                </p>
+              ))}
+              <ul className="list-disc space-y-1 pl-4">
+                {tracking.data.checklist.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+              <details>
+                <summary className="cursor-pointer">
+                  Observed host and referral rows
+                </summary>
+                <ul className="mt-2 space-y-1">
+                  {tracking.data.rows.map((row, i) => (
+                    <li
+                      key={`${row.hostName}:${row.sessionSource}:${row.sessionMedium}:${i}`}
+                    >
+                      {row.hostName} · {row.sessionSource} / {row.sessionMedium}{" "}
+                      · {row.sessions ?? "Unavailable"} sessions ·{" "}
+                      {row.keyEvents ?? "Unavailable"} all key events
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            </div>
+          ) : null}
+        </section>
+        <GrowthFunnel projectId={projectId} report={report} />
+        <GrowthSitemaps projectId={projectId} />
+        <section className="space-y-2">
+          <Button
             variant="outline"
             size="sm"
             disabled={devices.isPending}
@@ -130,8 +189,12 @@ export function GrowthEvidencePanel({
                       <tr>
                         <th className="p-2">Device</th>
                         <th className="p-2">Sessions</th>
-                        <th className="p-2">Key events</th>
-                        <th className="p-2">Session key-event rate</th>
+                        <th className="p-2">All key events</th>
+                        <th className="p-2">
+                          {report.goalEvent
+                            ? `${report.goalEvent} session rate`
+                            : "Session key-event rate"}
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -145,9 +208,11 @@ export function GrowthEvidencePanel({
                             {row.keyEvents ?? "Unavailable"}
                           </td>
                           <td className="p-2">
-                            {row.sessionKeyEventRate === null
+                            {(report.goalEvent
+                              ? row.goalRate
+                              : row.sessionKeyEventRate) == null
                               ? "Unavailable"
-                              : `${(row.sessionKeyEventRate * 100).toFixed(1)}%`}
+                              : `${((report.goalEvent ? (row.goalRate ?? 0) : (row.sessionKeyEventRate ?? 0)) * 100).toFixed(1)}%`}
                           </td>
                         </tr>
                       ))}
@@ -164,92 +229,7 @@ export function GrowthEvidencePanel({
             </div>
           ) : null}
         </section>
-        <section className="space-y-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={ai.isPending}
-            onClick={() => ai.mutate()}
-          >
-            Load saved AI citation evidence
-          </Button>
-          <p className="text-xs text-muted-foreground">
-            Reads existing tracked answers only. Does not buy new AI answers or
-            enable a schedule.
-          </p>
-          {ai.isError ? (
-            <QueryError
-              error={ai.error}
-              fallback="Could not load saved AI evidence."
-            />
-          ) : null}
-          {ai.data ? (
-            ai.data.run ? (
-              <div className="space-y-3">
-                <p className="text-xs text-muted-foreground">
-                  Saved run: {new Date(ai.data.run.createdAt).toLocaleString()}{" "}
-                  · {ai.data.run.completed} completed, {ai.data.run.failed}{" "}
-                  failed. These prompt/model samples do not represent every
-                  consumer AI answer and use a separate date scope from GSC/GA4.
-                </p>
-                {ai.data.answers
-                  .filter((a) => a.status === "completed" && a.answer.trim())
-                  .slice(0, 10)
-                  .map((answer) => (
-                    <details key={answer.id} className="rounded border p-2">
-                      <summary className="cursor-pointer">
-                        {answer.prompt} · {answer.engine}
-                      </summary>
-                      <p className="mt-2 whitespace-pre-wrap text-xs text-muted-foreground">
-                        {answer.answer.slice(0, 1600)}
-                        {answer.answer.length > 1600 ? "…" : ""}
-                      </p>
-                      <ul className="mt-2 space-y-1 text-xs">
-                        {answer.citations.slice(0, 10).map((citation, i) => {
-                          const url = safeHttpUrl(citation.url);
-                          return (
-                            <li key={`${citation.url}:${i}`}>
-                              {url ? (
-                                <a
-                                  className="break-all underline"
-                                  href={url}
-                                  target="_blank"
-                                  rel="noreferrer noopener"
-                                >
-                                  {citation.title || citation.url}
-                                </a>
-                              ) : (
-                                "Unsafe source URL omitted"
-                              )}
-                              {citation.matchedBrand
-                                ? " · Tracked brand source"
-                                : " · Other source"}
-                            </li>
-                          );
-                        })}
-                      </ul>
-                      <p className="mt-2 text-xs">
-                        Compare what these cited sources answer with your
-                        existing page. Absence from this sample is not proof of
-                        absence from AI search.
-                      </p>
-                    </details>
-                  ))}
-              </div>
-            ) : (
-              <p className="text-xs">
-                No completed AI tracking run is saved yet.
-              </p>
-            )
-          ) : null}
-          <Link
-            to="/p/$projectId/prompt-tracking"
-            params={{ projectId }}
-            className="text-xs underline"
-          >
-            Review full prompt tracking and citation coverage
-          </Link>
-        </section>
+        <GrowthCitationEvidence projectId={projectId} report={report} />
       </div>
     </details>
   );

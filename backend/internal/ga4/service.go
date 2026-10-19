@@ -31,11 +31,12 @@ type JSONDoer interface {
 
 // Service builds and executes GA4 reports while preserving their response contract.
 type Service struct {
-	Connections   ConnectionStore
-	Google        JSONDoer
-	Now           func() time.Time
-	Growth        *GrowthRepository
-	growthFlights singleflight.Group
+	Connections          ConnectionStore
+	Google               JSONDoer
+	Now                  func() time.Time
+	Growth               *GrowthRepository
+	GrowthMonitorAllowed func(context.Context, string) (bool, error)
+	growthFlights        singleflight.Group
 }
 
 // RunReport runs one configured report for the authorized project.

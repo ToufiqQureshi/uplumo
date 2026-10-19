@@ -31,3 +31,16 @@ Use the package tests next to the source files in `README.md`. For changes cross
 - No background AI refresh, new paid research or automatic site change is
   authorized by opening an insight. The existing SAM meter bills explicit AI
   replies, and analyst mode enforces a read-only tool allowlist at execution.
+
+- Event-specific session rate keeps all sessions in the denominator. Do not
+  apply an event-name filter to the entire landing-page report or relabel all
+  key events as the selected goal. Estimated goal-reaching session counts are
+  only a labeled minimum-sample aid; the rate is the direct provider metric.
+- Weekday-aligned year comparisons and user-selected unchanged pages provide
+  context, not experimental attribution. Never replace absent queries with zero.
+- Weekly checks require explicit opt-in and use no paid calls. Claim deadlines
+  and revision fences protect replicas and stale writes; recheck entitlement and
+  connection scope before fetching. Failure cannot trigger a fast retry loop.
+- Metadata availability is not proof of correct instrumentation. Funnels use
+  tracked event sequences, retain alpha/API limitations and do not synthesize
+  abandonment from unrelated aggregate event counts.
