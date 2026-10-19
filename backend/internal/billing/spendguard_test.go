@@ -803,3 +803,35 @@ func TestConcurrentHoldsCannotTogetherPassTheWorkspaceDailyLimit(t *testing.T) {
 		t.Fatalf("%d holds of $0.30 granted against a $1 limit, want 3", got)
 	}
 }
+
+// The credits a request charged are what the customer is told they used: they
+// must be exactly what the ledger settled, not the hold and not the estimate.
+func TestSettledCreditsAreCountedForTheRequest(t *testing.T) {
+	pool := setupTestDB(t)
+	ledger := NewCreditLedgerService(pool)
+	ctx := spend.WithCreditMeter(t.Context())
+	org := spendOrg(ctx, t, pool, 10_000)
+	guard := testGuard(t, pool, ledger, noDailyLimit, true)
+
+	hold, err := guard.Hold(ctx, spend.Request{OrganizationID: org, Feature: spend.Backlinks, IdempotencyKey: "meter-one", EstimateUSD: 0.5})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := hold.Settle(ctx, 0.024036); err != nil {
+		t.Fatal(err)
+	}
+	second, err := guard.Hold(ctx, spend.Request{OrganizationID: org, Feature: spend.Backlinks, IdempotencyKey: "meter-two", EstimateUSD: 0.5})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := second.Settle(ctx, 0.0258); err != nil {
+		t.Fatal(err)
+	}
+	want := CreditsForUSD(0.024036) + CreditsForUSD(0.0258)
+	if got := spend.CreditsCharged(ctx); got != want {
+		t.Fatalf("credits charged for the request = %d, want %d (what settled, not the $0.50 holds)", got, want)
+	}
+	if spent := 10_000 - balanceOf(ctx, t, ledger, org); spent != want {
+		t.Fatalf("balance fell by %d, the meter says %d", spent, want)
+	}
+}

@@ -7,7 +7,12 @@ import {
   type MockInstance,
 } from "vitest";
 import { z } from "zod";
-import { ApiError, apiRequest, shouldRetryApiError } from "./uplumoApi";
+import {
+  ApiError,
+  apiRequest,
+  onCreditsUsed,
+  shouldRetryApiError,
+} from "./uplumoApi";
 
 const schema = z.object({ plan: z.enum(["free", "pro"]) });
 // restoreMocks undoes the spy after each test, so each test spies again.
@@ -219,4 +224,50 @@ describe("shouldRetryApiError", () => {
       expect(shouldRetryApiError(failures, error)).toBe(retry);
     },
   );
+});
+
+describe("credits used", () => {
+  beforeEach(() => {
+    fetchMock = vi.spyOn(globalThis, "fetch");
+  });
+
+  function respondWithCredits(header: string | null) {
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ plan: "pro" }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          ...(header === null ? {} : { "X-Credits-Used": header }),
+        },
+      }),
+    );
+  }
+
+  it("tells listeners how many credits the request charged", async () => {
+    const listener = vi.fn();
+    const stop = onCreditsUsed(listener);
+    respondWithCredits("63");
+    await apiRequest("/api/v1/x", schema);
+    stop();
+    expect(listener).toHaveBeenCalledExactlyOnceWith(63);
+  });
+
+  it("stays quiet for a free request or a header that is not a whole number", async () => {
+    const listener = vi.fn();
+    const stop = onCreditsUsed(listener);
+    for (const header of [null, "0", "-4", "1.5", "lots"]) {
+      respondWithCredits(header);
+      await apiRequest("/api/v1/x", schema);
+    }
+    stop();
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it("stops telling a listener that was removed", async () => {
+    const listener = vi.fn();
+    onCreditsUsed(listener)();
+    respondWithCredits("10");
+    await apiRequest("/api/v1/x", schema);
+    expect(listener).not.toHaveBeenCalled();
+  });
 });

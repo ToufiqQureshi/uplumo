@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"strconv"
 	"sync"
+	"sync/atomic"
 
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/httpx"
 )
@@ -130,6 +131,31 @@ func ScopedKey(ctx context.Context, parts ...[]byte) string {
 	scope.uses[sum] = occurrence + 1
 	scope.mu.Unlock()
 	return hex.EncodeToString(sum[:]) + "." + strconv.Itoa(occurrence)
+}
+
+type creditMeterContextKey struct{}
+
+// WithCreditMeter makes ctx count the credits settled for it, so the HTTP layer
+// can tell the customer what the action cost them. Contexts derived from the
+// returned one (also detached ones) share the count.
+func WithCreditMeter(ctx context.Context) context.Context {
+	return context.WithValue(ctx, creditMeterContextKey{}, new(atomic.Int64))
+}
+
+// RecordCredits adds credits that were charged for ctx's action. It does
+// nothing when ctx has no meter.
+func RecordCredits(ctx context.Context, credits int64) {
+	if meter, ok := ctx.Value(creditMeterContextKey{}).(*atomic.Int64); ok && credits > 0 {
+		meter.Add(credits)
+	}
+}
+
+// CreditsCharged is the credits charged so far for ctx's action.
+func CreditsCharged(ctx context.Context) int64 {
+	if meter, ok := ctx.Value(creditMeterContextKey{}).(*atomic.Int64); ok {
+		return meter.Load()
+	}
+	return 0
 }
 
 // WithUserID attaches the authenticated user for credit ledger attribution.
