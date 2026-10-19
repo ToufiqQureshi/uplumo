@@ -17,5 +17,11 @@ Read [flow.md](flow.md) for the request path and [decision.md](decision.md) for 
 - `backend/internal/plans`
 - `backend/internal/razorpay`
 
+`credits/TopUpsCard.tsx` lists server-configured one-time packs. Owners/admins can
+open Razorpay; payment verification polls the organization-scoped order status
+and refreshes credits only after `paid`. Subscription and one-time order checkout
+share the lazy-loaded provider script. Daily limits still apply after purchase.
+`CreditsCard.tsx` explains upcoming scheduled usage and the estimated balance
+remaining after checks; negative estimates warn before schedules exhaust it.
 Billing period end dates render as UTC calendar dates so a workspace west of
 UTC does not see the previous day for a midnight refill.

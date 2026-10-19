@@ -77,7 +77,8 @@ type Config struct {
 	// on a live site, development anywhere else.
 	Environment string
 	// Release is the deployed commit, which Railway provides.
-	Release string
+	Release    string
+	TopUpPacks string
 	// TrustedProxyCIDRs are peers allowed to supply client IP headers.
 	TrustedProxyCIDRs []netip.Prefix
 	// SupabaseStorage configures the optional public media bucket used by
@@ -212,6 +213,7 @@ func Load(getenv func(string) string) (Config, error) {
 	}
 
 	return Config{
+		TopUpPacks:                   getenv("BILLING_TOPUP_PACKS"),
 		StaffEmails:                  staffEmails,
 		ProviderDailyLimitUSD:        dailyLimit,
 		Addr:                         fmt.Sprintf(":%d", port),

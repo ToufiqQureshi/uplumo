@@ -28,3 +28,7 @@ Go packages: `billing`, `plans` and `razorpay`; payment actions happen only afte
 - Credit reservations must settle/refund safely on provider failure and duplicate requests.
 - Never trust a browser-reported price, plan or provider cost.
 - Checkout/cancel are externally visible billing actions; require explicit user intent and preserve idempotency.
+
+## Forecast and packs
+
+CreditsCard shows configured schedule ceilings. TopUpsCard loads operator-configured packs, lazily opens server-priced Razorpay checkout, then polls signed capture status for at most 40 reads before manual refresh. Only a verified paid result invalidates balance queries. No configured packs means no purchase offer.

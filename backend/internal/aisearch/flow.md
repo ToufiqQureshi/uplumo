@@ -27,3 +27,7 @@ Redis cache; DataForSEO AI endpoints; plans/billing.
 - On one server, an organization-scoped in-flight key coalesces concurrent
   identical Brand Lookups before the six/eight paid tasks are reserved.
 - A cached prompt may contain user-entered text; retain expiry and privacy-erasure limitations in the feature README.
+
+## Saved prompt tracking
+
+`tracking_handler.go` reads saved state/evidence or validates explicit save/estimate/run requests. `tracking_store.go` snapshots approved configuration and writes an `ai_visibility` job in the same transaction. Two supervised workers in `tracking_worker.go` reserve one workspace budget, checkpoint accepted tasks, and poll free task reads; retries never replay uncertain paid submissions. The five-minute scheduler claims due projects, reconciles exhausted jobs and expires 13-month evidence.

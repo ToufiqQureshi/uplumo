@@ -80,7 +80,8 @@ type Deps struct {
 	OpenAIAppsChallenge string
 	// AISearch is nil when no DataForSEO key is configured; its routes then
 	// answer 503.
-	AISearch *aisearch.Service
+	AISearch   *aisearch.Service
+	AITracking *aisearch.Tracking
 	// Ahrefs serves optional, free domain-rating lookups.
 	Ahrefs *ahrefs.Service
 	// Backlinks is nil when no DataForSEO key is configured.
@@ -305,6 +306,7 @@ func NewHandler(d Deps) http.Handler {
 	aisearch.Mount(mux, aisearch.Deps{
 		Logger:      d.Logger,
 		Service:     d.AISearch,
+		Tracking:    d.AITracking,
 		Plans:       plans,
 		WithSession: withSession,
 		WithProjectAccess: func(next http.Handler) http.Handler {

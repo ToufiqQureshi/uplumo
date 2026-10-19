@@ -2,7 +2,10 @@ const CHECKOUT_SCRIPT = "https://checkout.razorpay.com/v1/checkout.js";
 
 interface RazorpayOptions {
   key: string;
-  subscription_id: string;
+  subscription_id?: string;
+  order_id?: string;
+  amount?: number;
+  currency?: string;
   name: string;
   description: string;
   theme: { color: string };
@@ -54,6 +57,31 @@ export async function openRazorpayCheckout(
       subscription_id: session.subscriptionId,
       name: "Uplumo",
       description: `Uplumo ${planName}, billed monthly`,
+      theme: { color: "#0f766e" },
+      handler: () => resolve(true),
+      modal: { ondismiss: () => resolve(false) },
+    }).open();
+  });
+}
+
+/** Browser success is only a hint; the signed server webhook confirms the grant. */
+export async function openTopUpCheckout(session: {
+  keyId: string;
+  orderId: string;
+  amount: number;
+  currency: string;
+}): Promise<boolean> {
+  await loadCheckoutScript();
+  const Razorpay = window.Razorpay;
+  if (!Razorpay) throw new Error("Razorpay did not start. Try again.");
+  return new Promise((resolve) => {
+    new Razorpay({
+      key: session.keyId,
+      order_id: session.orderId,
+      amount: session.amount,
+      currency: session.currency,
+      name: "Uplumo",
+      description: "Additional usage credits",
       theme: { color: "#0f766e" },
       handler: () => resolve(true),
       modal: { ondismiss: () => resolve(false) },

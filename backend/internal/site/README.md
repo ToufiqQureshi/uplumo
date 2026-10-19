@@ -12,3 +12,7 @@ This is an internal developer/AI-agent guide, not customer-facing product copy. 
 ## API/trigger
 
 GET /, /pricing, /blog, /blog/{slug}, /robots.txt, /sitemap.xml, assets
+
+Blog sources must use reviewed HTTPS documentation hosts accepted by
+`TestPagesHaveNoDeadLinks`; Google crawling/indexing explanations link to the
+Search Central fundamentals documentation.

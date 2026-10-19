@@ -31,8 +31,9 @@ type PaidPlans interface {
 
 // Deps contains the AI search service and the root router's middleware.
 type Deps struct {
-	Logger  *slog.Logger
-	Service *Service
+	Logger   *slog.Logger
+	Service  *Service
+	Tracking *Tracking
 	// Plans gates the endpoints behind a paid plan, because every uncached call
 	// is billed. Nil lets every organization in, for deployments that have no
 	// billing and pay the data provider themselves.
@@ -44,6 +45,7 @@ type Deps struct {
 // Mount registers the AI search routes on mux. Service may be nil when no
 // DataForSEO key is configured; the routes then answer 503.
 func Mount(mux *http.ServeMux, d Deps) {
+	mountTracking(mux, d)
 	protect := func(h http.Handler) http.Handler { return d.WithSession(d.WithProjectAccess(h)) }
 	mux.Handle("POST /api/v1/projects/{projectId}/ai-search/brand-lookup", protect(brandLookupHandler(d)))
 	mux.Handle("POST /api/v1/projects/{projectId}/ai-search/brand-lookup/history", protect(brandVisibilityHistoryHandler(d)))

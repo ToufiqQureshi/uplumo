@@ -123,3 +123,7 @@ only move forward, so a rollback keeps the newer database schema.
 
 The image also carries `/erase-user`. Its use is in
 `backend/internal/gdpr/README.md`.
+
+## Optional credit-pack checkout
+
+Set `BILLING_TOPUP_PACKS` only after approving pack prices, credits and validity (schema in `backend/internal/billing/README.md`). Unset means no purchasable packs. Add `payment.captured` to the existing signed Razorpay webhook event subscription and test captured, duplicate, incorrect-amount and interrupted-browser flows in test mode before enabling live purchases. Subscription webhook events remain required. Refund/dispute handling needs operator reconciliation; checkout does not initiate refunds.

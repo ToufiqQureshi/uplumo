@@ -86,6 +86,36 @@ export function CreditsCard({
             ) : null}
           </>
         )}
+        {level !== "not_charged" && usage.scheduledCredits !== undefined ? (
+          <div className="rounded-lg border p-3 text-sm">
+            <p>
+              Upcoming scheduled checks:{" "}
+              <strong>{formatCredits(usage.scheduledCredits)} credits</strong>
+              {usage.forecastUntil
+                ? ` before ${refillDate.format(new Date(usage.forecastUntil))}`
+                : ""}
+              .
+            </p>
+            <p>
+              Estimated balance after those checks:{" "}
+              <strong>
+                {formatCredits(usage.remainingAfterSchedules ?? 0)} credits
+              </strong>
+              .
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Forecast only; credits are held when a check starts. Extra
+              lookups, retries and expiring credits can change the amount
+              available.
+            </p>
+            {(usage.remainingAfterSchedules ?? 0) < 0 ? (
+              <p role="status" className="mt-2 text-amber-600">
+                Your current balance may not cover all scheduled checks. Reduce
+                frequency or add credits.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
         <div className="space-y-2 border-t border-border pt-4">
           <Button
             variant="outline"

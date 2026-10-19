@@ -25,6 +25,12 @@ import { GoogleGlyphMuted } from "@/client/features/gsc/GoogleGlyph";
 // heading agree.
 const projectNavItems = [
   {
+    to: "/p/$projectId/prompt-tracking" as const,
+    label: "AI Visibility Tracker",
+    icon: Sparkles,
+    badge: "New",
+  },
+  {
     to: "/p/$projectId" as const,
     label: "Dashboard",
     icon: LayoutDashboard,
@@ -185,6 +191,7 @@ export function getProjectNavGroups(projectId: string): NavGroup[] {
         item("/p/$projectId/analytics"),
         item("/p/$projectId/search-performance"),
         item("/p/$projectId/brand-lookup"),
+        item("/p/$projectId/prompt-tracking"),
         item("/p/$projectId/prompt-explorer"),
       ],
     },

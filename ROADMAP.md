@@ -76,7 +76,8 @@ mean each one has been tried on production with real provider keys.
 | ---------------------------------------------------------------------------------------- | ------ |
 | Changing from one paid plan to another without writing to support                        | ⏳     |
 | Agency: client access, and extra sites at ₹400 each                                      | ⏳     |
-| AI Visibility: sentiment, tracking over time, drop alerts                                | ⏳     |
+| AI Visibility: saved prompts, daily/weekly/monthly checks, history and in-app drop warnings | ✅ built; real-provider acceptance pending |
+| AI Visibility sentiment classification | ⏳ |
 | "Seen in AI" next to "visitors from AI" (AI Visibility joined with Analytics)            | ⏳     |
 | Publishing to Shopify, Wix, Webflow, plain HTML (SFTP) and an Uplumo-hosted blog         | ⏳     |
 | Content editor on an external site; delivering fixes (JS snippet, GitHub PR, copy-paste) | ⏳     |
@@ -98,6 +99,11 @@ This is a shortlist for product discovery, not a claim that competitors lack the
 - **Proposed: SEO Change Guard.** Save crawl snapshots and diff titles, canonicals, indexability, robots directives, schema and internal links. Show the exact URLs and dates affected, then recrawl after the owner fixes the change. Use Uplumo's crawler and stored snapshots; this needs no paid SEO-data API.
 - **Potential extension:** connect the change timeline to Uplumo's first-party analytics to show whether a change coincided with visits or lead events moving. Treat this as correlation, not proof that the change caused the movement.
 
+
+## Usage and saved AI tracking
+
+- Built: project-scoped saved AI questions, topics, engine/market selection, approved per-run credit ceilings, asynchronous collection, historical answers/citations, exports and comparable-scope drop warnings.
+- Built: Billing forecast for saved rank/AI schedules, plus optional server-configured one-time Razorpay credit packs. Packs remain unavailable until pricing and validity are explicitly configured. Refund/dispute reconciliation is manual.
 
 ## Next up
 

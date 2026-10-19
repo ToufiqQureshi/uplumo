@@ -181,6 +181,9 @@ func run(logger *slog.Logger) (err error) {
 	// The owner's and staff's own workspaces are never limited by a plan,
 	// with or without payments configured.
 	billingRoutes.SetStaffEmails(cfg.StaffEmails)
+	if err := billingRoutes.ConfigureTopUps(cfg.TopUpPacks); err != nil {
+		return err
+	}
 	// A live deployment must enforce entitlements even while checkout is
 	// unavailable. The read-only service still knows the stored subscription.
 	gateSvc := planGateService(cfg.Environment, billingSvc, billingRoutes)
@@ -279,6 +282,21 @@ func run(logger *slog.Logger) (err error) {
 	if gateSvc != nil {
 		rankTrackingService.Plans = gateSvc.Gate(planCatalog.RankTracking)
 	}
+	aiTracking := &aisearch.Tracking{DB: db, Search: aiSearchSvc}
+	if gateSvc != nil {
+		aiTracking.Plans = gateSvc.Gate(planCatalog.AIVisibility)
+	}
+	if err := aiTracking.RunWorkers(ctx, logger); err != nil {
+		return err
+	}
+	billingRoutes.Forecast = func(ctx context.Context, org string, until time.Time) (int64, error) {
+		rank, err := (ranktracking.Store{DB: db}).ScheduledCredits(ctx, org, until)
+		if err != nil {
+			return 0, err
+		}
+		ai, err := aiTracking.ScheduledCredits(ctx, org, until)
+		return rank + ai, err
+	}
 	reportsSvc := &reports.Service{Store: reports.Repository{DB: db}}
 
 	authService := auth.NewService(db, cfg.BetterAuthSecret)
@@ -337,6 +355,7 @@ func run(logger *slog.Logger) (err error) {
 			BillingRoutes:           billingRoutes,
 			Branding:                branding.NewService(db),
 			OpenAIAppsChallenge:     cfg.OpenAIAppsChallenge,
+			AITracking:              aiTracking,
 			AISearch:                aiSearchSvc,
 			Ahrefs:                  ahrefs.New(rdb),
 			Backlinks:               backlinksSvc,

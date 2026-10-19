@@ -32,6 +32,7 @@ type Deps struct {
 
 // Mount registers billing routes on mux.
 func Mount(mux *http.ServeMux, d Deps) {
+	mountTopUps(mux, d)
 	mux.Handle("POST /webhooks/razorpay", webhookHandler(d.Logger, d.Service))
 	mux.Handle("GET /api/v1/billing/plans", d.WithSession(http.HandlerFunc(plansHandler)))
 	mux.Handle("GET /api/v1/billing/status", d.WithSession(statusHandler(d.Logger, d.Service)))
