@@ -20,3 +20,6 @@ Postgres provider spend/credit holds; Redis/Postgres queue; billing.
 - A customer’s normal usage limit must be per organization/plan so one workspace cannot consume another’s allowance.
 - Retries must be classified by idempotency/provider billing behavior; never retry billed task creation blindly.
 - Guard and queue failures must have explicit fail-open/closed behavior and preserve reservation cleanup.
+- The request's idempotency key is never used as a hold key directly: each hold
+  gets `spend.ScopedKey`, or a second paid call in the same request is refused as
+  a replay after the first was already charged.

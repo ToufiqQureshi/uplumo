@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -323,7 +324,10 @@ func (g *SpendGuard) AIMeter(feature spend.Feature, endpoint ...string) AIMeter 
 // known once it answers, so holding the ceiling is what keeps parallel AI
 // work from spending past the workspace's credits.
 func (m AIMeter) Hold(ctx context.Context, org string, ceilingUSD float64) (spend.Hold, error) {
-	return m.guard.Hold(ctx, spend.Request{OrganizationID: org, Feature: m.feature, Endpoint: m.endpoint, IdempotencyKey: spend.IdempotencyKeyFromContext(ctx), EstimateUSD: ceilingUSD})
+	// A chat turn meters several model steps under one action key; numbering
+	// them keeps each step its own hold while a replayed turn is still refused.
+	key := spend.ScopedKey(ctx, []byte(m.feature), []byte(m.endpoint), []byte(strconv.FormatFloat(ceilingUSD, 'g', -1, 64)))
+	return m.guard.Hold(ctx, spend.Request{OrganizationID: org, Feature: m.feature, Endpoint: m.endpoint, IdempotencyKey: key, EstimateUSD: ceilingUSD})
 }
 
 // HoldWithIdempotencyKey reserves one model call under a stable request key.

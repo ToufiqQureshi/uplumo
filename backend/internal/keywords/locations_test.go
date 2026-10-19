@@ -24,6 +24,7 @@ import (
 type memoryLocationCache struct {
 	mu     sync.Mutex
 	values map[string][]byte
+	ttls   map[string]time.Duration
 	failed bool
 }
 
@@ -40,14 +41,28 @@ func (c *memoryLocationCache) Get(_ context.Context, key string) ([]byte, error)
 	return value, nil
 }
 
-func (c *memoryLocationCache) Set(_ context.Context, key string, value []byte, _ time.Duration) error {
+func (c *memoryLocationCache) Set(_ context.Context, key string, value []byte, ttl time.Duration) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.values == nil {
-		c.values = map[string][]byte{}
+		c.values, c.ttls = map[string][]byte{}, map[string]time.Duration{}
 	}
-	c.values[key] = value
+	c.values[key], c.ttls[key] = value, ttl
 	return nil
+}
+
+// onlyTTL is the lifetime of the single cached entry, or 0 when there is not
+// exactly one.
+func (c *memoryLocationCache) onlyTTL() time.Duration {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if len(c.ttls) != 1 {
+		return 0
+	}
+	for _, ttl := range c.ttls {
+		return ttl
+	}
+	return 0
 }
 
 func (c *memoryLocationCache) size() int {

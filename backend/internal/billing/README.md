@@ -82,7 +82,8 @@ remain available so the customer can resolve the overage without data loss.
 
 Each reserve, settle and refund ledger row records the workspace, initiating
 user, feature, provider endpoint, provider cost, cache flag and status. The
-request idempotency key is scoped to the workspace, so the same search from
+request idempotency key is scoped to the workspace and, inside one request, to each
+piece of provider work (`spend.ScopedKey`), so one action can buy several results and the same search from
 two customers cannot block or reuse the other's reservation.
 
 Monthly credits are shown on the public pricing page beside each plan's

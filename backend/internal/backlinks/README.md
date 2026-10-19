@@ -4,7 +4,7 @@
 
 | Behavior in TypeScript and its tests | Go behavior / edge case to keep |
 |---|---|
-| Overview fetches the DataForSEO summary and one year of daily history for domain scopes. | Exact page scope omits history. History dates cover UTC yesterday back one calendar year; both provider tasks fail the request if either task fails. |
+| Overview fetches the DataForSEO summary and one year of daily history for domain scopes. | Exact page scope omits history. History dates cover UTC yesterday back one calendar year; a credit refusal on either task fails the request, but if only the history task fails after the summary was billed, the summary is returned without a trend and cached for ten minutes. |
 | A subfolder cannot be targeted directly by summary/history. | Two sequential backlinks list tasks count all links and one-per-domain links with a `url_to` prefix filter; rank, spam, broken/new/lost values and trends stay null/empty. |
 | Target scopes include exact URL, subfolder, domain and subdomains; persisted `page` is an alias for exact URL. | Normalize host through IDNA, remove leading `www.`, reject IPs, invalid suffixes, credentials and exact URLs with queries/fragments. A subfolder needs a non-root path. |
 | Backlinks rows support all-links or strongest-per-domain mode, sort, pagination, spam hiding and include/exclude/numeric/link/lost/broken/domain filters. | Strict sort mapping, `50/100/200` page sizes, a maximum of eight provider filter conditions including scope and spam filters; include terms OR, excludes AND, escaped LIKE metacharacters. |
@@ -38,3 +38,8 @@ Routes are `POST /api/v1/projects/{projectId}/backlinks/{overview,backlinks,refe
 Tests cover target normalization, filter translation and budget, handler validation/plan checks, result mapping, provider errors, cache isolation/outages and cancellation. No database tenant-isolation test applies because this package has no repository; project authorization and organization-attributed provider usage are covered at the HTTP boundary.
 `service_test.go` also asserts that eight concurrent equivalent overviews issue
 only the required summary and history provider calls.
+
+The overview is two sequential provider tasks, summary then history. A credit
+refusal, provider billing problem or departed customer stops after the first;
+any other history failure keeps the already-billed summary (empty trend,
+`partialCacheTTL` of ten minutes) instead of discarding it.

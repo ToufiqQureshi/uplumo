@@ -17,13 +17,29 @@ import (
 	"time"
 
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/dataforseo"
+	"github.com/toufiqqureshi/uplumo/backend/internal/platform/spend"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/spend/spendtest"
 )
 
 type memoryCache struct {
 	mu     sync.Mutex
 	values map[string][]byte
+	ttls   map[string]time.Duration
 	fail   bool
+}
+
+// onlyTTL is the lifetime of the single cached entry, or 0 when there is not
+// exactly one.
+func (c *memoryCache) onlyTTL() time.Duration {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if len(c.ttls) != 1 {
+		return 0
+	}
+	for _, ttl := range c.ttls {
+		return ttl
+	}
+	return 0
 }
 
 func (c *memoryCache) Get(_ context.Context, key string) ([]byte, error) {
@@ -38,7 +54,7 @@ func (c *memoryCache) Get(_ context.Context, key string) ([]byte, error) {
 	}
 	return append([]byte(nil), value...), nil
 }
-func (c *memoryCache) Set(_ context.Context, key string, value []byte, _ time.Duration) error {
+func (c *memoryCache) Set(_ context.Context, key string, value []byte, ttl time.Duration) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.fail {
@@ -47,7 +63,10 @@ func (c *memoryCache) Set(_ context.Context, key string, value []byte, _ time.Du
 	if c.values == nil {
 		c.values = map[string][]byte{}
 	}
-	c.values[key] = append([]byte(nil), value...)
+	if c.ttls == nil {
+		c.ttls = map[string]time.Duration{}
+	}
+	c.values[key], c.ttls[key] = append([]byte(nil), value...), ttl
 	return nil
 }
 
@@ -402,6 +421,83 @@ func TestSharedOverviewSurvivesTheFirstCallerLeaving(t *testing.T) {
 	}
 }
 
+// refuseAfter is a spend guard that allows a few holds and then refuses.
+type refuseAfter struct {
+	left atomic.Int32
+	err  error
+}
+
+func (g *refuseAfter) Hold(context.Context, spend.Request) (spend.Hold, error) {
+	if g.left.Add(-1) < 0 {
+		return nil, g.err
+	}
+	return allowedHold{}, nil
+}
+
+type allowedHold struct{}
+
+func (allowedHold) Settle(context.Context, float64) error { return nil }
+
+func newOverviewService(t *testing.T, summaryOK, historyStatus int, guard spend.Guard) (*Service, *memoryCache, *atomic.Int32) {
+	t.Helper()
+	var providerCalls atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		providerCalls.Add(1)
+		if strings.HasSuffix(r.URL.Path, "/summary/live") {
+			providerOK(w, r.URL.Path, map[string]any{"rank": 52, "backlinks": summaryOK, "referring_pages": 20, "referring_domains": 10})
+			return
+		}
+		if historyStatus != http.StatusOK {
+			http.Error(w, "provider down", historyStatus)
+			return
+		}
+		providerOK(w, r.URL.Path, map[string]any{"items": []any{map[string]any{"date": "2026-10-08T00:00:00Z", "backlinks": 90}}})
+	}))
+	t.Cleanup(server.Close)
+	client, err := dataforseo.NewClient(dataforseo.Options{Guard: guard, BaseURL: server.URL, APIKey: base64.StdEncoding.EncodeToString([]byte("test-user:test-pass")), Recorder: &usageRecorder{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cache := &memoryCache{values: map[string][]byte{}}
+	return newService(client, cache, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Now), cache, &providerCalls
+}
+
+// The summary is billed before the history is asked for. A history that fails
+// afterwards must not throw the summary away: the retry would buy it again.
+func TestOverviewKeepsTheBilledSummaryWhenOnlyTheHistoryFails(t *testing.T) {
+	t.Parallel()
+	svc, cache, providerCalls := newOverviewService(t, 90, http.StatusInternalServerError, &spendtest.Guard{})
+	in := lookupInput{Target: "example.com", Scope: string(ScopeDomain)}
+	got, err := svc.Overview(t.Context(), "org-one", in)
+	if err != nil {
+		t.Fatalf("Overview() failed although the summary was bought: %v", err)
+	}
+	if got.Summary.Backlinks == nil || *got.Summary.Backlinks != 90 || len(got.Trends) != 0 {
+		t.Fatalf("overview = %#v, want the summary and no trend", got)
+	}
+	if ttl := cache.onlyTTL(); ttl != partialCacheTTL {
+		t.Fatalf("a summary-only answer is cached for %v, want %v", ttl, partialCacheTTL)
+	}
+	before := providerCalls.Load()
+	if _, err := svc.Overview(t.Context(), "org-one", in); err != nil || providerCalls.Load() != before {
+		t.Fatalf("a retry bought the report again (calls %d -> %d, err %v)", before, providerCalls.Load(), err)
+	}
+}
+
+func TestOverviewStillFailsWhenTheGuardRefusesTheHistory(t *testing.T) {
+	t.Parallel()
+	guard := &refuseAfter{err: spend.ErrNoCredits}
+	guard.left.Store(1) // the summary is allowed, the history is not
+	svc, cache, _ := newOverviewService(t, 90, http.StatusOK, guard)
+	_, err := svc.Overview(t.Context(), "org-one", lookupInput{Target: "example.com", Scope: string(ScopeDomain)})
+	if !errors.Is(err, spend.ErrNoCredits) {
+		t.Fatalf("Overview() error = %v, want the customer told they are out of credits", err)
+	}
+	if cache.onlyTTL() != 0 {
+		t.Fatal("a refused overview was cached")
+	}
+}
+
 func TestFilterConditionsCountNestedGroups(t *testing.T) {
 	t.Parallel()
 	filters := prependInclude(buildRowsFilters(rowsFilters{Exclude: "a,b", MinLinkAuthority: new(float64(1))}), "url_from", "x,y")
@@ -415,7 +511,9 @@ func providerFailure(w http.ResponseWriter, code int) {
 	_ = json.NewEncoder(w).Encode(map[string]any{"status_code": 20000, "tasks": []any{map[string]any{"status_code": code, "status_message": "task failed"}}})
 }
 
-func TestOverviewFailsWhenHistoryFails(t *testing.T) {
+// A task-level failure (HTTP 200 carrying status 50000) is treated like a
+// failed request: the billed summary is kept, the trend is left out.
+func TestOverviewAnswersWithTheSummaryWhenTheHistoryTaskFails(t *testing.T) {
 	t.Parallel()
 	server := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasSuffix(r.URL.Path, "/summary/live") {
@@ -425,8 +523,12 @@ func TestOverviewFailsWhenHistoryFails(t *testing.T) {
 		providerFailure(w, 50000)
 	})
 	svc := newService(testClient(t, server, &usageRecorder{}), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Now)
-	if _, err := svc.Overview(context.Background(), "org", lookupInput{Target: "example.com", Scope: string(ScopeDomain)}); err == nil {
-		t.Fatal("Overview succeeded although the history task failed")
+	got, err := svc.Overview(context.Background(), "org", lookupInput{Target: "example.com", Scope: string(ScopeDomain)})
+	if err != nil {
+		t.Fatalf("Overview() failed although the summary was bought: %v", err)
+	}
+	if got.Summary.Backlinks == nil || *got.Summary.Backlinks != 90 || len(got.Trends) != 0 {
+		t.Fatalf("overview = %#v, want the summary and no trend", got)
 	}
 }
 

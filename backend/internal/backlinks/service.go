@@ -13,11 +13,13 @@ import (
 
 	"github.com/redis/go-redis/v9"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/dataforseo"
+	"github.com/toufiqqureshi/uplumo/backend/internal/platform/spend"
 	"golang.org/x/sync/singleflight"
 )
 
 const (
 	cacheTTL            = 6 * time.Hour
+	partialCacheTTL     = 10 * time.Minute
 	cacheWriteTimeout   = 2 * time.Second
 	maxFilterConditions = 8
 	// flightTimeout bounds shared paid work that no longer follows its first
@@ -166,12 +168,21 @@ func (s *Service) loadOverview(ctx context.Context, org string, target Target, k
 		return Overview{}, err
 	}
 	var history []providerHistory
+	historyLost := false
 	if target.Scope != ScopeExactURL {
 		dateTo := now.Truncate(24 * time.Hour).Add(-24 * time.Hour)
 		dateFrom := dateTo.AddDate(-1, 0, 0)
 		history, err = s.provider.history(ctx, org, target.APITarget, dateFrom.Format("2006-01-02"), dateTo.Format("2006-01-02"))
 		if err != nil {
-			return Overview{}, err
+			// The summary is already billed. Losing only the trend chart is no
+			// reason to throw it away and bill it again on the retry. A credit
+			// refusal, a provider billing problem or a customer who left still
+			// stop here, as they would for the first task.
+			if spend.Refused(err) || errors.Is(err, dataforseo.ErrBillingIssue) || ctx.Err() != nil {
+				return Overview{}, err
+			}
+			s.logger.WarnContext(ctx, "backlinks history failed; answering with the summary only", "err", err)
+			history, historyLost = nil, true
 		}
 	}
 	result.Summary = mapSummary(summary)
@@ -185,7 +196,13 @@ func (s *Service) loadOverview(ctx context.Context, org string, target Target, k
 			result.NewLostTrends = append(result.NewLostTrends, NewLostTrend{Date: date, NewBacklinks: item.NewBacklinks, LostBacklinks: item.LostBacklinks, NewReferringDomains: first(item.NewReferringDomains, item.NewReferringDomainsLegacy), LostReferringDomains: first(item.LostReferringDomains, item.LostReferringDomainsLegacy)})
 		}
 	}
-	s.writeCache(ctx, key, result)
+	ttl := cacheTTL
+	if historyLost {
+		// Kept just long enough that a retry costs nothing; the full report is
+		// bought again once the provider has recovered.
+		ttl = partialCacheTTL
+	}
+	s.writeCacheFor(ctx, key, result, ttl)
 	return result, nil
 }
 
@@ -339,6 +356,10 @@ func (s *Service) readCache(ctx context.Context, key string, dst any) bool {
 	return true
 }
 func (s *Service) writeCache(ctx context.Context, key string, value any) {
+	s.writeCacheFor(ctx, key, value, cacheTTL)
+}
+
+func (s *Service) writeCacheFor(ctx context.Context, key string, value any, ttl time.Duration) {
 	if s.cache == nil {
 		return
 	}
@@ -349,7 +370,7 @@ func (s *Service) writeCache(ctx context.Context, key string, value any) {
 	}
 	writeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), cacheWriteTimeout)
 	defer cancel()
-	if err := s.cache.Set(writeCtx, key, raw, cacheTTL); err != nil {
+	if err := s.cache.Set(writeCtx, key, raw, ttl); err != nil {
 		s.logger.WarnContext(ctx, "write backlinks cache", "err", err)
 	}
 }

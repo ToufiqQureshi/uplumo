@@ -63,3 +63,9 @@ The Go DataForSEO provider now posts and collects `my_business_updates` tasks, k
 
 
 The local SERP provider also supports bounded Google Maps rank grids. It uses a fixed, latitude-aware zoom for comparable grid points and keeps each request independently metered.
+
+Auto research buys two legs in parallel (suggestions and ideas). If one leg
+fails but the other returned rows, `oneLegResult` answers with that leg
+(`source` is `suggestions` or `ideas`) and caches it for ten minutes
+(`partialResearchCacheTTL`) so a retry costs nothing; a credit refusal, a
+replay, a customer who left, or a working leg with no rows is still an error.

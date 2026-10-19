@@ -152,7 +152,17 @@ func (s *Service) rankGrid(w http.ResponseWriter, r *http.Request) {
 		cells[i].Longitude = math.Round((centerLon+(float64(col)-middle)*lonStep)*1e7) / 1e7
 	}
 	zoom := rankGridZoom(in.SpacingKm, centerLat)
+	// stopErr is the first credit refusal, provider billing problem or rejected
+	// credential. It stops further paid searches, but points already paid for
+	// are still answered below.
+	var stopErr error
 	for start := 0; start < len(cells); start += 3 {
+		if stopErr != nil {
+			for i := start; i < len(cells); i++ {
+				cells[i].Error = true // not searched
+			}
+			break
+		}
 		end := min(start+3, len(cells))
 		var wg sync.WaitGroup
 		for i := start; i < end; i++ {
@@ -182,16 +192,8 @@ func (s *Service) rankGrid(w http.ResponseWriter, r *http.Request) {
 		}
 		wg.Wait()
 		for i := start; i < end; i++ {
-			if spend.WriteHTTPError(w, cells[i].err) {
-				return
-			}
-			if isBillingError(cells[i].err) {
-				httpx.WriteError(w, http.StatusPaymentRequired, "insufficient_credits", "The data provider reported a billing or credit balance issue. Remaining grid searches were stopped.")
-				return
-			}
-			if isAuthError(cells[i].err) {
-				httpx.WriteError(w, http.StatusBadGateway, "provider_auth_failed", "The configured Maps data provider rejected its credentials.")
-				return
+			if stopErr == nil && (spend.Refused(cells[i].err) || isBillingError(cells[i].err) || isAuthError(cells[i].err)) {
+				stopErr = cells[i].err
 			}
 		}
 		if r.Context().Err() != nil {
@@ -220,7 +222,16 @@ func (s *Service) rankGrid(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if failed == len(cells) {
-		httpx.WriteError(w, 502, "upstream_error", "Google Maps rank grid could not be completed.")
+		// Nothing was bought, so the reason is the answer.
+		switch {
+		case spend.WriteHTTPError(w, stopErr):
+		case isBillingError(stopErr):
+			httpx.WriteError(w, http.StatusPaymentRequired, "insufficient_credits", "The data provider reported a billing or credit balance issue. Remaining grid searches were stopped.")
+		case isAuthError(stopErr):
+			httpx.WriteError(w, http.StatusBadGateway, "provider_auth_failed", "The configured Maps data provider rejected its credentials.")
+		default:
+			httpx.WriteError(w, 502, "upstream_error", "Google Maps rank grid could not be completed.")
+		}
 		return
 	}
 	var avg *float64
@@ -228,7 +239,23 @@ func (s *Service) rankGrid(w http.ResponseWriter, r *http.Request) {
 		v := math.Round(total/float64(found)*100) / 100
 		avg = &v
 	}
-	httpx.WriteJSON(w, 200, map[string]any{"grid": out, "summary": map[string]any{"pointsSearched": len(out), "pointsFound": found, "averageRank": avg, "top3Count": top3, "top10Count": top10, "failedPoints": failed}, "estimatedRequests": len(out)})
+	summary := map[string]any{"pointsSearched": len(out), "pointsFound": found, "averageRank": avg, "top3Count": top3, "top10Count": top10, "failedPoints": failed}
+	if stopErr != nil {
+		// The searches already paid for are shown; the rest were skipped.
+		summary["stoppedReason"] = stopReason(stopErr)
+	}
+	httpx.WriteJSON(w, 200, map[string]any{"grid": out, "summary": summary, "estimatedRequests": len(out)})
+}
+
+// stopReason says, for the customer, why a grid ended before every point was searched.
+func stopReason(err error) string {
+	if message := spend.Message(err); message != "" {
+		return message
+	}
+	if isAuthError(err) {
+		return "The Maps data provider rejected its credentials, so the remaining searches were skipped."
+	}
+	return "The data provider reported a billing or credit balance issue, so the remaining searches were skipped."
 }
 
 func (s *Service) businesses(w http.ResponseWriter, r *http.Request) {
