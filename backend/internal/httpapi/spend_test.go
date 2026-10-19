@@ -162,8 +162,8 @@ func TestResponseCarriesTheCreditsTheRequestCharged(t *testing.T) {
 			spend.RecordCredits(ctx, tt.charged)
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte("{}"))
-			if got := recorder.Header().Get(CreditsUsedHeader); got != tt.want {
-				t.Fatalf("%s = %q, want %q", CreditsUsedHeader, got, tt.want)
+			if got := recorder.Header().Get(usageHeaderName); got != tt.want {
+				t.Fatalf("%s = %q, want %q", usageHeaderName, got, tt.want)
 			}
 		})
 	}
