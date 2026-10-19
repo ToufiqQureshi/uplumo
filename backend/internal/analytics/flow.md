@@ -9,7 +9,7 @@
 
 ## Request or job flow
 
-Analytics UI creates a project site key; the published tracker posts bounded events; service validates bot/domain/rate rules; repository stores events; summary queries aggregate them.
+Analytics UI creates a project site key; the tracker assigns a random tab session, measures visible page time and posts bounded events; service validates bot/domain/rate rules and extracts the five allowed UTM fields; repository stores only site-scoped hashes; summary queries aggregate first-touch sources, engagement and selected goal events.
 
 ## Dependencies and cost boundary
 
@@ -17,9 +17,10 @@ Postgres analytics tables; Redis daily salt/rate-limit counters; no paid SEO pro
 
 ## Failure, security and data invariants
 
-- Do not store cookies or raw IP addresses.
+- Do not store cookies, raw IP addresses, raw session/pageview/event IDs, full URLs or raw click IDs.
 - Public ingestion must keep same-origin/domain validation, bot filtering, payload bounds and per-IP/site limits.
-- Custom events must not inflate pageview totals or bypass ingestion checks.
+- Pageviews and custom events must stay separate and remain idempotent across tracker retries.
+- Engagement contains visible time only; browser-hidden time and generic no-activity sessions must not be counted.
 
 ## Enquiry workflow
 

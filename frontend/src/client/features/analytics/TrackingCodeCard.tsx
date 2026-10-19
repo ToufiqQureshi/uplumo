@@ -38,8 +38,20 @@ export function TrackingCodeCard({ projectId }: { projectId: string }) {
           name). Clicks show up under Button clicks.
         </p>
         <p className="text-muted-foreground">
-          The script is tiny, sets no cookies and stores no personal data, so
-          you don&rsquo;t need a cookie banner for it.
+          To count a successful lead, booking or order, call{" "}
+          <code>window.uplumo(&quot;LeadSubmitted&quot;)</code> only after your
+          server confirms success, then choose that event as the goal in
+          Enquiries. A button click by itself is not a conversion.
+        </p>
+        <p className="text-muted-foreground">
+          Keep names, email addresses and other personal details out of event
+          names and UTM tags.
+        </p>
+        <p className="text-muted-foreground">
+          Sessions use a random ID in first-party sessionStorage (30 minutes
+          idle, 24 hours maximum). The tracker sets no cookies, honors Do Not
+          Track and Global Privacy Control, and does not send data to ad
+          platforms. Tell your visitors and update your privacy notice.
         </p>
         {site.data ? (
           <div className="space-y-2">

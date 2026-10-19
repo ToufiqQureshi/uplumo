@@ -251,7 +251,7 @@ func TestSummarize(t *testing.T) {
 			{Date: "2026-03-02", Visitors: 0, Pageviews: 0},
 			{Date: "2026-03-03", Visitors: 2, Pageviews: 2},
 		},
-		TopPages:  []PageCount{{"/", 2}, {"/pricing", 2}, {"/blog", 1}},
+		TopPages:  []PageCount{{"/", 2, 0}, {"/pricing", 2, 0}, {"/blog", 1, 0}},
 		Channels:  []ChannelCount{{channelAI, 2}, {channelReferral, 1}, {channelSearch, 1}},
 		AISources: []AISourceCount{{aiChatGPT, 1}, {aiPerplexity, 1}},
 		Referrers: []ReferrerCount{{"blog.example.org", 1}, {"google.co.in", 1}, {"perplexity.ai", 1}},

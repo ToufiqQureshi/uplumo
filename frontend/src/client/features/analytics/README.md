@@ -1,6 +1,6 @@
 # Uplumo Analytics
 
-A cookie-free first-party tracker and project analytics dashboard.
+A first-party tracker and project analytics dashboard with short tab sessions.
 
 Read [flow.md](flow.md) for the request path and [decision.md](decision.md) for the rules that protect user data, provider spend and customer trust.
 

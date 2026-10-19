@@ -18,13 +18,15 @@ import {
   type RangeDays,
 } from "./analyticsApi";
 import {
+  AcquisitionPerformanceCard,
   AiTrafficCard,
+  CampaignPerformanceCard,
   ChannelsCard,
   CountListCard,
   deviceRows,
   TrafficChartCard,
 } from "./AnalyticsCards";
-import { aiShareOfVisitors, displayPath, formatShare } from "./presentation";
+import { displayPath, formatDuration, formatShare } from "./presentation";
 import { TrackingCodeCard } from "./TrackingCodeCard";
 import { CountriesCard } from "./CountriesCard";
 
@@ -148,17 +150,47 @@ function Dashboard({
   projectId: string;
   range: { from: string; to: string };
 }) {
-  const aiShare = aiShareOfVisitors(summary.channels);
   return (
     <div className="space-y-6">
       <Card>
-        <CardContent className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-          <StatTile label="Visitors" value={formatCount(summary.visitors)} />
+        <CardContent className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
+          <StatTile
+            label="Visitors"
+            value={formatCount(summary.visitors)}
+            hint="Anonymous visitor-days, not people"
+          />
+          <StatTile
+            label="Sessions"
+            value={formatCount(summary.sessions)}
+            hint="Tab-scoped visits"
+          />
           <StatTile label="Pageviews" value={formatCount(summary.pageviews)} />
           <StatTile
-            label="From AI assistants"
-            value={formatShare(aiShare)}
-            hint="Share of visitors"
+            label="Avg visible time"
+            value={
+              summary.sessions > 0
+                ? formatDuration(summary.avgEngagementMs)
+                : "—"
+            }
+            hint="Visible page time per session"
+          />
+          <StatTile
+            label="Bounce rate"
+            value={summary.sessions > 0 ? formatShare(summary.bounceRate) : "—"}
+            hint={`${formatCount(summary.engagedSessions)} engaged sessions`}
+          />
+          <StatTile
+            label={summary.goalEventName ? "Goal completions" : "Goal not set"}
+            value={
+              summary.goalEventName
+                ? formatCount(summary.conversionSessions)
+                : "—"
+            }
+            hint={
+              summary.goalEventName
+                ? `${formatShare(summary.conversionRate)} of sessions`
+                : "Set in Enquiries"
+            }
           />
         </CardContent>
       </Card>
@@ -173,6 +205,14 @@ function Dashboard({
       </div>
       <div className="grid gap-6 lg:grid-cols-2">
         <ChannelsCard channels={summary.channels} />
+        <AcquisitionPerformanceCard
+          rows={summary.acquisitionChannels}
+          goalEventName={summary.goalEventName}
+        />
+        <CampaignPerformanceCard
+          campaigns={summary.campaigns}
+          goalEventName={summary.goalEventName}
+        />
         <CountriesCard projectId={projectId} range={range} />
         <CountListCard
           title="Top pages"
@@ -180,8 +220,28 @@ function Dashboard({
           emptyTitle="No pages viewed in this period"
           rows={summary.topPages.map((row) => ({
             key: row.path,
-            label: displayPath(row.path),
+            label: `${displayPath(row.path)} · avg ${formatDuration(row.avgEngagementMs)}`,
             count: row.pageviews,
+          }))}
+        />
+        <CountListCard
+          title="Landing pages"
+          unit="Sessions"
+          emptyTitle="No session entry pages yet"
+          rows={summary.entries.map((row) => ({
+            key: row.path,
+            label: `${displayPath(row.path)} · avg ${formatDuration(row.avgEngagementMs)}`,
+            count: row.sessions,
+          }))}
+        />
+        <CountListCard
+          title="Exit pages"
+          unit="Sessions"
+          emptyTitle="No session exit pages yet"
+          rows={summary.exits.map((row) => ({
+            key: row.path,
+            label: `${displayPath(row.path)} · avg ${formatDuration(row.avgEngagementMs)}`,
+            count: row.sessions,
           }))}
         />
         <CountListCard
@@ -218,7 +278,7 @@ function Dashboard({
 function DashboardSkeleton() {
   return (
     <div className="space-y-6" aria-busy>
-      <SkeletonStatGrid count={3} className="lg:grid-cols-3" />
+      <SkeletonStatGrid count={6} className="md:grid-cols-3 xl:grid-cols-6" />
       <div className="grid gap-6 lg:grid-cols-3">
         <Skeleton className="h-80 lg:col-span-2" />
         <Skeleton className="h-80" />

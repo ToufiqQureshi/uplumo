@@ -50,12 +50,24 @@ const summary = {
   visitors: 3,
   pageviews: 5,
   series: [{ date: "2026-10-07", visitors: 3, pageviews: 5 }],
-  topPages: [{ path: "/", pageviews: 5 }],
+  topPages: [{ path: "/", pageviews: 5, avgEngagementMs: 4_000 }],
   channels: [{ channel: "ai", visitors: 3 }],
   aiSources: [{ source: "chatgpt", visitors: 3 }],
   referrers: [{ host: "chatgpt.com", visitors: 3 }],
   devices: [{ device: "mobile", visitors: 3 }],
   events: [{ name: "Signup", count: 4, visitors: 2 }],
+  campaigns: [],
+  entries: [],
+  exits: [],
+  acquisitionChannels: [],
+  sessions: 3,
+  engagedSessions: 2,
+  bounceRate: 1 / 3,
+  totalEngagementMs: 120_000,
+  avgEngagementMs: 40_000,
+  goalEventName: "Signup",
+  conversionSessions: 1,
+  conversionRate: 1 / 3,
 };
 
 describe("analytics summary query", () => {
@@ -75,7 +87,7 @@ describe("analytics summary query", () => {
   it.each([
     {
       name: "an unknown channel",
-      patch: { channels: [{ channel: "email", visitors: 1 }] },
+      patch: { channels: [{ channel: "affiliate", visitors: 1 }] },
     },
     { name: "a null list", patch: { referrers: null } },
     { name: "a summary without events", patch: { events: undefined } },

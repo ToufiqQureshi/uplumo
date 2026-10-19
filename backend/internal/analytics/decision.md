@@ -8,9 +8,14 @@ Collects first-party pageviews/custom events and returns project traffic summari
 
 ## Decisions to preserve
 
-- Do not store cookies or raw IP addresses. _Why:_ Collecting or retaining less identifying data reduces privacy exposure if logs, storage or exports are accessed improperly.
+- Do not store cookies, raw IP addresses, raw session tokens, full URLs or raw ad click IDs. Store only a site-scoped hash of the random tab session; it expires after 30 minutes idle or 24 hours in the browser. _Why:_ This enables same-session engagement and goal attribution without cross-tab or cross-session identity.
 - Public ingestion must keep same-origin/domain validation, bot filtering, payload bounds and per-IP/site limits. _Why:_ Explicit bounds prevent a large or abusive request from consuming shared memory, latency or service capacity.
 - Custom events must not inflate pageview totals or bypass ingestion checks. _Why:_ This keeps the behavior explicit so future changes do not silently alter customer-visible results.
+- Campaign reporting stores only bounded `utm_source`, `utm_medium`,
+  `utm_campaign`, `utm_term` and `utm_content` values on non-internal
+  pageviews. Do not persist other query parameters or raw click IDs.
+- Respect Do Not Track and Global Privacy Control before session storage or
+  network collection; do not send events to third parties.
 
 ## Dependencies
 
