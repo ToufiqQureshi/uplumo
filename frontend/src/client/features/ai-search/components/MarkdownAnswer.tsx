@@ -32,6 +32,31 @@ const COLLAPSED_MAX_PX = 240;
  * Anchor URLs are sanitized to http(s) only — LLMs can be coaxed into
  * emitting `javascript:` payloads.
  */
+/**
+ * AI answers embed images hosted by the AI vendor. Loading them would send the
+ * viewer's address to that vendor and break when the links expire, so an
+ * image is shown as its title instead, linking to the picture.
+ */
+function AnswerImage({ src, alt }: { src?: string | Blob; alt?: string }) {
+  const href =
+    typeof src === "string" && /^https?:\/\//i.test(src) ? src : undefined;
+  const label = `Image: ${alt?.trim() || "untitled"}`;
+  return href ? (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="block text-xs text-muted-foreground underline"
+    >
+      {label}
+    </a>
+  ) : (
+    <span className="block text-xs text-muted-foreground">{label}</span>
+  );
+}
+
+const ANSWER_COMPONENTS = { ...MARKDOWN_COMPONENTS, img: AnswerImage };
+
 export function MarkdownAnswer({ text }: Props) {
   const contentRef = useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = useState(false);
@@ -74,7 +99,7 @@ export function MarkdownAnswer({ text }: Props) {
           >
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
-              components={MARKDOWN_COMPONENTS}
+              components={ANSWER_COMPONENTS}
             >
               {normalized}
             </ReactMarkdown>

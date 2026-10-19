@@ -20,6 +20,7 @@ function answer(over: Partial<TrackingAnswer> = {}): TrackingAnswer {
     errorCode: "",
     collectedAt: null,
     citations: [],
+    recommended: [],
     brands: [
       { name: "Acme", domain: "acme.com", mentioned: true, cited: false },
     ],

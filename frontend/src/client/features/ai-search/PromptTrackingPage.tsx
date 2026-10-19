@@ -3,6 +3,17 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/client/components/ui/button";
 import { PageHeader } from "@/client/components/PageHeader";
 import { TrackingForm } from "./TrackingForm";
+import { MarkdownAnswer } from "./components/MarkdownAnswer";
+
+const ENGINE_LABELS: Record<string, string> = {
+  chat_gpt: "ChatGPT",
+  gemini: "Gemini",
+  google_ai_overview: "Google AI Overviews",
+  claude: "Claude",
+  perplexity: "Perplexity",
+};
+const engineLabel = (engine: string) =>
+  ENGINE_LABELS[engine] ?? engine.replaceAll("_", " ");
 import { trackingApi, trackingKey, summarizeTracking } from "./trackingApi";
 
 const pct = (n: number, d: number) =>
@@ -204,17 +215,39 @@ export function PromptTrackingPage({ projectId }: { projectId: string }) {
           {answers.data?.map((a) => (
             <details key={a.id} className="rounded-lg border p-3">
               <summary className="cursor-pointer text-sm font-medium">
-                {a.topic} · {a.prompt} · {a.engine.replaceAll("_", " ")} ·{" "}
-                {a.status}
+                {a.topic} · {a.prompt} · {engineLabel(a.engine)} · {a.status}
                 {a.errorCode ? ` (${a.errorCode.replaceAll("_", " ")})` : ""}
               </summary>
-              <p className="mt-3 whitespace-pre-wrap text-sm">
-                {a.answer ||
-                  (a.status === "completed"
-                    ? "No substantive answer / AI Overview was returned."
-                    : "No answer captured yet.")}
-              </p>
-              <ul className="mt-3 space-y-1 text-sm">
+              {a.recommended.length > 0 ? (
+                <div className="mt-3 text-sm">
+                  <p className="font-medium">Businesses the AI recommended</p>
+                  <ol className="mt-1 list-decimal pl-5">
+                    {a.recommended.map((r) => (
+                      <li key={r.position}>
+                        {r.name}
+                        {a.brands.some(
+                          (b) => b.name.toLowerCase() === r.name.toLowerCase(),
+                        )
+                          ? " (tracked)"
+                          : ""}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              ) : null}
+              <div className="mt-3 text-sm">
+                {a.answer ? (
+                  <MarkdownAnswer text={a.answer} />
+                ) : a.status === "completed" ? (
+                  "No substantive answer / AI Overview was returned."
+                ) : (
+                  "No answer captured yet."
+                )}
+              </div>
+              {a.citations.length > 0 ? (
+                <p className="mt-3 text-sm font-medium">Sources cited</p>
+              ) : null}
+              <ul className="mt-1 space-y-1 text-sm">
                 {a.citations.map((c) => (
                   <li key={c.url}>
                     <a
@@ -225,6 +258,15 @@ export function PromptTrackingPage({ projectId }: { projectId: string }) {
                     >
                       {c.title ?? c.url}
                     </a>
+                    {c.source || c.domain ? (
+                      <span className="text-muted-foreground">
+                        {" "}
+                        · {c.source ?? c.domain}
+                        {c.publishedAt
+                          ? ` · ${c.publishedAt.slice(0, 10)}`
+                          : ""}
+                      </span>
+                    ) : null}
                   </li>
                 ))}
               </ul>

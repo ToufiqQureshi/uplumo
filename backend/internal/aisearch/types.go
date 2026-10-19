@@ -254,6 +254,10 @@ type Citation struct {
 	Domain       *string `json:"domain"`
 	Title        *string `json:"title"`
 	MatchedBrand bool    `json:"matchedBrand"`
+	// Source is the publisher's name and PublishedAt its date, when the
+	// provider sent them.
+	Source      *string `json:"source,omitempty"`
+	PublishedAt *string `json:"publishedAt,omitempty"`
 }
 
 // ModelResult is one model's outcome in a prompt run: a ModelSuccess or a

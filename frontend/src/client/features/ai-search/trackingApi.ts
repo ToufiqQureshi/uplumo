@@ -63,11 +63,24 @@ const trackingAnswersSchema = z.array(
         domain: z.string().nullable(),
         title: z.string().nullable(),
         matchedBrand: z.boolean(),
+        source: z.string().nullable().optional(),
+        publishedAt: z.string().nullable().optional(),
       }),
     ),
     brands: z.array(
       brand.extend({ mentioned: z.boolean(), cited: z.boolean() }),
     ),
+    // Businesses the AI named, in its order. Missing for answers saved
+    // before they were kept.
+    recommended: z
+      .array(
+        z.object({
+          name: z.string(),
+          category: z.string().optional(),
+          position: z.number().int(),
+        }),
+      )
+      .default([]),
   }),
 );
 export type TrackingAnswer = z.infer<typeof trackingAnswersSchema>[number];

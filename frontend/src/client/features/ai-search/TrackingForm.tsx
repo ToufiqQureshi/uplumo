@@ -72,7 +72,7 @@ export function TrackingForm({
       queryClient.invalidateQueries({ queryKey: trackingKey(projectId) }),
   });
   const run = useMutation({
-    mutationFn: () => trackingApi.run(projectId, review?.estimate.credits ?? 0),
+    mutationFn: () => trackingApi.run(projectId, approvedCredits),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: trackingKey(projectId) }),
   });
@@ -81,6 +81,15 @@ export function TrackingForm({
     saved !== null &&
     JSON.stringify({ ...config, maxCreditsPerRun: 0 }) ===
       JSON.stringify({ ...saved, maxCreditsPerRun: 0 });
+  // Saving remounts this form, which forgets the review; the saved
+  // configuration keeps the credits that were approved for it, so an unchanged
+  // saved check can run without reviewing again. The server checks the
+  // ceiling against the saved questions either way.
+  const approvedCredits = reviewed
+    ? (review?.estimate.credits ?? 0)
+    : unchanged
+      ? (saved?.maxCreditsPerRun ?? 0)
+      : 0;
   const update = (patch: Partial<TrackingConfig>) =>
     setConfig({ ...config, ...patch });
   const error = estimate.error ?? save.error ?? run.error;
@@ -289,18 +298,10 @@ export function TrackingForm({
           </select>
         </label>
       </div>
-      {reviewed && review ? (
-        <p className="rounded-lg bg-muted p-3 text-sm">
-          Up to{" "}
-          <strong>
-            {review.estimate.credits.toLocaleString()} credits per check
-          </strong>{" "}
-          for {review.estimate.answers} answers. Estimated scheduled ceiling:{" "}
-          {review.estimate.monthlyCredits.toLocaleString()} credits/month.
-          Actual usage settles after collection. All tools share the workspace
-          balance; daily limits still apply.
-        </p>
-      ) : null}
+      <CostNote
+        estimate={reviewed ? review?.estimate : undefined}
+        approvedCredits={approvedCredits}
+      />
       {error ? (
         <p role="alert" className="text-sm text-destructive">
           {error.message}
@@ -323,7 +324,10 @@ export function TrackingForm({
         <Button
           variant="outline"
           disabled={
-            !reviewed || !unchanged || !providerConfigured || run.isPending
+            approvedCredits <= 0 ||
+            !unchanged ||
+            !providerConfigured ||
+            run.isPending
           }
           onClick={() => run.mutate()}
         >
@@ -337,5 +341,34 @@ export function TrackingForm({
         </p>
       ) : null}
     </section>
+  );
+}
+
+/** What a check may cost: the fresh review, or the credits already approved. */
+function CostNote({
+  estimate,
+  approvedCredits,
+}: {
+  estimate: TrackingEstimate | undefined;
+  approvedCredits: number;
+}) {
+  if (estimate) {
+    return (
+      <p className="rounded-lg bg-muted p-3 text-sm">
+        Up to{" "}
+        <strong>{estimate.credits.toLocaleString()} credits per check</strong>{" "}
+        for {estimate.answers} answers. Estimated scheduled ceiling:{" "}
+        {estimate.monthlyCredits.toLocaleString()} credits/month. Actual usage
+        settles after collection and is shown after each check. All tools share
+        the workspace balance.
+      </p>
+    );
+  }
+  if (approvedCredits <= 0) return null;
+  return (
+    <p className="rounded-lg bg-muted p-3 text-sm">
+      Approved: up to{" "}
+      <strong>{approvedCredits.toLocaleString()} credits per check</strong>.
+    </p>
   );
 }

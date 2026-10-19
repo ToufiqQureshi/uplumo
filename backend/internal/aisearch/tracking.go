@@ -79,6 +79,27 @@ type BrandObservation struct {
 	Cited     bool   `json:"cited"`
 }
 
+// RecommendedBrand is a business the AI itself named in its answer
+// (DataForSEO brand_entities), in the order it named them. It shows who the AI
+// recommends instead of the tracked brand, without the customer having to
+// guess their competitors first.
+type RecommendedBrand struct {
+	Name     string `json:"name"`
+	Category string `json:"category,omitempty"`
+	Position int    `json:"position"`
+}
+
+// storedBrand is one element of the brands column: a tracked brand's
+// observation, or (Recommended set) a brand the AI named. Both live in one
+// column so no migration is needed; rows written before recommendations were
+// kept simply have none.
+type storedBrand struct {
+	BrandObservation
+	Recommended bool   `json:"recommended,omitempty"`
+	Category    string `json:"category,omitempty"`
+	Position    int    `json:"position,omitempty"`
+}
+
 // TrackingAnswer is saved evidence for one question and engine.
 type TrackingAnswer struct {
 	ID          string             `json:"id"`
@@ -90,6 +111,7 @@ type TrackingAnswer struct {
 	Answer      string             `json:"answer"`
 	Citations   []Citation         `json:"citations"`
 	Brands      []BrandObservation `json:"brands"`
+	Recommended []RecommendedBrand `json:"recommended"`
 	ErrorCode   string             `json:"errorCode"`
 	CollectedAt *time.Time         `json:"collectedAt"`
 }
