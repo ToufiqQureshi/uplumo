@@ -62,7 +62,7 @@ export function CreditBreakdown({ usage }: { usage: BillingUsage }) {
           <ul className="divide-y divide-border text-sm">
             {usage.costs.map((cost) => (
               <li
-                key={cost.feature}
+                key={`${cost.feature}:${cost.action ?? ""}`}
                 className="flex items-baseline justify-between gap-3 py-2"
               >
                 <span>

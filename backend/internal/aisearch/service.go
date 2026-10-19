@@ -150,7 +150,7 @@ func (s *Service) loadBrandLookup(ctx context.Context, organizationID, key strin
 	if len(groups) > 0 {
 		callCount += len(brandPlatforms)
 	}
-	err := s.provider.client.DoBudgeted(ctx, organizationID, spend.AIVisibility, float64(callCount)*0.5, func(request dataforseo.DoBudgetedRequest) error {
+	err := s.provider.client.DoBudgeted(ctx, organizationID, spend.AIVisibility, float64(callCount)*dataforseo.AIMentionsCeilingUSD, func(request dataforseo.DoBudgetedRequest) error {
 		budgetCtx := context.WithValue(ctx, budgetRequestContextKey{}, request)
 		platforms := make([]platformOutcome, len(brandPlatforms))
 		for i, platform := range brandPlatforms {
@@ -426,7 +426,7 @@ func (s *Service) ExplorePrompt(ctx context.Context, organizationID, projectID s
 	}
 	uncachedInput := in
 	uncachedInput.Models = uncachedModels
-	err := s.provider.client.DoBudgeted(ctx, organizationID, spend.AIVisibility, float64(callLimit)*0.5, func(request dataforseo.DoBudgetedRequest) error {
+	err := s.provider.client.DoBudgeted(ctx, organizationID, spend.AIVisibility, float64(callLimit)*dataforseo.AIResponseCeilingUSD, func(request dataforseo.DoBudgetedRequest) error {
 		var runErr error
 		var fresh PromptExplorerResult
 		fresh, runErr = s.explorePrompt(ctxWithBudget(ctx, request), organizationID, projectID, uncachedInput)

@@ -36,6 +36,8 @@ const usageSchema = z.object({
   costs: z.array(
     z.object({
       feature: featureSchema,
+      // Tells apart actions of one feature that cost very differently.
+      action: z.string().optional(),
       unit: z.string(),
       credits: z.number().int().positive(),
     }),

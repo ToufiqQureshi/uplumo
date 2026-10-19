@@ -78,7 +78,9 @@ func TestTrackingEstimateAndFairScope(t *testing.T) {
 		t.Fatal("different prompts must not be compared")
 	}
 	c.Engines = []string{"claude"}
-	if c.estimate().Credits != 640 {
+	// One prompt on one model API answer: its $0.10 ceiling, 128 credits (it was
+	// $0.50, 640 credits, ten times what an answer bills).
+	if c.estimate().Credits != 128 {
 		t.Fatal("model API ceiling missing")
 	}
 }

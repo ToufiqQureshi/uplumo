@@ -129,6 +129,11 @@ assistant. Rules that must never break:
   paid request is refused with `spend.ErrPaused` (`503 usage_paused`) and an
   error reaches Sentry. With per-workspace limits it should only trip on a
   bug; set it above the sum of your clients' daily limits.
+- **AI visibility.** Its two actions have separate hints (`ActionCost.Action`:
+  `prompt_explorer` about 128 credits, `brand_lookup` about 910), because a brand
+  lookup bills seven times a prompt run. Their holds use per-endpoint ceilings
+  (`dataforseo.AIResponseCeilingUSD` $0.10, `AIMentionsCeilingUSD` $0.25), above
+  what live calls billed; a flat $0.50 held more than a Pro workspace's day.
 - **AI.** A model's cost is only known after it answers, so every AI call
   holds its ceiling first (`AIMeter.Hold` with `openrouter.MaxCostUSD`: the
   input counted at three bytes a token plus the whole output budget, at the
