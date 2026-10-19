@@ -256,7 +256,7 @@ func run(logger *slog.Logger) (err error) {
 	var ga4Svc *ga4.Service
 	ga4Setup := &ga4.ConnectionOperations{Store: ga4.SetupRepository{DB: db}, OAuthReady: cfg.GoogleClientID != "" && cfg.GoogleClientSecret != ""}
 	if googleOAuthSvc != nil {
-		ga4Svc = &ga4.Service{Connections: ga4.ConnectionRepository{DB: db}, Google: &google.APIClient{Tokens: googleOAuthSvc.Tokens}}
+		ga4Svc = &ga4.Service{Growth: &ga4.GrowthRepository{DB: db}, Connections: ga4.ConnectionRepository{DB: db}, Google: &google.APIClient{Tokens: googleOAuthSvc.Tokens}}
 		ga4Setup.NewAdmin = func(userID, accountID string) ga4.PropertyAdmin {
 			return ga4.GooglePropertyAdmin{API: googleAPIClient, UserID: userID, AccountID: accountID}
 		}

@@ -19,3 +19,6 @@ API keys, OAuth/Postgres token tables, project auth, feature services and provid
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.
+
+- Classify Search Growth as GoogleData and read-only. Its result contains
+  evidence and candidates, not query-level conversion attribution or causal claims.

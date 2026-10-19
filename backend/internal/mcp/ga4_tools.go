@@ -62,7 +62,7 @@ func ga4Tools() []*tool {
 			return handleGA4Report(ctx, raw, env, toolSpec)
 		}})
 	}
-	tools = append(tools, organicOverviewTool(ga4OverviewInputSchema()), searchOpportunityTool(ga4OpportunityInputSchema()), measurementHealthTool(ga4HealthInputSchema()))
+	tools = append(tools, searchGrowthTool(), organicOverviewTool(ga4OverviewInputSchema()), searchOpportunityTool(ga4OpportunityInputSchema()), measurementHealthTool(ga4HealthInputSchema()))
 	return tools
 }
 
@@ -267,4 +267,32 @@ func handleMeasurementHealth(ctx context.Context, raw json.RawMessage, env *call
 		return ga4ErrorFromError(ctx, env, access, err), nil
 	}
 	return mcpResponse("Google Analytics measurement health complete.", result, ga4Meta(env, access)), nil
+}
+
+func growthInputSchema() json.RawMessage {
+	return json.RawMessage(`{"type":"object","properties":{"projectId":{"type":"string","minLength":1},"startDate":{"type":"string","pattern":"^\\d{4}-\\d{2}-\\d{2}$"},"endDate":{"type":"string","pattern":"^\\d{4}-\\d{2}-\\d{2}$"},"brandTerms":{"type":"array","maxItems":10,"items":{"type":"string","minLength":1,"maxLength":100}}},"required":["projectId"],"additionalProperties":false}`)
+}
+func searchGrowthTool() *tool {
+	return &tool{Name: "get_search_growth_report", Title: "Analyze search growth", Description: "Read evidence-backed GSC and Google organic GA4 page opportunities, current and previous metrics, query themes and data limitations. Up to five bounded Google reads on a cache miss; no paid SEO provider or AI credits. Query rows are not attributable to conversions. Returns review candidates, not causal conclusions.", InputSchema: growthInputSchema(), OutputSchema: json.RawMessage(`{"type":"object","additionalProperties":true}`), Annotations: readOnlyAnnotations(), Handler: handleSearchGrowth}
+}
+func handleSearchGrowth(ctx context.Context, raw json.RawMessage, env *callEnv) (*callResult, error) {
+	var args struct {
+		ProjectID string `json:"projectId"`
+		ga4.GrowthInput
+	}
+	if err := decodeSchemaToolArgs(raw, &args, growthInputSchema()); err != nil {
+		return nil, newAppErrorf("VALIDATION_ERROR", "Choose valid analysis dates and brand terms.")
+	}
+	access, err := env.h.authorizeProject(ctx, env.auth, args.ProjectID)
+	if err != nil {
+		return nil, err
+	}
+	if env.deps.GA4 == nil {
+		return ga4ErrorResult(env, access, "ga4_unavailable", "Google Analytics reporting is unavailable.", nil), nil
+	}
+	result, err := env.deps.GA4.GetGrowthReport(ctx, env.deps.GSC, access.Project.OrganizationID, access.Project.ID, args.GrowthInput)
+	if err != nil {
+		return ga4ErrorFromError(ctx, env, access, err), nil
+	}
+	return mcpResponse("Search growth evidence ready.", result, ga4Meta(env, access)), nil
 }

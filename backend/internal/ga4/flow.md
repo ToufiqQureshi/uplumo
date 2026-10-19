@@ -20,3 +20,11 @@ Google Analytics Admin/Data APIs and GSC; encrypted Google tokens; Postgres sele
 - Google calls are quota-limited; use bounded reads/retries and avoid duplicate queries.
 - Never expose OAuth tokens; property must belong to the connected organization/project.
 - GA4 and GSC metrics differ in definitions/attribution; do not silently equate them.
+
+Search growth: explicit UI/MCP analysis -> authorized project/connection scope
+-> ten-minute Postgres cache / per-key singleflight -> at most 3 GSC + 2 GA4
+reads -> deterministic findings with evidence and limitations. Save action
+reads its baseline from that scoped server report, not client metrics. Applied
+changes wait for complete 14/28-day post-change data; comparisons use 1 GSC + 1
+GA4 exact-page read. Device drill-down uses 1 additional Google Data API read;
+measurement-health retains its existing bounded Admin API flow.

@@ -186,3 +186,13 @@ Secrets go into Railway variables only, never into the repo or chat.
 - **Built:** Missed Enquiries Finder and in-app Lead Flow Guard using first-party
   events, instrumentation/sample caveats, immutable pre-change baselines and the
   first complete post-change week. No external alert delivery or revenue claim.
+
+## Search growth analyst
+
+- Search Performance includes an explicit GSC + Google-organic GA4 opportunity
+  workflow, query branding/competing-page evidence, measurement/device checks,
+  stored AI citations, saved page actions and observed 14/28-day results.
+- SAM can explain verified evidence and prepare page improvement briefs in
+  read-only analyst mode. Existing editor tools keep review/apply explicit.
+- Before/after differences are observational; GA4 key events require correct
+  customer configuration and are not automatically confirmed leads or sales.

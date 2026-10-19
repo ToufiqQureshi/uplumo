@@ -86,3 +86,40 @@ the GSC Pacific time zone and the Analytics property time zone as a warning.
 
 Uses the existing Postgres connection and Google OAuth credentials. No new
 environment variable or database migration is needed for report reads.
+
+## Search growth analyst
+
+`growth.go` joins current/previous final GSC pages with **Google** organic GA4
+landing pages, with bounded query evidence. `POST .../ga4/growth/report` is an
+explicit analysis action: three GSC reads and two GA4 reads on a cache miss,
+1,000 rows each, no paid provider. Identical requests coalesce per process;
+Postgres keeps one report per project for ten minutes. Cache identity includes
+organization, project, dates, brand terms and both selected connections. Report
+ranges are at most 90 days and both comparison windows must fit GSC history.
+
+Findings are review candidates: traffic loss, near-top positions, CTR decline,
+performing pages needing reach, key-event-rate gaps and recorded purchase
+revenue declines (at least five previous transactions). Business findings need
+at least 100 sessions; winner findings also need five key events. Restricted or
+limited Analytics suppresses business recommendations. Missing previous rows
+or ambiguous Analytics URL variants remain unknown. Query branding and competing
+page evidence do not attribute GA4 outcomes to queries. GA4 key events are never
+represented as verified leads or sales. Rates compare observed pages, not a
+universal industry benchmark or a controlled experiment.
+
+`growth_repository.go` stores server-derived page snapshots and change notes in
+`go_search_growth_actions`. All operations include organization and project.
+Saving a page is idempotent; a transaction advisory lock serializes the 100-page
+project cap. Marking applied preserves the first applied timestamp. Comparisons
+wait for 14/28 complete days after the applied day in both source timezones,
+then make one exact-page GSC read and one host/path-filtered GA4 read. Baseline
+and post-change ranges are explicit; clicks/day normalizes different durations.
+This is observational evidence, not proof the edit caused the result. Changed
+properties/timezones/currencies reject the comparison; missing rows are unknown.
+
+`growth/devices` is a separate explicit one-read drill-down, filtered to Google
+organic. Measurement setup reuses `measurement-health`; saved AI citations reuse
+the existing AI Tracking GET endpoints, with no new paid check or schedule.
+The SAM/MCP `get_search_growth_report` tool shares the report cache. Search
+analyst chat mode executes only allowlisted free data/site-read tools; AI
+completions retain SAM's existing credit holds, settlement and turn ceiling.

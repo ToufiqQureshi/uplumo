@@ -1,3 +1,4 @@
+import { SearchGrowthPanel } from "./SearchGrowthPanel";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
@@ -266,6 +267,7 @@ export function SearchPerformancePage({
         ) : (
           <>
             {reportQuery.isError ? reportError : null}
+            <SearchGrowthPanel key={projectId} projectId={projectId} />
             {reportQuery.isPlaceholderData ? (
               <SearchPerformanceLoadingState />
             ) : (

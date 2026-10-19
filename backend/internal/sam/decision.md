@@ -19,3 +19,6 @@ OpenRouter/model provider; Postgres sessions/messages; Redis limits; billing; pr
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.
+
+- Search analyst mode must filter execution as well as offered definitions;
+  prompt-only restrictions cannot stop a guessed paid tool or a write.

@@ -14,3 +14,15 @@ when several branches are open.
 tests that run in a private schema. `database_test.go` checks that a fresh
 database migrates end to end; keep every column in `legacy_schema.sql` present
 in the migrations too.
+
+Search growth uses migration 31: `go_search_growth_reports` holds one expiring
+report cache per project, while `go_search_growth_actions` holds at most 100
+tracked page baselines per project. Both cascade on project/account deletion;
+reads/writes carry organization and project, and page uniqueness prevents
+repeated saves from replacing baseline evidence.
+
+Migrations 29/30 are the exact additive preparatory schemas from PR #163. Keep
+them byte-identical when merging that PR: shipping 31 ahead of absent lower
+versions would make a later startup encounter out-of-order migrations. These
+nullable columns and indexes alone do not enable session tracking or change
+existing analytics ingestion behavior.

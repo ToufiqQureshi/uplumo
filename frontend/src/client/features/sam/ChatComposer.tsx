@@ -1,3 +1,4 @@
+import { takeAnalystDraft, clearAnalystDraft } from "./analystDraft";
 import { useState, type FormEvent, type KeyboardEvent } from "react";
 import { ArrowUp, Square } from "lucide-react";
 import {
@@ -10,20 +11,23 @@ import { CreditCostHint } from "@/client/features/billing/credits/CreditCostHint
 
 export function ChatComposer({
   busy,
+  projectId,
   onSend,
   onStop,
 }: {
   busy: boolean;
+  projectId: string;
   onSend: (text: string) => void;
   /** Cancels the running turn; while busy the send button becomes Stop. */
   onStop: () => void;
 }) {
-  const [value, setValue] = useState("");
+  const [value, setValue] = useState(() => takeAnalystDraft(projectId));
 
   function submit() {
     const text = value.trim();
     if (!text || busy) return;
     onSend(text);
+    clearAnalystDraft(projectId);
     setValue("");
   }
 

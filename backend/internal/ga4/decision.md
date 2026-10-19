@@ -19,3 +19,15 @@ Google Analytics Admin/Data APIs and GSC; encrypted Google tokens; Postgres sele
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.
+
+- Growth reporting uses Google organic sessions to align the source with GSC;
+  clicks and sessions remain distinct measurements. Query filters classify
+  evidence only, never conversion attribution.
+- Limited reports suppress outcome recommendations; absent and ambiguous rows
+  stay null. Finite metric validation and minimum samples precede findings.
+- Baselines come from cached server reports, and repeated saves/applied updates
+  cannot move an existing baseline or applied timestamp. Every SQL predicate
+  carries organization and project; report storage is bounded to one per project.
+- No background AI refresh, new paid research or automatic site change is
+  authorized by opening an insight. The existing SAM meter bills explicit AI
+  replies, and analyst mode enforces a read-only tool allowlist at execution.

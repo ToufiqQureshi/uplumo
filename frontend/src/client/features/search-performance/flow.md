@@ -33,3 +33,17 @@ The queue reuses the report's query-page rows; it makes no extra Search Console 
 - Every request uses the project's selected property and OAuth grant; never accept a property from another project.
 - Google returns sampled/limited rows; report totals and candidate rows are different views and candidate lists are not exhaustive.
 - URL inspection is an explicitly clicked read-only call, capped at 10 URLs per request.
+
+The independent Search Growth panel invokes `ga4/growth/report` only on click.
+Saving an action records its server report ID, page and note; the backend owns
+the metric baseline. Mark applied starts a fixed post-change observation window.
+Daily click averages permit 14/28-day comparison with the labeled baseline.
+Measurement/device/citation drill-downs run only when explicitly requested.
+Stored AI evidence preserves the run date and collection coverage separately
+from GSC/GA4 dates; it never buys new answers.
+
+AI handoff writes a 30-minute, tab-local, project-scoped draft and opens SAM.
+Send explicitly enables server-enforced search_growth mode: read-only Google
+and guarded site tools; ordinary SAM model metering still applies. Editor
+handoff carries the source URL, query cluster, date range and finding evidence
+through validated tab storage, preserving existing drafts.

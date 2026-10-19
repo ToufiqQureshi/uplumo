@@ -16,3 +16,7 @@ Streams project-aware AI answers and tool actions with persisted sessions and cr
 ## Verification pointers
 
 - `samApi.test.ts`
+
+- Reading an analyst draft must be repeatable under React StrictMode. Clear it
+  only on explicit Send, and keep it scoped/expiring so another project cannot
+  inherit the evidence. Server enforcement owns read-only tool access.

@@ -101,3 +101,8 @@ The Go MCP registry also owns `get_business_updates`; it uses the Go task queue 
 
 
 The Go MCP registry also owns `get_local_rank_grid`. It uses the Go local SERP provider for bounded Google Maps grids, preserves per-point failures and rank summaries, and computes a market-aware zoom when one is omitted. Contract tests remain deferred to the final test phase.
+
+`get_search_growth_report` authorizes the active project and calls GA4's shared
+GSC/Google-organic growth analysis. Classified as `GoogleData`, it uses no paid
+SEO provider or AI completion and preserves coverage warnings and nullable
+metrics. SAM binds its project server-side and uses it in read-only analyst mode.

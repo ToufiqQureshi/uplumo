@@ -38,6 +38,7 @@ describe("search performance table query", () => {
       JSON.stringify({
         queryFilter: { operator: "contains", expression: "dentist" },
         dateRange: "last_3_months",
+        searchType: "web",
         device: "MOBILE",
         country: "usa",
         dimension: "query",

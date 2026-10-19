@@ -74,6 +74,7 @@ var samMCPTools = []string{
 	"get_google_analytics_page_performance",
 	"get_google_analytics_key_events",
 	"get_search_opportunities",
+	"get_search_growth_report",
 	"get_google_analytics_organic_overview",
 	"get_google_analytics_traffic_acquisition",
 	"get_google_analytics_measurement_health",
@@ -100,9 +101,10 @@ type localTool struct {
 // toolset is one turn's tool surface: allowlisted MCP tools bound to the
 // session's project, plus the local tools.
 type toolset struct {
-	runner  ToolRunner
-	auth    mcp.Auth
-	project projectInfo
+	growthOnly bool
+	runner     ToolRunner
+	auth       mcp.Auth
+	project    projectInfo
 	// binds records which MCP tools had projectId stripped from their schema.
 	binds map[string]bool
 	defs  []openrouter.Tool
@@ -159,6 +161,9 @@ func (ts *toolset) Definitions() []openrouter.Tool { return ts.defs }
 // isError marks results the UI should show as failed. A Go error means the
 // call itself could not run (unknown tool, bad arguments).
 func (ts *toolset) Run(ctx context.Context, name string, arguments json.RawMessage) (output any, isError bool, err error) {
+	if ts.growthOnly && !growthReadTool(name) {
+		return nil, true, fmt.Errorf("tool %s is unavailable in read-only search analyst mode", name)
+	}
 	if local, ok := ts.local[name]; ok {
 		out, err := local.run(ctx, arguments)
 		if err != nil {
@@ -449,4 +454,24 @@ func decodeArgs(raw json.RawMessage, dst any) error {
 		return fmt.Errorf("invalid tool arguments: %w", err)
 	}
 	return nil
+}
+
+// The execution check is independent of the model's offered definitions: even
+// a guessed tool name cannot buy research or mutate a project in analyst mode.
+func growthReadTool(name string) bool {
+	switch name {
+	case "get_search_growth_report", "get_search_console_performance", "inspect_urls",
+		"get_google_analytics_organic_landing_pages", "get_google_analytics_page_performance",
+		"get_google_analytics_key_events", "get_google_analytics_traffic_acquisition",
+		"get_google_analytics_ecommerce_performance", "get_google_analytics_site_search",
+		"get_google_analytics_audience_breakdown", "get_google_analytics_organic_overview",
+		"get_google_analytics_measurement_health", "get_product_info", "map_links", "read_pages":
+		return true
+	default:
+		return false
+	}
+}
+func (ts *toolset) restrictToGrowth() {
+	ts.growthOnly = true
+	ts.defs = slices.DeleteFunc(ts.defs, func(def openrouter.Tool) bool { return !growthReadTool(def.Name) })
 }

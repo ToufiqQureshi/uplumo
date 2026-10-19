@@ -29,6 +29,9 @@ type Deps struct {
 func Mount(mux *http.ServeMux, d Deps) {
 	protect := func(h http.Handler) http.Handler { return d.WithSession(d.WithProjectAccess(h)) }
 	base := "POST /api/v1/projects/{projectId}/ga4/"
+	for _, action := range []string{"report", "devices", "list", "save", "update", "delete", "compare"} {
+		mux.Handle(base+"growth/"+action, protect(d.growthHandler(action)))
+	}
 	mux.Handle(base+"connection/status", protect(http.HandlerFunc(d.connectionStatus)))
 	mux.Handle(base+"properties/list", protect(http.HandlerFunc(d.listProperties)))
 	mux.Handle(base+"connection/set", protect(http.HandlerFunc(d.setProperty)))
@@ -309,7 +312,7 @@ func writeError(logger *slog.Logger, w http.ResponseWriter, r *http.Request, err
 		switch typed.Code {
 		case "ga4_unavailable", "gsc_unavailable":
 			status = http.StatusServiceUnavailable
-		case "ga4_not_connected", "gsc_not_connected":
+		case "ga4_not_connected", "gsc_not_connected", "growth_not_found":
 			status = http.StatusNotFound
 		case "gsc_rate_limited":
 			status = http.StatusTooManyRequests

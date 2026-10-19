@@ -23,3 +23,11 @@ Uses first-party Search Console data to prioritize content review and explain in
 - `searchPerformanceQueries.test.ts`
 - `contentRefreshQueue.test.ts`
 - `backend/internal/gsc/performance_test.go`
+
+- Show three prioritized growth candidates first, with optional evidence and
+  configuration drill-downs. Independent analysis dates/source are labeled so
+  GSC table filters cannot silently change the meaning of a saved GA4 finding.
+- Never invent missing GA4 metrics, query-to-outcome attribution or expected
+  revenue. Competing pages are investigation candidates, not proof of harm.
+- AI drafts and editor context stay in project-scoped tab storage for 30 minutes,
+  not report-bearing URLs. Opening a draft makes no paid call or site change.

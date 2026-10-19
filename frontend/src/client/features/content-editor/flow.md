@@ -52,3 +52,8 @@ fallback when the visual editor is unavailable.
 ## Search Performance handoff
 
 A user explicitly chooses Start draft on a Search Console refresh candidate -> TanStack route passes the strongest query as `keyword` -> the editor seeds the target topic on a blank draft. The route never starts a brief or AI call; editing, saving, and publishing retain their existing explicit workflows.
+
+Growth handoff: explicit Improve this page -> `saveSearchContext` validates the
+source URL, bounded queries/reasons and stores a 30-minute project-scoped tab
+reference -> `SearchContextPanel` shows the existing page and evidence above
+the unchanged editor workflow. An invalid/expired reference is omitted.

@@ -20,3 +20,7 @@ Creates and edits SEO drafts, content briefs, author profiles, internal-link sug
 
 - `ArticlePreview.test.ts`
 - `brief-view.test.ts`
+
+- Search Growth evidence is a read-only reference, not imported HTML or an
+  instruction to overwrite the draft. Validate URL scheme, lengths and expiry
+  before displaying the tab-local context.

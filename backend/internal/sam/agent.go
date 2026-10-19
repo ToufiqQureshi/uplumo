@@ -70,6 +70,7 @@ type SessionContext struct {
 	// OrganizationID is the project's organization.
 	OrganizationID string
 	Role           string
+	SearchGrowth   bool
 }
 
 // SessionTitler names and touches the registry row.
@@ -307,6 +308,10 @@ func (t *turnState) run(ctx context.Context) error {
 		return t.fail(ctx, fmt.Errorf("build toolset: %w", err))
 	}
 
+	if t.sc.SearchGrowth {
+		toolset.restrictToGrowth()
+		system += "\nThis turn is Search growth analyst mode. Only read-only first-party Google reporting and guarded site-reading tools are available. No paid research, writes, jobs or site changes are authorized. Start with the requested evidence analysis instead of onboarding."
+	}
 	conversation := append([]openrouter.Message{{Role: "system", Content: system}}, history...)
 	for step := 0; step < maxSteps; step++ {
 		if step > 0 && t.spent >= maxTurnUSD {

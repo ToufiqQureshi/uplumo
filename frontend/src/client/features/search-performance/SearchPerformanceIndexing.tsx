@@ -20,7 +20,7 @@ function humanize(value: string | undefined): string {
 }
 
 function formatCrawlTime(value: string | undefined): string {
-  if (!value) return "Not crawled yet";
+  if (!value) return "Not available";
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
@@ -29,6 +29,9 @@ function recommendedNextStep(index: {
   robotsTxtState?: string;
   indexingState?: string;
   pageFetchState?: string;
+  googleCanonical?: string;
+  userCanonical?: string;
+  verdict?: string;
 }): string {
   if (index.indexingState === "BLOCKED_BY_META_TAG") {
     return "If this page should appear in Google, remove its noindex meta tag.";
@@ -42,6 +45,15 @@ function recommendedNextStep(index: {
   ) {
     return "If this page should appear in Google, allow Googlebot to crawl it in robots.txt.";
   }
+  if (
+    index.googleCanonical &&
+    index.userCanonical &&
+    index.googleCanonical !== index.userCanonical
+  ) {
+    return "Google selected a different canonical URL. Review your intended page, canonical tag, sitemap and internal links before changing anything.";
+  }
+  if (index.verdict === "PASS")
+    return "Google's stored result indicates this URL is indexed. Review search performance; no indexing fix is indicated by this result.";
   switch (index.pageFetchState) {
     case "NOT_FOUND":
       return "Restore the page or redirect its URL to the closest relevant page.";
@@ -77,10 +89,14 @@ export function SearchPerformanceIndexing({
     mutationFn: (urls: string[]) =>
       inspectSearchConsoleUrls({ projectId, urls }),
   });
-  const urls = input
-    .split(/\r?\n/)
-    .map((url) => url.trim())
-    .filter(Boolean);
+  const urls = [
+    ...new Set(
+      input
+        .split(/\r?\n/)
+        .map((url) => url.trim())
+        .filter(Boolean),
+    ),
+  ];
   const canSubmit = urls.length > 0 && urls.length <= 10 && !mutation.isPending;
   const suggestedUrls = buildContentRefreshQueue(strikingDistance)
     .slice(0, 10)
