@@ -101,6 +101,11 @@ function PublishActions({
           ? `Live on ${siteName}.`
           : `Saved as a draft on ${siteName}.`,
       );
+      if (next.indexNow?.status === "submitted") {
+        toast.success("Sent to Bing and other IndexNow search engines.");
+      } else if (next.indexNow) {
+        toast.warning(next.indexNow.message);
+      }
     },
   });
   const published = publication?.published === true;

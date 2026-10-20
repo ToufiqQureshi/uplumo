@@ -9,11 +9,11 @@
 
 ## Request or job flow
 
-Owner/admin saves a WordPress connection; user asks for schema preview or publish; handler checks project, plan, draft and permissions; publisher sends bounded WordPress request; publication result is recorded.
+Owner/admin saves a WordPress connection; user asks for schema preview or publish; handler checks project, plan, draft and permissions; publisher sends bounded WordPress request; publication result is recorded; a live post is then offered to IndexNow (`PageSubmitter`, at most one key-file fetch and up to three engine requests, 35 seconds).
 
 ## Dependencies and cost boundary
 
-WordPress REST API; Postgres site connection/publication/draft rows; plan catalog.
+WordPress REST API; Postgres site connection/publication/draft rows; plan catalog; `indexnow.Service` after a live publish.
 
 ## Failure, security and data invariants
 

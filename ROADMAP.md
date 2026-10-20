@@ -64,6 +64,7 @@ mean each one has been tried on production with real provider keys.
 | Reports              | White-label reports (logo, name, colour, website), public share links                                                                                                                      |
 | Content editor       | Project drafts, live SEO/AEO checks, AI writing actions                                                                                                                                    |
 | Website publishing   | Connect a WordPress site (onboarding or Settings → Integrations), publish or update drafts with their images (Basic and above)                                                             |
+| IndexNow             | Key file setup and check, submit changed URLs to Bing and other IndexNow engines; live WordPress publishes are submitted automatically (Basic and above; Google does not use IndexNow) |
 | Local SEO            | Business search, profile, Google Maps rank grid                                                                                                                                            |
 | Assistant (SAM)      | Chat with tools over the project's data                                                                                                                                                    |
 | MCP server           | Tools for Claude, ChatGPT and Cursor, with OAuth                                                                                                                                           |

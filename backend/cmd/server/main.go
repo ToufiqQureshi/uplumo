@@ -41,6 +41,7 @@ import (
 	"github.com/toufiqqureshi/uplumo/backend/internal/google"
 	"github.com/toufiqqureshi/uplumo/backend/internal/gsc"
 	"github.com/toufiqqureshi/uplumo/backend/internal/httpapi"
+	"github.com/toufiqqureshi/uplumo/backend/internal/indexnow"
 	"github.com/toufiqqureshi/uplumo/backend/internal/keywords"
 	"github.com/toufiqqureshi/uplumo/backend/internal/kv"
 	"github.com/toufiqqureshi/uplumo/backend/internal/linksuggest"
@@ -269,6 +270,15 @@ func run(logger *slog.Logger) (err error) {
 	if err != nil {
 		return err
 	}
+	indexNowService := &indexnow.Service{
+		Logger: logger, Store: indexnow.Repository{DB: db}, Limiter: indexnow.RedisLimiter{Client: rdb},
+		Sites:     audit.NewGuard().NewClient(15 * time.Second),
+		Engines:   &http.Client{Timeout: 15 * time.Second},
+		Endpoints: indexnow.Engines,
+	}
+	if gateSvc != nil {
+		indexNowService.Plans = gateSvc.Gate(planCatalog.IndexNow)
+	}
 
 	rankChecks, err := buildRankChecks(ctx, logger, db, gateSvc, dfClient)
 	if err != nil {
@@ -396,6 +406,7 @@ func run(logger *slog.Logger) (err error) {
 			ContentAuthors:          contentAuthors,
 			LinkSuggest:             linkSuggestSvc,
 			SitePublish:             sitePublish,
+			IndexNow:                indexNowService,
 			ContentWriter:           buildContentWriter(cfg, logger, spendGuard.AIMeter(spend.AIWriting, "openrouter/"+contenteditor.WriterModel), billingRoutes.Gate(planCatalog.AIWriting)),
 			ContentBriefs:           buildContentBriefs(db, dfClient),
 			ProjectsRepo:            projects.Repository{DB: db},

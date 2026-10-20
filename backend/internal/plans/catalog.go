@@ -44,6 +44,9 @@ const (
 	AIWriting Feature = "ai_writing"
 	// WhiteLabel is the agency's own name, logo and colour on reports.
 	WhiteLabel Feature = "white_label"
+	// IndexNow is telling Bing and the other IndexNow search engines about
+	// new and changed pages, by hand or after a WordPress publish.
+	IndexNow Feature = "indexnow"
 )
 
 // Definition is one plan. A limit of zero means the plan has none of that
@@ -84,7 +87,7 @@ func (d Definition) Allows(feature Feature) bool {
 }
 
 var (
-	basicFeatures  = []Feature{GoogleData, Keywords, RankTracking, FullAudit, Publishing, AIWriting}
+	basicFeatures  = []Feature{GoogleData, Keywords, RankTracking, FullAudit, Publishing, AIWriting, IndexNow}
 	proFeatures    = append(slices.Clone(basicFeatures), Backlinks, DomainResearch, AIVisibility)
 	agencyFeatures = append(slices.Clone(proFeatures), WhiteLabel)
 )
@@ -110,6 +113,7 @@ var catalog = []Definition{
 			"Google Search Console and Google Analytics",
 			"Full site audit",
 			"Publish articles straight to your WordPress site",
+			"Tell Bing and other IndexNow search engines about new pages instantly",
 			"AI writing assistant",
 		},
 		features: basicFeatures,

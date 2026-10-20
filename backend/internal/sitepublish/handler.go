@@ -23,12 +23,21 @@ const (
 	// publishTimeout covers copying up to MaxImagesPerArticle images and
 	// saving the post. The handler lifts the server's write deadline to match.
 	publishTimeout = 100 * time.Second
-	userAgent      = "Uplumo/1.0 (+https://uplumo.com)"
+	// indexNowTimeout covers the key-file check and up to three engines
+	// after a page goes live.
+	indexNowTimeout = 35 * time.Second
+	userAgent       = "Uplumo/1.0 (+https://uplumo.com)"
 )
 
 // PaidPlans reports whether an organization's plan includes publishing.
 type PaidPlans interface {
 	HasPaidPlan(ctx context.Context, organizationID string) (bool, error)
+}
+
+// PageSubmitter tells search engines about a page that was just published.
+// status is "" when it did nothing (IndexNow not set up or not on the plan).
+type PageSubmitter interface {
+	SubmitPublished(ctx context.Context, organizationID, projectID, pageURL string) (status, message string)
 }
 
 // Deps wires the site-publishing routes.
@@ -37,7 +46,9 @@ type Deps struct {
 	// Service is nil when publishing is not configured; routes answer 503.
 	Service *Service
 	// Plans is nil when billing is not configured: publishing is then open.
-	Plans             PaidPlans
+	Plans PaidPlans
+	// IndexNow is nil when automatic submission is not wired.
+	IndexNow          PageSubmitter
 	WithSession       func(http.Handler) http.Handler
 	WithProjectAccess func(http.Handler) http.Handler
 }
@@ -81,6 +92,13 @@ type publicationView struct {
 	PublishedAt *time.Time         `json:"publishedAt,omitempty"`
 	UpdatedAt   *time.Time         `json:"updatedAt,omitempty"`
 	Schema      *PublicationSchema `json:"schema,omitempty"`
+	// IndexNow is what automatic submission did; absent when it did nothing.
+	IndexNow *indexNowView `json:"indexNow,omitempty"`
+}
+
+type indexNowView struct {
+	Status  string `json:"status"`
+	Message string `json:"message"`
 }
 
 func viewPublication(p Publication) publicationView {
@@ -182,7 +200,26 @@ func (h handler) publish(w http.ResponseWriter, r *http.Request) {
 	}
 	view := viewPublication(publication)
 	view.Schema = &schema
+	if publication.RemoteStatus == "publish" && h.IndexNow != nil {
+		view.IndexNow = h.submitToIndexNow(r, w, publication)
+	}
 	httpx.WriteJSON(w, http.StatusOK, view)
+}
+
+// submitToIndexNow sends a page that went live to IndexNow. The post is
+// already published, so nothing here can fail the publish.
+func (h handler) submitToIndexNow(r *http.Request, w http.ResponseWriter, publication Publication) *indexNowView {
+	if err := http.NewResponseController(w).SetWriteDeadline(time.Now().Add(indexNowTimeout + 10*time.Second)); err != nil {
+		h.Logger.WarnContext(r.Context(), "extend indexnow write deadline", "err", err)
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), indexNowTimeout)
+	defer cancel()
+	organizationID, _ := auth.ProjectOrganizationFromContext(r.Context())
+	status, message := h.IndexNow.SubmitPublished(ctx, organizationID, publication.ProjectID, publication.RemoteURL)
+	if status == "" {
+		return nil
+	}
+	return &indexNowView{Status: status, Message: message}
 }
 
 // schemaPreview answers the JSON-LD the saved draft would publish with. It

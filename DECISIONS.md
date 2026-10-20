@@ -5,7 +5,7 @@ on the owner. Feature status lives in `ROADMAP.md`, history in git.
 **No secret values here, only variable names.** Agents: keep this file and
 update it when the owner decides something or a Railway variable changes.
 
-Last updated: 15 Oct 2026
+Last updated: 20 Oct 2026
 
 ---
 
@@ -36,6 +36,7 @@ Last updated: 15 Oct 2026
 | 19 Oct | Each paid call in one user action holds credits under its own key (`spend.ScopedKey`); the browser's `Idempotency-Key` identifies the action, not the hold. | The 17 Oct change reused one key for every call in a request, so Backlinks overview, Local SEO grids, SAM turns and Keyword Research failed after the first call was charged. |
 | 19 Oct | HTTP `writeTimeout` is 150s (was 30s) and a budgeted operation stops starting calls after 120s. | A provider call can take 60s; at 30s the connection closed and the customer saw a generic error after paying. |
 | 19 Oct | The "about N credits" hints are the live measured cost of one click (keyword search 61, domain tab 40, backlink report 64, 3×3 map grid 27). AI Visibility is still 128 and is wrong for Brand Lookup (about 900): waiting for the owner. | Customers saw 26 and paid 40. |
+| 20 Oct | **IndexNow** is on **Basic, Pro and Agency**, not Free. Pages published live to WordPress from Uplumo are submitted automatically once the project has set up IndexNow. | Owner decision. Each workspace may make 60 IndexNow requests an hour, so one cannot get Uplumo's servers rate-limited for everyone. Google does not use IndexNow. |
 
 ## 2. Waiting for the owner
 

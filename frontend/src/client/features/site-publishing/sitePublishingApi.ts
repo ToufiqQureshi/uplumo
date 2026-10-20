@@ -22,6 +22,10 @@ const publicationSchema = z.object({
   schema: z
     .object({ added: z.boolean(), note: z.string().optional() })
     .optional(),
+  // What automatic IndexNow submission did; absent when it did nothing.
+  indexNow: z
+    .object({ status: z.enum(["submitted", "failed"]), message: z.string() })
+    .optional(),
 });
 export type SitePublication = z.infer<typeof publicationSchema>;
 

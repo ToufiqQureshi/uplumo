@@ -42,11 +42,11 @@ func TestCatalogMatchesTheOwnersPlanTable(t *testing.T) {
 }
 
 func TestEachPlanIncludesExactlyItsFeatures(t *testing.T) {
-	all := []Feature{GoogleData, Keywords, RankTracking, FullAudit, Publishing, Backlinks, DomainResearch, AIVisibility, AIWriting, WhiteLabel}
+	all := []Feature{GoogleData, Keywords, RankTracking, FullAudit, Publishing, Backlinks, DomainResearch, AIVisibility, AIWriting, WhiteLabel, IndexNow}
 	want := map[string][]Feature{
 		Free:   nil,
-		Basic:  {GoogleData, Keywords, RankTracking, FullAudit, Publishing, AIWriting},
-		Pro:    {GoogleData, Keywords, RankTracking, FullAudit, Publishing, AIWriting, Backlinks, DomainResearch, AIVisibility},
+		Basic:  {GoogleData, Keywords, RankTracking, FullAudit, Publishing, AIWriting, IndexNow},
+		Pro:    {GoogleData, Keywords, RankTracking, FullAudit, Publishing, AIWriting, IndexNow, Backlinks, DomainResearch, AIVisibility},
 		Agency: all,
 	}
 	for id, included := range want {

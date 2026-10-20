@@ -31,6 +31,7 @@ import (
 	"github.com/toufiqqureshi/uplumo/backend/internal/ga4"
 	"github.com/toufiqqureshi/uplumo/backend/internal/google"
 	"github.com/toufiqqureshi/uplumo/backend/internal/gsc"
+	"github.com/toufiqqureshi/uplumo/backend/internal/indexnow"
 	"github.com/toufiqqureshi/uplumo/backend/internal/keywords"
 	"github.com/toufiqqureshi/uplumo/backend/internal/linksuggest"
 	"github.com/toufiqqureshi/uplumo/backend/internal/localseo"
@@ -130,6 +131,9 @@ type Deps struct {
 	ContentImageLimiter contenteditor.ImageUploadLimiter
 	// SitePublish connects a project's website and publishes drafts to it.
 	SitePublish *sitepublish.Service
+	// IndexNow submits a project's new and changed pages to IndexNow
+	// engines; nil answers 503 and publishing does not submit.
+	IndexNow *indexnow.Service
 	// ContentAuthors serves the project's author profiles for the byline.
 	ContentAuthors *contentauthors.Repository
 	// LinkSuggest serves free internal link suggestions for drafts. Nil
@@ -384,8 +388,18 @@ func NewHandler(d Deps) http.Handler {
 		Logger: d.Logger, Service: d.LinkSuggest, WithSession: withSession,
 		WithProjectAccess: func(next http.Handler) http.Handler { return requireProjectAccess(d.Logger, d.Auth, next) },
 	})
+	// A nil *indexnow.Service must stay a nil interface, or publishing would
+	// call through it.
+	var pageSubmitter sitepublish.PageSubmitter
+	if d.IndexNow != nil {
+		pageSubmitter = d.IndexNow
+	}
 	sitepublish.Mount(mux, sitepublish.Deps{
-		Logger: d.Logger, Service: d.SitePublish, Plans: publishPlans, WithSession: withSession,
+		Logger: d.Logger, Service: d.SitePublish, Plans: publishPlans, IndexNow: pageSubmitter, WithSession: withSession,
+		WithProjectAccess: func(next http.Handler) http.Handler { return requireProjectAccess(d.Logger, d.Auth, next) },
+	})
+	indexnow.Mount(mux, indexnow.Deps{
+		Logger: d.Logger, Service: d.IndexNow, WithSession: withSession,
 		WithProjectAccess: func(next http.Handler) http.Handler { return requireProjectAccess(d.Logger, d.Auth, next) },
 	})
 	sam.Mount(mux, sam.Deps{
