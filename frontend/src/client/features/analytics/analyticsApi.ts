@@ -11,6 +11,8 @@ export const CHANNELS = [
   "ai",
   "search",
   "social",
+  "paid",
+  "email",
   "direct",
   "referral",
 ] as const;
@@ -32,7 +34,9 @@ const summarySchema = z.object({
   series: z.array(
     z.object({ date: isoDate, visitors: count, pageviews: count }),
   ),
-  topPages: z.array(z.object({ path: z.string(), pageviews: count })),
+  topPages: z.array(
+    z.object({ path: z.string(), pageviews: count, avgEngagementMs: count }),
+  ),
   channels: z.array(z.object({ channel: z.enum(CHANNELS), visitors: count })),
   aiSources: z.array(z.object({ source: z.enum(AI_SOURCES), visitors: count })),
   referrers: z.array(z.object({ host: z.string(), visitors: count })),
@@ -43,6 +47,39 @@ const summarySchema = z.object({
     }),
   ),
   events: z.array(z.object({ name: z.string(), count, visitors: count })),
+  campaigns: z.array(
+    z.object({
+      source: z.string(),
+      medium: z.string(),
+      campaign: z.string(),
+      term: z.string(),
+      content: z.string(),
+      visitors: count,
+      sessions: count,
+      conversions: count,
+    }),
+  ),
+  entries: z.array(
+    z.object({ path: z.string(), sessions: count, avgEngagementMs: count }),
+  ),
+  exits: z.array(
+    z.object({ path: z.string(), sessions: count, avgEngagementMs: count }),
+  ),
+  acquisitionChannels: z.array(
+    z.object({
+      channel: z.enum(CHANNELS),
+      sessions: count,
+      conversions: count,
+    }),
+  ),
+  sessions: count,
+  engagedSessions: count,
+  bounceRate: z.number().min(0).max(1),
+  totalEngagementMs: count,
+  avgEngagementMs: count,
+  goalEventName: z.string(),
+  conversionSessions: count,
+  conversionRate: z.number().min(0).max(1),
 });
 export type AnalyticsSummary = z.infer<typeof summarySchema>;
 

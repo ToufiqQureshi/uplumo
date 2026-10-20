@@ -8,9 +8,16 @@ Collects first-party pageviews/custom events and returns project traffic summari
 
 ## Decisions to preserve
 
-- Do not store cookies or raw IP addresses. _Why:_ Collecting or retaining less identifying data reduces privacy exposure if logs, storage or exports are accessed improperly.
+- Do not store cookies, raw IP addresses, raw session tokens, full URLs or raw ad click IDs. Store only a site-scoped hash of the random tab session; it expires after 30 minutes idle or 24 hours in the browser. _Why:_ This enables same-session engagement and goal attribution without cross-tab or cross-session identity.
 - Public ingestion must keep same-origin/domain validation, bot filtering, payload bounds and per-IP/site limits. _Why:_ Explicit bounds prevent a large or abusive request from consuming shared memory, latency or service capacity.
 - Custom events must not inflate pageview totals or bypass ingestion checks. _Why:_ This keeps the behavior explicit so future changes do not silently alter customer-visible results.
+- Campaign reporting stores only bounded `utm_source`, `utm_medium`,
+  `utm_campaign`, `utm_term` and `utm_content` values on non-internal
+  pageviews. Do not persist other query parameters or raw click IDs.
+- Respect Do Not Track and Global Privacy Control before session storage or
+  network collection; do not send events to third parties.
+
+- **Session reports read whole sessions; visible time includes the last interval.** _Decision:_ landing and exit pages pick the first and last event of every session that has an event in the range, even outside it; the tracker credits visible time up to the hide event and keeps the session across reloads of a tab that has an opener, resetting only on that tab's first page. _Why:_ review found that a session crossing midnight reported the wrong landing/exit page, a page viewed 10–14 s then hidden counted as a bounce, and every reload of a `window.open` tab started a new session. The summary SQL also had a duplicated `FROM` that failed every request. _Preserve:_ the summary runs in one batch; session metrics count only in-range events, while first/last page attribution uses the whole session; hidden time is never counted. _Trace:_ `repository.go` (`summary`), `httpapi/tracker.js`, `TestSummarizeSessionsCampaignsAndLandingPages`, `frontend/scripts/tracker.test.ts`.
 
 ## Dependencies
 

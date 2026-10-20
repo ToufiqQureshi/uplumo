@@ -65,15 +65,16 @@ are in its own `internal/<feature>/README.md` and, where one exists,
 - `GET /site/...`: the pages' embedded assets (logo, font, social card).
   The pages link them with a `?v=<content hash>`, which is cached for a
   year; other requests are revalidated by `ETag`.
-- `GET /t.js`: the analytics tracker (under 1.5 KB, no cookies, no
+- `GET /t.js`: the first-party analytics tracker (no third-party requests or
   dependencies). Sites add the snippet from
   `POST /api/v1/projects/{projectId}/analytics/site`. It reports a pageview
   on load and on SPA `history.pushState`/`popstate`, uses `sendBeacon`, and
   does nothing when Do Not Track or Global Privacy Control is on. Cached for
   an hour, then revalidated by ETag.
 - `POST /collect`: tracker events, `{"k": siteKey, "u": url, "r": referrer,
-"w": screenWidth, "n": eventName}` (`n` only for a custom event such as a
-  button click), answered with `202`. Open CORS, 4 KB body limit,
+"w": screenWidth, "s": sessionId, "p": pageviewId, "i": eventId, "d": engagedMs,
+"n": eventName}`. `s`, `p`, and `i` are random 128-bit IDs; `d` is cumulative
+  visible milliseconds for the pageview. Answered with `202`. Open CORS, 4 KB body limit,
   120 events a minute per IP and site (`429` above that). The page host must
   be the project's domain or a subdomain of it when the project has one
   (`403` otherwise). Crawlers and headless browsers are accepted and dropped.
@@ -81,8 +82,9 @@ are in its own `internal/<feature>/README.md` and, where one exists,
   and tracker snippet, created on first call.
 - `GET /api/v1/projects/{projectId}/analytics/summary?from=YYYY-MM-DD&to=YYYY-MM-DD`:
   visitors, pageviews, a daily series and the top pages, channels, AI
-  sources, referrers, devices and custom events (button clicks) for whole
-  UTC days, at most 366 of them.
+  sources, campaigns, entry/exit pages, session and page engagement, selected
+  goal completions, referrers, devices and custom events for whole UTC days,
+  at most 366 of them.
 - `GET /api/v1/billing/status`: the plan of the session's active workspace,
   `{"plan": "free"|"basic"|"pro"|"agency", "status": "<Razorpay status>"|"none",
 "currentPeriodEnd": RFC 3339|null, "cancelAtPeriodEnd": bool}`. Any member
@@ -145,12 +147,20 @@ accepts `from`, `to`, `page` (default 1), and `limit` (default 10, maximum
 visitors, including those whose country could not be found. The `siteId` is
 returned by the analytics site endpoint.
 
-**Privacy.** No cookies and no stored IP. A visitor is
+**Privacy.** No cookies and no stored IP. A daily visitor is
 `SHA-256(daily salt, site key, IP, user agent)`. The salt is random per UTC
 day, lives only in Redis and expires after 48 hours, so a visitor cannot be
 followed across days and old hashes cannot be recomputed. Visitors over a
-range are therefore the sum of each day's unique visitors. Only the path is
-stored, never the query string.
+range are therefore the sum of each day's unique visitors. Only the path and
+bounded `utm_source`, `utm_medium`, `utm_campaign`, `utm_term` and
+`utm_content` fields are stored. Recognized ad click-ID parameter names may
+set a platform label, but their values and all other query parameters are not
+retained. The browser stores a random session ID in first-party
+`sessionStorage` for one tab, with 30-minute inactivity and 24-hour maximum
+expiry. The server stores only a site-scoped hash, linking pageviews and
+custom events inside that session. Do Not Track and Global Privacy Control
+stop storage and collection. Sessions are not people, and no events are sent
+to advertising platforms.
 
 **Channels.** Each pageview is attributed in this order:
 

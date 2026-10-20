@@ -10,7 +10,10 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
@@ -46,9 +49,13 @@ type Hit struct {
 	ScreenWidth int
 	// EventName names a custom event, such as a button click; empty for a
 	// pageview.
-	EventName string
-	IP        string
-	UserAgent string
+	EventName    string
+	SessionID    string
+	PageviewID   string
+	EventID      string
+	EngagementMS int64
+	IP           string
+	UserAgent    string
 }
 
 // Summary is a project's traffic over a date range.
@@ -62,7 +69,38 @@ type Summary struct {
 	Referrers []ReferrerCount `json:"referrers"`
 	Devices   []DeviceCount   `json:"devices"`
 	// Events are the site's custom events, such as button clicks.
-	Events []EventCount `json:"events"`
+	Events              []EventCount       `json:"events"`
+	Campaigns           []CampaignCount    `json:"campaigns"`
+	Entries             []EntryExitCount   `json:"entries"`
+	Exits               []EntryExitCount   `json:"exits"`
+	AcquisitionChannels []AcquisitionCount `json:"acquisitionChannels"`
+	Sessions            int64              `json:"sessions"`
+	EngagedSessions     int64              `json:"engagedSessions"`
+	BounceRate          float64            `json:"bounceRate"`
+	TotalEngagementMS   int64              `json:"totalEngagementMs"`
+	AvgEngagementMS     int64              `json:"avgEngagementMs"`
+	GoalEventName       string             `json:"goalEventName"`
+	ConversionSessions  int64              `json:"conversionSessions"`
+	ConversionRate      float64            `json:"conversionRate"`
+}
+
+// CampaignCount is a tagged campaign's visitor-day, session and goal counts.
+type CampaignCount struct {
+	Source      string `json:"source"`
+	Medium      string `json:"medium"`
+	Campaign    string `json:"campaign"`
+	Term        string `json:"term"`
+	Content     string `json:"content"`
+	Visitors    int64  `json:"visitors"`
+	Sessions    int64  `json:"sessions"`
+	Conversions int64  `json:"conversions"`
+}
+
+// AcquisitionCount is the first known channel of a session and its goal count.
+type AcquisitionCount struct {
+	Channel     string `json:"channel"`
+	Sessions    int64  `json:"sessions"`
+	Conversions int64  `json:"conversions"`
 }
 
 // EventCount is how often a custom event happened and for how many visitors.
@@ -81,8 +119,16 @@ type DayCount struct {
 
 // PageCount is a path's pageviews.
 type PageCount struct {
-	Path      string `json:"path"`
-	Pageviews int64  `json:"pageviews"`
+	Path            string `json:"path"`
+	Pageviews       int64  `json:"pageviews"`
+	AvgEngagementMS int64  `json:"avgEngagementMs"`
+}
+
+// EntryExitCount is the number of sessions that entered or ended on a path.
+type EntryExitCount struct {
+	Path            string `json:"path"`
+	Sessions        int64  `json:"sessions"`
+	AvgEngagementMS int64  `json:"avgEngagementMs"`
 }
 
 // ChannelCount is a channel's visitors.
@@ -169,8 +215,18 @@ func (s *Service) Collect(ctx context.Context, h Hit) error {
 		path = "/"
 	}
 	visitor := hash(salt, h.SiteKey, h.IP, h.UserAgent)
+	var sessionHash, pageviewHash, eventHash []byte
+	if h.SessionID != "" {
+		sessionHash = hash(h.SiteKey, h.SessionID)
+	}
+	if h.PageviewID != "" {
+		pageviewHash = hash(h.SiteKey, h.PageviewID)
+	}
+	if h.EventID != "" {
+		eventHash = hash(h.SiteKey, h.EventID)
+	}
 	if h.EventName != "" {
-		return s.repo.insertCustomEvent(ctx, st.ID, now, h.EventName, path, visitor)
+		return s.repo.insertCustomEvent(ctx, st.ID, now, h.EventName, path, visitor, sessionHash, eventHash)
 	}
 	var country string
 	if s.geo != nil {
@@ -179,15 +235,63 @@ func (s *Service) Collect(ctx context.Context, h Hit) error {
 			return fmt.Errorf("resolve event country: %w", err)
 		}
 	}
+	source := classify(h.Page, h.Referrer, st.Domain)
+	var campaign campaign
+	if source.Channel != channelInternal {
+		// shortcut: only bounded UTM fields are retained; raw ad click IDs need
+		// a separate consented conversion-export design.
+		campaign = campaignFrom(h.Page)
+	}
 	return s.repo.insertEvent(ctx, event{
-		SiteID:      st.ID,
-		OccurredAt:  now,
-		Path:        path,
-		Source:      classify(h.Page, h.Referrer, st.Domain),
-		Device:      deviceOf(h.UserAgent, h.ScreenWidth),
-		VisitorHash: visitor,
-		CountryCode: country,
+		SiteID:       st.ID,
+		OccurredAt:   now,
+		Path:         path,
+		Source:       source,
+		Campaign:     campaign,
+		Device:       deviceOf(h.UserAgent, h.ScreenWidth),
+		VisitorHash:  visitor,
+		SessionHash:  sessionHash,
+		PageviewHash: pageviewHash,
+		EngagementMS: h.EngagementMS,
+		CountryCode:  country,
 	})
+}
+
+type campaign struct {
+	Source  string
+	Medium  string
+	Name    string
+	Term    string
+	Content string
+}
+
+func campaignFrom(page *url.URL) campaign {
+	q := page.Query()
+	source := cleanUTM(q.Get("utm_source"))
+	medium := cleanUTM(q.Get("utm_medium"))
+	if source == "" {
+		if clickSource := adClickSource(page); clickSource != "" {
+			source = clickSource
+			if medium == "" {
+				medium = "auto-tagged"
+			}
+		}
+	}
+	return campaign{
+		Source:  source,
+		Medium:  medium,
+		Name:    cleanUTM(q.Get("utm_campaign")),
+		Term:    cleanUTM(q.Get("utm_term")),
+		Content: cleanUTM(q.Get("utm_content")),
+	}
+}
+
+func cleanUTM(value string) string {
+	value = strings.TrimSpace(value)
+	if !utf8.ValidString(value) || utf8.RuneCountInString(value) > 100 || strings.ContainsFunc(value, unicode.IsControl) {
+		return ""
+	}
+	return value
 }
 
 // dailySalt returns the salt for now's UTC day, creating it if this is the

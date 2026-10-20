@@ -23,6 +23,7 @@ import {
   channelRows,
   DEVICE_LABELS,
   formatShare,
+  CHANNEL_LABELS,
   type ShareRow,
 } from "./presentation";
 
@@ -165,6 +166,174 @@ export function ChannelsCard({ channels }: Pick<AnalyticsSummary, "channels">) {
       ) : (
         <ShareList rows={rows} />
       )}
+    </CardShell>
+  );
+}
+
+export function AcquisitionPerformanceCard({
+  rows,
+  goalEventName,
+}: {
+  rows: AnalyticsSummary["acquisitionChannels"];
+  goalEventName: string;
+}) {
+  return (
+    <CardShell title="Acquisition to goal">
+      {rows.length === 0 ? (
+        <EmptyState
+          variant="plain"
+          size="sm"
+          title="Session source data is collecting"
+        />
+      ) : (
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left text-xs text-muted-foreground">
+              <th scope="col" className="pb-2 font-medium">
+                First source
+              </th>
+              <th scope="col" className="pb-2 text-right font-medium">
+                Sessions
+              </th>
+              <th scope="col" className="pb-2 text-right font-medium">
+                Goals
+              </th>
+              <th scope="col" className="pb-2 text-right font-medium">
+                Rate
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.channel} className="border-t border-border">
+                <td
+                  className="py-2 pr-3"
+                  title={CHANNEL_LABELS[row.channel].hint}
+                >
+                  {CHANNEL_LABELS[row.channel].label}
+                </td>
+                <td className="py-2 text-right tabular-nums">
+                  {formatCount(row.sessions)}
+                </td>
+                <td className="py-2 text-right tabular-nums">
+                  {formatCount(row.conversions)}
+                </td>
+                <td className="py-2 text-right tabular-nums">
+                  {goalEventName
+                    ? formatShare(
+                        row.sessions === 0 ? 0 : row.conversions / row.sessions,
+                      )
+                    : "—"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      <p className="mt-3 text-xs text-muted-foreground">
+        {goalEventName
+          ? `Goal: ${goalEventName}. Count it only after the form, booking or purchase succeeds.`
+          : "Choose a successful outcome event in Enquiries to see goal rates."}
+      </p>
+    </CardShell>
+  );
+}
+
+export function CampaignPerformanceCard({
+  campaigns,
+  goalEventName,
+}: Pick<AnalyticsSummary, "campaigns" | "goalEventName">) {
+  return (
+    <CardShell title="Campaign performance">
+      {campaigns.length === 0 ? (
+        <EmptyState
+          variant="plain"
+          size="sm"
+          title="No tagged campaign sessions"
+          description="Add UTM tags to your ad links to compare campaign sessions and goal completions."
+        />
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs text-muted-foreground">
+                <th scope="col" className="pb-2 font-medium">
+                  Campaign
+                </th>
+                <th scope="col" className="pb-2 text-right font-medium">
+                  Sessions
+                </th>
+                <th scope="col" className="pb-2 text-right font-medium">
+                  Goals
+                </th>
+                <th scope="col" className="pb-2 text-right font-medium">
+                  Rate
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {campaigns.map((row) => {
+                const details = [
+                  row.source && `source=${row.source}`,
+                  row.medium && `medium=${row.medium}`,
+                  row.campaign && `campaign=${row.campaign}`,
+                  row.term && `term=${row.term}`,
+                  row.content && `content=${row.content}`,
+                ].filter(Boolean);
+                return (
+                  <tr
+                    key={[
+                      row.source,
+                      row.medium,
+                      row.campaign,
+                      row.term,
+                      row.content,
+                    ].join("\u0000")}
+                    className="border-t border-border"
+                  >
+                    <td
+                      className="max-w-0 py-2 pr-3"
+                      title={details.join(" · ")}
+                    >
+                      <span className="block truncate">
+                        {row.campaign ||
+                          row.source ||
+                          row.medium ||
+                          "Tagged visit"}
+                      </span>
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {[row.source, row.medium, row.term, row.content]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
+                    </td>
+                    <td className="py-2 text-right tabular-nums">
+                      {formatCount(row.sessions)}
+                    </td>
+                    <td className="py-2 text-right tabular-nums">
+                      {formatCount(row.conversions)}
+                    </td>
+                    <td className="py-2 text-right tabular-nums">
+                      {goalEventName
+                        ? formatShare(
+                            row.sessions === 0
+                              ? 0
+                              : row.conversions / row.sessions,
+                          )
+                        : "—"}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <p className="mt-3 text-xs text-muted-foreground">
+        {goalEventName
+          ? `Goals are tracked ${goalEventName} events.`
+          : "Set a goal in Enquiries to compare outcomes."}
+      </p>
     </CardShell>
   );
 }

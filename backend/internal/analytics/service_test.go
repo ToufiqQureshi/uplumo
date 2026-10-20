@@ -251,7 +251,7 @@ func TestSummarize(t *testing.T) {
 			{Date: "2026-03-02", Visitors: 0, Pageviews: 0},
 			{Date: "2026-03-03", Visitors: 2, Pageviews: 2},
 		},
-		TopPages:  []PageCount{{"/", 2}, {"/pricing", 2}, {"/blog", 1}},
+		TopPages:  []PageCount{{"/", 2, 0}, {"/pricing", 2, 0}, {"/blog", 1, 0}},
 		Channels:  []ChannelCount{{channelAI, 2}, {channelReferral, 1}, {channelSearch, 1}},
 		AISources: []AISourceCount{{aiChatGPT, 1}, {aiPerplexity, 1}},
 		Referrers: []ReferrerCount{{"blog.example.org", 1}, {"google.co.in", 1}, {"perplexity.ai", 1}},
@@ -559,4 +559,77 @@ func testEnv(t *testing.T, name string) string {
 	}
 	t.Skipf("%s not set; skipping integration test", name)
 	return ""
+}
+
+func TestSummarizeSessionsCampaignsAndLandingPages(t *testing.T) {
+	ctx := context.Background()
+	f := newFixture(ctx, t)
+	s := f.addSite(ctx, t, "acme.com")
+	f.exec(ctx, t, `INSERT INTO go_analytics_enquiry_goals (project_id, event_name) VALUES ($1, 'lead')`, s.project)
+	d1 := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
+
+	send := func(ts time.Time, h Hit) {
+		t.Helper()
+		f.svc.now = func() time.Time { return ts }
+		if err := f.svc.Collect(ctx, h); err != nil {
+			t.Fatalf("Collect(%+v) error = %v", h, err)
+		}
+	}
+	view := func(page, ip, session, pageview string, engagedMS int64) Hit {
+		h := hit(t, s.key, page, "", ip, desktopUA)
+		h.SessionID, h.PageviewID, h.EngagementMS = session, pageview, engagedMS
+		return h
+	}
+	// S1: tagged email visit, two pages, then the goal: engaged and converted.
+	send(d1.Add(10*time.Hour), view("https://acme.com/?utm_source=news&utm_medium=email&utm_campaign=oct", "10.0.0.1", "s1", "p1", 3000))
+	send(d1.Add(10*time.Hour+time.Minute), view("https://acme.com/pricing", "10.0.0.1", "s1", "p2", 4000))
+	// A later engagement report for p1 raises its time instead of adding a pageview.
+	send(d1.Add(10*time.Hour+2*time.Minute), view("https://acme.com/?utm_source=news&utm_medium=email&utm_campaign=oct", "10.0.0.1", "s1", "p1", 5000))
+	goal := hit(t, s.key, "https://acme.com/pricing", "", "10.0.0.1", desktopUA)
+	goal.EventName, goal.SessionID, goal.EventID = "lead", "s1", "e1"
+	send(d1.Add(10*time.Hour+3*time.Minute), goal)
+	// S2: one short page: a bounce.
+	send(d1.Add(11*time.Hour), view("https://acme.com/blog", "10.0.0.2", "s2", "p3", 2000))
+	// S4: two quick pages, no goal: engaged by its pageviews alone.
+	send(d1.Add(12*time.Hour), view("https://acme.com/a", "10.0.0.4", "s4", "p6", 500))
+	send(d1.Add(12*time.Hour+time.Minute), view("https://acme.com/b", "10.0.0.4", "s4", "p7", 500))
+	// S3 starts a minute before the range on a tagged page and continues
+	// inside it: its landing page is the real first page, outside the range.
+	send(d1.Add(-time.Minute), view("https://acme.com/start?utm_source=ads&utm_campaign=early", "10.0.0.3", "s3", "p4", 0))
+	send(d1.Add(time.Minute), view("https://acme.com/inside", "10.0.0.3", "s3", "p5", 12000))
+
+	got, err := f.svc.Summarize(ctx, s.project, d1, d1)
+	if err != nil {
+		t.Fatalf("Summarize() error = %v", err)
+	}
+	if got.Pageviews != 6 || got.Sessions != 4 || got.EngagedSessions != 3 || got.ConversionSessions != 1 || got.GoalEventName != "lead" {
+		t.Errorf("sessions = %d pageviews, %d sessions, %d engaged, %d converted, goal %q; want 6, 4, 3, 1, lead",
+			got.Pageviews, got.Sessions, got.EngagedSessions, got.ConversionSessions, got.GoalEventName)
+	}
+	if got.BounceRate != 0.25 {
+		t.Errorf("bounce rate = %v, want 1/4", got.BounceRate)
+	}
+	wantEntries := []EntryExitCount{{"/", 1, 5000}, {"/a", 1, 500}, {"/blog", 1, 2000}, {"/start", 1, 0}}
+	if !slices.Equal(got.Entries, wantEntries) {
+		t.Errorf("entries = %+v\nwant %+v", got.Entries, wantEntries)
+	}
+	wantExits := []EntryExitCount{{"/b", 1, 500}, {"/blog", 1, 2000}, {"/inside", 1, 12000}, {"/pricing", 1, 4000}}
+	if !slices.Equal(got.Exits, wantExits) {
+		t.Errorf("exits = %+v\nwant %+v", got.Exits, wantExits)
+	}
+	wantCampaigns := []CampaignCount{
+		{Source: "news", Medium: "email", Campaign: "oct", Visitors: 1, Sessions: 1, Conversions: 1},
+		{Source: "ads", Campaign: "early", Visitors: 1, Sessions: 1},
+	}
+	if !slices.Equal(got.Campaigns, wantCampaigns) {
+		t.Errorf("campaigns = %+v\nwant %+v", got.Campaigns, wantCampaigns)
+	}
+	var sessions, conversions int64
+	for _, row := range got.AcquisitionChannels {
+		sessions += row.Sessions
+		conversions += row.Conversions
+	}
+	if sessions != 4 || conversions != 1 {
+		t.Errorf("acquisition = %+v, want 4 sessions and 1 conversion in all", got.AcquisitionChannels)
+	}
 }

@@ -13,6 +13,8 @@ const (
 	channelAI       = "ai"
 	channelSearch   = "search"
 	channelSocial   = "social"
+	channelPaid     = "paid"
+	channelEmail    = "email"
 	channelDirect   = "direct"
 	channelReferral = "referral"
 	channelInternal = "internal"
@@ -132,11 +134,13 @@ type source struct {
 //     to every link it cites, or "perplexity") is that assistant. Many
 //     assistants strip the referrer, so this recovers AI visits that would
 //     otherwise read as direct.
-//  4. A referrer on a search engine or social network is that channel.
-//  5. Any other parseable referrer host is a referral.
-//  6. With no usable referrer, a utm_source naming a search engine or social
+//  4. A paid/email utm_medium or a recognized click-id parameter classifies
+//     paid/email traffic. Only the parameter name is used; its value is dropped.
+//  5. A referrer on a search engine or social network is that channel.
+//  6. Any other parseable referrer host is a referral.
+//  7. With no usable referrer, a utm_source naming a search engine or social
 //     network is that channel (in-app browsers often send no referrer).
-//  7. Everything else is direct.
+//  8. Everything else is direct.
 //
 // Hosts compare case-insensitively without a leading "www.".
 func classify(page *url.URL, referrer, domain string) source {
@@ -156,6 +160,19 @@ func classify(page *url.URL, referrer, domain string) source {
 	if ai := aiSourceOf(utm); ai != "" {
 		return source{Channel: channelAI, AISource: ai, ReferrerHost: refHost}
 	}
+	medium := strings.ToLower(strings.TrimSpace(page.Query().Get("utm_medium")))
+	if isPaidMedium(medium) {
+		return source{Channel: channelPaid, ReferrerHost: refHost}
+	}
+	if medium == "email" || medium == "newsletter" {
+		return source{Channel: channelEmail, ReferrerHost: refHost}
+	}
+	if clickSource := adClickSource(page); clickSource != "" {
+		if clickSource == "Meta click (auto-tagged)" {
+			return source{Channel: channelSocial, ReferrerHost: refHost}
+		}
+		return source{Channel: channelPaid, ReferrerHost: refHost}
+	}
 	if refHost != "" {
 		if ch := channelOf(refHost); ch != "" {
 			return source{Channel: ch, ReferrerHost: refHost}
@@ -166,6 +183,31 @@ func classify(page *url.URL, referrer, domain string) source {
 		return source{Channel: ch}
 	}
 	return source{Channel: channelDirect}
+}
+
+func adClickSource(page *url.URL) string {
+	for _, tag := range []struct{ parameter, source string }{
+		{"gclid", "Google Ads (auto-tagged)"},
+		{"gbraid", "Google Ads (auto-tagged)"},
+		{"wbraid", "Google Ads (auto-tagged)"},
+		{"msclkid", "Microsoft Ads (auto-tagged)"},
+		{"li_fat_id", "LinkedIn (auto-tagged)"},
+		{"fbclid", "Meta click (auto-tagged)"},
+	} {
+		if page.Query().Get(tag.parameter) != "" {
+			return tag.source
+		}
+	}
+	return ""
+}
+
+func isPaidMedium(medium string) bool {
+	switch medium {
+	case "paid", "cpc", "ppc", "paid_search", "paid-search", "paid_social", "paid-social", "display", "cpm", "paid_video", "paid-video", "cpv", "affiliate", "sponsored":
+		return true
+	default:
+		return false
+	}
 }
 
 // aiSourceOf returns the assistant host or utm tag names, or "".

@@ -1,15 +1,29 @@
 import type { AiSource, AnalyticsSummary, Channel } from "./analyticsApi";
 
-const CHANNEL_LABELS: Record<Channel, { label: string; hint: string }> = {
-  ai: {
-    label: "AI assistants",
-    hint: "ChatGPT, Perplexity, Gemini and others",
-  },
-  search: { label: "Search engines", hint: "Google, Bing and others" },
-  social: { label: "Social media", hint: "Facebook, LinkedIn, X and others" },
-  referral: { label: "Other websites", hint: "Links on other sites" },
-  direct: { label: "Direct", hint: "Typed the address or used a bookmark" },
-};
+export const CHANNEL_LABELS: Record<Channel, { label: string; hint: string }> =
+  {
+    ai: {
+      label: "AI assistants",
+      hint: "ChatGPT, Perplexity, Gemini and others",
+    },
+    search: { label: "Search engines", hint: "Google, Bing and others" },
+    social: { label: "Social media", hint: "Facebook, LinkedIn, X and others" },
+    paid: { label: "Paid ads", hint: "Campaign-tagged paid traffic" },
+    email: { label: "Email", hint: "Email campaigns and newsletters" },
+    referral: { label: "Other websites", hint: "Links on other sites" },
+    direct: { label: "Direct", hint: "Typed the address or used a bookmark" },
+  };
+
+export function formatDuration(milliseconds: number): string {
+  if (milliseconds < 1000) return "<1s";
+  const totalSeconds = Math.floor(milliseconds / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  if (minutes > 0) return `${minutes}m ${seconds}s`;
+  return `${seconds}s`;
+}
 
 const AI_SOURCE_LABELS: Record<AiSource, string> = {
   chatgpt: "ChatGPT",

@@ -1,6 +1,7 @@
 package analytics
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"html"
@@ -23,8 +24,9 @@ const (
 	maxSiteKey     = 64
 	maxURL         = 2048
 	// maxEventName is the longest custom event name, in characters.
-	maxEventName   = 64
-	maxScreenWidth = 100_000
+	maxEventName    = 64
+	maxScreenWidth  = 100_000
+	maxEngagementMS = 24 * 60 * 60 * 1000
 )
 
 // Deps contains analytics services and the root router's authorization middleware.
@@ -82,13 +84,17 @@ func collect(logger *slog.Logger, svc *Service, trusted []netip.Prefix) http.Han
 		}
 
 		err = svc.Collect(r.Context(), Hit{
-			SiteKey:     req.SiteKey,
-			Page:        page,
-			Referrer:    req.Referrer,
-			ScreenWidth: req.ScreenWidth,
-			EventName:   strings.TrimSpace(req.EventName),
-			IP:          httpx.ClientIP(r, trusted),
-			UserAgent:   r.UserAgent(),
+			SiteKey:      req.SiteKey,
+			Page:         page,
+			Referrer:     req.Referrer,
+			ScreenWidth:  req.ScreenWidth,
+			EventName:    strings.TrimSpace(req.EventName),
+			SessionID:    req.SessionID,
+			PageviewID:   req.PageviewID,
+			EventID:      req.EventID,
+			EngagementMS: req.EngagementMS,
+			IP:           httpx.ClientIP(r, trusted),
+			UserAgent:    r.UserAgent(),
 		})
 		switch {
 		case err == nil:
@@ -109,11 +115,15 @@ func collect(logger *slog.Logger, svc *Service, trusted []netip.Prefix) http.Han
 // collectRequest is what the tracker posts. EventName is empty for a
 // pageview and names a custom event, such as a button click, otherwise.
 type collectRequest struct {
-	SiteKey     string `json:"k"`
-	URL         string `json:"u"`
-	Referrer    string `json:"r"`
-	ScreenWidth int    `json:"w"`
-	EventName   string `json:"n"`
+	SiteKey      string `json:"k"`
+	URL          string `json:"u"`
+	Referrer     string `json:"r"`
+	ScreenWidth  int    `json:"w"`
+	EventName    string `json:"n"`
+	SessionID    string `json:"s"`
+	PageviewID   string `json:"p"`
+	EventID      string `json:"i"`
+	EngagementMS int64  `json:"d"`
 }
 
 // validateCollect checks an event's fields and returns the parsed page URL.
@@ -131,12 +141,32 @@ func validateCollect(req collectRequest) (*url.URL, string) {
 	if req.ScreenWidth < 0 || req.ScreenWidth > maxScreenWidth {
 		return nil, fmt.Sprintf("w must be a screen width from 0 to %d.", maxScreenWidth)
 	}
+	for _, id := range []string{req.SessionID, req.PageviewID, req.EventID} {
+		if id != "" && !validTrackerID(id) {
+			return nil, "s, p and i must be 32 lowercase hexadecimal characters."
+		}
+	}
+	if req.SessionID != "" && req.PageviewID == "" {
+		return nil, "s requires a pageview id."
+	}
+	if req.EngagementMS < 0 || req.EngagementMS > maxEngagementMS ||
+		(req.EngagementMS > 0 && (req.PageviewID == "" || strings.TrimSpace(req.EventName) != "")) {
+		return nil, fmt.Sprintf("d must be from 0 to %d and requires a pageview id.", maxEngagementMS)
+	}
 	if name := strings.TrimSpace(req.EventName); req.EventName != "" &&
 		(name == "" || !utf8.ValidString(name) || utf8.RuneCountInString(name) > maxEventName ||
 			strings.ContainsFunc(name, unicode.IsControl)) {
 		return nil, fmt.Sprintf("n must be an event name of 1 to %d characters.", maxEventName)
 	}
 	return page, ""
+}
+
+func validTrackerID(id string) bool {
+	if len(id) != 32 {
+		return false
+	}
+	_, err := hex.DecodeString(id)
+	return err == nil && strings.ToLower(id) == id
 }
 
 // ensureSiteHandler returns the project's site key and tracker snippet.
