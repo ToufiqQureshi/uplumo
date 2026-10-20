@@ -81,6 +81,8 @@ func TestHandlerRefusals(t *testing.T) {
 		return testMux(newTestService(t, &fakeWeb{}, readyStore(), plans, limiter))
 	}
 	tooMany := `{"urls":[` + strings.Repeat(`"https://example.com/",`, MaxURLs) + `"https://example.com/"]}`
+	// 1,100 maximum-length URLs: under MaxURLs, over the 2 MB body cap.
+	oversized := `{"urls":[` + strings.Repeat(`"https://example.com/`+strings.Repeat("a", 2000)+`",`, 1100) + `"https://example.com/"]}`
 	longURL := `{"urls":["https://example.com/` + strings.Repeat("a", maxURLLength) + `"]}`
 	for _, test := range []struct {
 		name       string
@@ -95,6 +97,7 @@ func TestHandlerRefusals(t *testing.T) {
 		{"hourly limit", ready(planStub{included: true}, &limiterStub{}), "submit", `{"urls":["https://example.com/"]}`, http.StatusTooManyRequests, "rate_limited"},
 		{"no urls", ready(planStub{included: true}, &limiterStub{left: 1}), "submit", `{"urls":[]}`, http.StatusBadRequest, "invalid_request"},
 		{"too many urls", ready(planStub{included: true}, &limiterStub{left: 1}), "submit", tooMany, http.StatusBadRequest, "invalid_request"},
+		{"body over 2 MB", ready(planStub{included: true}, &limiterStub{left: 1}), "submit", oversized, http.StatusRequestEntityTooLarge, "too_large"},
 		{"url too long", ready(planStub{included: true}, &limiterStub{left: 1}), "submit", longURL, http.StatusBadRequest, "invalid_request"},
 		{"unknown field", ready(planStub{included: true}, &limiterStub{left: 1}), "submit", `{"urls":["https://example.com/"],"key":"x"}`, http.StatusBadRequest, "invalid_request"},
 		{"fields on get", ready(planStub{included: true}, &limiterStub{left: 1}), "get", `{"x":1}`, http.StatusBadRequest, "invalid_request"},

@@ -15,7 +15,9 @@ import (
 )
 
 const (
-	// maxRequestBody fits MaxURLs typical URLs, not MaxURLs of maxURLLength.
+	// maxRequestBody fits MaxURLs typical URLs (about 200 characters each),
+	// not MaxURLs of maxURLLength: 20 MB bodies would let one request hold
+	// that much memory. A larger body gets 413 too_large, not a parse error.
 	maxRequestBody = 2 << 20
 	maxURLLength   = 2048
 	// outboundTimeout covers checking key files and posting to engines for
@@ -187,6 +189,10 @@ func decodeEmpty(w http.ResponseWriter, r *http.Request) bool {
 
 func decode(w http.ResponseWriter, r *http.Request, dst any) bool {
 	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxRequestBody))
+	if _, tooLarge := errors.AsType[*http.MaxBytesError](err); tooLarge {
+		httpx.WriteError(w, http.StatusRequestEntityTooLarge, "too_large", "Send at most 2 MB of URLs at a time (about 10,000 typical URLs). Split the list and submit each part.")
+		return false
+	}
 	trimmed := bytes.TrimSpace(body)
 	if err != nil || len(trimmed) == 0 || trimmed[0] != '{' {
 		httpx.WriteError(w, http.StatusBadRequest, "invalid_request", "Send a JSON object.")

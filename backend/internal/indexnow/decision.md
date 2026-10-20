@@ -25,6 +25,7 @@ submits new or changed URLs by hand or after a live WordPress publish.
 - **Check the key file before submitting.** _Why:_ engines answer 202 while a
   key is unverified, so a missing file would look like success; the check
   catches it with a message the customer can act on.
+- **Body capped at 2 MB, with its own error.** _Decision:_ a submission body over 2 MB answers `413 too_large` ("split the list"), even when it holds fewer than 10,000 URLs. _Why:_ 10,000 URLs of 2,048 characters would need 20 MB per request held in memory; typical URLs (about 200 characters) fit 10,000 in 2 MB. Before, an oversized body got a misleading "Send a JSON object" (found in review). _Trace:_ `handler.go` (`decode`), `TestHandlerRefusals` "body over 2 MB".
 - **No submission history.** _Why:_ Bing Webmaster Tools already shows what
   IndexNow received; the screen shows the latest result only.
 - **No MCP tool yet.** _Why:_ not needed for the first customers; add one

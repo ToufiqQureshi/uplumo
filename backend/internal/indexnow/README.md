@@ -49,13 +49,15 @@ All `POST`, any project member (as with other project research actions):
 | `.../indexnow/check` | `{}` | `{files: [{host, status}]}` for the domain and its `www.` host |
 | `.../indexnow/submit` | `{urls: [...]}` | `{hosts: [{host, urlCount, status, message}], skipped, skippedCount}` |
 
-Errors: `402 plan_required`, `400 no_website`, `409 indexnow_not_set_up`,
+Errors: `402 plan_required`, `413 too_large`, `400 no_website`, `409 indexnow_not_set_up`,
 `429 rate_limited`, `404 not_found`, `503 indexnow_unavailable`.
 
 ## Limits
 
 - 1 to 10,000 URLs per submission (the protocol's limit), each at most 2,048
-  characters; request body at most 2 MB.
+  characters, and at most 2 MB of request body (about 10,000 typical URLs).
+  A larger body answers `413 too_large` asking to split the list; the cap is
+  not raised to 10,000 × 2,048 because one request would then hold 20 MB.
 - URLs must be http(s) on the project's domain or a subdomain, with no
   user-info or port. Others are skipped; the answer lists the first 20 and
   counts all.
