@@ -1,8 +1,6 @@
 export const BILLING_ROUTE = "/billing";
 export const SUBSCRIBE_ROUTE = "/subscribe";
 
-// YC deal: same entitlements as the base plan with $50 of monthly credits.
-export const AUTUMN_YC_PLAN_ID = "yc-plan";
 export const AUTUMN_SEO_DATA_TOP_UP_PLAN_ID = "credit-top-up";
 export const AUTUMN_PAID_PLAN_FEATURE_ID = "paid_plan";
 // Granted by both the free plan (now the Autumn Default, so every non-paid
@@ -18,23 +16,6 @@ const SEO_DATA_COST_MARKUP = 1.28;
 // DataForSEO's raw price for one Google Ads search_volume live call (up to
 // 1,000 keywords). Local keyword research adds one call to each search.
 export const LOCAL_VOLUME_COST_USD = 0.09;
-
-// Passed through to Stripe's checkout.sessions.create so checkout collects the
-// legal business name, tax ID (EU VAT etc.), and full billing address — makes
-// invoices valid for business customers. Display only, no Stripe Tax. Stripe
-// requires customer_update.name "auto" to collect tax IDs for an existing customer.
-const AUTUMN_CHECKOUT_SESSION_PARAMS = {
-  tax_id_collection: { enabled: true },
-  billing_address_collection: "required",
-  customer_update: { name: "auto", address: "auto" },
-} as const;
-
-// YC checkout additionally shows Stripe's promotion code field so founders
-// can redeem the YC deal code for their first month.
-export const AUTUMN_YC_CHECKOUT_SESSION_PARAMS = {
-  ...AUTUMN_CHECKOUT_SESSION_PARAMS,
-  allow_promotion_codes: true,
-} as const;
 
 export function roundUsdForBilling(value: number) {
   return Math.round(value * 100000) / 100000;

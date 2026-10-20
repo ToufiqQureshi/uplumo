@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"time"
 
+	"golang.org/x/sync/singleflight"
+
 	"github.com/toufiqqureshi/uplumo/backend/internal/google"
 )
 
@@ -29,9 +31,12 @@ type JSONDoer interface {
 
 // Service builds and executes GA4 reports while preserving their response contract.
 type Service struct {
-	Connections ConnectionStore
-	Google      JSONDoer
-	Now         func() time.Time
+	Connections          ConnectionStore
+	Google               JSONDoer
+	Now                  func() time.Time
+	Growth               *GrowthRepository
+	GrowthMonitorAllowed func(context.Context, string) (bool, error)
+	growthFlights        singleflight.Group
 }
 
 // RunReport runs one configured report for the authorized project.

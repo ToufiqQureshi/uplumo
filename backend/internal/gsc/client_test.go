@@ -40,7 +40,7 @@ func TestQuerySearchAnalyticsValidatesBeforeGoogle(t *testing.T) {
 	client := Client{API: &google.APIClient{Tokens: staticToken{}, Client: server.Client()}, UserID: "user", BaseURL: server.URL}
 	valid := SearchRequest{StartDate: "2026-01-01", EndDate: "2026-01-31", Dimensions: []string{"query"}, RowLimit: 100, Type: "web", DataState: "all", DimensionFilterGroups: []FilterGroup{{GroupType: "and", Filters: []DimensionFilter{{Dimension: "query", Operator: "contains", Expression: "brand"}}}}}
 	invalid := valid
-	invalid.RowLimit = 1001
+	invalid.RowLimit = maxReportRowLimit + 1
 	if _, err := client.QuerySearchAnalytics(t.Context(), "https://example.com/", invalid); err == nil || calls != 0 {
 		t.Fatalf("invalid request reached provider: %v, calls=%d", err, calls)
 	}

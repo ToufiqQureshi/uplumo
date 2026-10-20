@@ -161,3 +161,14 @@ Google or predict rankings.
   rank tracking and enquiry evidence with a clean page path. Before another edit,
   save a measurement baseline there; new articles need data before a comparison
   means anything. Opening any follow-up makes no paid check or site change.
+
+## Search Console handoff
+
+The Search Performance refresh queue can open a new draft with that page's strongest query prefilled as the target topic. This is only a draft seed: it does not fetch a brief, call AI, overwrite an existing draft or publish. The editor accepts the optional `keyword` route search value only up to 200 characters and applies it only while the current draft is clean and blank.
+
+Search Growth's explicit editor action additionally carries the existing page
+URL, related query cluster and finding evidence via validated project-scoped tab
+storage. `SearchContextPanel.tsx` displays this reference only for a `growth=1`
+handoff. It does not import external HTML, modify an existing draft, call AI or
+publish. The writer can paste existing content or open its saved draft and use
+the existing selection-scoped review/apply tools.

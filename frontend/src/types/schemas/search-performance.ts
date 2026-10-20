@@ -7,18 +7,22 @@ import {
 /** Date ranges offered by the Search Performance page. A deliberate subset of
  *  the GSC agent ranges (GSC_DATE_RANGES in searchAnalytics.ts); assignability
  *  to GscDateRange is compiler-checked at the resolveDateRange call site. */
-export const SEARCH_PERFORMANCE_RANGES = [
+const SEARCH_PERFORMANCE_RANGES = [
   "last_7_days",
   "last_28_days",
   "last_3_months",
+  "last_6_months",
+  "last_12_months",
+  "last_16_months",
 ] as const;
+
+export const GSC_SEARCH_TYPES = ["web", "image", "video", "news"] as const;
 
 /** Device values exactly as the GSC `device` dimension returns/accepts them. */
 export const GSC_DEVICES = ["DESKTOP", "MOBILE", "TABLET"] as const;
 
-export type SearchPerformanceDateRange =
-  (typeof SEARCH_PERFORMANCE_RANGES)[number];
 export type SearchPerformanceDevice = (typeof GSC_DEVICES)[number];
+export type GscSearchType = (typeof GSC_SEARCH_TYPES)[number];
 
 // Shared report/table filters. Spread into each request schema so the overview
 // and the paginated table calls always accept the exact same filter surface.
@@ -37,6 +41,15 @@ const searchPerformanceFilterShape = {
     .optional(),
   projectId: z.string().min(1),
   dateRange: z.enum(SEARCH_PERFORMANCE_RANGES).default("last_28_days"),
+  searchType: z.enum(GSC_SEARCH_TYPES).default("web"),
+  startDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  endDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
   device: z.enum(GSC_DEVICES).optional(),
   // ISO-3166-1 alpha-3, the code GSC returns in `country` dimension keys.
   country: z
@@ -95,6 +108,17 @@ const textMatchParam = z
 export const searchPerformanceSearchSchema = z.object({
   tab: z.enum(SEARCH_PERFORMANCE_TABS).optional().catch(undefined),
   range: z.enum(SEARCH_PERFORMANCE_RANGES).optional().catch(undefined),
+  searchType: z.enum(GSC_SEARCH_TYPES).optional().catch(undefined),
+  startDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional()
+    .catch(undefined),
+  endDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional()
+    .catch(undefined),
   device: z.enum(GSC_DEVICES).optional().catch(undefined),
   country: z.string().length(3).optional().catch(undefined),
   pageText: searchTextParam,

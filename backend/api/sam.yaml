@@ -102,6 +102,7 @@ paths:
               additionalProperties: false
               required: [sessionId, message]
               properties:
+                mode: { type: string, enum: [search_growth], description: Optional read-only analyst tool mode; AI completions still use credits. }
                 sessionId: { type: string, minLength: 1, maxLength: 128 }
                 message:
                   type: object

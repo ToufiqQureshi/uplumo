@@ -20,3 +20,9 @@ OpenRouter/model provider; Postgres sessions/messages; Redis limits; billing; pr
 - Require a per-turn cost ceiling and stop mid-turn if credits/limits are exhausted.
 - Never let a model-selected project ID change authorization scope.
 - Persist partial answers and settle real usage on provider/tool error; avoid charging reported-zero usage as free.
+
+Search growth handoff is an editable draft, never an automatic send. A request
+with `mode: search_growth` selects a server-enforced read-only tool subset before
+streaming. `get_search_growth_report` verifies metrics through the project-bound
+MCP runner. Provider completions retain ordinary SAM metering; paid research,
+site changes, jobs and memory writes cannot execute in analyst mode.

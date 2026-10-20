@@ -131,3 +131,23 @@ Google Cloud project `agentproject-473109`:
   enquiry measurement, reusing existing analytics and writing services. It adds
   no plan-price change, new paid provider, automatic publishing or externally
   delivered alerts. Competitor feature overlap is acknowledged in the PR.
+
+## Search Growth scope and maintenance decisions
+
+- **Decision:** consolidate Search Performance (#165) and Search Growth (#166)
+  into a single PR #166 against `main`, superseding #165 without merging or
+  deploying it. **Why:** the owner wants one reviewable change; the growth branch
+  already contains the original Search Performance commits. Keep the developer
+  handover in `PR_166_DEVELOPER_HANDOVER.txt` aligned with that combined scope.
+- **Decision:** deliver business-goal-led actions and evidence rather than a
+  claim to ingest every GA4/GSC screen. **Why:** useful decisions require correct
+  denominators, technical context and honest coverage. UI, measurement, storage
+  and AI boundaries are maintained in the Search Performance, GA4, GSC,
+  database, SAM and MCP `decision.md` files.
+- **Decision:** every repository-changing task must update its relevant
+  `decision.md` in the same commit; repository-wide decisions use this file.
+  **Why:** an AI or developer must understand the choice, evidence, trade-offs
+  and constraints without reading chat history or guessing from code. This
+  includes UI fixes, refactors, tests and documentation changes. The mandatory
+  procedure is defined once in `CLAUDE.md` section 7; a PR handover does not
+  replace feature decisions. No automated enforcement is claimed.

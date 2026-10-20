@@ -7,7 +7,7 @@ import type {
 } from "@/types/schemas/search-performance";
 
 export type FilterInput = Omit<
-  z.infer<typeof searchPerformanceInputSchema>,
+  z.input<typeof searchPerformanceInputSchema>,
   "projectId"
 >;
 

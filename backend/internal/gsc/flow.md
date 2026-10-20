@@ -20,3 +20,9 @@ Google Search Console API; encrypted Google grants; selected property in Postgre
 - Property and grant must belong to the authorized organization/project.
 - Google quotas require bounded read-only retries; do not retry writes blindly.
 - Treat provider row limits and inspection errors accurately; null/empty is not proof of no search demand.
+
+Sitemap drill-down -> selected scoped property/client -> one bounded Google
+`sitemaps.list` read -> first 200 entries + truncation and indexing caveats.
+Customer-controlled sitemap URLs are displayed safely but never fetched by the
+server. Click investigation reads two exact-page query windows on explicit action;
+expanded growth pagination stops at five 1,000-row pages per source.

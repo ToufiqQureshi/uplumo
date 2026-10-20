@@ -16,6 +16,7 @@ export const Route = createFileRoute("/_app/p/$projectId/search-performance")({
       stripSearchParams({
         tab: "striking",
         range: "last_28_days",
+        searchType: "web",
         page: 1,
         size: SEARCH_PERFORMANCE_DEFAULT_PAGE_SIZE,
       }),

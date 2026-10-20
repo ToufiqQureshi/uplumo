@@ -13,6 +13,17 @@ Shows subscription status, plan limits, credit balances and usage; starts checko
 - Never trust a browser-reported price, plan or provider cost. _Why:_ This work consumes paid quota or shared capacity, so authorization and bounds must be checked before dispatch.
 - Checkout/cancel are externally visible billing actions; require explicit user intent and preserve idempotency. _Why:_ Retries, replays and parallel requests are normal; idempotency prevents duplicate charges, records and side effects.
 
+- **No offer page sells a plan the catalog does not have.** _Decision:_ the
+  upstream `/yc` page ("YC Plan, $50, first month free") and its helpers
+  (`PlanOfferCard`, `plan-offers.ts`, `checkout-url.ts`,
+  `getCustomerPaidPlan`) are removed; `/yc` now falls through to not-found.
+  _Why:_ its button called `attach`, which always opens the Razorpay checkout
+  for Pro (₹2,499), so a customer would pay for something other than what the
+  page showed. _Preserve:_ any future offer page reads its plan, price and
+  checkout from `backend/internal/plans/catalog.go` through the billing API,
+  never from constants in the browser. _Trace:_ `useBillingCustomer.ts`
+  (`attach`), `plan-detection.ts`; checked with `pnpm ci:check` and `pnpm test`.
+
 ## Verification pointers
 
 - `credits/CreditCostHint.test.ts`
