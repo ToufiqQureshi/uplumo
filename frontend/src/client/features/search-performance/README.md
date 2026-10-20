@@ -59,3 +59,10 @@ above that breakpoint. Funnel steps use separate editable inputs with explicit
 add/remove controls. Secondary interpretation and sitemap submission details are
 collapsed; error/limited-data signals remain visible. Long action labels and
 URLs wrap, and borders use the existing theme token instead of current text color.
+
+## IndexNow
+
+The IndexNow card (`indexnow/IndexNowCard.tsx`) sits at the bottom of the
+page, shown whether or not Search Console is connected: it works on any
+website and needs no Google connection. Rules live in
+`backend/internal/indexnow/README.md`.

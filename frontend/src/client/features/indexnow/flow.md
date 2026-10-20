@@ -4,7 +4,7 @@
 
 ## Entry points
 
-- **Screen:** `routes/_app/p/$projectId/settings/integrations.tsx` → `IndexNowCard`
+- **Screens:** `search-performance/SearchPerformancePage.tsx` (under the report, with or without Search Console) and `routes/_app/p/$projectId/settings/integrations.tsx` → `IndexNowCard` (one component, one cached query)
 - **Source:** `IndexNowCard.tsx`, `indexNowApi.ts`
 
 ## Flow

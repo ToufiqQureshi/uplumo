@@ -1,6 +1,9 @@
 # indexnow
 
-The IndexNow card on Settings → Integrations (`#indexnow`). Rules, limits and
+The IndexNow card, on the Search Performance page (under the report, with or
+without Search Console connected) and on Settings → Integrations
+(`#indexnow`). Manual submission works on any website (WordPress, Shopify,
+Wix, plain HTML); only automatic submission needs a WordPress connection. Rules, limits and
 errors live in `backend/internal/indexnow/README.md`.
 
 - `IndexNowCard`: Free workspaces see a plans link; a project without a

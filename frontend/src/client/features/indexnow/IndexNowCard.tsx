@@ -97,8 +97,9 @@ function SetUp({ projectId }: { projectId: string }) {
     <div className="space-y-3 rounded-lg border border-border bg-card p-4">
       <p className="text-sm text-muted-foreground">
         Tell Bing, Yandex, Naver, Seznam and Yep about new and changed pages, so
-        they crawl them sooner. Google does not use IndexNow: for Google, keep
-        using Search Console.
+        they crawl them sooner. Works on any website: WordPress, Shopify, Wix or
+        plain HTML. Google does not use IndexNow: for Google, keep using Search
+        Console.
       </p>
       <Button
         size="sm"
