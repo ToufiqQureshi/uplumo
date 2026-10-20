@@ -241,7 +241,7 @@ func TestIssueSeverityDefaultsToWarning(t *testing.T) {
 	if severityOf(IssueMissingTitle) != SeverityCritical {
 		t.Fatal("missing-title should be critical")
 	}
-	if _, ok := getIssueDescriptor(IssueDeepPage); !ok {
+	if _, ok := DescribeIssueType(string(IssueDeepPage)); !ok {
 		t.Fatal("deep-page descriptor missing")
 	}
 }

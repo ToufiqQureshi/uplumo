@@ -30,7 +30,7 @@ export const AUDIT_ISSUE_TYPES = {
     explanation:
       "The page's HTML contains a JavaScript app container with very little readable content and no headings, links, or images. The page may load its content in the browser, or it was still loading when rendered. Content checks were skipped because this HTML may not represent the complete page.",
     howToFix:
-      'If this audit did not render JavaScript, start a new audit with "Render JavaScript" enabled to check the loaded content. For reliable crawling, serve important content and navigation in the initial HTML using server-side rendering or prerendering. This warning does not prove that search engines cannot index the page.',
+      "This audit checks the initial HTML; JavaScript rendering is not currently available in Uplumo. Verify the loaded page in a browser and serve important content and navigation in the initial HTML using server-side rendering or prerendering. This warning does not prove that search engines cannot index the page.",
   },
   "rate-limited-page": {
     severity: "warning",

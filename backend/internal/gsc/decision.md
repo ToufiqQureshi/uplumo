@@ -8,7 +8,7 @@ status or URL Inspection. `README.md` defines the supported routes and bounds;
 | --- | --- | --- |
 | Resolve the selected property and OAuth grant from the authorized organization/project. | A valid grant for one site is not permission to read another customer's property; client-provided IDs are not authority. | `repository.go`, `connections.go`, connection/handler tests |
 | Use bounded read-only retries and preserve safe provider failures. | Google has quotas; failure must not create a retry loop, leak tokens or look like valid empty evidence. | `client.go`, shared `google` transport tests |
-| Label final Web Search windows and skip a full-period comparison that crosses the available history floor. | Incomplete or differently scoped periods can manufacture apparent growth/loss. | `performance.go`, `dates.go`, `performance_test.go` |
+| Label final Web Search windows and skip a full-period comparison that crosses the available history floor. | Incomplete or differently scoped periods can manufacture apparent growth/loss. | `performance.go`, `performance_test.go` |
 | Keep growth-expanded pagination separate from existing report/table/export limits. | One explicit deeper investigation must not silently widen every user's report cost or response size. Exact bounds live in `README.md`. | `growth_rows.go`, `growth_rows_test.go` |
 | Return exact-page query evidence for click diagnosis, retaining missing rows as unknown. | Provider privacy and top-row limits mean absence is not a measured zero or proof that a query disappeared. | `sitemaps.go` (`GetPageQueryRows`), GA4 `growth_clicks.go` |
 | Read submitted sitemap metadata without fetching customer-supplied XML or expanding nested indexes. | The available API supports bounded sitemap status; a new crawler adds different security, quota and scope requirements. | `sitemaps.go`, real-client tests in `growth_rows_test.go` |
@@ -22,3 +22,10 @@ Update this file in the same commit when changing a decision, supported scope or
 failure/cost assumption. Preserve exact request bounds, organization checks and
 missing-data semantics in provider/handler tests. Real-account reconciliation is
 still required before claiming live Google reporting works for a customer.
+
+## One active date-window implementation
+
+- **Decision:** Remove unused `ResolveDateRange`, `PreviousPeriod` and month-subtraction helpers and their exclusive tests; retain `DateRange`.
+- **Why:** Production routes use the validated implementation in `performance.go`. Keeping a second, unreachable algorithm and tests hid drift.
+- **Preserve:** Live date presets, history floor, comparison semantics, authorization and Google quotas remain unchanged.
+- **Trace:** `dates.go`, `performance.go`, `performance_test.go`; production deadcode scan identified the removed functions.

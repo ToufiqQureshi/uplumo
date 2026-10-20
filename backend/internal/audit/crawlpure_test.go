@@ -96,14 +96,6 @@ func TestAdjustCrawlWindow(t *testing.T) {
 			t.Fatalf("got %d, want 2", got)
 		}
 	})
-	t.Run("clamp", func(t *testing.T) {
-		if got := ClampCrawlWindow(0, CrawlWindow); got != 1 {
-			t.Fatalf("got %d, want 1", got)
-		}
-		if got := ClampCrawlWindow(99, CrawlWindow); got != 2 {
-			t.Fatalf("got %d, want 2", got)
-		}
-	})
 }
 
 // fakeClock is a manually advanced clock for throttle tests.

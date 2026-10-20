@@ -3,7 +3,6 @@ package audit
 import (
 	"net/url"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -73,23 +72,6 @@ func CrawlerHeadersFor(rawURL string, access *CrawlerAccess) map[string]string {
 		return nil
 	}
 	return access.Headers
-}
-
-var signatureExpiryPattern = regexp.MustCompile(`expires=(\d+)`)
-
-// ParseSignatureExpiry extracts the RFC 9421 `expires=<unix seconds>` parameter
-// from a Shopify Signature-Input value.
-func ParseSignatureExpiry(signatureInput string) *time.Time {
-	match := signatureExpiryPattern.FindStringSubmatch(signatureInput)
-	if match == nil {
-		return nil
-	}
-	seconds, err := strconv.ParseInt(match[1], 10, 64)
-	if err != nil {
-		return nil
-	}
-	expiresAt := time.Unix(seconds, 0).UTC()
-	return &expiresAt
 }
 
 // IsCrawlerAccessExpired reports whether a credential has expired at now.

@@ -162,3 +162,17 @@ Google Cloud project `agentproject-473109`:
 ## Analytics daily audience definition
 
 Owner-approved scope: one focused PR adds optional 180-day browser recognition and click destinations. Daily UTC new browsers were first observed that day; returning browsers were first observed on an earlier day. A browser counts once daily, even across ten visits. Unknown coverage stays separate. Revenue/refunds/ROI, AI, alerts and GA4 redesign are excluded. Implementation, privacy and verification invariants live in `backend/internal/analytics/decision.md`.
+
+## Autonomous feature-wiring review
+
+- **Decision:** The owner authorized a repository-wide frontend/backend/data wiring review and necessary fixes, with Go built-ins and standard libraries preferred over redundant helpers. Review findings live in `docs/audits/2026-10-20-feature-wiring-review.md`.
+- **Why:** Customers need working, truthful features; frontend presence alone does not prove backend persistence or production availability.
+- **Preserve:** Normal PR review and separate deployment, tenant isolation, paid-provider guards and the mandatory feature decision records. This authorization does not claim every external integration has been reconciled live.
+- **Trace:** Feature decisions in audit, GSC, MCP, AI search and billing; the dated review distinguishes source inspection from executed tests. No agent-rule changes.
+
+## Owner authorization to complete and ship
+
+- **Decision:** The owner explicitly authorized autonomous implementation, tests, PR creation/merge, Railway deployment and Supabase work to make Uplumo usable end to end. Routine reversible implementation and release steps do not wait for the owner while they sleep.
+- **Why:** There is no separate development team; source changes alone do not establish that customers can use the result.
+- **Preserve:** Validate real data paths and failure/cost behavior, report remaining limits honestly, protect existing customer data and credentials, and never turn test-mode billing into live charges without validated payment readiness. Every change still updates the affected decision record.
+- **Trace:** Root agent guide, feature decision records, PR checks and deployment/live verification evidence. This records owner authorization; it does not alter agent rules or assert production readiness without evidence.

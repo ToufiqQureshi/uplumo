@@ -35,3 +35,10 @@ event. Shared configuration and opt-outs live in the backend site `decision.md`.
 
 - `credits/CreditCostHint.test.ts`
 - `credits/CreditsCard.test.ts`
+
+## Remove orphan renderer conversion
+
+- **Decision:** Remove shared `autumnSeoDataCreditsToUsd` after removing its only caller, the unsupported audit-rendering estimate.
+- **Why:** Unused price conversion implied an unavailable service and duplicated a stale pricing path.
+- **Preserve:** No active catalog, checkout, rank-tracking estimate, credit settlement or plan price changes.
+- **Trace:** Shared `billing.ts`; audit launch decision; frontend type, unused-code and test checks.

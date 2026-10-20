@@ -77,8 +77,6 @@ func (q platformQuery) body(extra map[string]any) []map[string]any {
 	return []map[string]any{body}
 }
 
-func clamp(value, lo, hi int) int { return min(hi, max(lo, value)) }
-
 func (p *provider) post(ctx context.Context, organizationID, path string, body any) ([]json.RawMessage, error) {
 	raw, err := json.Marshal(body)
 	if err != nil {
@@ -116,7 +114,7 @@ func items[T any](path string, results []json.RawMessage) ([]T, error) {
 
 // mentionsSearch returns the LLM answers that mention the target.
 func (p *provider) mentionsSearch(ctx context.Context, q platformQuery, limit int) ([]mentionItem, error) {
-	results, err := p.post(ctx, q.organizationID, mentionsSearchPath, q.body(map[string]any{"limit": clamp(limit, 1, 1000)}))
+	results, err := p.post(ctx, q.organizationID, mentionsSearchPath, q.body(map[string]any{"limit": min(1000, max(1, limit))}))
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +123,7 @@ func (p *provider) mentionsSearch(ctx context.Context, q platformQuery, limit in
 
 // aggregatedMetrics returns the target's totals per platform.
 func (p *provider) aggregatedMetrics(ctx context.Context, q platformQuery, listLimit int) (aggregatedTotal, error) {
-	results, err := p.post(ctx, q.organizationID, aggregatedPath, q.body(map[string]any{"internal_list_limit": clamp(listLimit, 1, 20)}))
+	results, err := p.post(ctx, q.organizationID, aggregatedPath, q.body(map[string]any{"internal_list_limit": min(20, max(1, listLimit))}))
 	if err != nil || len(results) == 0 {
 		return aggregatedTotal{}, err
 	}
@@ -142,7 +140,7 @@ func (p *provider) aggregatedMetrics(ctx context.Context, q platformQuery, listL
 func (p *provider) topPages(ctx context.Context, q platformQuery, limit int) ([]topPagesItem, error) {
 	results, err := p.post(ctx, q.organizationID, topPagesPath, q.body(map[string]any{
 		"links_scope":         "sources",
-		"items_list_limit":    clamp(limit, 1, 10),
+		"items_list_limit":    min(10, max(1, limit)),
 		"internal_list_limit": 5,
 	}))
 	if err != nil {
@@ -212,7 +210,7 @@ func (p *provider) llmResponse(ctx context.Context, r responseRequest) (llmRespo
 		"user_prompt":       r.prompt,
 		"model_name":        r.modelName,
 		"web_search":        r.webSearch,
-		"max_output_tokens": clamp(r.maxTokens, 256, 4096),
+		"max_output_tokens": min(4096, max(256, r.maxTokens)),
 	}
 	// web_search only permits searching, and models often answer from memory
 	// and return no citations. Claude accepts force_web_search to make the

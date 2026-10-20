@@ -16,14 +16,10 @@ import {
 } from "@/client/components/ui/field";
 import { Input } from "@/client/components/ui/input";
 import { Switch } from "@/client/components/ui/switch";
-import {
-  clampMaxPagesInput,
-  MIN_PAGES,
-} from "@/client/features/audit/launch/types";
+import { MIN_PAGES } from "@/client/features/audit/launch/types";
 import type { useLaunchController } from "@/client/features/audit/launch/useLaunchController";
 import { getFieldError, getFormError } from "@/client/lib/forms";
 import { RENDERED_MAX_AUDIT_PAGES } from "@/shared/audit-limits";
-import { renderingEstimateText } from "@/shared/audit-rendering";
 import { SUBSCRIBE_ROUTE } from "@/shared/billing";
 
 type Props = {
@@ -107,7 +103,6 @@ export function LaunchFormCard({
               />
               <RenderingOptions
                 launchForm={launchForm}
-                maxPagesLimit={maxPagesLimit}
                 canRenderJavaScript={canRenderJavaScript}
               />
             </div>
@@ -221,9 +216,8 @@ function LighthouseOptions({
 
 function RenderingOptions({
   launchForm,
-  maxPagesLimit,
   canRenderJavaScript,
-}: Pick<Props, "launchForm" | "maxPagesLimit" | "canRenderJavaScript">) {
+}: Pick<Props, "launchForm" | "canRenderJavaScript">) {
   return (
     <Field className="rounded-lg border border-border p-3">
       <div className="flex items-center gap-2">
@@ -245,22 +239,6 @@ function RenderingOptions({
         </FieldLabel>
       </div>
 
-      <launchForm.Subscribe
-        selector={(state) => ({
-          renderJavaScript: state.values.renderJavaScript,
-          maxPagesInput: state.values.maxPagesInput,
-        })}
-      >
-        {({ renderJavaScript, maxPagesInput }) =>
-          renderJavaScript ? (
-            <FieldDescription>
-              {renderingEstimateText(
-                clampMaxPagesInput(maxPagesInput, maxPagesLimit),
-              )}
-            </FieldDescription>
-          ) : null
-        }
-      </launchForm.Subscribe>
       {canRenderJavaScript === false && (
         <FieldDescription>
           JavaScript rendering isn&apos;t available right now.

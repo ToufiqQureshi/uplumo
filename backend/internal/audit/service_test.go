@@ -74,15 +74,33 @@ func TestStartAuditRejectsRenderingWhenUnavailable(t *testing.T) {
 	}
 }
 
-func TestStartAuditRejectsRenderingPageLimit(t *testing.T) {
+func TestEnvironmentFlagsCannotAdvertiseAnUnwiredRenderer(t *testing.T) {
+	for _, env := range []map[string]string{{"AUDIT_BROWSER_RENDERING": "true"}, {"CONTEXT_API_KEY": "fixture-context"}} {
+		store := newMemoryStore()
+		scheduler := &recordingScheduler{}
+		service := newTestService(store, scheduler, nil, nil, nil, true, env)
+		if service.Capabilities().CanRenderJavaScript {
+			t.Error("environment flag advertises an unwired renderer")
+		}
+		_, err := service.StartAudit(t.Context(), StartAuditInput{ProjectID: "proj-1", StartURL: "example.com", RenderJavaScript: true, LimitTier: TierFree})
+		if !errors.Is(err, ErrRenderingUnavailable) {
+			t.Errorf("rendering request must fail before plain HTTP crawl: %v", err)
+		}
+		if len(store.audits) != 0 || len(scheduler.enqueued) != 0 {
+			t.Fatal("unsupported rendering scheduled work")
+		}
+	}
+}
+
+func TestStartAuditRejectsUnwiredRenderingBeforePageLimit(t *testing.T) {
 	store := newMemoryStore()
 	service := newTestService(store, &recordingScheduler{}, nil, nil, nil, false,
 		map[string]string{"AUDIT_BROWSER_RENDERING": "true"})
 	_, err := service.StartAudit(context.Background(), StartAuditInput{
 		ProjectID: "proj-1", StartURL: "example.com", MaxPages: 2000, RenderJavaScript: true, LimitTier: TierSelfHosted,
 	})
-	if !errors.Is(err, ErrAuditPageLimitExceeded) {
-		t.Fatalf("error = %v, want ErrAuditPageLimitExceeded", err)
+	if !errors.Is(err, ErrRenderingUnavailable) {
+		t.Fatalf("error = %v, want ErrRenderingUnavailable", err)
 	}
 }
 
@@ -124,34 +142,29 @@ func TestStartAuditCleansUpWhenSchedulingFails(t *testing.T) {
 	}
 }
 
-func TestStartAuditHoldsRenderingCredits(t *testing.T) {
-	store := newMemoryStore()
+func TestPostInsertGateHoldsRenderingCredits(t *testing.T) {
 	meter := &fakeRenderingMeter{}
-	service := newTestService(store, &recordingScheduler{}, nil, nil, meter, false,
-		map[string]string{"AUDIT_BROWSER_RENDERING": "true"})
-	if _, err := service.StartAudit(context.Background(), StartAuditInput{
-		ProjectID: "proj-1", StartURL: "example.com", MaxPages: 20, RenderJavaScript: true, LimitTier: TierSelfHosted,
-	}); err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	service := newTestService(newMemoryStore(), &recordingScheduler{}, nil, nil, meter, false, nil)
+	var locks []RenderingLock
+	if err := service.postInsertGate(t.Context(), "org-1", auditLimits[TierSelfHosted], true, "audit-1", 20, &locks); err != nil {
+		t.Fatal(err)
 	}
-	if meter.locked != 1 || meter.lastMaxPages != 20 {
-		t.Fatalf("meter = %+v", meter)
+	if meter.locked != 1 || meter.lastMaxPages != 20 || len(locks) == 0 {
+		t.Fatalf("meter = %+v, locks = %+v", meter, locks)
 	}
 }
 
-func TestStartAuditReleasesCreditsWhenSchedulingFails(t *testing.T) {
-	store := newMemoryStore()
+func TestCleanupFailedStartReleasesRenderingCredits(t *testing.T) {
 	meter := &fakeRenderingMeter{}
 	scheduler := &recordingScheduler{failEnqueue: true}
-	service := newTestService(store, scheduler, nil, nil, meter, false,
-		map[string]string{"AUDIT_BROWSER_RENDERING": "true"})
-	if _, err := service.StartAudit(context.Background(), StartAuditInput{
-		ProjectID: "proj-1", StartURL: "example.com", MaxPages: 20, RenderJavaScript: true, LimitTier: TierSelfHosted,
-	}); err == nil {
-		t.Fatal("expected the scheduling failure to surface")
+	service := newTestService(newMemoryStore(), scheduler, nil, nil, meter, false, nil)
+	var locks []RenderingLock
+	if err := service.postInsertGate(t.Context(), "org-1", auditLimits[TierSelfHosted], true, "audit-1", 20, &locks); err != nil {
+		t.Fatal(err)
 	}
+	service.cleanupFailedStart(t.Context(), "audit-1", "proj-1", locks)
 	if meter.locked != 1 || meter.released != 1 {
-		t.Fatalf("expected the hold to be released, meter = %+v", meter)
+		t.Fatalf("expected hold release: %+v", meter)
 	}
 }
 
@@ -256,8 +269,8 @@ func TestCapabilities(t *testing.T) {
 		t.Fatal("rendering should be off")
 	}
 	enabled := newTestService(newMemoryStore(), nil, nil, nil, nil, false, map[string]string{"CONTEXT_API_KEY": "k"})
-	if !enabled.Capabilities().CanRenderJavaScript {
-		t.Fatal("rendering should be on")
+	if enabled.Capabilities().CanRenderJavaScript {
+		t.Fatal("a configured key cannot supply a renderer")
 	}
 }
 

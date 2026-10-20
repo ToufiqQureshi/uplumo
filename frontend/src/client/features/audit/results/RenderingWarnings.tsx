@@ -25,9 +25,10 @@ export function RenderingWarnings({ data }: { data: AuditResultsData }) {
             Some pages may need JavaScript to show their content.
           </AlertTitle>
           <AlertDescription>
-            {rendered
-              ? "They were still loading after rendering, so we couldn't check them."
-              : "Turn on Render JavaScript and run the audit again to check them."}
+            This audit checks initial HTML. JavaScript rendering is unavailable;
+            inspect the affected pages in a browser and serve essential content
+            in the initial HTML. This warning does not prove Google cannot index
+            them.
           </AlertDescription>
         </Alert>
       )}
@@ -47,7 +48,8 @@ export function RenderingWarnings({ data }: { data: AuditResultsData }) {
 
       {rendered && (
         <p className="text-sm text-muted-foreground">
-          JavaScript rendering was enabled for this audit.
+          This saved audit requested rendering. That setting does not prove
+          JavaScript was executed; verify the page in a browser.
         </p>
       )}
     </>

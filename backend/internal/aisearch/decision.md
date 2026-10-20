@@ -23,3 +23,10 @@ Redis cache; DataForSEO AI endpoints; plans/billing.
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.
+
+## Use built-in integer bounds
+
+- **Decision:** Replace the local clamp helper with Go built-in `min`/`max` at its four callers.
+- **Why:** The wrapper duplicated language functionality.
+- **Preserve:** Keep identical limits (1–1000, 1–20, 1–10 and 256–4096), provider call counts, billing guards, retries and cache behavior.
+- **Trace:** `provider.go` and existing AI search provider tests; no live paid calls.

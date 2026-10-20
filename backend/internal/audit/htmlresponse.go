@@ -63,19 +63,3 @@ func decodeUTF8Prefix(buffer []byte) string {
 	}
 	return builder.String()
 }
-
-// TruncateToBytes returns the longest prefix of text whose UTF-8 encoding is at
-// most maxBytes, mirroring truncateToBytes.
-func TruncateToBytes(text string, maxBytes int) string {
-	if len(text) <= maxBytes {
-		return text
-	}
-	if maxBytes <= 0 {
-		return ""
-	}
-	cut := maxBytes
-	for cut > 0 && !utf8.ValidString(text[:cut]) {
-		cut--
-	}
-	return text[:cut]
-}

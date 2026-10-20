@@ -105,10 +105,7 @@ export function ResultsView({
             {blockedCount === 1 ? "page" : "pages"}.
           </AlertTitle>
           <AlertDescription>
-            <BotProtectionAdvice
-              projectId={projectId}
-              rendered={audit.config.renderJavaScript}
-            />
+            <BotProtectionAdvice />
           </AlertDescription>
         </Alert>
       )}

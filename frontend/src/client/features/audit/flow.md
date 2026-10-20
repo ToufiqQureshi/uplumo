@@ -35,3 +35,7 @@ For orphan-page issues, `results/IssuesView.tsx` displays up to 100 orphan rows.
 - Every crawl URL must pass the SSRF guard; never let redirect targets bypass it.
 - Lighthouse/CrUX unavailability is a partial result, not proof that a page has no field data.
 - At-least-once jobs must remain idempotent so retries do not duplicate audit rows.
+
+JavaScript rendering is not wired into the crawler. Capabilities report false;
+rendering starts fail before persistence/dispatch even when legacy environment
+hints are set. Audits inspect initial HTTP HTML; PSI runs separately on Google.

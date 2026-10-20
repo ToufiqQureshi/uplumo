@@ -21,10 +21,6 @@ export function roundUsdForBilling(value: number) {
   return Math.round(value * 100000) / 100000;
 }
 
-export function autumnSeoDataCreditsToUsd(credits: number) {
-  return credits / AUTUMN_SEO_DATA_CREDITS_PER_USD;
-}
-
 /**
  * Convert a raw DataForSEO USD cost into the USD amount a hosted customer is
  * actually billed, applying the platform markup. Use this when displaying

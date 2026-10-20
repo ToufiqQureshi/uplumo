@@ -147,48 +147,11 @@ export function useAuditCapabilities(projectId: string) {
 }
 
 /** What to do when a site's bot protection blocked the crawler. */
-export function BotProtectionAdvice({
-  projectId,
-  rendered,
-}: {
-  projectId: string;
-  /** Whether this audit already rendered JavaScript. */
-  rendered: boolean;
-}) {
-  const canRender =
-    useAuditCapabilities(projectId).data?.canRenderJavaScript === true;
-  const desktopCrawlers = (
-    <>
-      <a
-        href="https://github.com/PhialsBasement/LibreCrawl"
-        target="_blank"
-        rel="noreferrer"
-      >
-        LibreCrawl
-      </a>{" "}
-      or{" "}
-      <a
-        href="https://www.screamingfrog.co.uk/seo-spider/"
-        target="_blank"
-        rel="noreferrer"
-      >
-        Screaming Frog
-      </a>
-    </>
-  );
-
-  if (!rendered && canRender) {
-    return (
-      <>
-        Turn on Render JavaScript and run the audit again. To avoid the extra
-        cost, use a free desktop crawler like {desktopCrawlers}.
-      </>
-    );
-  }
+export function BotProtectionAdvice() {
   return (
     <>
-      {rendered ? "Rendering couldn't get past it. " : null}
-      Try a free desktop crawler like {desktopCrawlers}.
+      Review your site&apos;s bot protection rules or inspect the affected pages
+      in a browser. A blocked crawl does not prove Google is blocked.
     </>
   );
 }

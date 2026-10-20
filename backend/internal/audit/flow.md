@@ -20,3 +20,7 @@ Postgres audit tables; Redis progress/cache/quota; PageSpeed Insights and CrUX; 
 - Every initial and redirected URL passes SSRF checks.
 - Per-organization crawl and PSI quotas, timeouts and page caps protect shared capacity.
 - At-least-once jobs use idempotent row IDs; provider outages remain unavailable/partial, not false zeroes.
+
+JavaScript rendering is not wired into the crawler. Capabilities report false;
+rendering starts fail before persistence/dispatch even when legacy environment
+hints are set. Audits inspect initial HTTP HTML; PSI runs separately on Google.

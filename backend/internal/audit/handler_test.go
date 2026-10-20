@@ -228,3 +228,24 @@ func TestHandlerLighthouseIssuesAndExport(t *testing.T) {
 		})
 	}
 }
+
+func TestHandlerRejectsUnwiredRenderingWithEnvironmentHint(t *testing.T) {
+	store := newMemoryStore()
+	scheduler := &recordingScheduler{}
+	service := newTestService(store, scheduler, nil, nil, nil, false, map[string]string{"AUDIT_BROWSER_RENDERING": "true"})
+	mux := testMux(service)
+	response := doJSON(t, mux, "/api/v1/projects/proj-1/audit/capabilities", `{}`)
+	var capabilities struct {
+		CanRenderJavaScript bool `json:"canRenderJavaScript"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &capabilities); err != nil || response.Code != http.StatusOK || capabilities.CanRenderJavaScript {
+		t.Fatalf("unsupported capability: status=%d body=%s err=%v", response.Code, response.Body, err)
+	}
+	response = doJSON(t, mux, "/api/v1/projects/proj-1/audit/start", `{"startUrl":"example.com","renderJavaScript":true}`)
+	if response.Code != http.StatusForbidden {
+		t.Fatalf("render start: status=%d body=%s", response.Code, response.Body)
+	}
+	if len(store.audits) != 0 || len(scheduler.enqueued) != 0 {
+		t.Fatal("unsupported rendering persisted or dispatched work")
+	}
+}

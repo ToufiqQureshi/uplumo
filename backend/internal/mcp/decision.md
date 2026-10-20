@@ -43,3 +43,10 @@ Use the package tests next to the source files in `README.md`. For changes cross
 
 Update this decision file with tool-schema, access or cost-bound changes, and
 verify schema validation and project binding through the existing MCP/SAM tests.
+
+## Use standard scope membership
+
+- **Decision:** Replace the manual `containsScope` loop with standard-library `slices.Contains`.
+- **Why:** Exact slice membership is already provided by Go; a wrapper adds no policy.
+- **Preserve:** Exact case-sensitive scope checks, token authorization and tool cost gates remain unchanged.
+- **Trace:** `oauth.go` and existing MCP/OAuth tests.
