@@ -39,6 +39,12 @@ interface).
 
 ## Verification
 
+Start the Redis integration-test deadline after the clock-hour rollover wait.
+The guard can wait 15 seconds, longer than the 10-second request budget; starting
+the context first made healthy Redis fail at the hour boundary. Preserve the
+workspace-isolation assertions and bounded Redis deadline. This changes only
+test setup in `repository_integration_test.go`, not runtime limits or submissions.
+
 `go test ./internal/indexnow/` (fake engines and sites through an in-process
 transport), with `TEST_DATABASE_URL` and `TEST_REDIS_URL` for the key store
 and the limiter. `TestPublishSubmitsLivePagesToIndexNow` in `sitepublish`

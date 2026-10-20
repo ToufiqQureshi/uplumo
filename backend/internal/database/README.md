@@ -31,3 +31,9 @@ Migration 32 adds `go_search_growth_monitors`: one scoped opt-in configuration
 and last in-app digest per project. A partial due-time index supports bounded
 worker claims; a revision token fences concurrent/disabled updates. RLS is enabled
 with no public-client policies; the trusted server/migration owner operates it.
+
+Migration 34 applies the same RLS boundary to report caches and saved actions.
+All three growth tables have no browser/Data API policies. The server database
+role must own these tables or have BYPASSRLS; API queries still require explicit
+organization/project predicates. `TestSearchGrowthStorageDeniesPublicRole`
+verifies that table grants alone cannot expose or alter stored evidence.
