@@ -107,8 +107,6 @@ func TestRedisLimiterIsPerWorkspace(t *testing.T) {
 	}
 	client := redis.NewClient(options)
 	t.Cleanup(func() { _ = client.Close() })
-	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
-	defer cancel()
 	limiter := RedisLimiter{Client: client}
 	suffix := time.Now().UTC().Format("150405.000000000")
 	heavy, quiet := "indexnow-heavy-"+suffix, "indexnow-quiet-"+suffix
@@ -118,6 +116,10 @@ func TestRedisLimiterIsPerWorkspace(t *testing.T) {
 	if time.Now().Minute() == 59 && time.Now().Second() > 50 {
 		time.Sleep(15 * time.Second)
 	}
+	// Start the Redis deadline after waiting; otherwise the rollover guard
+	// consumes the entire request budget before the first Redis operation.
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
 	for i := range HourlyLimit {
 		if ok, err := limiter.Allow(ctx, heavy); err != nil || !ok {
 			t.Fatalf("request %d = %v, %v", i+1, ok, err)
