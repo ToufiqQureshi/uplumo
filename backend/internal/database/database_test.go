@@ -3,15 +3,85 @@ package database
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"net/url"
 	"os"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/pgdb"
 )
+
+// Even a Data API role granted table privileges must not read or alter
+// server-owned evidence. The migration owner still needs normal write access.
+func TestSearchGrowthStorageDeniesPublicRole(t *testing.T) {
+	ctx := t.Context()
+	pool := openFresh(ctx, t)
+	if err := Migrate(ctx, pool); err != nil {
+		t.Fatal(err)
+	}
+	for _, sql := range []string{
+		`INSERT INTO organization(id,name,slug,created_at) VALUES ('growth-org','Test','growth-org',now())`,
+		`INSERT INTO projects(id,organization_id,name) VALUES ('growth-project','growth-org','Test')`,
+		`INSERT INTO go_search_growth_reports(project_id,organization_id,cache_key,report) VALUES ('growth-project','growth-org','key','{}')`,
+		`INSERT INTO go_search_growth_actions(id,project_id,organization_id,page,note,baseline,source,baseline_range) VALUES ('action','growth-project','growth-org','https://example.test/','Review','{}','{}','{}')`,
+		`INSERT INTO go_search_growth_monitors(project_id,organization_id,property_id,site_url) VALUES ('growth-project','growth-org','properties/1','https://example.test/')`,
+	} {
+		if _, err := pool.Exec(ctx, sql); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, table := range []string{"go_search_growth_reports", "go_search_growth_actions", "go_search_growth_monitors"} {
+		t.Run(table, func(t *testing.T) {
+			tx, err := pool.Begin(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() { _ = tx.Rollback(context.WithoutCancel(ctx)) }()
+			role := "growth_public_" + strings.ToLower(rand.Text())
+			for _, sql := range []string{
+				"CREATE ROLE " + role + " NOLOGIN",
+				"GRANT USAGE ON SCHEMA public TO " + role,
+				"GRANT SELECT, UPDATE ON " + table + " TO " + role,
+			} {
+				if _, err := tx.Exec(ctx, sql); err != nil {
+					t.Fatal(err)
+				}
+			}
+			var count int
+			if err := tx.QueryRow(ctx, "SELECT count(*) FROM "+table).Scan(&count); err != nil || count != 1 {
+				t.Fatalf("owner access: count=%d err=%v", count, err)
+			}
+			if _, err := tx.Exec(ctx, "SET LOCAL ROLE "+role); err != nil {
+				t.Fatal(err)
+			}
+			if err := tx.QueryRow(ctx, "SELECT count(*) FROM "+table).Scan(&count); err != nil || count != 0 {
+				t.Fatalf("public role exposed evidence: count=%d err=%v", count, err)
+			}
+			tag, err := tx.Exec(ctx, "UPDATE "+table+" SET organization_id='growth-org'")
+			if err != nil || tag.RowsAffected() != 0 {
+				t.Fatalf("public role updated evidence: %v %v", tag, err)
+			}
+			// Permission grants must not let the role create evidence either.
+			if _, err := tx.Exec(ctx, "RESET ROLE"); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := tx.Exec(ctx, "GRANT INSERT ON "+table+" TO "+role); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := tx.Exec(ctx, "SET LOCAL ROLE "+role); err != nil {
+				t.Fatal(err)
+			}
+			_, err = tx.Exec(ctx, "INSERT INTO "+table+"(project_id,organization_id) VALUES ('growth-project','growth-org')")
+			if pgErr, ok := errors.AsType[*pgconn.PgError](err); !ok || pgErr.Code != "42501" {
+				t.Fatalf("expected row security denial, got %v", err)
+			}
+		})
+	}
+}
 
 // testDatabaseURL returns the Postgres URL for integration tests. CI always
 // sets it, so a missing value there fails instead of silently skipping.
