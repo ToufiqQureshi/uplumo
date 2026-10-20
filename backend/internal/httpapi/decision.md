@@ -19,3 +19,9 @@ Every feature handler, auth middleware, logging and dependency wiring.
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.
+
+## Recognition and destination tracker
+
+Decision: `/t.js` accepts optional first-party browser recognition and captures configured click destinations plus outbound links without injecting content or a banner. Random browser IDs expire 180 days from creation and require secure storage/Web Locks; default snippets keep prior anonymous behavior. Host consent revocation clears identifiers and suppresses subsequent collection, including heartbeat/navigation handlers. Storage removal broadcasts revocation to other same-origin tabs. Recognition reuses the existing bounded collector, whose new fields are validated before service access.
+
+Preserve: DNT/GPC before storage/collection, session expiry, hidden-time exclusion, duplicate-event IDs and no external-provider calls. Destinations contain only HTTP(S) origin/path in transit and normalized host/path in storage; unsupported targets remain unknown. Trace: `tracker.js`, frontend `scripts/tracker.test.ts`, mounted analytics route tests and analytics feature decision/handover. Tracker verification uses local origins; no fabricated production analytics traffic.

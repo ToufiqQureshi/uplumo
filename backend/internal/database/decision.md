@@ -35,3 +35,11 @@ Use the package tests next to the source files in `README.md`. For changes cross
 Changes to these decisions update this file in the same commit. Use disposable
 integration databases; real production roles and migrations require the release
 checks in the handover. The decision text is not proof of production validation.
+
+## Analytics recognition storage (migration 35)
+
+Decision: add a server-owned site/browser-hash primary-key registry with first-observed timestamps and cascading site deletion; optional browser hashes/page hosts on pageviews; click identity and sanitized destination fields on custom events. Existing writes remain compatible through nullable fields/defaults. Site/browser/time and partial click/time indexes support the reports; existing session/time index supports observed-arrival lookups.
+
+Why: daily salted identifiers cannot establish cross-day returns, while destination association must not inflate pageviews or count duplicate event deliveries. Public collection remains behind the Go validator; no database client policies are added. Browser registry, pageviews and custom events have RLS enabled, PUBLIC privileges revoked, and anon/authenticated privileges revoked where those roles exist, including TRUNCATE privileges that RLS alone would not protect.
+
+Preserve: table owner/BYPASSRLS remains the trusted server role, API tenant checks remain necessary, and server hashes/first-seen records persist with project analytics history until deletion (not a claimed 180-day DB TTL). Goose version ordering stays canonical; production is not used for migration/testing. Trace: migration 35, `analytics_audience_test.go`, analytics integration tests and fresh migration checks. No production migration or role change is performed by opening the PR.

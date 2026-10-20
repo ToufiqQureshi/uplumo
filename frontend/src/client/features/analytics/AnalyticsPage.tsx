@@ -29,6 +29,10 @@ import {
 import { displayPath, formatDuration, formatShare } from "./presentation";
 import { TrackingCodeCard } from "./TrackingCodeCard";
 import { CountriesCard } from "./CountriesCard";
+import {
+  DailyAudienceCard,
+  ClickDestinationsCard,
+} from "./AudienceJourneyCards";
 
 const RANGE_ITEMS = RANGE_DAYS.map((days) => ({
   value: `${days}` as const,
@@ -102,7 +106,9 @@ export function AnalyticsPage({
           />
         ) : (
           <>
-            {showCode ? <TrackingCodeCard projectId={projectId} /> : null}
+            {showCode ? (
+              <TrackingCodeCard key={projectId} projectId={projectId} />
+            ) : null}
             <Dashboard
               summary={summary}
               projectId={projectId}
@@ -133,7 +139,7 @@ function SetupState({
         visits your site, which pages they read, and how many arrive from AI
         assistants.
       </p>
-      <TrackingCodeCard projectId={projectId} />
+      <TrackingCodeCard key={projectId} projectId={projectId} />
       <Button variant="outline" onClick={onCheckAgain} disabled={isChecking}>
         {isChecking ? "Checking…" : "I've installed it, check again"}
       </Button>
@@ -194,6 +200,8 @@ function Dashboard({
           />
         </CardContent>
       </Card>
+      <DailyAudienceCard days={summary.audience} />
+      <ClickDestinationsCard projectId={projectId} range={range} />
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <TrafficChartCard series={summary.series} />
@@ -261,8 +269,8 @@ function Dashboard({
           rows={deviceRows(summary.devices)}
         />
         <CountListCard
-          title="Button clicks"
-          unit="Clicks"
+          title="Custom events"
+          unit="Events"
           emptyTitle='No clicks tracked yet. Add data-uplumo-event="Signup" to any button or link to count its clicks.'
           rows={summary.events.map((row) => ({
             key: row.name,

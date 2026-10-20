@@ -95,6 +95,7 @@ func TestAnalyticsEndToEnd(t *testing.T) {
 		return rec
 	}
 	for _, route := range []struct{ method, suffix string }{
+		{http.MethodGet, "/analytics/clicks?from=2026-10-20&to=2026-10-20"},
 		{http.MethodGet, "/analytics/enquiries"}, {http.MethodPost, "/analytics/enquiries/goal"}, {http.MethodPost, "/analytics/enquiries/changes"}, {http.MethodGet, "/analytics/enquiries/changes/example"}, {http.MethodPost, "/analytics/enquiries/changes/example/delete"},
 	} {
 		target := "/api/v1/projects/" + project + route.suffix
@@ -153,6 +154,12 @@ func TestAnalyticsEndToEnd(t *testing.T) {
 	assertError(t, post("https://acme.com/", "missing-"+id), http.StatusNotFound, "unknown_site")
 
 	today := time.Now().UTC().Format(time.DateOnly)
+	var clickReport analytics.ClickReport
+	decode(t, api(http.MethodGet, "/api/v1/projects/"+project+"/analytics/clicks?from="+today+"&to="+today), http.StatusOK, &clickReport)
+	if len(clickReport.Rows) != 0 || clickReport.HasMore {
+		t.Fatal("invented click evidence", clickReport)
+	}
+	assertError(t, api(http.MethodGet, "/api/v1/projects/"+project+"/analytics/clicks?from="+today+"&to="+today+"&limit=1000"), http.StatusBadRequest, "invalid_request")
 	var sum analytics.Summary
 	decode(t, api(http.MethodGet, "/api/v1/projects/"+project+"/analytics/summary?from="+today+"&to="+today), http.StatusOK, &sum)
 	if sum.Visitors != 1 || sum.Pageviews != 1 || len(sum.AISources) != 1 || sum.AISources[0].Source != "chatgpt" {
@@ -162,6 +169,34 @@ func TestAnalyticsEndToEnd(t *testing.T) {
 	decode(t, api(http.MethodGet, fmt.Sprintf("/api/v1/analytics/%d/countries?from=%s&to=%s", site.ID, today, today)), http.StatusOK, &countryRows)
 	if len(countryRows) != 0 {
 		t.Errorf("unlocated test visitor has countries = %+v", countryRows)
+	}
+	// Exercise the browser wire contract through authorization, validation,
+	// storage and both report responses, rather than only service-level hits.
+	postHit := func(payload map[string]any) {
+		t.Helper()
+		payload["k"], payload["u"] = site.SiteKey, "https://acme.com/services"
+		payload["s"], payload["p"] = strings.Repeat("a", 32), strings.Repeat("b", 32)
+		body, err := json.Marshal(payload)
+		if err != nil {
+			t.Fatal(err)
+		}
+		req := httptest.NewRequestWithContext(ctx, http.MethodPost, "/collect", strings.NewReader(string(body)))
+		req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0) Chrome/126.0")
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		if rec.Code != http.StatusAccepted {
+			t.Fatalf("recognition/click collect: %d %s", rec.Code, rec.Body)
+		}
+	}
+	postHit(map[string]any{"b": strings.Repeat("c", 32)})
+	postHit(map[string]any{"n": "Booking", "i": strings.Repeat("d", 32), "c": true, "x": "https://partner.test/book?private=secret#hidden"})
+	decode(t, api(http.MethodGet, "/api/v1/projects/"+project+"/analytics/clicks?from="+today+"&to="+today), http.StatusOK, &clickReport)
+	if len(clickReport.Rows) != 1 || clickReport.Rows[0].Clicks != 1 || clickReport.Rows[0].Path != "/book" || clickReport.Rows[0].Type != "external" {
+		t.Fatalf("mounted click report=%+v", clickReport)
+	}
+	decode(t, api(http.MethodGet, "/api/v1/projects/"+project+"/analytics/summary?from="+today+"&to="+today), http.StatusOK, &sum)
+	if len(sum.Audience) != 1 || sum.Audience[0].NewBrowsers != 1 || sum.Audience[0].UnknownPageviews != 1 {
+		t.Fatalf("mounted audience=%+v", sum.Audience)
 	}
 	assertError(t, api(http.MethodGet, fmt.Sprintf("/api/v1/analytics/%d/countries?from=%s&to=%s&page=0", site.ID, today, today)), http.StatusBadRequest, "invalid_page")
 	assertError(t, api(http.MethodGet, fmt.Sprintf("/api/v1/analytics/%d/countries?from=%s&to=%s", site.ID+9999, today, today)), http.StatusNotFound, "unknown_site")

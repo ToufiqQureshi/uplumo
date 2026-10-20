@@ -52,3 +52,9 @@ Embedded/site templates, markdown blog content, plan catalog, static assets.
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.
+
+## Optional recognition disclosure
+
+Decision: privacy copy and tracker FAQ/blog disclose optional 180-day first-party browser recognition, default anonymous mode, first-seen/hash history retention until project/account deletion, host-managed consent and sanitized click destinations. Remove blanket claims that no visitor can be followed across days or that storage-based analytics never needs consent.
+
+Why: optional recognition changes the privacy behavior of enabled customer snippets. Existing owner tracking remains on its current default configuration; this change does not enable recognition there or inject a consent UI. Preserve accurate distinctions between browser identity and people, click intent and success, browser expiry and historical database deletion. Trace: `site.go`, `templates/privacy.html`, `blog/chatgpt-traffic-google-analytics.md`, site tests and analytics feature handover.

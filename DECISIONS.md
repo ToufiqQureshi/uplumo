@@ -158,3 +158,7 @@ Google Cloud project `agentproject-473109`:
   includes UI fixes, refactors, tests and documentation changes. The mandatory
   procedure is defined once in `CLAUDE.md` section 7; a PR handover does not
   replace feature decisions. No automated enforcement is claimed.
+
+## Analytics daily audience definition
+
+Owner-approved scope: one focused PR adds optional 180-day browser recognition and click destinations. Daily UTC new browsers were first observed that day; returning browsers were first observed on an earlier day. A browser counts once daily, even across ten visits. Unknown coverage stays separate. Revenue/refunds/ROI, AI, alerts and GA4 redesign are excluded. Implementation, privacy and verification invariants live in `backend/internal/analytics/decision.md`.

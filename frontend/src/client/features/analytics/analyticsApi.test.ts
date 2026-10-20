@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/client/lib/uplumoApi";
 import {
   analyticsCountriesPage,
+  analyticsClicksQueryOptions,
   analyticsSummaryQueryOptions,
   rangeForDays,
 } from "./analyticsApi";
@@ -28,6 +29,47 @@ describe("rangeForDays", () => {
     },
   ])("$name", ({ days, now, range }) => {
     expect(rangeForDays(days, new Date(now))).toEqual(range);
+  });
+});
+
+describe("analytics click destinations query", () => {
+  it("scopes cached pages to the project and dates and requests bounded pages", async () => {
+    const response = {
+      rows: [
+        {
+          page: "/services",
+          name: "Book",
+          host: "partner.test",
+          path: "/book",
+          type: "external" as const,
+          clicks: 3,
+          visitorDays: 2,
+          arrivals: 0,
+        },
+      ],
+      hasMore: true,
+    };
+    const fetch = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(Response.json(response));
+    const options = analyticsClicksQueryOptions("p/1", {
+      from: "2026-10-01",
+      to: "2026-10-07",
+    });
+    await expect(options.queryFn({ pageParam: 2 })).resolves.toEqual(response);
+    expect(options.queryKey).toEqual([
+      "goAnalyticsClicks",
+      "p/1",
+      "2026-10-01",
+      "2026-10-07",
+    ]);
+    expect(fetch.mock.calls[0][0]).toBe(
+      "/api/v1/projects/p%2F1/analytics/clicks?from=2026-10-01&to=2026-10-07&page=2&limit=20",
+    );
+    expect(options.getNextPageParam(response, [], 2)).toBe(3);
+    expect(
+      options.getNextPageParam({ ...response, hasMore: false }, [], 2),
+    ).toBeUndefined();
   });
 });
 
@@ -68,6 +110,14 @@ const summary = {
   goalEventName: "Signup",
   conversionSessions: 1,
   conversionRate: 1 / 3,
+  audience: [
+    {
+      date: "2026-10-07",
+      newBrowsers: 1,
+      returningBrowsers: 1,
+      unknownPageviews: 1,
+    },
+  ],
 };
 
 describe("analytics summary query", () => {
