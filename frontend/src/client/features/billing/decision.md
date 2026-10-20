@@ -26,5 +26,12 @@ Shows subscription status, plan limits, credit balances and usage; starts checko
 
 ## Verification pointers
 
+Checkout buttons expose `data-uplumo-event="subscription_checkout_<plan>"` to
+the owner-approved website tracking loader. This measures plan-specific click
+intent in Uplumo Analytics and GA4; it is not a purchase/success event. Preserve
+the existing explicit checkout mutation, disabled state, idempotency and provider
+metering. No billing amount, payment details or user identity is added to the
+event. Shared configuration and opt-outs live in the backend site `decision.md`.
+
 - `credits/CreditCostHint.test.ts`
 - `credits/CreditsCard.test.ts`

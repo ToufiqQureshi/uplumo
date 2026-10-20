@@ -22,6 +22,7 @@
 <link rel="preload" href="{{asset "geist.woff2"}}" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="{{asset "instrument-serif.woff2"}}" as="font" type="font/woff2" crossorigin>
 <script type="application/ld+json">{{.JSONLD}}</script>
+<script defer src="{{asset "analytics.js"}}"></script>
 <style>
 @font-face{font-family:"Geist";src:url("{{asset "geist.woff2"}}") format("woff2");font-weight:100 900;font-display:swap}
 @font-face{font-family:"Geist Mono";src:url("{{asset "geist-mono.woff2"}}") format("woff2");font-weight:100 900;font-display:swap}
@@ -185,11 +186,11 @@ footer .legal{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--bord
 <header class="dots">
 <nav class="wrap nav" aria-label="Main">
 <a class="brand" href="/"><img src="{{asset "logo.svg"}}" alt="" width="30" height="30">Uplumo</a>
-<a class="link hide-sm" href="/pricing"{{if eq .Path "/pricing"}} aria-current="page"{{end}}>Pricing</a>
+<a class="link hide-sm" href="/pricing" data-uplumo-event="pricing_open"{{if eq .Path "/pricing"}} aria-current="page"{{end}}>Pricing</a>
 <a class="link hide-sm" href="/blog"{{if eq .Path "/blog"}} aria-current="page"{{end}}>Blog</a>
 <a class="link hide-sm" href="/about"{{if eq .Path "/about"}} aria-current="page"{{end}}>About</a>
 <a class="link" href="/sign-in">Log in</a>
-<a class="btn btn-sm" href="{{.SignUp}}">Start free</a>
+<a class="btn btn-sm" href="{{.SignUp}}" data-uplumo-event="signup_click">Start free</a>
 </nav>
 </header>
 {{end}}
@@ -210,7 +211,7 @@ footer .legal{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--bord
 {{else}}
 <ul>{{range .Highlights}}<li>{{.}}</li>{{end}}</ul>
 {{end}}
-<a class="btn btn-md{{if not .Featured}} btn-ghost{{end}}" href="{{$.SignUp}}">{{.CTA}}</a>
+<a class="btn btn-md{{if not .Featured}} btn-ghost{{end}}" href="{{$.SignUp}}" data-uplumo-event="plan_select_{{.ID}}">{{.CTA}}</a>
 </article>
 {{end}}
 </div>
@@ -236,7 +237,7 @@ footer .legal{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--bord
 <a class="name" href="/"><img src="{{asset "logo.svg"}}" alt="" width="28" height="28">Uplumo</a>
 <p>SEO and AI search, made simple. See where you rank, where AI names you and what to fix next.</p>
 </div>
-<nav aria-label="Product"><h2>Product</h2><a href="/pricing">Pricing</a><a href="/sign-in">Log in</a><a href="{{.SignUp}}">Start free</a></nav>
+<nav aria-label="Product"><h2>Product</h2><a href="/pricing" data-uplumo-event="pricing_open">Pricing</a><a href="/sign-in">Log in</a><a href="{{.SignUp}}" data-uplumo-event="signup_click">Start free</a></nav>
 <nav aria-label="Company"><h2>Company</h2><a href="/blog">Blog</a><a href="/about">About</a><a href="/contact">Contact</a></nav>
 <nav aria-label="Legal"><h2>Legal</h2><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/refunds">Refunds</a><a href="/shipping">Delivery</a></nav>
 </div>

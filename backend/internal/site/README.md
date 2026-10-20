@@ -16,3 +16,8 @@ GET /, /pricing, /blog, /blog/{slug}, /robots.txt, /sitemap.xml, assets
 Blog sources must use reviewed HTTPS documentation hosts accepted by
 `TestPagesHaveNoDeadLinks`; Google crawling/indexing explanations link to the
 Search Central fundamentals documentation.
+
+`static/analytics.js` loads the owner's GA4 and first-party Uplumo tags on
+production public pages and the React shell. It respects DNT/GPC, excludes
+authentication routes, and records named signup/pricing/plan-selection clicks.
+See `decision.md` for the measurement boundary and verification.

@@ -394,7 +394,11 @@ function UpgradeButton({
 
   return (
     <div className="w-full space-y-3">
-      <Button onClick={() => upgrade.mutate()} disabled={upgrade.isPending}>
+      <Button
+        data-uplumo-event={`subscription_checkout_${plan}`}
+        onClick={() => upgrade.mutate()}
+        disabled={upgrade.isPending}
+      >
         {activating
           ? "Activating your plan…"
           : upgrade.isPending

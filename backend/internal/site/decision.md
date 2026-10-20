@@ -13,6 +13,32 @@ Serves Uplumo marketing pages, pricing, blog posts, robots.txt, sitemap.xml and 
 - Pricing must be sourced from the current plan catalog. _Why:_ A single server-owned source keeps UI access, checkout and limits aligned even if client state is stale or modified.
 - **The IndexNow pricing rows say it is not Google.** _Decision:_ both feature lists read `plans.IndexNow` and name Bing and other engines. _Why:_ Google does not use IndexNow; a pricing page that implied faster Google indexing would promise what the product does not do. _Trace:_ `site.go` (tools list and comparison rows), `site_test.go`.
 
+## Owner website measurement
+
+Use one shared `static/analytics.js` loader from `templates/base.html` and
+`frontend/index.html` for GA4 `G-NTP32DNMN2` and Uplumo site
+`DDVAYTG2IADAYZQSEM4GMU6HFA`, supplied by the owner. This covers both Go public
+pages and the React app without duplicating initialization in components. Load
+once per document, only on uplumo.com/www; skip DNT/GPC and authentication routes
+so development traffic and credential-link pages are excluded. The public CSP
+allows self-hosted scripts plus Google's explicit analytics hosts; do not enable
+arbitrary scripts or inline execution. Privacy copy discloses GA4 cookies and
+keeps website measurement separate from connected workspace Google grants.
+
+Named `data-uplumo-event` attributes distinguish `signup_click`, `pricing_open`,
+`plan_select_<plan>` and app `subscription_checkout_<plan>` intent. The shared
+loader sends these names to GA4; the existing Uplumo tracker collects them
+independently with session/source attribution. Do not include form values,
+emails, or payment details in event names, and never present an intent click as
+a completed subscription. Successful billing still requires server confirmation;
+no purchase conversion or person-level identity tracking is added here.
+
+Trace: `templates/base.html`, `landing.html`, `pricing.html`, `privacy.html`,
+`site.go`, `static/analytics.js`; frontend `scripts/owner-tracking.test.ts` tests
+single initialization, opt-outs, auth exclusions and named clicks. Site tests
+verify rendered assets/CSP. Owner explicitly requested a direct main push without
+a PR for these tags; that exception does not change the normal PR workflow.
+
 ## Dependencies
 
 Embedded/site templates, markdown blog content, plan catalog, static assets.

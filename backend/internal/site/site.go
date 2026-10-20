@@ -37,7 +37,7 @@ const (
 	SupportEmail = "support@uplumo.com"
 	// policyUpdated is the date shown on the legal pages. Change it whenever
 	// their text changes.
-	policyUpdated = "13 October 2026"
+	policyUpdated = "20 October 2026"
 	// operatorName and operatorAddress are the legal name and postal address
 	// of whoever runs Uplumo, and supportPhone a support number. The legal
 	// and contact pages print each only when it is set. The owner asked for
@@ -47,9 +47,11 @@ const (
 	operatorAddress = ""
 	supportPhone    = ""
 	contentType     = "text/html; charset=utf-8"
-	// The pages load nothing from other origins and run no script; the
-	// JSON-LD block is data, which script-src does not govern.
-	contentSecurityPolicy = "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; font-src 'self'; " +
+	// Run only same-origin code and Google's analytics loader. No inline
+	// executable script is needed; JSON-LD remains a data block.
+	contentSecurityPolicy = "default-src 'none'; script-src 'self' https://www.googletagmanager.com; " +
+		"connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com; " +
+		"style-src 'unsafe-inline'; img-src 'self' https://*.google-analytics.com; font-src 'self'; " +
 		"base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
 )
 

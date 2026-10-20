@@ -135,6 +135,12 @@ Google Cloud project `agentproject-473109`:
 
 ## Search Growth scope and maintenance decisions
 
+- Owner requested GA4 and Uplumo tags for uplumo.com, including subscription
+  intent clicks and source attribution, with direct push to `main` and no PR.
+  The shared loader and measurement limits are recorded in
+  `backend/internal/site/decision.md`; billing clicks remain separate from
+  server-confirmed paid subscriptions. This is a task-specific workflow exception.
+
 - **Decision:** consolidate Search Performance (#165) and Search Growth (#166)
   into a single PR #166 against `main`, superseding #165 without merging or
   deploying it. **Why:** the owner wants one reviewable change; the growth branch

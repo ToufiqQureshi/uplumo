@@ -7,8 +7,8 @@
 <h1>See what AI says about <em>your brand.</em></h1>
 <p class="lead">Uplumo shows where ChatGPT, Perplexity, Gemini and Claude mention you, then counts the visitors they actually send. Rankings, site fixes and client reports live in the same place.</p>
 <div class="cta-row">
-<a class="btn" href="{{.SignUp}}">Start free, no card →</a>
-<a class="btn btn-ghost" href="/pricing">See pricing</a>
+<a class="btn" href="{{.SignUp}}" data-uplumo-event="signup_click">Start free, no card →</a>
+<a class="btn btn-ghost" href="/pricing" data-uplumo-event="pricing_open">See pricing</a>
 </div>
 <p class="note">5 min setup · cancel in one click · no row caps on our own data</p>
 </div>
@@ -97,7 +97,7 @@
 <p>Compare limits, monthly credits and every included tool on the pricing page.</p>
 </div>
 {{template "plans" .}}
-<p class="note"><a href="/pricing">Compare plans in detail</a></p>
+<p class="note"><a href="/pricing" data-uplumo-event="pricing_open">Compare plans in detail</a></p>
 </div>
 </section>
 
@@ -115,7 +115,7 @@
 <div class="wrap final">
 <h2 id="start">Your customers already ask AI. <em>Show up.</em></h2>
 <p>Set up takes under five minutes. No card needed.</p>
-<a class="btn" href="{{.SignUp}}">Start free, no card →</a>
+<a class="btn" href="{{.SignUp}}" data-uplumo-event="signup_click">Start free, no card →</a>
 </div>
 </section>
 {{template "footer" .}}

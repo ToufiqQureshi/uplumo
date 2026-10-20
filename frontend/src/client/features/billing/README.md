@@ -25,3 +25,7 @@ share the lazy-loaded provider script. Daily limits still apply after purchase.
 remaining after checks; negative estimates warn before schedules exhaust it.
 Billing period end dates render as UTC calendar dates so a workspace west of
 UTC does not see the previous day for a midnight refill.
+
+The owner website tracking loader records checkout-button intent as
+`subscription_checkout_<plan>` through `data-uplumo-event`. These click counts
+are not confirmed payments; see `decision.md` for the boundary.

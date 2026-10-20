@@ -197,7 +197,7 @@ func TestAssets(t *testing.T) {
 	if len(refs) < 3 {
 		t.Fatalf("pages reference %d assets, want the logo, the font and the social card", len(refs))
 	}
-	wantType := map[string]string{".svg": "image/svg+xml", ".png": "image/png", ".woff2": "font/woff2"}
+	wantType := map[string]string{".svg": "image/svg+xml", ".png": "image/png", ".woff2": "font/woff2", ".js": "text/javascript; charset=utf-8"}
 	for _, ref := range refs {
 		rec := get(s.ServeAsset, ref, nil)
 		ext := ref[strings.LastIndex(ref, "."):strings.Index(ref, "?")]
