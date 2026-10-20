@@ -26,3 +26,10 @@ Starts an asynchronous crawl and presents technical SEO findings, crawl progress
 - **Why:** The server has no JavaScript renderer. Displaying a price or telling users to enable it implied a capability they could not use.
 - **Preserve:** Keep ordinary crawl and Lighthouse controls, server error handling and existing launch/result contracts. No provider work, new charge or layout redesign.
 - **Trace:** `launch/LaunchFormCard.tsx`, `launch/useLaunchController.ts`, shared `audit-issues.ts`; backend audit decision and regression tests; `frontend/tests/audit-capabilities.spec.ts` checks the disabled control, explanation and absence of automatic audit/paid work on mobile and desktop using API fixtures.
+
+## Usable guidance for initial-HTML and historical audits
+
+- **Decision:** Results warnings never tell users to enable the unavailable renderer. Stored render flags describe a request, not evidence of execution. Bot-block advice offers browser/host checks without inferring that Google is blocked.
+- **Why:** Review caught a second results alert that contradicted launch capabilities; legacy flags could also make false execution claims.
+- **Preserve:** Existing audit data stays unchanged. Keep failed-page evidence and explicit limitations; guidance must describe actions users can actually take.
+- **Trace:** `results/RenderingWarnings.tsx`, `shared.tsx`, their callers and `RenderingWarnings.test.ts` (both cases failed before fixing the copy).

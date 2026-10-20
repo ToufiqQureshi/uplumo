@@ -168,10 +168,7 @@ export function AuditDetail({
               This site's bot protection blocked our crawler.
             </AlertTitle>
             <AlertDescription>
-              <BotProtectionAdvice
-                projectId={projectId}
-                rendered={results.audit.config.renderJavaScript}
-              />
+              <BotProtectionAdvice />
             </AlertDescription>
           </Alert>
         )}
