@@ -2,12 +2,17 @@ package dashboardoverview
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"time"
 
 	"github.com/toufiqqureshi/uplumo/backend/internal/backlinks"
+	"golang.org/x/sync/singleflight"
 )
+
+// ErrBacklinksUnavailable indicates no provider is wired for a requested refresh.
+var ErrBacklinksUnavailable = errors.New("dashboard backlinks unavailable")
 
 // Store provides project and dashboard overview data.
 type Store interface {
@@ -25,7 +30,8 @@ type Service struct {
 	Backlinks interface {
 		DashboardSummary(context.Context, string, string) (backlinks.Summary, error)
 	}
-	Now func() time.Time
+	Now       func() time.Time
+	refreshes singleflight.Group
 }
 
 // Get assembles the dashboard overview for an organization project.
@@ -50,7 +56,7 @@ func (s *Service) Get(ctx context.Context, organizationID, projectID string) (Ov
 		snapshot.Stale = !fresh(snapshot.CapturedAt, s.now())
 		backlinks = &snapshot
 	}
-	return Overview{Audit: audit, Backlinks: backlinks}, nil
+	return Overview{Audit: audit, Backlinks: backlinks, BacklinkRefreshAvailable: s.Backlinks != nil}, nil
 }
 
 // RefreshBacklinkSnapshot captures one provider summary per project and domain
@@ -59,6 +65,20 @@ func (s *Service) RefreshBacklinkSnapshot(ctx context.Context, organizationID, p
 	if s == nil || s.Store == nil {
 		return fmt.Errorf("dashboard overview store unavailable")
 	}
+	result := s.refreshes.DoChan(organizationID+"\x00"+projectID, func() (any, error) {
+		shared, cancel := context.WithTimeout(context.WithoutCancel(ctx), 90*time.Second)
+		defer cancel()
+		return nil, s.refreshBacklinkSnapshot(shared, organizationID, projectID)
+	})
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case done := <-result:
+		return done.Err
+	}
+}
+
+func (s *Service) refreshBacklinkSnapshot(ctx context.Context, organizationID, projectID string) error {
 	domain, err := s.Store.ProjectDomain(ctx, projectID, organizationID)
 	if err != nil || domain == nil {
 		return err
@@ -76,15 +96,10 @@ func (s *Service) RefreshBacklinkSnapshot(ctx context.Context, organizationID, p
 		return fmt.Errorf("dashboard backlink snapshot writer unavailable")
 	}
 	if s.Backlinks == nil {
-		// No provider configured: there is nothing to refresh, and the
-		// dashboard simply shows no backlink card. Not a failure.
-		return nil
+		return ErrBacklinksUnavailable
 	}
 	summary, err := s.Backlinks.DashboardSummary(ctx, organizationID, *domain)
 	if err != nil {
-		if matches {
-			return nil
-		}
 		return err
 	}
 	snapshot := BacklinkSummary{

@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef } from "react";
+import { Fragment } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { sort } from "remeda";
 import { DashboardOnboarding } from "./DashboardOnboarding";
@@ -35,29 +35,15 @@ export function DashboardPage({ projectId }: { projectId: string }) {
   const activation = activationQuery.data;
   const overview = overviewQuery.data;
 
-  // Visit-triggered backlink snapshot: fire once per page view when the
-  // overview reports a missing or stale snapshot for a project with a domain.
-  // The server re-checks freshness, so a stray double-fire costs nothing.
   const refreshMutation = useMutation({
     mutationFn: () => refreshDashboardBacklinkSnapshot({ data: { projectId } }),
-    // Runs in the background on page view; the user did not ask for it, so a
-    // failure must not raise a toast. The card simply stays empty or stale.
+    retry: false,
     meta: { errorToast: false },
     onSuccess: () =>
       void queryClient.invalidateQueries({
         queryKey: ["dashboardOverview", projectId],
       }),
   });
-  const refreshFiredRef = useRef(false);
-  const needsSnapshot =
-    activation?.domain != null &&
-    overview !== undefined &&
-    (overview.backlinks === null || overview.backlinks.stale);
-  useEffect(() => {
-    if (!needsSnapshot || refreshFiredRef.current) return;
-    refreshFiredRef.current = true;
-    refreshMutation.mutate();
-  }, [needsSnapshot, refreshMutation]);
 
   if (activationQuery.isError && !activation) {
     return (
@@ -139,6 +125,9 @@ export function DashboardPage({ projectId }: { projectId: string }) {
                 projectId={projectId}
                 backlinks={overview.backlinks}
                 refreshing={refreshMutation.isPending}
+                canRefresh={overview.backlinkRefreshAvailable}
+                onRefresh={() => refreshMutation.mutate()}
+                refreshError={refreshMutation.error}
               />
             ),
           },

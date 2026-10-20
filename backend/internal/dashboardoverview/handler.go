@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	"github.com/toufiqqureshi/uplumo/backend/internal/auth"
+	"github.com/toufiqqureshi/uplumo/backend/internal/backlinks"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/httpx"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/spend"
 )
@@ -17,6 +18,7 @@ import (
 type Deps struct {
 	Logger            *slog.Logger
 	Service           *Service
+	Plans             backlinks.PaidPlans
 	WithSession       func(http.Handler) http.Handler
 	WithProjectAccess func(http.Handler) http.Handler
 }
@@ -84,12 +86,28 @@ func (d Deps) refresh(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusInternalServerError, "internal", "Something went wrong.")
 		return
 	}
+	if d.Plans != nil {
+		allowed, err := d.Plans.HasPaidPlan(r.Context(), org)
+		if err != nil {
+			d.Logger.ErrorContext(r.Context(), "check dashboard backlink plan", "err", err)
+			httpx.WriteError(w, http.StatusInternalServerError, "internal", "Could not check your plan.")
+			return
+		}
+		if !allowed {
+			httpx.WriteError(w, http.StatusPaymentRequired, "payment_required", "Upgrade to a paid plan to refresh backlinks.")
+			return
+		}
+	}
 	if err := d.Service.RefreshBacklinkSnapshot(r.Context(), org, r.PathValue("projectId")); err != nil {
 		if errors.Is(err, ErrProjectNotFound) {
 			httpx.WriteError(w, http.StatusNotFound, "project_not_found", "Project not found.")
 			return
 		}
 		if r.Context().Err() != nil {
+			return
+		}
+		if errors.Is(err, ErrBacklinksUnavailable) {
+			httpx.WriteError(w, http.StatusServiceUnavailable, "backlinks_unavailable", "Backlink refresh is not configured on this server.")
 			return
 		}
 		if spend.WriteHTTPError(w, err) {

@@ -16,3 +16,10 @@ Combines project onboarding state, audit/backlink summaries and GA4 overview car
 
 - `dashboardApi.test.ts`
 - `dashboardSteps.test.ts`
+
+## Let customers choose a backlink refresh
+
+- **Decision:** Remove the mount effect that purchased missing/stale snapshots. Show a pending-disabled refresh button, credit guidance and explicit stale/error state; use the server availability flag, defaulting absent flags to false. Disable automatic mutation retries.
+- **Why:** Opening or reloading the dashboard must not silently spend customer credits. The new browser regression failed on the existing page-open request before the fix.
+- **Preserve:** Keep stored results and project-scoped queries. No paid work on visits, reloads, focus or error; a click sends one mutation. Errors remain visible and do not remove saved metrics.
+- **Trace:** `DashboardPage.tsx`, `DashboardCards.tsx`, `dashboardApi.ts`; `dashboardApi.test.ts` and `frontend/tests/dashboard-spend.spec.ts`; backend dashboardoverview decision.

@@ -5,10 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/toufiqqureshi/uplumo/backend/internal/backlinks"
+	"github.com/toufiqqureshi/uplumo/backend/internal/platform/spend"
 )
 
 func dashboardDB(t *testing.T) *pgxpool.Pool {
@@ -66,5 +70,94 @@ func TestRepositoryReadsProjectScopedDashboardCards(t *testing.T) {
 	}
 	if _, err = repo.ProjectDomain(context.Background(), "p", "other-org"); !errors.Is(err, ErrProjectNotFound) {
 		t.Fatalf("unauthorized organization err=%v", err)
+	}
+}
+
+type snapshotProvider struct {
+	calls atomic.Int32
+	delay time.Duration
+	err   error
+}
+
+func (p *snapshotProvider) DashboardSummary(ctx context.Context, _, _ string) (backlinks.Summary, error) {
+	p.calls.Add(1)
+	timer := time.NewTimer(p.delay)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return backlinks.Summary{}, ctx.Err()
+	case <-timer.C:
+	}
+	count := 42.0
+	return backlinks.Summary{Backlinks: &count}, p.err
+}
+
+func TestConcurrentRefreshPersistsOnePurchaseAndReusesDailySnapshot(t *testing.T) {
+	db := dashboardDB(t)
+	provider := &snapshotProvider{delay: 100 * time.Millisecond}
+	svc := &Service{Store: Repository{DB: db}, Backlinks: provider}
+	start := make(chan struct{})
+	var group sync.WaitGroup
+	for range 8 {
+		group.Go(func() {
+			<-start
+			if err := svc.RefreshBacklinkSnapshot(t.Context(), "o", "p"); err != nil {
+				t.Error(err)
+			}
+		})
+	}
+	close(start)
+	group.Wait()
+	if got := provider.calls.Load(); got != 1 {
+		t.Fatalf("provider purchases=%d, want one for eight concurrent refreshes", got)
+	}
+	if err := svc.RefreshBacklinkSnapshot(t.Context(), "o", "p"); err != nil {
+		t.Fatal(err)
+	}
+	overview, err := svc.Get(t.Context(), "o", "p")
+	if err != nil || overview.Backlinks == nil || overview.Backlinks.Stale || overview.Backlinks.Backlinks == nil || *overview.Backlinks.Backlinks != 42 || !overview.BacklinkRefreshAvailable {
+		t.Fatalf("persisted result=%+v, err=%v", overview, err)
+	}
+	var rows int
+	if err = db.QueryRow(t.Context(), "SELECT count(*) FROM backlink_snapshots WHERE project_id='p'").Scan(&rows); err != nil || rows != 3 {
+		t.Fatalf("rows=%d, want two fixtures plus one refresh: %v", rows, err)
+	}
+	if got := provider.calls.Load(); got != 1 {
+		t.Fatalf("fresh snapshot caused another purchase: %d", got)
+	}
+	if err = svc.RefreshBacklinkSnapshot(t.Context(), "other-org", "p"); !errors.Is(err, ErrProjectNotFound) {
+		t.Fatalf("cross-tenant refresh=%v", err)
+	}
+	if _, err = db.Exec(t.Context(), "INSERT INTO projects VALUES('p2','o2','example.com',NULL)"); err != nil {
+		t.Fatal(err)
+	}
+	if err = svc.RefreshBacklinkSnapshot(t.Context(), "o2", "p2"); err != nil {
+		t.Fatal(err)
+	}
+	if got := provider.calls.Load(); got != 2 {
+		t.Fatalf("independent organization purchases=%d, want two total", got)
+	}
+}
+
+func TestFailedRefreshKeepsStaleDataAndReturnsTheRefusal(t *testing.T) {
+	db := dashboardDB(t)
+	if _, err := db.Exec(t.Context(), "UPDATE backlink_snapshots SET domain='example.com' WHERE project_id='p'"); err != nil {
+		t.Fatal(err)
+	}
+	provider := &snapshotProvider{err: spend.ErrNoCredits}
+	svc := &Service{Store: Repository{DB: db}, Backlinks: provider}
+	if err := svc.RefreshBacklinkSnapshot(t.Context(), "o", "p"); !errors.Is(err, spend.ErrNoCredits) {
+		t.Fatalf("refusal hidden as refresh success: %v", err)
+	}
+	overview, err := svc.Get(t.Context(), "o", "p")
+	if err != nil || overview.Backlinks == nil || !overview.Backlinks.Stale {
+		t.Fatalf("lost stale snapshot: %+v, %v", overview, err)
+	}
+	var rows int
+	if err = db.QueryRow(t.Context(), "SELECT count(*) FROM backlink_snapshots").Scan(&rows); err != nil || rows != 2 {
+		t.Fatalf("failed refresh changed stored rows=%d: %v", rows, err)
+	}
+	if provider.calls.Load() != 1 {
+		t.Fatalf("failure was automatically retried: %d", provider.calls.Load())
 	}
 }

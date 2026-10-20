@@ -77,6 +77,7 @@ export async function getDashboardOverview({ data }: ProjectInput) {
     z.object({
       audit: dashboardAuditSchema.nullable(),
       backlinks: dashboardBacklinksSchema.nullable(),
+      backlinkRefreshAvailable: z.boolean().default(false),
     }),
     "POST",
     {},

@@ -2,6 +2,7 @@ package dashboardoverview
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 )
@@ -47,10 +48,14 @@ func TestSortIssuesMatchesSeverityThenPageCount(t *testing.T) {
 		t.Fatalf("sorted issues=%+v", rows)
 	}
 }
-func TestRefreshWithoutBacklinkProviderIsNotAFailure(t *testing.T) {
+func TestRefreshWithoutBacklinkProviderReportsUnavailable(t *testing.T) {
 	domain := "example.com"
 	svc := &Service{Store: writableStore{&storeStub{domain: &domain}}}
-	if err := svc.RefreshBacklinkSnapshot(context.Background(), "org-1", "project-1"); err != nil {
+	got, err := svc.Get(t.Context(), "org-1", "project-1")
+	if err != nil || got.BacklinkRefreshAvailable {
+		t.Fatalf("unavailable provider advertised: %+v, %v", got, err)
+	}
+	if err := svc.RefreshBacklinkSnapshot(context.Background(), "org-1", "project-1"); !errors.Is(err, ErrBacklinksUnavailable) {
 		t.Fatalf("refresh without provider: %v", err)
 	}
 }

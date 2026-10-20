@@ -52,7 +52,11 @@ describe("dashboard API", () => {
       .mockResolvedValueOnce(Response.json({ ok: true }));
     await expect(
       getDashboardOverview({ data: { projectId: "p1" } }),
-    ).resolves.toEqual({ audit: null, backlinks: null });
+    ).resolves.toEqual({
+      audit: null,
+      backlinks: null,
+      backlinkRefreshAvailable: false,
+    });
     await markDashboardStepClicked({
       data: { projectId: "p1", step: "competitor" },
     });

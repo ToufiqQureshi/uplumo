@@ -27,3 +27,8 @@ Go packages: `dashboardoverview`, `activation` and `ga4`; optional backlink refr
 - Dashboard loads must not trigger expensive provider refreshes implicitly; refresh stays an explicit action.
 - Refresh cost and plan checks stay server-side; stale snapshots should be labeled, not silently refreshed.
 - Activation mutations are user/project-scoped and first-use timestamps remain stable.
+
+Snapshot refresh: explicit button → existing Backlinks plan gate → scoped
+in-flight operation → re-check saved 24-hour snapshot → at most one metered
+summary task → Postgres save → invalidate overview. No history task, automatic
+retry or page-load purchase. Failures retain saved data and surface an error.
