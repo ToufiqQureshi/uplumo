@@ -21,11 +21,11 @@ tracked page baselines per project. Both cascade on project/account deletion;
 reads/writes carry organization and project, and page uniqueness prevents
 repeated saves from replacing baseline evidence.
 
-Migrations 29/30 are the exact additive preparatory schemas from PR #163. Keep
-them byte-identical when merging that PR: shipping 31 ahead of absent lower
-versions would make a later startup encounter out-of-order migrations. These
-nullable columns and indexes alone do not enable session tracking or change
-existing analytics ingestion behavior.
+Migrations 29/30 add campaign fields, session/event hashes, engagement storage
+and indexes with defaults compatible with existing analytics writes. The schema
+alone does not enable session tracking or change analytics ingestion. Preserve
+applied migration contents and keep all prerequisite versions in order so startup
+never encounters a missing lower version.
 
 Migration 32 adds `go_search_growth_monitors`: one scoped opt-in configuration
 and last in-app digest per project. A partial due-time index supports bounded
