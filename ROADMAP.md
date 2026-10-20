@@ -171,8 +171,6 @@ Secrets go into Railway variables only, never into the repo or chat.
   (keywords, rank tracking, backlinks, AI visibility). An AI model cannot
   replace it, because it has no real search data.
 - Audit page and AI-check limits per plan.
-- The `/yc` offer page still talks about USD credits and top-ups. Remove it
-  or rebuild it (the `/billing` page now shows credits from the Go API).
 - Cloudflare's managed `robots.txt` blocks AI crawlers (GPTBot, ClaudeBot,
   Google-Extended) on a product that sells AI visibility. Keep or turn off.
 - Whether billing rows are kept when an account is erased (tax records). See
