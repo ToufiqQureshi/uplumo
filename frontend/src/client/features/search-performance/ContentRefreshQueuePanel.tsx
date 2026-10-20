@@ -47,10 +47,11 @@ export function ContentRefreshQueue({
       <CardHeader>
         <CardTitle>Content refresh queue</CardTitle>
         <CardDescription>
-          Pages found in the report&apos;s 100 highest-impression
-          striking-distance queries, with at least 50 impressions and average
-          positions 5–20. These are review candidates, not proof that a page is
-          outdated.
+          Pages grouped from up to 1,000 query-page rows returned by Search
+          Console. We highlight pages with at least 50 impressions and average
+          positions 5 to 20; Google can omit rows, so this list may be
+          incomplete. These are review candidates, not proof that a page is
+          outdated.{" "}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -85,24 +86,42 @@ export function ContentRefreshQueue({
                       {item.queries.map((query) => query.query).join(" · ")}
                     </TableCell>
                     <TableCell>
-                      {safePageUrl(item.page) ? (
-                        <Button
-                          size="xs"
-                          variant="outline"
-                          nativeButton={false}
-                          render={
-                            <a
-                              href={safePageUrl(item.page)}
-                              target="_blank"
-                              rel="noreferrer"
-                            />
-                          }
-                        >
-                          Review page
-                        </Button>
-                      ) : (
-                        "—"
-                      )}
+                      <div className="flex flex-wrap items-center gap-1">
+                        {safePageUrl(item.page) ? (
+                          <Button
+                            size="xs"
+                            variant="outline"
+                            nativeButton={false}
+                            render={
+                              <a
+                                href={safePageUrl(item.page)}
+                                target="_blank"
+                                rel="noreferrer"
+                              />
+                            }
+                          >
+                            Review page
+                          </Button>
+                        ) : null}
+                        {item.queries[0]?.query ? (
+                          <Button
+                            size="xs"
+                            variant="outline"
+                            nativeButton={false}
+                            render={
+                              <Link
+                                to="/p/$projectId/content-editor"
+                                params={{ projectId }}
+                                search={{
+                                  keyword: item.queries[0].query.slice(0, 200),
+                                }}
+                              />
+                            }
+                          >
+                            Start draft
+                          </Button>
+                        ) : null}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

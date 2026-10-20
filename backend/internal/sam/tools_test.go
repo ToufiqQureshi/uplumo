@@ -302,3 +302,24 @@ func TestMapLinksBlockedHostIsReportedNotFatal(t *testing.T) {
 		t.Fatalf("out = %v err = %v", out, err)
 	}
 }
+
+func TestGrowthAnalystBlocksPaidAndMutatingToolsAtExecution(t *testing.T) {
+	runner := mcp.NewRunner(mcp.Deps{Logger: slog.New(slog.NewTextHandler(io.Discard, nil))})
+	ts := testToolset(t, runner)
+	ts.restrictToGrowth()
+	offered := map[string]bool{}
+	for _, def := range ts.Definitions() {
+		offered[def.Name] = true
+	}
+	if !offered["get_search_growth_report"] || !offered["read_pages"] {
+		t.Fatal("analyst lost its evidence tools")
+	}
+	for _, name := range []string{"get_domain_overview", "research_keywords", "run_site_audit", "update_project_context", "save_keywords", "activate_skill"} {
+		if offered[name] {
+			t.Fatalf("analyst offers %s", name)
+		}
+		if _, isError, err := ts.Run(t.Context(), name, json.RawMessage(`{}`)); err == nil || !isError {
+			t.Fatalf("analyst executed blocked tool %s", name)
+		}
+	}
+}

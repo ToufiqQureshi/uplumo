@@ -29,6 +29,7 @@ type PerformanceDeps struct {
 func MountPerformance(mux *http.ServeMux, d PerformanceDeps) {
 	protect := func(h http.Handler) http.Handler { return d.WithSession(d.WithProjectAccess(h)) }
 	base := "POST /api/v1/projects/{projectId}/gsc/search-performance/"
+	mux.Handle(base+"sitemaps", protect(performanceHandler(d, runSitemaps)))
 	mux.Handle(base+"report", protect(performanceHandler(d, runPerformanceReport)))
 	mux.Handle(base+"table", protect(performanceHandler(d, runPerformanceTable)))
 	mux.Handle(base+"export", protect(performanceHandler(d, runPerformanceExport)))
@@ -132,8 +133,11 @@ func runPerformanceExport(s *Service, w http.ResponseWriter, r *http.Request, or
 }
 
 func validatePerformanceInput(input *PerformanceInput) error {
-	if input.DateRange != "" && input.DateRange != last7Days && input.DateRange != last28Days && input.DateRange != last3Months {
-		return validationError("dateRange must be last_7_days, last_28_days, or last_3_months.")
+	if input.DateRange != "" && input.DateRange != last7Days && input.DateRange != last28Days && input.DateRange != last3Months && input.DateRange != last6Months && input.DateRange != last12Months && input.DateRange != last16Months {
+		return validationError("dateRange must be a supported Search Console range.")
+	}
+	if input.SearchType != "" && input.SearchType != "web" && input.SearchType != "image" && input.SearchType != "video" && input.SearchType != "news" {
+		return validationError("searchType must be web, image, video, or news.")
 	}
 	if input.Device != "" && input.Device != "DESKTOP" && input.Device != "MOBILE" && input.Device != "TABLET" {
 		return validationError("device must be DESKTOP, MOBILE, or TABLET.")
@@ -213,4 +217,12 @@ func PublicError(err error) (code, message string, ok bool) {
 		return connection.Code, connection.Message, true
 	}
 	return "", "", false
+}
+
+func runSitemaps(s *Service, w http.ResponseWriter, r *http.Request, org, project string) (any, error) {
+	var in struct{}
+	if err := decodePerformance(w, r, &in); err != nil {
+		return nil, err
+	}
+	return s.GetSitemaps(r.Context(), org, project)
 }

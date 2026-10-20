@@ -1,8 +1,13 @@
+import {
+  takeAnalystDraft,
+  isAnalystSession,
+  setAnalystSession,
+} from "./analystDraft";
 import { useChat } from "@ai-sdk/react";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { DefaultChatTransport } from "ai";
 import type { UIMessage } from "ai";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { findLast } from "remeda";
 import { toast } from "sonner";
 import { ChatComposer } from "@/client/features/sam/ChatComposer";
@@ -68,6 +73,11 @@ function SamChatView({
   initialMessages: UIMessage[];
 }) {
   const queryClient = useQueryClient();
+  const [analystMode, setAnalystMode] = useState(
+    () =>
+      Boolean(takeAnalystDraft(projectId)) ||
+      isAnalystSession(projectId, sessionId),
+  );
   // The conversation lives on the Go server; each send is one HTTP request
   // whose response streams the reply. The server keeps the transcript, so the
   // request carries only the new message, not the history.
@@ -80,12 +90,13 @@ function SamChatView({
           return {
             body: {
               sessionId,
+              ...(analystMode ? { mode: "search_growth" } : {}),
               message: { id: last.id, text: messageText(last) },
             },
           };
         },
       }),
-    [projectId, sessionId],
+    [projectId, sessionId, analystMode],
   );
   // SAM streams dense tool-input deltas; unthrottled per-chunk store fanout
   // re-renders the transcript per delta.
@@ -107,6 +118,7 @@ function SamChatView({
     text: string,
     source: "composer" | "suggestion" | "edit" | "retry" = "composer",
   ) => {
+    setAnalystSession(projectId, sessionId, analystMode);
     pinToBottom();
     captureClientEvent("sam:message_send", {
       session_id: sessionId,
@@ -269,7 +281,26 @@ function SamChatView({
 
       <div className="flex-shrink-0 border-t border-border px-5 py-3">
         <div className="mx-auto w-full max-w-2xl">
+          {analystMode ? (
+            <div className="mb-2 flex items-center justify-between gap-2 text-xs text-muted-foreground">
+              <span>
+                SEO analyst · read-only data tools · AI reply uses credits
+              </span>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={isBusy}
+                onClick={() => {
+                  setAnalystSession(projectId, sessionId, false);
+                  setAnalystMode(false);
+                }}
+              >
+                Switch to general assistant
+              </Button>
+            </div>
+          ) : null}
           <ChatComposer
+            projectId={projectId}
             busy={isBusy}
             onSend={sendText}
             onStop={() => void stop()}

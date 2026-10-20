@@ -58,7 +58,18 @@ const slugFromTitle = (title: string) =>
     .replace(/^-|-$/gu, "")
     .slice(0, 300);
 
-export function ContentEditorPage({ projectId }: { projectId: string }) {
+const blankDraftForKeyword = (keyword?: string): ContentDraftInput => ({
+  ...blankDraft,
+  targetKeyword: keyword ?? "",
+});
+
+export function ContentEditorPage({
+  projectId,
+  initialKeyword,
+}: {
+  projectId: string;
+  initialKeyword?: string;
+}) {
   const queryClient = useQueryClient();
   const draftsQuery = useQuery({
     queryKey: contentEditorQueryKeys.drafts(projectId),
@@ -70,9 +81,13 @@ export function ContentEditorPage({ projectId }: { projectId: string }) {
   const [mode, setMode] = useState<EditorMode>("seo");
   const [tab, setTab] = useState<EditorTab>("score");
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [draft, setDraft] = useState<ContentDraftInput>(blankDraft);
+  const [draft, setDraft] = useState<ContentDraftInput>(() =>
+    blankDraftForKeyword(initialKeyword),
+  );
   const [draftId, setDraftId] = useState<string>();
-  const [savedSnapshot, setSavedSnapshot] = useState(blankDraft);
+  const [savedSnapshot, setSavedSnapshot] = useState<ContentDraftInput>(() =>
+    blankDraftForKeyword(initialKeyword),
+  );
   const [initialized, setInitialized] = useState(false);
   const [imageUploadBusy, setImageUploadBusy] = useState(false);
   const [scoredDraft, setScoredDraft] = useState(draft);

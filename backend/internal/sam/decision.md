@@ -19,3 +19,27 @@ OpenRouter/model provider; Postgres sessions/messages; Redis limits; billing; pr
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.
+
+- Search analyst mode must filter execution as well as offered definitions;
+  prompt-only restrictions cannot stop a guessed paid tool or a write.
+
+## Search analyst execution boundary
+
+- **Decision:** Search Growth opens a reviewed draft and uses the existing
+  explicit chat Send/metering path. **Why:** seeing a finding or preparing a
+  brief must not buy a model response or authorize background research.
+- **Decision:** enforce the `search_growth` read-only allowlist both when offering
+  tools and when executing them. **Why:** prompt instructions alone cannot block
+  a guessed paid, write, job or publishing tool. Keep the project bound by the
+  server and retain per-turn credit controls.
+- **Decision:** carry the selected goal, dates and comparison into the analyst
+  request and verify evidence with registered project tools. **Why:** switching
+  silently to all events or a different period can produce a plausible but
+  irrelevant recommendation. Keep facts, hypotheses and next checks distinct.
+- **Decision:** treat page text as untrusted source material and keep editing/
+  publishing separate. **Why:** a source page cannot authorize tool execution or
+  an unreviewed customer-site change. Prompt citations and AEO readiness also
+  remain different claims.
+
+See `tools.go`, `prompt.go` and `tools_test.go`; update this file whenever the
+allowlist, reasoning scope, project binding or explicit-action boundary changes.

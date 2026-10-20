@@ -17,7 +17,7 @@ func toolFeature(name string) (plans.Feature, bool) {
 		return plans.Backlinks, true
 	case "get_domain_overview", "get_domain_keyword_suggestions", "get_ranked_keywords", "find_serp_competitors":
 		return plans.DomainResearch, true
-	case "get_search_console_performance", "inspect_urls", "get_search_opportunities",
+	case "get_search_growth_report", "get_search_console_performance", "inspect_urls", "get_search_opportunities",
 		"get_google_analytics_organic_landing_pages", "get_google_analytics_page_performance",
 		"get_google_analytics_key_events", "get_google_analytics_traffic_acquisition",
 		"get_google_analytics_ecommerce_performance", "get_google_analytics_site_search",

@@ -29,6 +29,7 @@ type sessionRequest struct {
 }
 
 type chatRequest struct {
+	Mode      string `json:"mode,omitempty"`
 	SessionID string `json:"sessionId"`
 	Message   struct {
 		ID   string `json:"id"`
@@ -91,6 +92,10 @@ func (d Deps) chat(w http.ResponseWriter, r *http.Request) {
 		writeInvalid(w)
 		return
 	}
+	if in.Mode != "" && in.Mode != "search_growth" {
+		writeInvalid(w)
+		return
+	}
 	text := strings.TrimSpace(in.Message.Text)
 	if text == "" || utf8.RuneCountInString(text) > maxMessageChars {
 		httpx.WriteError(w, http.StatusBadRequest, "invalid_message", "Write a message of up to 20,000 characters.")
@@ -100,6 +105,7 @@ func (d Deps) chat(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	sc.SearchGrowth = in.Mode == "search_growth"
 	ctx, release, ok := d.Chat.turns.begin(r.Context(), sc.SessionID)
 	if !ok {
 		httpx.WriteError(w, http.StatusConflict, "sam_turn_in_progress", "SAM is still answering. Wait for the reply or stop it first.")

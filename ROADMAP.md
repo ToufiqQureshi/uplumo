@@ -60,7 +60,7 @@ mean each one has been tried on production with real provider keys.
 | Rank tracking        | Configs, manual and scheduled checks, city-level locations                                                                                                                                 |
 | Site audit           | Crawl, issues, Lighthouse through Google PageSpeed Insights (free; homepage only on Free) with real-visitor Core Web Vitals                                                                |
 | Backlinks, Domain    | Overview, rows, referring domains, top pages; domain keywords and pages                                                                                                                    |
-| Google               | Search Console performance and URL inspection, GA4 reports and measurement health                                                                                                          |
+| Google               | Search Console performance opportunities and URL inspection, GA4 reports and measurement health                                                                                                          |
 | Reports              | White-label reports (logo, name, colour, website), public share links                                                                                                                      |
 | Content editor       | Project drafts, live SEO/AEO checks, AI writing actions                                                                                                                                    |
 | Website publishing   | Connect a WordPress site (onboarding or Settings → Integrations), publish or update drafts with their images (Basic and above)                                                             |
@@ -186,3 +186,25 @@ Secrets go into Railway variables only, never into the repo or chat.
 - **Built:** Missed Enquiries Finder and in-app Lead Flow Guard using first-party
   events, instrumentation/sample caveats, immutable pre-change baselines and the
   first complete post-change week. No external alert delivery or revenue claim.
+
+## Search growth analyst
+
+- Search Performance includes an explicit GSC + Google-organic GA4 opportunity
+  workflow, query branding/competing-page evidence, measurement/device checks,
+  stored AI citations, saved page actions and observed 14/28-day results.
+- SAM can explain verified evidence and prepare page improvement briefs in
+  read-only analyst mode. Existing editor tools keep review/apply explicit.
+- Before/after differences are observational; GA4 key events require correct
+  customer configuration and are not automatically confirmed leads or sales.
+
+## Goal-led search diagnosis
+
+- Built: registered GA4 business-goal selection, goal-specific session rates,
+  low-click/query diagnosis, submitted-sitemap status and explicit stored-index
+  checks, actual ordered GA4 funnels, attribution investigation, weekday-aligned
+  year comparisons and optional unchanged-page comparison baselines.
+- Built: explicit expanded growth coverage (5,000 rows/source) and opt-in weekly
+  in-app top-three actions/drop alerts, with no scheduled paid AI or email.
+- Google native generative-AI reporting and optional BigQuery setup are external
+  entry points; automatic ingestion is not implemented. Real-account Google
+  reconciliation and production acceptance remain pending.

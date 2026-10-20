@@ -133,7 +133,7 @@ func validFilter(filter DimensionFilter) bool {
 // ValidateSearchRequest rejects provider-invalid dates, dimensions and paging.
 func ValidateSearchRequest(request SearchRequest) error {
 	if !validDate(request.StartDate) || !validDate(request.EndDate) || request.StartDate > request.EndDate ||
-		request.RowLimit < 1 || request.RowLimit > 1000 || request.StartRow < 0 || request.StartRow > 1_000_000 ||
+		request.RowLimit < 1 || request.RowLimit > 25_000 || request.StartRow < 0 || request.StartRow > 1_000_000 ||
 		len(request.Dimensions) == 0 || len(request.Dimensions) > 6 || len(request.DimensionFilterGroups) > 1 {
 		return errors.New("invalid search analytics request")
 	}
@@ -178,7 +178,7 @@ func (c *Client) QuerySearchAnalytics(ctx context.Context, siteURL string, reque
 		Rows []SearchRow `json:"rows"`
 	}
 	endpoint := c.baseURL() + "/sites/" + url.PathEscape(siteURL) + "/searchAnalytics/query"
-	if err := c.API.DoJSON(ctx, google.APIRequest{UserID: c.UserID, Provider: "gsc", AccountID: c.AccountID, Method: http.MethodPost, URL: endpoint, Body: request, Response: &response, Retryable: true, MaxResponseBytes: 4 << 20}); err != nil {
+	if err := c.API.DoJSON(ctx, google.APIRequest{UserID: c.UserID, Provider: "gsc", AccountID: c.AccountID, Method: http.MethodPost, URL: endpoint, Body: request, Response: &response, Retryable: true, MaxResponseBytes: 16 << 20}); err != nil {
 		return nil, err
 	}
 	if len(response.Rows) > request.RowLimit {

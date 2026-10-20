@@ -1,0 +1,262 @@
+UPLUMO — PR #166 DEVELOPER HANDOVER
+=================================
+Purpose: help a user understand search problems, choose a useful business action,
+and observe the result. This file covers the complete Search Growth workflow,
+including the original Search Performance changes from #165, the analyst
+implementation, goal/diagnosis extension and mobile usability fixes.
+PR: https://github.com/ToufiqQureshi/uplumo/pull/166
+Base branch: main. This single PR contains both #165 and #166; #165 is superseded.
+Application stack: Go API, React/Vite UI, Postgres; existing Google OAuth and SAM.
+
+1. STARTING PROBLEM AND PRODUCT DECISIONS
+---------------------------------------
+Before: Search Console and GA4 were separate reports. Users had to interpret the
+numbers themselves, remember page edits and decide whether a change helped.
+After: select a useful outcome, review the top three evidence-backed candidates,
+investigate clicks/tracking/index status, prepare a reviewed improvement brief,
+save an immutable baseline and compare complete post-change windows.
+
+Do not promise that averages prove a cause, that every key event is a lead, that
+all Google UI reports have APIs, or that missing rows mean measured zero.
+Avoid automatic paid research, automatic publishing and a dashboard of every
+possible metric. Use goal-led defaults with explicit evidence drill-downs.
+
+The original #165 changes are included unchanged in the combined branch:
+custom calendar dates and source/device/country/query/page filters; period totals,
+trend and country evidence; the content-refresh queue and editor handoff; and
+bounded stored-index inspection. Review SearchPerformancePage/Selects/Totals/
+Trend/Indexing and backend/internal/gsc/performance.go for that foundation.
+
+2. COMPLETE USER JOURNEY
+------------------------
+a. Project -> Search Performance -> Search Growth panel.
+b. Load my GA4 goals explicitly. Metadata returns registered event-specific
+   session rates for this property. Choose an actual successful business outcome.
+   Custom registered key events can appear; not just purchase/generate_lead.
+c. Optionally set brands, 14/28-day window, previous period vs same weekdays
+   364 days earlier, or expanded 5,000-row coverage. Settings do not fetch reports.
+d. Click Find opportunities. Default view shows three candidates with evidence
+   and one main next action. Other candidates are browsed ten cards at a time.
+e. Why clicks are low/falling: explicit two-window, exact-page query evidence,
+   low-visibility/position/CTR observations. A separate button inspects only this
+   page's stored Google index status. Missing queries remain unknown.
+f. Investigation panel: choose a collapsed topic; only one opens at a time.
+   Measurement configuration, observed host/referral rows,
+   real ordered-event funnel, device rates, submitted sitemap status and saved
+   prompt citations. All are explicit reads with independent source limitations.
+g. AI brief opens an editable, scoped SAM draft; no model call until Send. The
+   search_growth mode retains its read-only tool allowlist and existing metering.
+   Selected goal, dates and comparison are carried into the analyst instruction.
+h. Editor handoff passes page/query/evidence reference in validated tab storage;
+   existing drafts are preserved. Existing selection-based tools remain review/apply.
+i. Save an action/note. Optionally choose a similar unchanged comparison page
+   from the first 100 other report pages. Server snapshots both baselines.
+j. Mark applied only after actually changing the page. The first applied time
+   cannot move. Compare after 14/28 complete days plus Google's reporting delay.
+k. Optionally enable weekly in-app checks for a selected registered goal.
+   Last dated digest shows at most three actions and five meaningful drop alerts.
+
+3. WHERE DEVELOPERS SHOULD READ THE CODE
+----------------------------------------
+Frontend feature directory: frontend/src/client/features/search-performance/
+- SearchGrowthPanel.tsx: explicit analysis, report scope, top three/paginated list.
+- GrowthSettings.tsx: goal discovery and controlled analysis settings.
+- growthApi.ts: API calls and Zod response contracts.
+- GrowthPageCard.tsx: headline evidence, baseline save and comparison-page choice.
+- GrowthClickDiagnosis.tsx: query diagnosis and separate one-URL inspection.
+- indexingGuidance.ts: shared indexing advice, also used by SearchPerformanceIndexing.
+- GrowthEvidencePanel.tsx: investigation navigation, with one topic open at a time.
+- GrowthInvestigation.tsx: native accessible disclosure group, no fetch on opening.
+- GrowthDeviceEvidence.tsx: device data and desktop/mobile result presentation.
+- GrowthMobileResults.tsx: labeled mobile cards for journey/device/query values.
+- GrowthFunnel.tsx: actual event-name steps, ordered users and device breakdown.
+- GrowthSitemaps.tsx: sitemap counts/status with interpretation and Google link.
+- GrowthCitationEvidence.tsx: saved prompt evidence vs native Google AI reporting.
+- GrowthMonitor.tsx: lazy configuration read, explicit enable/disable, dated digest.
+- GrowthActions.tsx: saved changes, waiting/ready comparisons and source caveats.
+- growthBrief.ts: goal/date/comparison-aware editable analyst instruction.
+Related original handoffs: content-editor/searchContext.ts; sam/analystDraft.ts.
+
+Backend feature directory: backend/internal/ga4/
+- growth.go: bounded source joins, goal-separated findings, source coverage/cache.
+- growth_goal.go: metadata discovery/validation and event-specific rate handling.
+- growth_clicks.go: trusted snapshot selection, query comparisons and diagnosis.
+- growth_tracking.go: observed host/source/medium and attribution checklist.
+- growth_funnel.go: v1alpha ordered user funnel with strict value checks.
+- growth_repository.go: scoped cache, immutable page/control snapshots and updates.
+- growth_handler.go: strict endpoint bodies and post-change comparison logic.
+- growth_monitor.go: opt-in state, atomic claims, revision fencing, digest/alerts.
+- service.go: existing Google transport dependency and scheduler entitlement hook.
+Backend GSC: internal/gsc/growth_rows.go, sitemaps.go, performance_handler.go.
+MCP: internal/mcp/ga4_tools.go shares goal/comparison/coverage inputs and cache.
+Worker wiring: backend/cmd/server/main.go, one due project per minute.
+API contracts: backend/api/ga4.yaml and backend/api/gsc.yaml.
+Mobile presentation: journey, device and query results use labeled cards below
+640px; desktop tables retain all metrics. Each funnel step has its own input,
+with accessible add/remove controls. Long buttons/URLs wrap inside the card.
+Use explicit border-border tokens: bare Tailwind borders inherit text color and
+made the previous view look like a dense black grid. No global theme changes.
+Read local README.md, flow.md and decision.md for the maintained invariants.
+
+4. DATA MEANING AND PROVIDER READ BOUNDS
+---------------------------------------
+- Join GSC final Web pages with Google organic GA4 landing pages. GSC clicks and
+  GA4 sessions are different measurements/time zones. No query-level conversion
+  attribution. Ambiguous normalized URL variants remain unmatched.
+- Raw keyEvents is all configured events. goalRate is the provider's registered
+  sessionKeyEventRate:<event>. Never event-filter the full session denominator.
+  Sessions x goalRate is only an estimated minimum-success check, clearly labeled.
+- Standard analysis: at most 3 GSC + 2 GA4 report reads on cache miss.
+  Selected goal adds 1 metadata read. Expanded: at most 15 GSC + 10 GA4 + metadata.
+  Ten-minute scoped report cache and per-process singleflight deduplicate requests.
+  One report/project; 90-second overall report deadline; dates bounded to 90 days
+  with both windows inside GSC history. GSC can omit queries even below row caps.
+- Report holds <=10 queries/page. A query holds <=5 example competing URLs plus
+  its returned-page count. Do not reintroduce quadratic competing-page output.
+- Explicit click investigation: 2 exact-page query reads, <=1,000 rows/window,
+  60-second total deadline. Queries absent from a period remain null.
+- URL Inspection: separate explicit one-URL read of stored Google state; no live
+  test, indexing request or recrawl. Existing general inspector remains <=10 URLs.
+- Sitemap status: 1 Google read, 30-second service deadline, 2 MiB response bound,
+  first 200 submitted entries. No XML crawling or nested-index expansion.
+  Sitemap errors/warnings are counts; detailed reasons stay in Google's report.
+  Submitted entries can overlap across content types; do not label them unique
+  indexed pages. Preserve the per-type counts.
+- Funnel: 1 alpha API read, <=5 distinct tracked event steps, closed ordered user
+  sequence, optional device breakdown, <=100 rows, 45-second deadline. Users may
+  complete steps across sessions in the selected window. Missing instrumentation
+  can resemble abandonment. Sampling/thresholds/restrictions remain visible.
+- Attribution check: 1 all-channel host/source/medium report, <=100 rows.
+  Self-referral candidates need >=20 sessions. This cannot verify actual tag,
+  cross-domain or consent configuration. Direct traffic is not automatically AI.
+- Devices: 1 Google-organic report; selected goal adds metadata validation.
+- Post-change comparison: 1 exact-page GSC + 1 host/path-filtered GA4 read, plus
+  selected-goal metadata when applicable and 1 GSC read for an optional control.
+  Control-adjusted click movement needs >=30 baseline clicks on each page and
+  >=30 after clicks on the comparison page. Descriptive ratio, not causal proof.
+
+5. DATABASE, SCHEDULING AND MIGRATION REVIEW
+-------------------------------------------
+Original migration 31: go_search_growth_reports and go_search_growth_actions.
+Extension migration 32: go_search_growth_monitors (one row/project), due-time
+partial index, scope index and RLS without public-client policies. Trusted server
+owner accesses it; no new browser database credentials. Foreign keys cascade on
+project/organization deletion. Test fresh migrations and production server role.
+
+Migrations 29/30 in this PR are preparatory copies from PR #163; retain the same
+files when merging #163. Do not renumber/delete already-applied migrations.
+
+Weekly checks are OFF until explicitly enabled. Freeze selected property/site
+identity and goal. Worker checks current entitlement/connections before reports.
+Atomic SKIP LOCKED claim advances the due date before fetching. A revision fence
+prevents an old worker from saving into disabled/changed configuration. An
+identical enable replay preserves its schedule/revision. Success waits seven days;
+failure waits one day. Previous successful digest stays dated. No catch-up loop.
+
+Alert requires both clicks down >=20% from >=30 baseline clicks and selected-goal
+rate down >30%, >=100 sessions in each period, and >=5 estimated baseline
+sessions reaching that goal. Limited reports suppress alerts. Thresholds identify
+investigation candidates, not statistical significance or guaranteed lost sales.
+
+6. MONEY, AUTHORIZATION AND FAILURE BOUNDARIES
+---------------------------------------------
+No new paid DataForSEO/OpenRouter call is introduced by these reports/drill-downs
+or weekly checks. Existing explicit SAM replies retain their credit guard.
+No email delivery, automatic site edit, pricing change or production deployment.
+Variable names were inspected on Railway; values/keys were not exposed or changed.
+
+Every HTTP route uses session + project access. Repositories include organization
+and project, caches include selected connections and analysis inputs. Baselines
+come from scoped server reports, not client-submitted metrics. Goal/property/date
+changes cannot silently reinterpret an old baseline. Null/limited values are not
+filled with zero. Errors never expose provider bodies/tokens. No public indexing
+API submissions or server fetch of user-provided sitemap URLs are introduced.
+
+7. VERIFICATION AND DEVELOPER CHECKLIST
+--------------------------------------
+Automated checks (recorded for this change):
+- Full Go race/coverage suite on a fresh disposable Postgres database and Redis.
+- Focused GA4/GSC/MCP/server race tests after subsequent changes.
+- Module consistency, gofmt, go vet, staticcheck, golangci-lint, deadcode,
+  govulncheck; frontend ci:check, complete Vitest suite and production build.
+- Playwright desktop flow plus 320px/390px mobile regressions with stubbed
+  Google/AI responses: goal payload,
+  analyze/save, diagnosis/index inspection, tracking, funnel, sitemap status,
+  monitor on/off, editor reference and explicit paid SAM Send boundary.
+  Mobile assertions verify complete drop-off counts/rates, per-step form controls,
+  independently collapsed investigation topics and no document-wide overflow.
+- Mutation: removing limited-report alert suppression makes the guard test fail.
+
+Regression sources:
+  backend/internal/ga4/growth_business_test.go and growth_test.go
+  backend/internal/gsc/growth_rows_test.go and existing client/inspection tests
+  frontend/src/client/features/search-performance/SearchGrowthPanel.test.ts
+  frontend/tests/search-growth.spec.ts and search-growth.fixtures.ts
+
+Tests cover goal/all-event separation, unsupported inputs before provider reads,
+cache/concurrent call counts, fixed pagination bounds, malformed rates/counts,
+missing queries, tenant isolation, frozen comparison baselines, replica claims,
+entitlement/cooldown and disable-during-flight stale-digest protection.
+
+Local checks: backend requires disposable TEST_DATABASE_URL and TEST_REDIS_URL;
+run go test -p 1 -race -count=1 -cover ./..., then the static checks in CLAUDE.md.
+Frontend: pnpm ci:check; pnpm test:ci; pnpm build. Browser: use the installed
+Chromium/Chrome with tests/playwright.config.ts. This environment used a temporary
+config pointing to system Chromium, with video off (Playwright's bundled browser
+and ffmpeg were absent); all assertions, screenshots and trace behavior remained.
+Remove only generated ignored Playwright artifacts before the docs-map test,
+which otherwise treats generated error-context.md as repository documentation.
+
+Before production acceptance, a developer must:
+1) Connect a real authorized GA4/GSC account and confirm the selected properties,
+   time zones, currency, Google API enablement and OAuth scopes.
+2) Match the SAME dates/filters against Google: page/query rows, selected outcome
+   rate, device breakdown, ordered funnel and sitemap counts/status. Do not expect
+   GSC clicks to equal GA4 sessions or query sums to equal property totals.
+3) Use one instrumented lead/purchase site; verify success events in DebugView,
+   cross-domain checkout/booking and consent behavior in the browser.
+4) Enable a monitor, observe one completion and digest, disable it, then confirm
+   a changed goal/property or revoked grant does not produce misleading evidence.
+5) Apply migrations in a staging copy first; verify server role/RLS, restart and
+   rollback behavior. Check query latency, row coverage and Google quota handling.
+
+8. HONEST LIMITATIONS / NOT IMPLEMENTED
+--------------------------------------
+Live Google OAuth/provider reconciliation and a real-account alpha funnel smoke
+were NOT performed here; test Google responses were controlled fixtures.
+No production migration or deploy was performed. Automated tests do not prove
+that a customer's tracking instrumentation or business definitions are correct.
+
+Google's native generative-AI report has an external property/help entry point;
+automatic API/CSV ingestion is not implemented. It is not equivalent to all
+ChatGPT/Perplexity exposure. BigQuery is an external optional setup link with
+Google Cloud cost caveats; no dataset/query billing is enabled automatically.
+No arbitrary GA4 metrics/dimensions builder, CRM-qualified leads, complete GSC
+Page Indexing UI export, nested sitemap crawler, controlled SEO experiment,
+statistical significance claim, automatic competitor/SERP research or weekly email.
+Existing crawl/speed/paid SEO tools remain available through their own workflows.
+
+9. ROLLBACK AND REVIEW ORDER
+----------------------------
+Review frontend -> API contracts -> service calculations -> repositories/schema
+-> worker claim/fence logic -> tests -> docs. Pay particular attention to the
+selected-goal denominator, null handling, capped pagination/output and source dates.
+
+Before rolling back application code, disable weekly monitoring. Revert code
+without removing applied migration history/tables. Existing pre-extension readers
+ignore added JSON fields. No customer website was automatically rewritten.
+Keep this handover with the PR; maintain ongoing behavior in feature docs.
+
+10. MAINTAINED DECISION RECORDS
+------------------------------
+CLAUDE.md section 7 requires a relevant decision.md update in the same commit
+for every repository-changing task. Record the choice, reason, trade-offs,
+constraints and verification, replacing superseded decisions. Repository-wide
+owner/rule decisions live in DECISIONS.md; do not create a second root file
+with different capitalization. This handover does not replace maintained docs.
+
+Read the Search Performance decision.md for product/mobile choices; GA4/GSC
+for measurement and diagnosis; database for persistence/worker races; MCP and
+backend/frontend SAM for authorization and paid-action boundaries; content-editor
+for reviewed handoffs. Exact operational bounds stay in the relevant README.
+This rule is an agent instruction; no new automatic CI enforcement was added.

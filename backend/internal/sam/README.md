@@ -122,3 +122,12 @@ membership, and take a strict JSON body. Spec: `backend/api/sam.yaml`.
 - **Skills and fact sheet.** `skills/*.md` and `product_fact_sheet.md` are copies
   of files outside the Go module. `TestEmbeddedCopiesMatchTheirSources` fails
   when they drift.
+
+## Search growth mode
+
+Chat requests may specify `mode: search_growth`. The server sets this only for
+that authorized turn and filters both model definitions and execution to
+read-only Google reports/inspection, `get_search_growth_report`, guarded
+`read_pages`/`map_links`, and product info. Guessed paid or mutating tool names
+are rejected before the runner executes them. AI completions still use existing
+SAM holds, actual-cost settlement and turn limits; this is not free AI.

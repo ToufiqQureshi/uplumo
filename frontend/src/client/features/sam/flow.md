@@ -28,3 +28,8 @@ Go package: `backend/internal/sam`; uses the configured model provider, billing,
 - Tool arguments cannot choose another project or bypass project membership.
 - Provider errors must preserve already-produced partial output while charging actual usage only.
 - Avoid refetching or replaying a streamed POST automatically.
+
+Search analyst drafts initialize the composer without sending. On Send the chat
+transport includes `mode: search_growth`; the tab remembers that mode per
+project/session until explicitly switched to the general assistant. Draft
+storage clears after sending; no report payload is placed in navigation URLs.
