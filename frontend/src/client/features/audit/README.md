@@ -14,3 +14,6 @@ Read [flow.md](flow.md) for the request path and [decision.md](decision.md) for 
 
 - `launch/AuditChangeGuard.tsx` and `compare.ts` (read-only saved-audit comparison)
 - `orphanLinkCandidates.ts` (local, review-only link suggestions)
+
+Audits inspect initial HTTP HTML. JavaScript rendering is unavailable and its
+launch control is disabled by server capabilities; no rendering price is quoted.

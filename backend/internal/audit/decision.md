@@ -19,3 +19,10 @@ Postgres audit tables; Redis progress/cache/quota; PageSpeed Insights and CrUX; 
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.
+
+## Honest rendering capability and reachable code
+
+- **Decision:** Keep rendering unavailable until an actual renderer is wired into the crawler. Environment flags alone cannot advertise it. Reject requests before rows, jobs or credit holds. Remove unreachable renderer pricing and orphan crawl helpers, retaining the active credit lifecycle tests.
+- **Why:** The HTTP crawler never executed JavaScript; accepting rendering requests misrepresented the work performed. Test-only port helpers duplicated inactive behavior.
+- **Preserve:** HTTP crawl, SSRF checks, plan limits, job idempotency and credit cleanup remain intact. Existing rendering interfaces are retained for the runner lifecycle; they do not imply a usable renderer.
+- **Trace:** `rendering.go`, `service_test.go` (`TestEnvironmentFlagsCannotAdvertiseAnUnwiredRenderer`, reproduced failing before the fix); `crawleraccess.go`, `crawlwindow.go`, `htmlresponse.go`, `issues_test.go`. `handler_test.go` checks the mounted capabilities/start responses and no rows/jobs; a forced-true mutation fails both service and HTTP regressions. No browser renderer/provider was added.

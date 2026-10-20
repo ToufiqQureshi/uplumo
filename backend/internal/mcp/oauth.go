@@ -14,6 +14,7 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -139,7 +140,7 @@ func (h *handler) registerOAuthClient(w http.ResponseWriter, r *http.Request) {
 	}
 	if input.Scope != "" {
 		for _, scope := range strings.Fields(input.Scope) {
-			if !containsScope(oauthScopes, scope) {
+			if !slices.Contains(oauthScopes, scope) {
 				writeOAuthError(w, http.StatusBadRequest, "invalid_client_metadata", "Unsupported scope.")
 				return
 			}
@@ -449,7 +450,7 @@ func (h *handler) exchangeAuthorizationCode(w http.ResponseWriter, r *http.Reque
 		writeOAuthError(w, http.StatusBadRequest, "invalid_grant", "Authorization code validation failed.")
 		return
 	}
-	if !containsScope(strings.Fields(grant.Scope), "mcp") {
+	if !slices.Contains(strings.Fields(grant.Scope), "mcp") {
 		writeOAuthError(w, http.StatusBadRequest, "invalid_scope", "The mcp scope is required.")
 		return
 	}
@@ -491,14 +492,14 @@ func (h *handler) refreshOAuthToken(w http.ResponseWriter, r *http.Request, clie
 	scopes := strings.Fields(grant.Scope)
 	if len(requested) != 0 {
 		for _, scope := range requested {
-			if !containsScope(scopes, scope) {
+			if !slices.Contains(scopes, scope) {
 				writeOAuthError(w, http.StatusBadRequest, "invalid_scope", "Requested scope exceeds the original grant.")
 				return
 			}
 		}
 		scopes = requested
 	}
-	if !containsScope(scopes, "mcp") {
+	if !slices.Contains(scopes, "mcp") {
 		writeOAuthError(w, http.StatusBadRequest, "invalid_scope", "The mcp scope is required.")
 		return
 	}
@@ -564,7 +565,7 @@ func (h *handler) authenticateOAuthToken(ctx context.Context, r *http.Request, t
 		return Auth{}, false, err
 	}
 	scopes := strings.Fields(scope)
-	if !containsScope(scopes, "mcp") {
+	if !slices.Contains(scopes, "mcp") {
 		return Auth{}, false, nil
 	}
 	org, err := resolveExistingActiveOrganization(ctx, h.deps.DB, userID)
@@ -731,15 +732,6 @@ func sha256Bytes(value string) []byte { sum := sha256.Sum256([]byte(value)); ret
 
 func constantTimeHashEqual(expectedHash, rawValue string) bool {
 	return subtle.ConstantTimeCompare([]byte(expectedHash), []byte(hashOAuthValue(rawValue))) == 1
-}
-
-func containsScope(scopes []string, target string) bool {
-	for _, scope := range scopes {
-		if scope == target {
-			return true
-		}
-	}
-	return false
 }
 
 func validPKCEVerifier(value string) bool {

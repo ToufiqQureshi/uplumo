@@ -12,6 +12,8 @@ Code and tests are the source of truth. Feature docs are colocated with their so
 - [API contracts](api/CONVENTIONS.md)
 - [Local setup](LOCAL_DEVELOPMENT.md), [deployment](DEPLOY.md), [product](PRODUCT.md)
 
+- [Feature wiring review](audits/2026-10-20-feature-wiring-review.md)
+
 ## Repo-wide guidance and references
 
 `README.md`, `CLAUDE.md`, `AGENTS.md`, `.claude/CLAUDE.md`, `ROADMAP.md`, `DECISIONS.md`, `.agents/PAPERCUTS.md`, `backend/README.md`, `backend/internal/analytics/geo/ATTRIBUTION.md`, `backend/internal/sam/product_fact_sheet.md`, `frontend/src/client/features/ai-mcp/agentSetupPrompt.md`. Historical reviews are in `docs/audits/`.

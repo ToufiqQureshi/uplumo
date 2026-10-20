@@ -48,8 +48,10 @@ safely escaped link snippet for review and manual placement.
 
 ## Env vars
 
-- `AUDIT_BROWSER_RENDERING=true` or `CONTEXT_API_KEY` enables JavaScript
-  rendering. Without either, `renderJavaScript` requests answer 403.
+- JavaScript rendering is unavailable: the wired crawler fetches initial HTTP
+  HTML. `AUDIT_BROWSER_RENDERING` and `CONTEXT_API_KEY` cannot enable an unwired
+  renderer. Capabilities return false and rendering requests answer 403 before
+  creating an audit or job.
 - `PAGESPEED_API_KEY` (a Google Cloud API key with the PageSpeed Insights API
   enabled) is needed for Lighthouse. Without it audits still run; Lighthouse is
   skipped.

@@ -164,31 +164,11 @@ func TestCrawlerHeadersFor(t *testing.T) {
 	}
 }
 
-func TestParseSignatureExpiry(t *testing.T) {
-	expiry := ParseSignatureExpiry(`sig1=("@target-uri");expires=1700000000`)
-	if expiry == nil || expiry.Unix() != 1700000000 {
-		t.Fatalf("expiry = %v", expiry)
-	}
-	if ParseSignatureExpiry("no expiry here") != nil {
-		t.Fatal("expected no expiry")
-	}
-}
-
-func TestReadTextUpToAndTruncate(t *testing.T) {
+func TestReadTextUpToEmptyBody(t *testing.T) {
 	response := &http.Response{Body: http.NoBody}
 	text, err := ReadTextUpTo(response, 10)
 	if err != nil || text != "" {
 		t.Fatalf("text = %q err = %v", text, err)
-	}
-	if got := TruncateToBytes("hello", 10); got != "hello" {
-		t.Fatalf("got %q", got)
-	}
-	if got := TruncateToBytes("hello world", 5); got != "hello" {
-		t.Fatalf("got %q", got)
-	}
-	// A multibyte rune split by the cap must be dropped, not corrupted.
-	if got := TruncateToBytes("héllo", 2); got != "h" {
-		t.Fatalf("got %q", got)
 	}
 }
 

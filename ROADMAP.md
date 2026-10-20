@@ -3,7 +3,8 @@
 Status: ✅ done · 🔨 in progress · ⏳ not started.
 Product reasoning lives in `docs/PRODUCT.md`; rules for agents in `CLAUDE.md`.
 
-Last reviewed against the code, Railway and the live site on 13 October 2026.
+Feature wiring and Railway configuration reviewed on 20 October 2026.
+See `docs/audits/2026-10-20-feature-wiring-review.md` for scope and validation limits.
 
 ## Where we are
 
@@ -11,7 +12,9 @@ Uplumo is live at `https://uplumo.com` on Railway. The whole backend is Go and
 the React app is a static SPA the Go server serves. People can sign up, verify
 their email and use the free features. **Nobody pays real money yet**:
 Razorpay runs with test-mode keys in production, so checkout works only with
-test cards. DataForSEO and OpenRouter keys are not in production.
+test cards. DataForSEO and OpenRouter variables are configured in production;
+requests can incur real provider costs. Their presence is not live acceptance
+validation for every feature.
 
 ## Content editor
 
@@ -39,7 +42,7 @@ test cards. DataForSEO and OpenRouter keys are not in production.
 | Razorpay test-mode keys in Railway                                                                     | ✅                                     |
 | Razorpay test payment, renewal and cancel through the site, then live keys                             | ⏳                                     |
 | One-click cancel (`POST /api/v1/billing/cancel`, "Cancel Pro" on Billing)                              | ✅ built, not yet run against Razorpay |
-| DataForSEO key in production (keywords, rank tracking, backlinks, AI visibility answer 503 without it) | ⏳                                     |
+| DataForSEO key in production (keywords, rank tracking, backlinks, AI visibility answer 503 without it) | ✅ configured; live feature acceptance remains separate |
 | Google OAuth app verification (Search Console and Analytics scopes)                                    | ⏳                                     |
 | Live usage shown to the customer (credits on Billing, cost next to paid actions)                       | ✅ built                               |
 | Spend guard: credits held before every paid lookup and AI call, daily limit                            | ✅ built                               |
@@ -89,7 +92,7 @@ mean each one has been tried on production with real provider keys.
 | Plain-language and Hinglish copy pass across the app                                     | ⏳     |
 | USD pricing                                                                              | ⏳     |
 | Account deletion and data export from Settings                                           | ⏳     |
-| SEO Change Guard: snapshot crawl results, flag SEO-critical changes, show affected URLs and verify fixes after the next crawl | ⏳ proposed |
+| SEO Change Guard: compare saved completed audits with the same start URL and show field/coverage changes | ✅ built; explicit comparison, no automatic fixing |
 
 ## Competitive scan and product opportunity (16 October 2026)
 

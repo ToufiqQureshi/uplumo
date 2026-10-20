@@ -19,3 +19,10 @@ Starts an asynchronous crawl and presents technical SEO findings, crawl progress
 ## Verification pointers
 
 - `auditApi.test.ts`
+
+## Show supported audit work
+
+- **Decision:** Use the backend capability to disable JavaScript rendering; remove the unused local render-price estimate and its special credit-error calculation. Remediation describes initial-HTML coverage and recommends independent browser verification.
+- **Why:** The server has no JavaScript renderer. Displaying a price or telling users to enable it implied a capability they could not use.
+- **Preserve:** Keep ordinary crawl and Lighthouse controls, server error handling and existing launch/result contracts. No provider work, new charge or layout redesign.
+- **Trace:** `launch/LaunchFormCard.tsx`, `launch/useLaunchController.ts`, shared `audit-issues.ts`; backend audit decision and regression tests; `frontend/tests/audit-capabilities.spec.ts` checks the disabled control, explanation and absence of automatic audit/paid work on mobile and desktop using API fixtures.

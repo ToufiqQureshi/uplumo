@@ -34,11 +34,6 @@ const (
 	growthMinSample = 25
 )
 
-// ClampCrawlWindow clamps size into the window limits. Mirrors clampCrawlWindow.
-func ClampCrawlWindow(size int, limits CrawlWindowLimits) int {
-	return min(max(size, limits.Min), limits.Max)
-}
-
 // AdjustCrawlWindow adapts the window to the last persisted sub-batch: it
 // shrinks on trouble (errors, blocks, very slow responses), grows only on a
 // clean, mostly fast, full-size batch, and is always capped so the batch's

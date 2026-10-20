@@ -89,13 +89,6 @@ var issueRegistry = map[IssueType]issueDescriptor{
 	IssueDeepPage:                     {SeverityInfo, "Page is deep in the site structure"},
 }
 
-// getIssueDescriptor returns the descriptor for an issue type, or ok=false when
-// the type is unknown.
-func getIssueDescriptor(issueType IssueType) (issueDescriptor, bool) {
-	descriptor, ok := issueRegistry[issueType]
-	return descriptor, ok
-}
-
 // severityOf returns the severity for an issue type, defaulting to warning so a
 // future type cannot make a write fail.
 func severityOf(issueType IssueType) IssueSeverity {
@@ -114,7 +107,7 @@ type IssueDescriptor struct {
 
 var issueRemediation = map[IssueType]string{
 	IssueType("blocked-page"):                   "If you own this site, allowlist the \"Uplumo-Audit\" user agent in your WAF/bot-protection settings (on Cloudflare: a WAF custom rule that skips bot protection when the user agent contains \"Uplumo-Audit\"; on some free tiers you may need to relax bot protection). Then re-run the audit. On Shopify, use Crawler access instead (Online Store → Preferences → Crawler access) and paste the signature into Uplumo under Settings → Crawler access.",
-	IssueType("javascript-rendering-suspected"): "If this audit did not render JavaScript, start a new audit with \"Render JavaScript\" enabled to check the loaded content. For reliable crawling, serve important content and navigation in the initial HTML using server-side rendering or prerendering. This warning does not prove that search engines cannot index the page.",
+	IssueType("javascript-rendering-suspected"): "This audit checks the initial HTML; JavaScript rendering is not currently available in Uplumo. Verify the loaded page in a browser and serve important content and navigation in the initial HTML using server-side rendering or prerendering. This warning does not prove that search engines cannot index the page.",
 	IssueType("rate-limited-page"):              "Raise the rate limit for crawlers, or allowlist the \"Uplumo-Audit\" user agent in your rate-limiting rules (on Cloudflare: a rate-limiting rule exception matching that user agent). Then re-run the audit. Re-running with fewer pages also helps if the limit is strict. On Shopify, use Crawler access instead (Online Store → Preferences → Crawler access) and paste the signature into Uplumo under Settings → Crawler access.",
 	IssueType("crawl-rate-limited"):             "Re-run the audit after the site's rate limit resets, or ask the site owner to allow the Uplumo-Audit crawler. On Shopify, use Crawler access instead (Online Store → Preferences → Crawler access) and paste the signature into Uplumo under Settings → Crawler access.",
 	IssueType("server-error"):                   "Check the server logs for this URL and fix the underlying error. If the page is gone, return a 404/410 or redirect it to a relevant page instead of erroring.",

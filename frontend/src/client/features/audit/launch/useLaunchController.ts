@@ -17,11 +17,7 @@ import {
   createFormValidationErrors,
   shouldValidateFieldOnChange,
 } from "@/client/lib/forms";
-import {
-  getErrorCode,
-  getStandardErrorMessage,
-} from "@/client/lib/error-messages";
-import { renderingCreditsNeededText } from "@/shared/audit-rendering";
+import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { useAuditCapabilities } from "@/client/features/audit/shared";
 
 function getLaunchValidationErrors(
@@ -103,13 +99,7 @@ export function useLaunchController({
         toast.success("Audit started!");
         onAuditStarted(result.auditId);
       } catch (error) {
-        // Starting an audit refuses for credits only when the rendering hold
-        // does not fit, so the form can say how much the audit needs.
-        const message =
-          value.renderJavaScript &&
-          getErrorCode(error) === "INSUFFICIENT_CREDITS"
-            ? renderingCreditsNeededText(effectiveMaxPages)
-            : getStandardErrorMessage(error, "Failed to start audit");
+        const message = getStandardErrorMessage(error, "Failed to start audit");
         formApi.setErrorMap({
           onSubmit: createFormValidationErrors({ form: message }),
         });
