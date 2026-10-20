@@ -80,23 +80,31 @@ type event struct {
 	PageviewHash []byte
 	EngagementMS int64
 	CountryCode  string
+	BrowserHash  []byte
+	PageHost     string
 }
 
 func (r repository) insertEvent(ctx context.Context, e event) error {
 	_, err := r.db.Exec(ctx, `
+		WITH registered AS (
+			INSERT INTO go_analytics_browsers(site_id, browser_hash, first_seen)
+			SELECT $1, $18::bytea, $2 WHERE $18::bytea IS NOT NULL
+			ON CONFLICT (site_id, browser_hash) DO NOTHING
+		)
 		INSERT INTO go_analytics_events
 			(site_id, occurred_at, path, referrer_host, channel, ai_source, device, visitor_hash,
 			 country_code, utm_source, utm_medium, utm_campaign, utm_term, utm_content,
-			 pageview_hash, session_hash, engaged_ms)
+			 pageview_hash, session_hash, engaged_ms, browser_hash, page_host)
 		VALUES ($1, $2, $3, nullif($4, ''), $5, nullif($6, ''), $7, $8, nullif($9, ''),
 			nullif($10, ''), nullif($11, ''), nullif($12, ''), nullif($13, ''), nullif($14, ''),
-			$15, $16, $17)
+			$15, $16, $17, $18, $19)
 		ON CONFLICT (site_id, pageview_hash) WHERE pageview_hash IS NOT NULL
 		DO UPDATE SET engaged_ms = GREATEST(go_analytics_events.engaged_ms, EXCLUDED.engaged_ms)`,
 		e.SiteID, e.OccurredAt, e.Path, e.Source.ReferrerHost, e.Source.Channel,
 		e.Source.AISource, e.Device, e.VisitorHash, e.CountryCode,
 		e.Campaign.Source, e.Campaign.Medium, e.Campaign.Name,
 		e.Campaign.Term, e.Campaign.Content, e.PageviewHash, e.SessionHash, e.EngagementMS,
+		e.BrowserHash, e.PageHost,
 	)
 	if err != nil {
 		return fmt.Errorf("insert analytics event: %w", err)
@@ -104,12 +112,13 @@ func (r repository) insertEvent(ctx context.Context, e event) error {
 	return nil
 }
 
-func (r repository) insertCustomEvent(ctx context.Context, siteID int64, at time.Time, name, path string, visitor, sessionHash, eventHash []byte) error {
+func (r repository) insertCustomEvent(ctx context.Context, siteID int64, at time.Time, name, path string, visitor, sessionHash, eventHash, pageviewHash []byte, click bool, target destination) error {
 	_, err := r.db.Exec(ctx, `
-		INSERT INTO go_analytics_custom_events (site_id, occurred_at, name, path, visitor_hash, session_hash, event_hash)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO go_analytics_custom_events (site_id, occurred_at, name, path, visitor_hash, session_hash, event_hash,
+			pageview_hash, is_click, destination_host, destination_path, destination_type)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, nullif($10,''), nullif($11,''), $12)
 		ON CONFLICT (site_id, event_hash) WHERE event_hash IS NOT NULL DO NOTHING`,
-		siteID, at, name, path, visitor, sessionHash, eventHash)
+		siteID, at, name, path, visitor, sessionHash, eventHash, pageviewHash, click, target.Host, target.Path, target.Type)
 	if err != nil {
 		return fmt.Errorf("insert custom event: %w", err)
 	}
@@ -277,6 +286,22 @@ func (r repository) summary(ctx context.Context, projectID string, start, end ti
 		SELECT path, count(*), coalesce(avg(engaged_ms)::bigint, 0)
 		FROM last_page GROUP BY path ORDER BY 2 DESC, path LIMIT $4`, append(args, topLimit)...).
 		Query(collectInto(&s.Exits, pgx.RowToStructByPos[EntryExitCount]))
+
+	b.Queue(`WITH daily AS (
+		SELECT (e.occurred_at AT TIME ZONE 'UTC')::date AS day,
+			count(DISTINCT e.browser_hash) FILTER (WHERE (v.first_seen AT TIME ZONE 'UTC')::date = (e.occurred_at AT TIME ZONE 'UTC')::date) AS new_browsers,
+			count(DISTINCT e.browser_hash) FILTER (WHERE (v.first_seen AT TIME ZONE 'UTC')::date < (e.occurred_at AT TIME ZONE 'UTC')::date) AS returning_browsers,
+			count(*) FILTER (WHERE e.browser_hash IS NULL) AS unknown_pageviews
+		FROM go_analytics_events e
+		LEFT JOIN go_analytics_browsers v ON v.site_id=e.site_id AND v.browser_hash=e.browser_hash
+		WHERE e.site_id=(SELECT id FROM go_analytics_sites WHERE project_id=$1)
+			AND e.occurred_at >= $2 AND e.occurred_at < $3
+		GROUP BY 1
+	)
+	SELECT to_char(d, 'YYYY-MM-DD'), coalesce(new_browsers,0), coalesce(returning_browsers,0), coalesce(unknown_pageviews,0)
+	FROM generate_series($2 AT TIME ZONE 'UTC', $3 AT TIME ZONE 'UTC' - interval '1 day', interval '1 day') d
+	LEFT JOIN daily ON daily.day=d::date ORDER BY d`, args...).
+		Query(collectInto(&s.Audience, pgx.RowToStructByPos[AudienceDay]))
 
 	if err := r.db.SendBatch(ctx, b).Close(); err != nil {
 		return Summary{}, fmt.Errorf("query analytics summary: %w", err)

@@ -80,6 +80,14 @@ const summarySchema = z.object({
   goalEventName: z.string(),
   conversionSessions: count,
   conversionRate: z.number().min(0).max(1),
+  audience: z.array(
+    z.object({
+      date: isoDate,
+      newBrowsers: count,
+      returningBrowsers: count,
+      unknownPageviews: count,
+    }),
+  ),
 });
 export type AnalyticsSummary = z.infer<typeof summarySchema>;
 
@@ -157,4 +165,42 @@ export function analyticsCountriesPage(
     `/api/v1/analytics/${siteId}/countries?${query}`,
     z.array(countrySchema),
   );
+}
+
+const clickReportSchema = z.object({
+  rows: z.array(
+    z.object({
+      page: z.string(),
+      name: z.string(),
+      host: z.string(),
+      path: z.string(),
+      type: z.enum(["internal", "external", "unknown"]),
+      clicks: count,
+      visitorDays: count,
+      arrivals: count,
+    }),
+  ),
+  hasMore: z.boolean(),
+});
+
+export function analyticsClicksQueryOptions(
+  projectId: string,
+  range: { from: string; to: string },
+) {
+  return {
+    queryKey: ["goAnalyticsClicks", projectId, range.from, range.to],
+    queryFn: ({ pageParam }: { pageParam: number }) =>
+      apiRequest(
+        `${projectPath(projectId)}/clicks?${new URLSearchParams({ ...range, page: String(pageParam), limit: "20" })}`,
+        clickReportSchema,
+      ),
+    initialPageParam: 1,
+    getNextPageParam: (
+      last: z.infer<typeof clickReportSchema>,
+      _pages: unknown,
+      lastPage: number,
+    ) => (last.hasMore && lastPage < 1000 ? lastPage + 1 : undefined),
+    retry: shouldRetryApiError,
+    staleTime: 60_000,
+  };
 }

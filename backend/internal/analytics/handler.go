@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	maxCollectBody = 4 << 10
+	maxCollectBody = 8 << 10
 	maxSiteKey     = 64
 	maxURL         = 2048
 	// maxEventName is the longest custom event name, in characters.
@@ -41,6 +41,7 @@ type Deps struct {
 // Mount registers analytics routes on mux.
 func Mount(mux *http.ServeMux, d Deps) {
 	mountEnquiries(mux, d)
+	mux.Handle("GET /api/v1/projects/{projectId}/analytics/clicks", d.WithSession(d.WithProjectAccess(clicksHandler(d.Logger, d.Service))))
 	mux.HandleFunc("POST /collect", collect(d.Logger, d.Service, d.TrustedProxyCIDRs))
 	mux.HandleFunc("OPTIONS /collect", collectPreflight)
 	mux.Handle("POST /api/v1/projects/{projectId}/analytics/site", d.WithSession(d.WithProjectAccess(ensureSiteHandler(d.Logger, d.Service))))
@@ -92,6 +93,9 @@ func collect(logger *slog.Logger, svc *Service, trusted []netip.Prefix) http.Han
 			SessionID:    req.SessionID,
 			PageviewID:   req.PageviewID,
 			EventID:      req.EventID,
+			BrowserID:    req.BrowserID,
+			IsClick:      req.IsClick,
+			Destination:  req.Destination,
 			EngagementMS: req.EngagementMS,
 			IP:           httpx.ClientIP(r, trusted),
 			UserAgent:    r.UserAgent(),
@@ -124,6 +128,9 @@ type collectRequest struct {
 	PageviewID   string `json:"p"`
 	EventID      string `json:"i"`
 	EngagementMS int64  `json:"d"`
+	BrowserID    string `json:"b"`
+	IsClick      bool   `json:"c"`
+	Destination  string `json:"x"`
 }
 
 // validateCollect checks an event's fields and returns the parsed page URL.
@@ -144,6 +151,24 @@ func validateCollect(req collectRequest) (*url.URL, string) {
 	for _, id := range []string{req.SessionID, req.PageviewID, req.EventID} {
 		if id != "" && !validTrackerID(id) {
 			return nil, "s, p and i must be 32 lowercase hexadecimal characters."
+		}
+	}
+	if req.BrowserID != "" && !validTrackerID(req.BrowserID) {
+		return nil, "b must be 32 lowercase hexadecimal characters."
+	}
+	if req.BrowserID != "" && req.SessionID == "" {
+		return nil, "b requires a session id."
+	}
+	if req.IsClick && (strings.TrimSpace(req.EventName) == "" || req.EventID == "" || req.SessionID == "" || req.PageviewID == "") {
+		return nil, "c requires an event name, event id, session id and pageview id."
+	}
+	if req.Destination != "" {
+		if !req.IsClick || len(req.Destination) > maxURL {
+			return nil, "x requires a click and must be at most 2048 bytes."
+		}
+		u, parseErr := url.Parse(req.Destination)
+		if parseErr != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Hostname() == "" || u.User != nil {
+			return nil, "x must be an absolute http or https URL without credentials."
 		}
 	}
 	if req.SessionID != "" && req.PageviewID == "" {

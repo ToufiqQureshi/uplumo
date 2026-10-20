@@ -37,3 +37,5 @@ All three growth tables have no browser/Data API policies. The server database
 role must own these tables or have BYPASSRLS; API queries still require explicit
 organization/project predicates. `TestSearchGrowthStorageDeniesPublicRole`
 verifies that table grants alone cannot expose or alter stored evidence.
+
+Migration 35 adds optional analytics browser recognition and sanitized click destinations. It enables RLS and revokes public/client privileges on the browser registry and pageview/custom-event tables. The Go server must own these tables or have BYPASSRLS. See analytics `decision.md` and `AUDIENCE_DESTINATIONS.txt`; migration tests verify fresh startup, restricted-role denial and legacy-write compatibility.

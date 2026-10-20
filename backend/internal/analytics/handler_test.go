@@ -19,6 +19,10 @@ func TestCollectRejectsInvalidEvents(t *testing.T) {
 		wantCode   string
 	}{
 		{name: "not JSON", body: "k=abc", wantStatus: http.StatusBadRequest, wantCode: "invalid_event"},
+		{name: "invalid browser", body: `{"k":"abc","u":"https://acme.com/","b":"person@example.test"}`, wantStatus: http.StatusBadRequest, wantCode: "invalid_event"},
+		{name: "click without event identity", body: `{"k":"abc","u":"https://acme.com/","c":true,"n":"Click"}`, wantStatus: http.StatusBadRequest, wantCode: "invalid_event"},
+		{name: "destination on nonclick", body: `{"k":"abc","u":"https://acme.com/","x":"https://partner.test/"}`, wantStatus: http.StatusBadRequest, wantCode: "invalid_event"},
+		{name: "destination credentials", body: `{"k":"abc","u":"https://acme.com/","c":true,"n":"Click","s":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","p":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","i":"cccccccccccccccccccccccccccccccc","x":"https://userinfo@partner.test/"}`, wantStatus: http.StatusBadRequest, wantCode: "invalid_event"},
 		{name: "empty body", wantStatus: http.StatusBadRequest, wantCode: "invalid_event"},
 		{name: "wrong type", body: `{"k":"abc","u":"https://acme.com/","w":"wide"}`, wantStatus: http.StatusBadRequest, wantCode: "invalid_event"},
 		{name: "missing site key", body: `{"u":"https://acme.com/"}`, wantStatus: http.StatusBadRequest, wantCode: "invalid_event"},

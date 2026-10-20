@@ -53,6 +53,9 @@ type Hit struct {
 	SessionID    string
 	PageviewID   string
 	EventID      string
+	BrowserID    string
+	IsClick      bool
+	Destination  string
 	EngagementMS int64
 	IP           string
 	UserAgent    string
@@ -82,6 +85,7 @@ type Summary struct {
 	GoalEventName       string             `json:"goalEventName"`
 	ConversionSessions  int64              `json:"conversionSessions"`
 	ConversionRate      float64            `json:"conversionRate"`
+	Audience            []AudienceDay      `json:"audience"`
 }
 
 // CampaignCount is a tagged campaign's visitor-day, session and goal counts.
@@ -185,8 +189,9 @@ func (s *Service) EnsureSite(ctx context.Context, projectID string) (string, err
 //
 // Visitors are counted without cookies or stored IPs: the visitor id is
 // SHA-256(daily salt, site key, IP, user agent). The salt lives only in
-// Redis and expires, so a visitor cannot be followed across days and the
-// hash cannot be reversed once the salt is gone. The rate-limit key uses the
+// Redis and expires, so this anonymous hash cannot link days. Optional browser
+// recognition has a separate site-scoped hash and first-seen registry; it never
+// replaces the anonymous visitor-day metric. The rate-limit key uses the
 // same salt, so no raw IP is stored anywhere.
 func (s *Service) Collect(ctx context.Context, h Hit) error {
 	if isBot(h.UserAgent) {
@@ -226,7 +231,11 @@ func (s *Service) Collect(ctx context.Context, h Hit) error {
 		eventHash = hash(h.SiteKey, h.EventID)
 	}
 	if h.EventName != "" {
-		return s.repo.insertCustomEvent(ctx, st.ID, now, h.EventName, path, visitor, sessionHash, eventHash)
+		return s.repo.insertCustomEvent(ctx, st.ID, now, h.EventName, path, visitor, sessionHash, eventHash, pageviewHash, h.IsClick, clickDestination(h.Destination, h.Page, st.Domain))
+	}
+	var browserHash []byte
+	if h.BrowserID != "" {
+		browserHash = hash(h.SiteKey, "browser", h.BrowserID)
 	}
 	var country string
 	if s.geo != nil {
@@ -244,6 +253,8 @@ func (s *Service) Collect(ctx context.Context, h Hit) error {
 	}
 	return s.repo.insertEvent(ctx, event{
 		SiteID:       st.ID,
+		BrowserHash:  browserHash,
+		PageHost:     normalizeHost(h.Page.Hostname()),
 		OccurredAt:   now,
 		Path:         path,
 		Source:       source,

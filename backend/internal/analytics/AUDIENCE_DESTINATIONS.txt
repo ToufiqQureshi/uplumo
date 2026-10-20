@@ -1,0 +1,99 @@
+UPLUMO ANALYTICS: DAILY AUDIENCE AND CLICK DESTINATIONS
+
+Scope
+- One PR: optional new/returning browser recognition, configured button/link
+  destinations, automatic outbound clicks and observed same-tab internal arrivals.
+- No revenue, refunds, ROI, AI calls, GA4 redesign, funnels or external APIs.
+- Existing visitors stay anonymous visitor-days. Recognized browser counts are
+  separate, not exact people. Unknown coverage is unrecognized pageviews.
+
+Daily definition
+- Days are UTC, matching the existing dashboard date window. Today is partial.
+- First server-observed browser visit on that day: New.
+- First server-observed visit before that day: Returning.
+- Same browser visiting ten times or in multiple same-origin tabs counts once
+  that day. A browser can be New one day and Returning the following day.
+- Do not sum daily counts to claim unique browsers across an entire range.
+- Separate browser/device/origin, storage clearing or ID expiry can look New.
+
+Tracker and consent
+- backend/internal/httpapi/tracker.js is the served /t.js implementation.
+- Recognition is off in existing/default snippets; enable with
+  data-recognition="true" only after required analytics consent.
+- The setup checkbox generates that snippet; it does not remotely change an
+  already-installed customer snippet or obtain consent on their behalf.
+- The random ID is stored under uplumo-browser:<site-key> in localStorage for
+  180 days from creation, not extended on every visit. Web Locks serialize
+  same-origin initialization. Unsupported storage/locks stay unrecognized.
+- window.uplumoConsent(false) stops future collection, clears browser/session
+  IDs and signals other same-origin tabs through storage removal. It does not
+  delete historical server data. Grant again only after renewed permission.
+- DNT/GPC are respected; no banner, branding or content is injected.
+
+Click semantics
+- data-uplumo-event tags important buttons/links. Untagged outbound HTTP(S)
+  links produce outbound_click. Tagged outbound links produce one event.
+- Anchors supply destinations; JavaScript buttons may specify
+  data-uplumo-destination="/booking". Unsupported/missing targets stay Unknown.
+- Stored destination is host/path only: no query strings, fragments, raw click
+  IDs or URL credentials. Owners must also avoid PII in path/event labels.
+- Internal arrival = a different pageview matching host/path in the same tab
+  session within 30 minutes after the click, even just beyond report end.
+  It is association, not proof the click caused navigation or success.
+- External further activity and new-tab arrivals are not inferred.
+- Click visitor-days are distinct existing daily anonymous hashes per group;
+  the same person on multiple days may count more than once.
+
+Code and database review
+- analytics/handler.go: optional collector b/c/x fields, input bounds and routes.
+- analytics/service.go and repository.go: site-scoped browser hash and atomic
+  first-observed registry insert; existing pageview/event deduplication intact.
+- analytics/journey.go: types, date/page validation and bounded click SQL.
+- Migration 35: registry, nullable fields/defaults, indexes, cascades and RLS.
+  Browser registry + pageview/custom-event tables are server-only. PUBLIC and
+  anon/authenticated privileges are revoked; owner/BYPASSRLS server required.
+- Browser hashes/first-seen records follow existing site analytics history until
+  project/account deletion; 180-day browser expiry is not a database TTL.
+- Summary adds audience[]. Click API is GET .../analytics/clicks with inclusive
+  from/to dates, max 366 days, page 1-1000 and limit 1-100 (UI 20). Ten-second
+  click-query timeout. No external destination fetch or paid provider call.
+- Frontend AudienceJourneyCards/analyticsApi use project/date-keyed TanStack
+  caching with a one-minute stale window, bounded paging and separate errors.
+- TrackingCodeCard, privacy policy and FAQ explain enablement and limitations.
+- Relevant decision.md files record why each layer changed.
+
+Verification
+- Go integration tests: daily deduplication/midnight, cross-site separation,
+  sanitized targets, duplicate delivery, same-tab/host/time arrival checks,
+  mounted authorization/JSON contracts and restricted database-role denial.
+- Tracker tests: opt-in/default, expiry, blocked storage, DNT/GPC, nested clicks,
+  one tagged outbound event, automatic outbound/explicit targets and revocation.
+- Browser tests: daily report, scoped paging/date changes, snippet toggle,
+  mobile scroll containment and partial report failure.
+- Final executed check results and browser evidence are recorded in the PR.
+
+Rollout
+- This PR is not itself a deployment. Apply migration 35 through normal Go
+  startup before the new API/UI. Existing snippets remain compatible.
+- Native recognition remains off until the site owner installs the enabled
+  snippet after wiring consent. Old visits cannot be reconstructed.
+- Removing data-recognition returns future visits to default anonymous mode;
+  use uplumoConsent(false) for consent withdrawal and identifier cleanup.
+
+Executed validation for this change
+- Full Go race/coverage suite passed against disposable Postgres/Redis.
+- go mod tidy produced no module diff; gofmt, vet, staticcheck, golangci-lint,
+  govulncheck (no reachable vulnerabilities) and deadcode passed.
+- Frontend: 574 tests, formatting/knip/type/lint checks and production build passed.
+- Desktop/mobile browser tests passed; final PR records viewport coverage.
+- A Chromium visitor sent events through the real Go collector and disposable
+  Postgres: one recognized browser across two tabs, three pageviews, one internal
+  click with a matching arrival, one external target and one unknown target.
+  Collector requests were accepted; no page errors. Consent withdrawal stopped
+  subsequent collection. Analytics dashboard rendered this real API data on
+  desktop/mobile; only unrelated app-shell responses were fixtures.
+- Removing the recognition opt-in guard made its regression fail. Replacing
+  DISTINCT daily browser counting with raw event counting made the daily test
+  fail (11 New instead of 2); both mutations were restored and tests passed.
+- Production was not deployed/migrated and customer Google data was not used.
+  This is not a high-volume load test or a privacy-law compliance certification.

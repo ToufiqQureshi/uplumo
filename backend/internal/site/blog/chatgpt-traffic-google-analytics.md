@@ -83,7 +83,7 @@ Uplumo Analytics is a small tracking script, built to answer this exact question
 
 - recognises visits from ChatGPT, Perplexity, Gemini, Claude and Copilot by their referrers **and** by AI tracking tags such as `utm_source=chatgpt.com`;
 - shows AI traffic as its own channel, with the assistant and the landing page for each visit;
-- sets no cookies and stores no IP addresses, so it does not need a cookie banner.
+- sets no cookies and stores no IP addresses. Optional new/returning recognition uses first-party browser storage; site owners must obtain any required consent and update visitor disclosures.
 
 It is included in every plan, including Free. You add one script tag to your site, the same way you would add GA4, and both can run side by side.
 

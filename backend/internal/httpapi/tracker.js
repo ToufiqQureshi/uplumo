@@ -1,4 +1,5 @@
-// Uplumo first-party tracker. No cookies, third-party requests or raw IDs sent to storage.
+// Uplumo first-party tracker. No cookies or third-party requests; the server
+// stores only site-scoped ID hashes. Browser recognition is explicitly opt-in.
 (function () {
   var script = document.currentScript;
   var nav = navigator;
@@ -20,6 +21,31 @@
   var visibleSinceTick = false;
   var idleMS = 30 * 60 * 1000;
   var maxSessionMS = 24 * 60 * 60 * 1000;
+  var browserKey = "uplumo-browser:" + site;
+  var recognition = script.getAttribute("data-recognition") === "true";
+  var collectionAllowed = true;
+  var browserTTL = 180 * 24 * 60 * 60 * 1000;
+
+  function privacyBlocked() {
+    return nav.doNotTrack === "1" || window.doNotTrack === "1" || nav.globalPrivacyControl;
+  }
+
+  function browserID() {
+    if (!recognition || !collectionAllowed || privacyBlocked()) return "";
+    try {
+      var stored = JSON.parse(localStorage.getItem(browserKey) || "null");
+      var now = Date.now();
+      if (!stored || !/^[0-9a-f]{32}$/.test(stored.id || "") ||
+          !Number.isFinite(stored.created) || stored.created > now || now - stored.created >= browserTTL) {
+        if (!window.crypto || !window.crypto.getRandomValues) return "";
+        var secureID = id(true);
+        if (!secureID) return "";
+        stored = { id: secureID, created: now };
+        localStorage.setItem(browserKey, JSON.stringify(stored));
+      }
+      return stored.id;
+    } catch (_) { return ""; }
+  }
 
   // A tab opened by another page starts with a copy of the opener's
   // sessionStorage. Drop the copied session on that first page only: later
@@ -29,12 +55,13 @@
     try { sessionStorage.removeItem(sessionKey); } catch (_) { storageAvailable = false; }
   }
 
-  function id() {
+  function id(requireSecure) {
     var bytes = new Uint8Array(16);
     try {
       if (!window.crypto || !window.crypto.getRandomValues) throw new Error("secure random unavailable");
       window.crypto.getRandomValues(bytes);
     } catch (_) {
+      if (requireSecure) return "";
       for (var i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
     }
     return Array.prototype.map.call(bytes, function (n) { return n.toString(16).padStart(2, "0"); }).join("");
@@ -71,6 +98,7 @@
   }
 
   function post(data) {
+    if (!collectionAllowed || privacyBlocked()) return;
     var body = JSON.stringify(data);
     if (!(nav.sendBeacon && nav.sendBeacon(endpoint, body))) {
       fetch(endpoint, { method: "POST", body: body, keepalive: true, mode: "no-cors" }).catch(function () {});
@@ -79,6 +107,8 @@
 
   function payload(extra) {
     var data = { k: site, u: pageURL, r: pageReferrer, w: screen.width, s: session ? session.id : currentSession(), p: pageviewID };
+    var browser = browserID();
+    if (browser) data.b = browser;
     Object.keys(extra || {}).forEach(function (key) { data[key] = extra[key]; });
     return data;
   }
@@ -96,6 +126,7 @@
   }
 
   function startPage(referrer, force) {
+    if (!collectionAllowed || privacyBlocked()) return;
     var url = location.href.split("#")[0];
     if (url === last && !force) return;
     if (pageviewID) flushEngagement();
@@ -110,20 +141,67 @@
     post(payload({ r: referrer || "" }));
   }
 
-  function track(name) {
+  function track(name, extra) {
+    if (!collectionAllowed || privacyBlocked() || !pageviewID) return;
     name = String(name || "").trim().slice(0, 64);
     if (!name) return;
     var oldSession = session && session.id;
     var activeSession = currentSession();
     if (oldSession && oldSession !== activeSession) startPage("", true);
-    post(payload({ n: name, i: id() }));
+    var data = { n: name, i: id() };
+    if (extra) {
+      data.c = true;
+      if (extra.destination) data.x = extra.destination;
+    }
+    post(payload(data));
   }
 
   addEventListener("click", function (e) {
-    var el = e.target && e.target.closest && e.target.closest("[data-uplumo-event]");
-    if (el) track(el.getAttribute("data-uplumo-event"));
+    var target = e.target && (e.target.closest ? e.target : e.target.parentElement);
+    if (!target || !target.closest) return;
+    var el = target.closest("[data-uplumo-event]");
+    var link = target.closest("a[href]");
+    var raw = el && el.getAttribute("data-uplumo-destination") || link && link.getAttribute("href");
+    var destination = "";
+    var external = false;
+    try {
+      var url = new URL(raw || "", location.href);
+      if (raw && /^https?:$/.test(url.protocol) && !url.username && !url.password) {
+        external = url.hostname !== location.hostname;
+        destination = url.origin + url.pathname;
+        if (destination.length > 2048) destination = "";
+      }
+    } catch (_) { /* Missing or unsupported targets stay unknown. */ }
+    if (el) track(el.getAttribute("data-uplumo-event"), { destination: destination });
+    else if (external && destination) track("outbound_click", { destination: destination });
   }, true);
-  window.uplumo = track;
+  window.uplumo = function (name) { track(name); };
+  // Site owners call this from their consent manager. Revocation stops all
+  // future collection and clears our browser/session identifiers on this origin.
+  window.uplumoConsent = function (granted) {
+    if (granted !== true && granted !== false) return;
+    recognition = granted;
+    collectionAllowed = granted;
+    if (!granted) {
+      try { localStorage.removeItem(browserKey); } catch (_) { /* Storage may be blocked. */ }
+      try { sessionStorage.removeItem(sessionKey); } catch (_) { /* Storage may be blocked. */ }
+      session = null;
+      pageviewID = "";
+      last = "";
+    } else {
+      initialize();
+    }
+  };
+  addEventListener("storage", function (e) {
+    if (e.key === browserKey && e.newValue === null) {
+      collectionAllowed = false;
+      recognition = false;
+      session = null;
+      pageviewID = "";
+      last = "";
+      try { sessionStorage.removeItem(sessionKey); } catch (_) { /* Storage may be blocked. */ }
+    }
+  });
 
   var pushState = history.pushState;
   history.pushState = function () {
@@ -133,6 +211,7 @@
   };
   addEventListener("popstate", function () { startPage(last, false); });
   document.addEventListener("visibilitychange", function () {
+    if (!collectionAllowed || privacyBlocked()) return;
     if (document.visibilityState === "hidden") flushEngagement();
     else {
       var oldSession = session && session.id;
@@ -144,12 +223,27 @@
   });
   addEventListener("pagehide", flushEngagement);
   setInterval(function () {
-    if (document.visibilityState !== "visible") return;
+    if (document.visibilityState !== "visible" || !collectionAllowed || privacyBlocked()) return;
     var oldSession = session && session.id;
     var activeSession = currentSession();
     if (oldSession && oldSession !== activeSession) startPage("", true);
     flushEngagement();
   }, 15000);
 
-  startPage(document.referrer, false);
+  function initialize() {
+    // Web Locks serialize first recognition across same-origin tabs. Browsers
+    // without that API use the default anonymous mode rather than race IDs.
+    if (recognition) {
+      if (!nav.locks || !nav.locks.request) recognition = false;
+      else {
+        nav.locks.request(browserKey, function () {
+          browserID();
+          startPage(document.referrer, false);
+        }).catch(function () { recognition = false; startPage(document.referrer, false); });
+        return;
+      }
+    }
+    startPage(document.referrer, false);
+  }
+  initialize();
 })();

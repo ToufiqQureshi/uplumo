@@ -599,7 +599,7 @@ func landingFAQ() []QA {
 			"in ordinary analytics. Uplumo Analytics recognises AI referrers and AI tracking tags, " +
 			"so you can see which assistants send you visitors and which pages they land on."},
 		{"Does the tracker need a cookie banner?", "The tracker sets no cookies and stores no IP addresses. " +
-			"Visitors are counted with a hash that changes every day, so nobody can be followed over time."},
+			"Default visitor-day counts use a daily-changing hash. Optional new/returning recognition uses first-party browser storage; enable it only after obtaining any required consent and updating your privacy notice."},
 		{"Do I need technical skills?", "No. Every finding is explained in plain language, with what to do next. " +
 			"Adding analytics means pasting one script tag into your site."},
 	}
