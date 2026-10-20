@@ -15,10 +15,17 @@
   var pageReferrer = "";
   var engagedMS = 0;
   var tickAt = 0;
+  // Whether the page was visible since tickAt. Checked instead of the current
+  // state, because visibilitychange fires after the page is already hidden.
+  var visibleSinceTick = false;
   var idleMS = 30 * 60 * 1000;
   var maxSessionMS = 24 * 60 * 60 * 1000;
 
-  if (window.opener) {
+  // A tab opened by another page starts with a copy of the opener's
+  // sessionStorage. Drop the copied session on that first page only: later
+  // pages and reloads in the same tab keep window.opener but are one visit.
+  var navEntry = performance.getEntriesByType && performance.getEntriesByType("navigation")[0];
+  if (window.opener && history.length === 1 && !(navEntry && navEntry.type === "reload")) {
     try { sessionStorage.removeItem(sessionKey); } catch (_) { storageAvailable = false; }
   }
 
@@ -78,8 +85,9 @@
 
   function accrue() {
     var now = performance.now();
-    if (tickAt && document.visibilityState === "visible") engagedMS += Math.min(now - tickAt, 15000);
+    if (tickAt && visibleSinceTick) engagedMS += Math.min(now - tickAt, 15000);
     tickAt = now;
+    visibleSinceTick = document.visibilityState === "visible";
   }
 
   function flushEngagement() {
@@ -98,6 +106,7 @@
     pageviewID = id();
     engagedMS = 0;
     tickAt = performance.now();
+    visibleSinceTick = document.visibilityState === "visible";
     post(payload({ r: referrer || "" }));
   }
 
@@ -130,6 +139,7 @@
       var activeSession = currentSession();
       if (oldSession && oldSession !== activeSession) startPage("", true);
       tickAt = performance.now();
+      visibleSinceTick = true;
     }
   });
   addEventListener("pagehide", flushEngagement);

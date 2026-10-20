@@ -186,7 +186,7 @@ func (r repository) summary(ctx context.Context, projectID string, start, end ti
 			SELECT DISTINCT ON (e.session_hash) e.session_hash, e.visitor_hash,
 				e.utm_source, e.utm_medium, e.utm_campaign, e.utm_term, e.utm_content
 			FROM go_analytics_events e
-			JOIN (SELECT DISTINCT session_hash FROM go_analytics_events`+eventsInRange+`
+			JOIN (SELECT DISTINCT session_hash`+eventsInRange+`
 				AND session_hash IS NOT NULL) in_range USING (session_hash)
 			WHERE e.site_id = (SELECT id FROM go_analytics_sites WHERE project_id = $1)
 				AND e.session_hash IS NOT NULL
@@ -212,7 +212,7 @@ func (r repository) summary(ctx context.Context, projectID string, start, end ti
 		), first_page AS (
 			SELECT DISTINCT ON (e.session_hash) e.session_hash, e.channel
 			FROM go_analytics_events e
-			JOIN (SELECT DISTINCT session_hash FROM go_analytics_events`+eventsInRange+`
+			JOIN (SELECT DISTINCT session_hash`+eventsInRange+`
 				AND session_hash IS NOT NULL) in_range USING (session_hash)
 			WHERE e.site_id = (SELECT id FROM go_analytics_sites WHERE project_id = $1)
 			ORDER BY e.session_hash, e.occurred_at, e.pageview_hash
@@ -249,21 +249,30 @@ func (r repository) summary(ctx context.Context, projectID string, start, end ti
 				&s.AvgEngagementMS, &s.GoalEventName, &s.ConversionSessions)
 		})
 
-	b.Queue(`WITH first_page AS (
-			SELECT DISTINCT ON (session_hash) session_hash, path, engaged_ms
-			FROM go_analytics_events`+eventsInRange+`
+	// Landing and exit pages come from the whole session, like the campaign
+	// reports above: a session that crosses the range's edge keeps its real
+	// first and last page.
+	b.Queue(`WITH in_range AS (
+			SELECT DISTINCT session_hash`+eventsInRange+`
 				AND session_hash IS NOT NULL
-			ORDER BY session_hash, occurred_at, pageview_hash
+		), first_page AS (
+			SELECT DISTINCT ON (e.session_hash) e.session_hash, e.path, e.engaged_ms
+			FROM go_analytics_events e JOIN in_range USING (session_hash)
+			WHERE e.site_id = (SELECT id FROM go_analytics_sites WHERE project_id = $1)
+			ORDER BY e.session_hash, e.occurred_at, e.pageview_hash
 		)
 		SELECT path, count(*), coalesce(avg(engaged_ms)::bigint, 0)
 		FROM first_page GROUP BY path ORDER BY 2 DESC, path LIMIT $4`, append(args, topLimit)...).
 		Query(collectInto(&s.Entries, pgx.RowToStructByPos[EntryExitCount]))
 
-	b.Queue(`WITH last_page AS (
-			SELECT DISTINCT ON (session_hash) session_hash, path, engaged_ms
-			FROM go_analytics_events`+eventsInRange+`
+	b.Queue(`WITH in_range AS (
+			SELECT DISTINCT session_hash`+eventsInRange+`
 				AND session_hash IS NOT NULL
-			ORDER BY session_hash, occurred_at DESC, pageview_hash DESC
+		), last_page AS (
+			SELECT DISTINCT ON (e.session_hash) e.session_hash, e.path, e.engaged_ms
+			FROM go_analytics_events e JOIN in_range USING (session_hash)
+			WHERE e.site_id = (SELECT id FROM go_analytics_sites WHERE project_id = $1)
+			ORDER BY e.session_hash, e.occurred_at DESC, e.pageview_hash DESC
 		)
 		SELECT path, count(*), coalesce(avg(engaged_ms)::bigint, 0)
 		FROM last_page GROUP BY path ORDER BY 2 DESC, path LIMIT $4`, append(args, topLimit)...).

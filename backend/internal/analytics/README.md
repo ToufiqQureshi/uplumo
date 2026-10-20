@@ -19,10 +19,21 @@ acquisition, sessions, visible page engagement and selected outcome events.
    outcome.
 4. While a page is visible, cumulative engagement time is upserted every 15
    seconds and on page hide/navigation. Duplicate updates keep the maximum
-   duration, so retries do not add time twice. Hidden time is excluded.
+   duration, so retries do not add time twice. Hidden time is excluded; the
+   time up to the moment the page is hidden is kept (`visibleSinceTick` in
+   `httpapi/tracker.js`), because `visibilitychange` fires after the page is
+   already hidden.
 5. The summary returns visitor-days, sessions, engaged sessions, bounce and
    goal rates, acquisition channels, tagged campaigns, entry/exit pages,
    average page/session time, referrers, devices, geography and custom events.
+   Landing and exit pages, like campaigns and acquisition, come from the
+   whole session: a session that crosses the edge of the range keeps its
+   real first and last page.
+
+A tab opened by another page starts with a copy of the opener's
+`sessionStorage`; the tracker drops that copied session on the tab's first
+page only (`history.length === 1`, not a reload), so reloads and later pages
+in the same tab stay one session.
 
 An engaged session has at least 10 seconds of visible page time, two
 pageviews, or the selected goal event. Time means the page was visible in the

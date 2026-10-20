@@ -17,6 +17,8 @@ Collects first-party pageviews/custom events and returns project traffic summari
 - Respect Do Not Track and Global Privacy Control before session storage or
   network collection; do not send events to third parties.
 
+- **Session reports read whole sessions; visible time includes the last interval.** _Decision:_ landing and exit pages pick the first and last event of every session that has an event in the range, even outside it; the tracker credits visible time up to the hide event and keeps the session across reloads of a tab that has an opener, resetting only on that tab's first page. _Why:_ review found that a session crossing midnight reported the wrong landing/exit page, a page viewed 10–14 s then hidden counted as a bounce, and every reload of a `window.open` tab started a new session. The summary SQL also had a duplicated `FROM` that failed every request. _Preserve:_ the summary runs in one batch; session metrics count only in-range events, while first/last page attribution uses the whole session; hidden time is never counted. _Trace:_ `repository.go` (`summary`), `httpapi/tracker.js`, `TestSummarizeSessionsCampaignsAndLandingPages`, `frontend/scripts/tracker.test.ts`.
+
 ## Dependencies
 
 Postgres analytics tables; Redis daily salt/rate-limit counters; no paid SEO provider.
