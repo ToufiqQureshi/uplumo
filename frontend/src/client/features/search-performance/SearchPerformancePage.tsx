@@ -16,6 +16,8 @@ import { Spinner } from "@/client/components/ui/spinner";
 import { DataTableTabs } from "@/client/components/table/DataTableToolbar";
 import { TabsTrigger } from "@/client/components/ui/tabs";
 import { GoogleConnectionCard } from "@/client/features/integrations/GoogleConnectionCard";
+import { IndexNowCard } from "@/client/features/indexnow/IndexNowCard";
+import { SectionHeader } from "@/client/components/PageHeader";
 import { DimensionSection } from "@/client/features/search-performance/SearchPerformanceDimensionSection";
 import { SearchPerformanceSelects } from "@/client/features/search-performance/SearchPerformanceSelects";
 import { SearchPerformanceLoadingState } from "@/client/features/search-performance/SearchPerformanceLoadingState";
@@ -383,6 +385,18 @@ export function SearchPerformancePage({
               )}
             </div>
           </>
+        )}
+
+        {/* IndexNow needs no Search Console connection and works on any
+            website, so it shows whether or not Google is connected. */}
+        {reportQuery.isPending ? null : (
+          <section id="indexnow" className="max-w-2xl space-y-3 pt-4">
+            <SectionHeader
+              title="Request indexing on Bing and other engines (IndexNow)"
+              hint="Works on any website, WordPress or not. Google does not use IndexNow: for Google, use URL Inspection in Search Console."
+            />
+            <IndexNowCard projectId={projectId} />
+          </section>
         )}
       </div>
     </div>

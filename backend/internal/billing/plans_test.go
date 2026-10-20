@@ -26,7 +26,7 @@ func (f *fixture) eventOnPlan(plan, name, subID, status string) []byte {
 func TestPlanDecidesFeaturesAndLimits(t *testing.T) {
 	ctx := context.Background()
 	all := []plans.Feature{
-		plans.GoogleData, plans.Keywords, plans.RankTracking, plans.FullAudit, plans.Publishing, plans.AIWriting,
+		plans.GoogleData, plans.Keywords, plans.RankTracking, plans.FullAudit, plans.Publishing, plans.AIWriting, plans.IndexNow,
 		plans.Backlinks, plans.DomainResearch, plans.AIVisibility, plans.WhiteLabel,
 	}
 	for _, test := range []struct {
@@ -35,9 +35,9 @@ func TestPlanDecidesFeaturesAndLimits(t *testing.T) {
 		sites, keywords, members int
 	}{
 		{PlanFree, 0, 1, 0, 1},
-		{PlanBasic, 6, 1, 100, 1},
-		{PlanPro, 9, 2, 500, 3},
-		{PlanAgency, 10, 10, 1500, 10},
+		{PlanBasic, 7, 1, 100, 1},
+		{PlanPro, 10, 2, 500, 3},
+		{PlanAgency, 11, 10, 1500, 10},
 	} {
 		t.Run(test.plan, func(t *testing.T) {
 			f := newFixture(ctx, t)

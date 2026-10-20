@@ -34,6 +34,11 @@ contract.
      the scripts, the article stays published and the response explains why
      schema was omitted. The author can install an optional schema plugin
      later; no plugin-specific REST fields are assumed available.
+   - when the post went **live** (`status: publish`) and the project has set
+     up IndexNow, the published URL is sent to IndexNow
+     (`backend/internal/indexnow`). The answer carries
+     `indexNow: {status, message}`; it is absent when IndexNow did nothing.
+     A failure there never fails the publish.
 3. `.../site-connection/get`, `.../site-connection/delete` (owner or admin)
    and `.../content/drafts/{draftId}/publication/get` read and remove.
 

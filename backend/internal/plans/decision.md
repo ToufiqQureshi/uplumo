@@ -11,6 +11,7 @@ Defines official Uplumo prices, entitlements and limits for pricing, billing and
 - Never duplicate price/limits in frontend or feature code. _Why:_ A single server-owned source keeps UI access, checkout and limits aligned even if client state is stale or modified.
 - Every advertised feature must be enforced, and Razorpay amount/plan ID must match the catalog. _Why:_ A single server-owned source keeps UI access, checkout and limits aligned even if client state is stale or modified.
 - Plan limit changes need cost/unit-economics review and test coverage. _Why:_ This work consumes paid quota or shared capacity, so authorization and bounds must be checked before dispatch.
+- **`IndexNow` is a Basic, Pro and Agency feature.** _Decision:_ owner's choice (20 Oct); Free does not get it. _Why:_ a paid-plan benefit even though IndexNow costs Uplumo nothing per call. _Preserve:_ the pricing page rows and the `indexnow` routes read `plans.IndexNow`, never a copied plan list. _Trace:_ `catalog.go`, `catalog_test.go`, `billing/plans_test.go`, `backend/internal/indexnow/`.
 
 ## Dependencies
 

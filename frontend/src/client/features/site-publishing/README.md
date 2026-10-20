@@ -13,7 +13,8 @@ drafts to it. Rules, limits and errors live in
 - `PublishToSite`: in the content editor's sidebar. Publishes the **saved**
   draft, so it waits while there are unsaved changes. "Send as draft" makes a
   WordPress draft; "Publish now" makes it live; both update the same post
-  the second time.
+  the second time. After a live publish it shows what IndexNow did (see
+  `indexnow/README.md`) as a second toast.
 - The application password is only held in the form until it is sent; it is
   never cached or read back.
 - Errors from the customer's own site (`site_unreachable`, `site_error`, both 502) keep the server's message, so the customer sees what WordPress said.

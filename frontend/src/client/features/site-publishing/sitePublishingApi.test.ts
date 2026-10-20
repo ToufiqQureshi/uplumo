@@ -95,6 +95,17 @@ describe("publishing", () => {
     );
   });
 
+  it("keeps what automatic IndexNow submission did", async () => {
+    respondWith({
+      published: true,
+      status: "publish",
+      indexNow: { status: "failed", message: "No key file." },
+    });
+    await expect(publishDraft("p", "d", "publish")).resolves.toMatchObject({
+      indexNow: { status: "failed", message: "No key file." },
+    });
+  });
+
   it("reads an unpublished draft", async () => {
     respondWith({ published: false });
     await expect(

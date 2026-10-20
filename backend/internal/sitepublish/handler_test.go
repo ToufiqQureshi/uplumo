@@ -239,3 +239,66 @@ func TestHandlerExplainsADroppedLoginHeader(t *testing.T) {
 		t.Fatalf("connect when the host drops the header = %d %v", status, body)
 	}
 }
+
+type submitterStub struct {
+	status, message string
+	calls           []string
+}
+
+func (s *submitterStub) SubmitPublished(_ context.Context, organizationID, projectID, pageURL string) (string, string) {
+	s.calls = append(s.calls, organizationID+" "+projectID+" "+pageURL)
+	return s.status, s.message
+}
+
+func TestPublishSubmitsLivePagesToIndexNow(t *testing.T) {
+	for _, test := range []struct {
+		name      string
+		status    string
+		submitter *submitterStub
+		wantCalls int
+		wantView  bool
+	}{
+		{"live page", "publish", &submitterStub{status: "submitted", message: "Submitted 1 URL."}, 1, true},
+		// A WordPress draft is not public, so engines must not be told.
+		{"wordpress draft", "draft", &submitterStub{status: "submitted"}, 0, false},
+		// Not set up or not on the plan: nothing to show.
+		{"indexnow off", "publish", &submitterStub{}, 1, false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			wp := newFakeWordPress(t)
+			service, _ := newTestService(t, wp, memoryDrafts{"d": {ID: "d", ProjectID: "p", Title: "Hello", Content: "Body"}})
+			mux := http.NewServeMux()
+			base := testMux(service, planStub{allowed: true}, owner)
+			if status, _ := post(t, base, "/api/v1/projects/p/site-connection/save", connectBody(wp.server.URL, testPassword)); status != http.StatusOK {
+				t.Fatalf("connect = %d", status)
+			}
+			Mount(mux, Deps{
+				Service: service, Plans: planStub{allowed: true}, IndexNow: test.submitter,
+				WithSession: func(next http.Handler) http.Handler {
+					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						next.ServeHTTP(w, r.WithContext(auth.WithUser(r.Context(), owner)))
+					})
+				},
+				WithProjectAccess: func(next http.Handler) http.Handler {
+					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						next.ServeHTTP(w, r.WithContext(auth.WithProjectOrganization(r.Context(), "org")))
+					})
+				},
+			})
+			status, body := post(t, mux, "/api/v1/projects/p/content/drafts/d/publish", `{"status":"`+test.status+`"}`)
+			if status != http.StatusOK || body["published"] != true {
+				t.Fatalf("publish = %d %v", status, body)
+			}
+			if len(test.submitter.calls) != test.wantCalls {
+				t.Fatalf("indexnow calls = %v, want %d", test.submitter.calls, test.wantCalls)
+			}
+			if test.wantCalls == 1 && test.submitter.calls[0] != "org p "+body["url"].(string) {
+				t.Errorf("submitted %q, want the published URL", test.submitter.calls[0])
+			}
+			view, has := body["indexNow"].(map[string]any)
+			if has != test.wantView || (has && view["status"] != "submitted") {
+				t.Errorf("indexNow = %v", body["indexNow"])
+			}
+		})
+	}
+}

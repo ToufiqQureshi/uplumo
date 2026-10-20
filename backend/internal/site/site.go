@@ -496,6 +496,7 @@ func includedTools(plan planCatalog.Definition) []string {
 		{planCatalog.Keywords, "Keyword research, SERP analysis, Local SEO and Google Business research"},
 		{planCatalog.RankTracking, "Rank tracking"},
 		{planCatalog.Publishing, "Publish articles to WordPress"},
+		{planCatalog.IndexNow, "IndexNow submissions to Bing and other engines"},
 		{planCatalog.Backlinks, "Backlink research"},
 		{planCatalog.DomainResearch, "Competitor and domain research"},
 		{planCatalog.AIVisibility, "AI Visibility"},
@@ -575,6 +576,7 @@ func comparison() []CompareRow {
 		row("Backlink and competitor research", included(planCatalog.Backlinks)),
 		row("AI Visibility", included(planCatalog.AIVisibility)),
 		row("Publish articles to your WordPress site", included(planCatalog.Publishing)),
+		row("IndexNow: tell Bing and other engines about new pages (not Google)", included(planCatalog.IndexNow)),
 		row("AI writing assistant", included(planCatalog.AIWriting)),
 		row("White-label reports", included(planCatalog.WhiteLabel)),
 		row("Monthly price", func(plan planCatalog.Definition) string {

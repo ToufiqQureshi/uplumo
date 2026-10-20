@@ -6,7 +6,7 @@ The one list of what each Uplumo plan costs, limits and includes
 | Plan   | Price a month | Sites | Tracked keywords | Members | Monthly credits | Adds                                                                |
 | ------ | ------------- | ----- | ---------------- | ------- | --------------- | ------------------------------------------------------------------- |
 | Free   | ₹0            | 1     | none             | 1       | 0               | Uplumo Analytics with AI traffic detection, starter site audit      |
-| Basic  | ₹999          | 1     | 100              | 1       | 4,000           | Keyword research, rank tracking, Google data, full site audit, AI writing assistant, SAM  |
+| Basic  | ₹999          | 1     | 100              | 1       | 4,000           | Keyword research, rank tracking, Google data, full site audit, AI writing assistant, IndexNow, SAM  |
 | Pro    | ₹2,499        | 2     | 500              | 3       | 10,000          | Backlinks, competitor research, AI Visibility |
 | Agency | ₹5,999        | 10    | 1,500            | 10      | 25,000          | White-label reports                                                 |
 

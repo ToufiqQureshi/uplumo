@@ -37,6 +37,18 @@ in the linked feature READMEs; do not silently change them during a UI refactor.
 | Save immutable server-derived baselines and preserve the selected goal/comparison context.                                              | A later configuration change or repeated click must not rewrite the evidence used to assess a page edit. Before/after and unchanged-page comparisons remain observational.                | `GrowthActions.tsx`, `GrowthPageCard.tsx`; backend `ga4/decision.md`                                              |
 | Separate saved prompt citations from Google's native AI report and optional BigQuery setup.                                             | These sources do not share coverage. External entry points must not be presented as implemented automatic ingestion or a complete AI visibility picture.                                  | `GrowthCitationEvidence.tsx`, `SearchGrowthPanel.tsx`                                                             |
 
+## IndexNow on this page
+
+- **Decision:** the IndexNow card sits at the bottom of the page, shown with or
+  without a Search Console connection, and works for any website.
+- **Why:** the owner wants manual indexing requests where customers look at
+  search data, including sites that are not on WordPress.
+- **Preserve:** the heading says Bing and other engines and that Google does
+  not use IndexNow (Google indexing is URL Inspection in Search Console);
+  nothing outbound runs on page load.
+- **Trace:** `SearchPerformancePage.tsx`; rules in
+  `../indexnow/decision.md` and `backend/internal/indexnow/decision.md`.
+
 ## Verification and future changes
 
 - Preserve explicit-action/no-paid-call boundaries in `SearchGrowthPanel.test.ts`

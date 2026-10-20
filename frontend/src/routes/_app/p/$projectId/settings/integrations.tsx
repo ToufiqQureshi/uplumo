@@ -6,6 +6,7 @@ import { CrawlerAccessSettings } from "@/client/features/settings/CrawlerAccessS
 import { SectionHeader } from "@/client/components/PageHeader";
 import { WebsiteConnectionCard } from "@/client/features/site-publishing/WebsiteConnectionCard";
 import { AuthorProfiles } from "@/client/features/content-editor/AuthorProfiles";
+import { IndexNowCard } from "@/client/features/indexnow/IndexNowCard";
 
 export const Route = createFileRoute(
   "/_app/p/$projectId/settings/integrations",
@@ -44,6 +45,14 @@ function ProjectIntegrationsRoute() {
           hint="Publish content-editor articles straight to your WordPress site."
         />
         <WebsiteConnectionCard projectId={projectId} />
+      </section>
+
+      <section id="indexnow" className="scroll-mt-6 space-y-3">
+        <SectionHeader
+          title="IndexNow"
+          hint="Tell Bing and other IndexNow search engines when pages are new or changed."
+        />
+        <IndexNowCard projectId={projectId} />
       </section>
 
       <section id="authors" className="scroll-mt-6 space-y-3">
