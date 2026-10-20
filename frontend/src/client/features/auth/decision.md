@@ -14,4 +14,11 @@ Frontend sign-up, sign-in, verification, password recovery, Google sign-in and h
 
 ## Verification pointers
 
+The shared owner analytics loader excludes initial auth/credential-link pages.
+After client navigation resolves, `src/router.tsx` emits `uplumo:navigation`
+without credentials or user data; the loader can then initialize on an eligible
+dashboard/checkout page. Auth-first sessions must not permanently miss app
+tracking. This notification changes no auth guard or session behavior. See the
+backend site `decision.md` and `scripts/owner-tracking.test.ts` for boundaries.
+
 - `passwordSchema.test.ts`

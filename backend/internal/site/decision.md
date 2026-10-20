@@ -33,6 +33,12 @@ emails, or payment details in event names, and never present an intent click as
 a completed subscription. Successful billing still requires server confirmation;
 no purchase conversion or person-level identity tracking is added here.
 
+The React router emits `uplumo:navigation` after a route resolves. The loader
+rechecks eligibility on that event, so an initial sign-in page can leave tracking
+off while a subsequent in-app dashboard/checkout route initializes it once,
+without requiring a reload. Loading auth first must not permanently suppress
+subscription-intent measurements. `owner-tracking.test.ts` covers this transition.
+
 Trace: `templates/base.html`, `landing.html`, `pricing.html`, `privacy.html`,
 `site.go`, `static/analytics.js`; frontend `scripts/owner-tracking.test.ts` tests
 single initialization, opt-outs, auth exclusions and named clicks. Site tests

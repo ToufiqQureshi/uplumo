@@ -42,6 +42,10 @@ export function getRouter() {
     scrollRestoration: true,
   });
 
+  router.subscribe("onResolved", () => {
+    window.dispatchEvent(new Event("uplumo:navigation"));
+  });
+
   return router;
 }
 

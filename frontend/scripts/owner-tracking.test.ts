@@ -11,6 +11,9 @@ function browser(path = "/pricing", hostname = "uplumo.com", optedOut = false) {
   const listeners: Record<string, (event: unknown) => void> = {};
   const window: { dataLayer: unknown[][]; [key: string]: unknown } = {
     dataLayer: [],
+    addEventListener: (name: string, fn: (event: unknown) => void) => {
+      listeners[name] = fn;
+    },
   };
   const context = {
     location: { hostname, pathname: path },
@@ -33,6 +36,15 @@ function browser(path = "/pricing", hostname = "uplumo.com", optedOut = false) {
   return { context, scripts, listeners, window };
 }
 describe("owner tracking boundaries", () => {
+  it("initializes after client navigation leaves the login page, only once", () => {
+    const b = browser("/sign-in");
+    runInNewContext(loader, b.context);
+    expect(b.scripts).toHaveLength(0);
+    b.context.location.pathname = "/p/example/billing/plan";
+    b.listeners["uplumo:navigation"]({});
+    b.listeners["uplumo:navigation"]({});
+    expect(b.scripts).toHaveLength(2);
+  });
   it("initializes both trackers once and records named intent without form data", () => {
     const b = browser();
     runInNewContext(loader, b.context);
