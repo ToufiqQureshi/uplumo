@@ -86,7 +86,7 @@ func (d BriefDeps) brief(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !allowed {
-		httpx.WriteError(w, http.StatusPaymentRequired, "plan_required", "Search briefs are included in Basic and higher plans.")
+		httpx.WriteError(w, http.StatusPaymentRequired, "plan_required", "Search briefs are included in Solo and higher plans.")
 		return
 	}
 	domain, location, language, err := d.Projects.ProjectMarket(r.Context(), org, r.PathValue("projectId"))

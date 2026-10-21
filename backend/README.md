@@ -112,7 +112,7 @@ are in its own `internal/<feature>/README.md` and, where one exists,
   See `internal/domain/README.md`.
 - `POST /api/v1/projects/{projectId}/site-connection/get`, `/save`,
   `/delete` and `.../content/drafts/{draftId}/publish`: connect the
-  project's WordPress site and publish drafts to it; `402` below Basic when
+  project's WordPress site and publish drafts to it; `402` below Solo when
   billing is configured. See `internal/sitepublish/README.md`.
 - `/api/v1/...`: needs a valid session cookie, otherwise 401.
   `/api/v1/projects/{projectId}/...` also needs membership of the project's
@@ -188,7 +188,7 @@ Hosts compare case-insensitively without `www.`. The tables are in
 
 ## Billing
 
-Basic, Pro and Agency, each sold as a Razorpay subscription per workspace
+Solo (`basic`), Growth (`pro`) and Agency (`agency`), each sold as a Razorpay subscription per workspace
 (organization). What they cost and include is in `internal/plans/README.md`.
 More, including cancelling and the credit ledger, is in
 `internal/billing/README.md`.

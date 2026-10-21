@@ -103,7 +103,7 @@ var catalog = []Definition{
 		},
 	},
 	{
-		ID: Basic, Name: "Basic", PriceINR: 999, Sites: 1, TrackedKeywords: 100, Members: 1, MonthlyCredits: 4000, MaxSerpDepth: 30, RankSchedule: RankScheduleWeekly,
+		ID: Basic, Name: "Solo", PriceINR: 999, Sites: 1, TrackedKeywords: 100, Members: 1, MonthlyCredits: 4000, MaxSerpDepth: 30, RankSchedule: RankScheduleWeekly,
 		Summary: "For one site that wants to rank: keywords, rankings and Google data.",
 		Highlights: []string{
 			"1 website",
@@ -119,11 +119,11 @@ var catalog = []Definition{
 		features: basicFeatures,
 	},
 	{
-		ID: Pro, Name: "Pro", PriceINR: 2499, Sites: 2, TrackedKeywords: 500, Members: 3, MonthlyCredits: 10000, MaxSerpDepth: 40, RankSchedule: RankScheduleWeekly,
+		ID: Pro, Name: "Growth", PriceINR: 2499, Sites: 1, TrackedKeywords: 500, Members: 3, MonthlyCredits: 10000, MaxSerpDepth: 40, RankSchedule: RankScheduleWeekly,
 		Summary: "For a growing business: competitors, backlinks and AI search.",
 		Highlights: []string{
-			"2 websites",
-			"Everything in Basic",
+			"1 website",
+			"Everything in Solo",
 			"Rank tracking for 500 keywords, checked weekly",
 			"AI Visibility across ChatGPT, Perplexity, Gemini, AI Overviews and Claude",
 			"Backlink and competitor research",
@@ -132,11 +132,11 @@ var catalog = []Definition{
 		features: proFeatures,
 	},
 	{
-		ID: Agency, Name: "Agency", PriceINR: 5999, Sites: 10, TrackedKeywords: 1500, Members: 10, MonthlyCredits: 25000, MaxSerpDepth: 40, RankSchedule: RankScheduleWeekly,
+		ID: Agency, Name: "Agency", PriceINR: 9999, Sites: 10, TrackedKeywords: 1500, Members: 10, MonthlyCredits: 25000, MaxSerpDepth: 40, RankSchedule: RankScheduleWeekly,
 		Summary: "For agencies: client sites and reports under your own brand.",
 		Highlights: []string{
 			"10 websites",
-			"Everything in Pro",
+			"Everything in Growth",
 			"Rank tracking for 1,500 keywords, checked weekly",
 			"White-label reports with your name, logo and colour",
 			"10 team members",

@@ -6,9 +6,9 @@ The one list of what each Uplumo plan costs, limits and includes
 | Plan   | Price a month | Sites | Tracked keywords | Members | Monthly credits | Adds                                                                |
 | ------ | ------------- | ----- | ---------------- | ------- | --------------- | ------------------------------------------------------------------- |
 | Free   | ₹0            | 1     | none             | 1       | 0               | Uplumo Analytics with AI traffic detection, starter site audit      |
-| Basic  | ₹999          | 1     | 100              | 1       | 4,000           | Keyword research, rank tracking, Google data, full site audit, AI writing assistant, IndexNow, SAM  |
-| Pro    | ₹2,499        | 2     | 500              | 3       | 10,000          | Backlinks, competitor research, AI Visibility |
-| Agency | ₹5,999        | 10    | 1,500            | 10      | 25,000          | White-label reports                                                 |
+| Solo (`basic`)  | ₹999          | 1     | 100              | 1       | 4,000           | Keyword research, rank tracking, Google data, full site audit, AI writing assistant, IndexNow, SAM  |
+| Growth (`pro`)    | ₹2,499        | 1     | 500              | 3       | 10,000          | Backlinks, competitor research, AI Visibility |
+| Agency | ₹9,999        | 10    | 1,500            | 10      | 25,000          | White-label reports                                                 |
 
 ## Who reads it
 
@@ -55,7 +55,7 @@ The one list of what each Uplumo plan costs, limits and includes
   two requests at once can pass the limit by what one of them adds.
 - A workspace over a limit after a downgrade keeps what it has; it only
   cannot add more.
-- Keyword research has no monthly cap of its own on Basic.
+- Keyword research has no monthly cap of its own on Solo.
 - The assistant (SAM) is limited by credits, not by a feature of its own.
-  Free has no credits; Basic, Pro and Agency can use SAM from their monthly
+  Free has no credits; Solo, Growth and Agency can use SAM from their monthly
   grant when the AI provider is configured.

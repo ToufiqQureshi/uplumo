@@ -95,7 +95,7 @@ export function ScorePanel({
             <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
               {active.hasBrief
                 ? "Compared with the pages that rank for your topic."
-                : "Basic checks only: no search brief is loaded, so competitor terms and questions are not scored yet."}
+                : "Simple checks only: no search brief is loaded, so competitor terms and questions are not scored yet."}
             </p>
           </div>
         </div>

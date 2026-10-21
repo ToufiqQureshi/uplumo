@@ -126,7 +126,7 @@ TanStack Query/Router. `EditorPanels.tsx` contains the shared toolbar and previe
   requests for the same key at once make one provider call (advisory lock).
   The customer's own domain is filtered out when the brief is read, never in
   the key. "Refresh" rebuilds it and charges the refreshing workspace.
-- Plans: Basic and up (`plans.Keywords` gate). It fails closed: no plan
+- Plans: Solo (`basic`) and up (`plans.Keywords` gate). It fails closed: no plan
   service or a failing plan check means nothing is fetched.
 - The brief gives terms (phrases most pages use, ranked by how many pages use
   them, with a 25th–75th percentile use range), subtopics (phrases several

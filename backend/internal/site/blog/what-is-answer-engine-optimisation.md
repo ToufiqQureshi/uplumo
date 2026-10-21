@@ -76,7 +76,7 @@ AEO is harder to measure than rankings, because there is no single results page.
 2. **Citations:** note whether the answer links to your site, and to which page.
 3. **Visits:** measure traffic arriving from AI assistants. Much of it shows up as "Direct" in ordinary analytics; our guide to [finding ChatGPT traffic in Google Analytics](/blog/chatgpt-traffic-google-analytics) explains why and what to do.
 
-Uplumo does all three in one place. AI Visibility (on the Pro and Agency plans) checks how ChatGPT, Perplexity, Gemini, Google AI Overviews and Claude answer the questions you choose, which brands they mention and which pages they cite. Uplumo Analytics, on every plan, shows the visitors those assistants send you.
+Uplumo does all three in one place. AI Visibility (on the Growth and Agency plans) checks how ChatGPT, Perplexity, Gemini, Google AI Overviews and Claude answer the questions you choose, which brands they mention and which pages they cite. Uplumo Analytics, on every plan, shows the visitors those assistants send you.
 
 ## FAQ
 

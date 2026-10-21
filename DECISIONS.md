@@ -13,6 +13,7 @@ Last updated: 20 Oct 2026
 
 | Date | Decision | Why |
 |---|---|---|
+| 21 Oct | Plans renamed **Solo (₹999, 1 site) / Growth (₹2,499, 1 site) / Agency (₹9,999, 10 sites, 25,000 credits)**. Internal ids stay `basic`/`pro`/`agency`. | Credits, not sites, cap provider cost; Agency at ₹5,999 for 10 sites was cheaper per site than Growth. |
 | 14 Oct | WordPress publishing is on the **Basic, Pro and Agency** plans. Free gets a link to the plans. | It is a paid feature with no provider cost. |
 | 14 Oct | Only an **owner or admin** can connect a website. Any member can publish. | The site password is sensitive. |
 | 14 Oct | Onboarding has a **6th step**, "connect website", and it can be skipped. | Customers can connect early without being blocked. |

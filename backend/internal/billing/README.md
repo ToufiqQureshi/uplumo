@@ -3,7 +3,7 @@
 Two things live here: the plan a workspace is on, and the internal credit
 ledger.
 
-**Plan.** Basic, Pro and Agency are sold as Razorpay subscriptions per
+**Plan.** Solo (`basic`), Growth (`pro`) and Agency (`agency`) are sold as Razorpay subscriptions per
 workspace (organization), stored in `go_billing_subscriptions`. What each one
 costs, limits and includes is in `internal/plans`; this package only answers
 "which plan is this workspace on" and "does that plan include X".
@@ -56,7 +56,7 @@ Being a member of someone else's workspace unlocks nothing there.
 it) is what one workspace may cost us at the providers. 1,000 credits are one
 US dollar of provider cost before the 1.28 markup, so a credit is 1/1280 of a
 dollar of provider cost. Each paid charge of a plan grants that plan's
-`MonthlyCredits` (`internal/plans`: Basic 4,000, Pro 10,000, Agency 25,000)
+`MonthlyCredits` (`internal/plans`: Solo 4,000, Growth 10,000, Agency 25,000)
 once per webhook event; unused credits roll over up to two months of the
 plan: each grant expires after two months and reservations consume the oldest
 unexpired grants first. The hourly expiry worker records `expire` ledger rows;
@@ -69,7 +69,7 @@ typical cost of each action (`costs.go`, `api/billing.yaml`), and `POST
 /api/v1/billing/usage-events` lists settled spends.
 
 Plan-wise limits beside credits: sites, tracked keywords, members and the
-deepest rank-tracking check (`MaxSerpDepth`: Basic top 30, Pro and Agency
+deepest rank-tracking check (`MaxSerpDepth`: Solo top 30, Growth and Agency
 top 40). `TestWeeklyRankTrackingFitsInTheMonthlyCredits` keeps each plan's
 plain tracked keywords, checked weekly on desktop at its deepest depth, within
 its monthly credit grant. Choosing both devices doubles that estimate.

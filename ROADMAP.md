@@ -148,10 +148,10 @@ Secrets go into Railway variables only, never into the repo or chat.
   below is `backend/internal/plans/catalog.go`. Free is one site with
   analytics and a starter audit.
 
-  | Limit               | Basic | Pro    | Agency             |
+  | Limit               | Solo  | Growth | Agency             |
   | ------------------- | ----- | ------ | ------------------ |
-  | Price per month     | ₹999  | ₹2,499 | ₹5,999             |
-  | Sites               | 1     | 2      | 10, then ₹400 each |
+  | Price per month     | ₹999  | ₹2,499 | ₹9,999             |
+  | Sites               | 1     | 1      | 10, then ₹400 each |
   | Tracked keywords    | 100   | 500    | 1,500              |
   | White-label reports | no    | no     | yes                |
   | Client access       | no    | no     | yes                |

@@ -74,7 +74,7 @@ func Mount(mux *http.ServeMux, service *Service, withSession, withProjectAccess 
 					return
 				}
 				if !allowed {
-					httpx.WriteError(w, http.StatusPaymentRequired, "plan_required", "Local SEO research is available on Basic, Pro and Agency.")
+					httpx.WriteError(w, http.StatusPaymentRequired, "plan_required", "Local SEO research is available on Solo, Growth and Agency.")
 					return
 				}
 			}

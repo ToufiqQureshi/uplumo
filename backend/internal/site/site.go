@@ -178,15 +178,15 @@ func build(publicURL *url.URL, blogFiles fs.FS) (*Site, error) {
 	landing := base
 	landing.Path = "/"
 	landing.Title = "Uplumo: SEO and AI search analytics with honest INR pricing"
-	landing.Description = "Track Google rankings, audit your site and see where AI assistants mention you and send visitors. Choose Free, Basic, Pro or Agency pricing in rupees."
+	landing.Description = "Track Google rankings, audit your site and see where AI assistants mention you and send visitors. Choose Free, Solo, Growth or Agency pricing in rupees."
 	landing.Canonical = origin + "/"
 	landing.FAQ = landingFAQ()
 	landing.JSONLD = jsonLD(origin, landing.Description, plans)
 
 	pricing := base
 	pricing.Path = "/pricing"
-	pricing.Title = "Uplumo pricing: Free, Basic, Pro and Agency plans"
-	pricing.Description = fmt.Sprintf("Start free. Basic is %s, Pro is %s and Agency is %s a month in rupees. See what each plan includes, cancel in one click.",
+	pricing.Title = "Uplumo pricing: Free, Solo, Growth and Agency plans"
+	pricing.Description = fmt.Sprintf("Start free. Solo is %s, Growth is %s and Agency is %s a month in rupees. See what each plan includes, cancel in one click.",
 		formatINR(price(planCatalog.Basic)), formatINR(price(planCatalog.Pro)), formatINR(price(planCatalog.Agency)))
 	pricing.Canonical = origin + "/pricing"
 	pricing.FAQ = pricingFAQ()
@@ -435,7 +435,7 @@ var infoPages = []struct {
 	{"/privacy", "privacy.html", "Privacy Policy | Uplumo",
 		"What data Uplumo collects, how it uses Google account data, who processes it and how to delete it."},
 	{"/refunds", "refunds.html", "Cancellation and Refund Policy | Uplumo",
-		"How to cancel Uplumo Pro, what happens after you cancel and when we refund a payment."},
+		"How to cancel a paid Uplumo plan, what happens after you cancel and when we refund a payment."},
 	{"/shipping", "shipping.html", "Shipping and Delivery Policy | Uplumo",
 		"Uplumo is online software: nothing is shipped, and access starts as soon as you sign up or pay."},
 }
@@ -612,11 +612,11 @@ func pricingFAQ() []QA {
 	return []QA{
 		{"Is the Free plan really free?", "Yes. It costs " + formatINR(0) +
 			" and needs no card. Paid plans start at " + formatINR(basic.PriceINR) + " a month."},
-		{"What is the difference between Basic and Pro?", "Basic is for ranking one site: keyword research, rank tracking and your Google data. " +
-			"Pro adds what you need to beat competitors: backlink and competitor research, AI Visibility and the AI writing assistant, for " +
-			strconv.Itoa(pro.Sites) + " sites."},
-		{"How do site limits work?", fmt.Sprintf("Free and Basic include one active website, Pro includes %d and Agency includes %d. "+
-			"Archiving a site frees a slot; your data stays in the workspace.", pro.Sites, agency.Sites)},
+		{"What is the difference between Solo and Growth?", "Solo is for ranking one site: keyword research, rank tracking and your Google data. " +
+			"Growth adds what you need to beat competitors on the same site: backlink and competitor research, AI Visibility, " +
+			strconv.Itoa(pro.TrackedKeywords) + " tracked keywords and " + strconv.Itoa(pro.Members) + " team members."},
+		{"How do site limits work?", fmt.Sprintf("Free, Solo and Growth include one active website; Agency includes %d. "+
+			"Archiving a site frees a slot; your data stays in the workspace.", agency.Sites)},
 		{"How do I cancel a paid plan?", "In one click from Billing. You keep the plan until the end of the month you paid for, " +
 			"and you are never charged again."},
 		{"How do I change plan?", "Write to us from your account's email address and we move you. Changing plan from Billing is not built yet."},
