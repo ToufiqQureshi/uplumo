@@ -48,17 +48,17 @@ Required, or the server does not start:
 
 Needed before real users sign up:
 
-| Variables                                                | Without them                                                                                                                                     |
-| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `LOOPS_API_KEY` and the three `LOOPS_TRANSACTIONAL_*_ID` | No verification or reset email: nobody can finish sign-up. The key, the verify ID and the reset ID must all be set, or none of the three works. |
-| `TURNSTILE_SECRET_KEY`, `TURNSTILE_SITE_KEY`             | No bot check on sign-up.                                                                                                                         |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`               | No Google sign-in, Search Console or Analytics.                                                                                                  |
-| The `RAZORPAY_*` variables (three credentials and a plan id per plan) | No paid plan: the Billing page shows the plan but offers no checkout, and checkout, cancel and the webhook answer `503`. |
-| `STAFF_EMAILS` | The owner and the team are held to the Free plan like any customer. |
-| `DATAFORSEO_API_KEY`                                     | No keywords, rank tracking, backlinks or AI visibility (`503`).                                                                                  |
-| `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`                 | No AI assistant or AI writing.                                                                                                                   |
-| `PAGESPEED_API_KEY` | Site audits skip the page speed (Lighthouse) test. A free Google Cloud API key with the PageSpeed Insights API enabled; restrict the key to that API. |
-| `CRUX_API_KEY` | Real-visitor (Core Web Vitals) data on audits comes only from what PageSpeed Insights still embeds. A free key with the Chrome UX Report API enabled; it may be the same key as `PAGESPEED_API_KEY` if both APIs are enabled and allowed on it. |
+| Variables                                                             | Without them                                                                                                                                                                                                                                    |
+| --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `LOOPS_API_KEY` and the three `LOOPS_TRANSACTIONAL_*_ID`              | No verification or reset email: nobody can finish sign-up. The key, the verify ID and the reset ID must all be set, or none of the three works.                                                                                                 |
+| `TURNSTILE_SECRET_KEY`, `TURNSTILE_SITE_KEY`                          | No bot check on sign-up.                                                                                                                                                                                                                        |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`                            | No Google sign-in, Search Console or Analytics.                                                                                                                                                                                                 |
+| The `RAZORPAY_*` variables (three credentials and a plan id per plan) | No paid plan: the Billing page shows the plan but offers no checkout, and checkout, cancel and the webhook answer `503`.                                                                                                                        |
+| `STAFF_EMAILS`                                                        | The owner and the team are held to the Free plan like any customer.                                                                                                                                                                             |
+| `DATAFORSEO_API_KEY`                                                  | No keywords, rank tracking, backlinks or AI visibility (`503`).                                                                                                                                                                                 |
+| `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`                              | No AI assistant or AI writing.                                                                                                                                                                                                                  |
+| `PAGESPEED_API_KEY`                                                   | Site audits skip the page speed (Lighthouse) test. A free Google Cloud API key with the PageSpeed Insights API enabled; restrict the key to that API.                                                                                           |
+| `CRUX_API_KEY`                                                        | Real-visitor (Core Web Vitals) data on audits comes only from what PageSpeed Insights still embeds. A free key with the Chrome UX Report API enabled; it may be the same key as `PAGESPEED_API_KEY` if both APIs are enabled and allowed on it. |
 
 `SENTRY_DSN` turns on error reporting: every error the server logs is sent
 to Sentry (`backend/internal/platform/errreport/README.md`). Without it
@@ -81,12 +81,12 @@ The server refuses to start on a live `https` site when:
 
 ## 3. Point the outside services at the site
 
-| Service    | Setting                                                                                                                                                                                                      |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Domain     | In Railway add `uplumo.com` as a custom domain, then add the DNS record it shows in Cloudflare.                                                                                                              |
-| Cloudflare | SSL mode Full. One redirect rule sends `www.uplumo.com` to `uplumo.com`. Email Routing forwards `support@uplumo.com` to the owner's mailbox: every public page links to that address.                         |
+| Service    | Setting                                                                                                                                                                                                                                                                                                            |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Domain     | In Railway add `uplumo.com` as a custom domain, then add the DNS record it shows in Cloudflare.                                                                                                                                                                                                                    |
+| Cloudflare | SSL mode Full. One redirect rule sends `www.uplumo.com` to `uplumo.com`. Email Routing forwards `support@uplumo.com` to the owner's mailbox: every public page links to that address.                                                                                                                              |
 | Google     | Authorised redirect URIs: `https://uplumo.com/api/auth/callback/google` (sign-in), `https://uplumo.com/api/gsc/oauth/callback` (Search Console) and `https://uplumo.com/api/ga4/oauth/callback` (Analytics). Enable the Search Console API and the Analytics Data and Admin APIs in the same Google Cloud project. |
-| Loops      | Verify the sending domain `mail.uplumo.com` and publish the three transactional templates. Template variables and checks are in `backend/internal/email/README.md`.                                          |
+| Loops      | Verify the sending domain `mail.uplumo.com` and publish the three transactional templates. Template variables and checks are in `backend/internal/email/README.md`.                                                                                                                                                |
 
 ### Razorpay
 

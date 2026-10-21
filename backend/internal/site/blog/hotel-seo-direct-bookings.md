@@ -47,7 +47,7 @@ Use recent, authentic photos, detailed policies, accessible contact details and 
 - Guest questions and recurring review themes.
 - Organic and AI-assisted visits, with limitations clearly explained.
 
-For supporting tasks, read [local SEO for small businesses](/blog/local-seo-checklist-for-small-businesses), [ethical Google review requests](/blog/get-more-google-reviews-ethically) and [website visits without leads](/blog/seo-website-traffic-no-leads).
+For supporting tasks, read [website visits without leads](/blog/seo-website-traffic-no-leads).
 
 ## Compare the booking path in both target markets
 

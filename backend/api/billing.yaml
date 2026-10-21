@@ -75,7 +75,7 @@ components:
   schemas:
     Feature:
       type: string
-      enum: [rank_tracking, keyword_research, local_seo, domain_research, backlinks, ai_visibility, site_audit, ai_assistant, ai_writing]
+      enum: [rank_tracking, keyword_research, domain_research, backlinks, ai_visibility, site_audit, ai_assistant, ai_writing]
     Usage:
       type: object
       required: [plan, unlimited, chargesCredits, balanceCredits, monthlyCredits, periodStart, periodEnd, spent, costs]

@@ -45,7 +45,6 @@ import (
 	"github.com/toufiqqureshi/uplumo/backend/internal/keywords"
 	"github.com/toufiqqureshi/uplumo/backend/internal/kv"
 	"github.com/toufiqqureshi/uplumo/backend/internal/linksuggest"
-	"github.com/toufiqqureshi/uplumo/backend/internal/localseo"
 	"github.com/toufiqqureshi/uplumo/backend/internal/mcp"
 	"github.com/toufiqqureshi/uplumo/backend/internal/onboarding"
 	planCatalog "github.com/toufiqqureshi/uplumo/backend/internal/plans"
@@ -346,17 +345,6 @@ func run(logger *slog.Logger) (err error) {
 	} else {
 		logger.Warn("SUPABASE_* image storage variables not set; content editor image uploads are unavailable")
 	}
-	var localSEOData localseo.Data
-	// keywordResearch is nil when DATAFORSEO_API_KEY is not set.
-	if keywordResearch != nil {
-		if provider, ok := keywordResearch.Data.(localseo.Data); ok {
-			localSEOData = provider
-		}
-	}
-	localSEOService := &localseo.Service{Data: localSEOData}
-	if gateSvc != nil {
-		localSEOService.Plans = gateSvc.Gate(planCatalog.Keywords)
-	}
 	mcpDeps := &mcp.Deps{
 		Logger: logger, DB: db, Redis: rdb, Auth: authService, Billing: gateSvc,
 		Credits:   credits,
@@ -430,7 +418,6 @@ func run(logger *slog.Logger) (err error) {
 			SavedKeywords:           savedKeywordsSvc,
 			ProjectContext:          projectContextSvc,
 			KeywordResearch:         keywordResearch,
-			LocalSEO:                localSEOService,
 			Site:                    pages,
 			StaticDir:               cfg.StaticDir,
 		}),

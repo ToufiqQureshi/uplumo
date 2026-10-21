@@ -54,14 +54,12 @@ specific $1 discrepancy and Basic/Pro/Agency margins.
 
 The browser sends one `Idempotency-Key` per user action. Each paid call in that
 action holds credits under a key derived from it (`spend.ScopedKey`: method,
-path and body), so a backlink overview can buy its summary and its history, and
-a 3×3 map grid can buy nine searches. Sending the same action again within a
+path and body), so a backlink overview can buy its summary and its history. Sending the same action again within a
 minute is refused call by call with `409 duplicate_request` and buys nothing.
 
 When a later call of an action fails after an earlier one was billed, the
 answer keeps what was paid for instead of failing: Keyword Research answers with
-the leg that worked, Backlinks with the summary and no trend, Local SEO with
-the points already searched (`summary.stoppedReason` says why it stopped). Such
+the leg that worked, Backlinks with the summary and no trend. Such
 partial answers are cached for ten minutes only, so a retry costs nothing and
 the full report is bought again once the provider has recovered. A credit
 refusal, a replay or a customer who left still fails the request.

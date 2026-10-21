@@ -44,7 +44,7 @@ The recipient decides whether it belongs on their site. Do not demand exact-matc
 
 Record the source, referral visits, enquiries and relationship. Do not judge success only by a tool’s authority score. If a directory sends no relevant customers, is inaccurate or asks for payment for ranking links, it may not be worth the effort.
 
-For steady visibility, first strengthen [service pages](/blog/service-pages-that-rank-and-convert), [local SEO foundations](/blog/local-seo-checklist-for-small-businesses) and [internal links](/blog/internal-linking-for-small-business-seo).
+For steady visibility, first strengthen [service pages](/blog/service-pages-that-rank-and-convert) and [internal links](/blog/internal-linking-for-small-business-seo).
 
 ## A local outreach example
 

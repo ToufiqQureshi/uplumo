@@ -93,7 +93,6 @@ Uplumo MCP tools cover workflows such as:
 - Live Google organic SERP inspection.
 - Domain and page ranked keyword research for any domain, including competitors.
 - SERP competitor comparisons.
-- Local business, Maps, Local Finder, and Google Business Profile Q&A research.
 - Saved keyword listing and saving.
 - Rank tracker config and latest position reads.
 - Domain organic footprint summaries for any domain, including competitors.

@@ -44,7 +44,6 @@ gates open; site and member limits still apply from the stored plan.
 The MCP dispatcher applies the same catalog to every registered tool before
 calling its handler, including SAM's in-process tool runner. New MCP tools
 must be classified explicitly; unknown tools fail closed when billing is on.
-Local SEO research routes use the Keywords gate as well.
 
 **Staff workspaces.** `STAFF_EMAILS` lists people whose own workspaces are
 never limited: a workspace whose **owner** has one of those **verified**

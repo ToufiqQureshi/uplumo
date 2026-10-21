@@ -8,11 +8,11 @@ describe("getProjectNavGroups", () => {
   it("keeps every page reachable exactly once from the sidebar or a tab", () => {
     const routes = pages.map((page) => String(page.link.to));
     expect(new Set(routes).size).toBe(routes.length);
-    expect(routes).toHaveLength(18);
+    expect(routes).toHaveLength(17);
   });
 
-  it("shows twelve sidebar rows", () => {
-    expect(items).toHaveLength(12);
+  it("shows eleven sidebar rows", () => {
+    expect(items).toHaveLength(11);
   });
 
   it("opens a tabbed row on its first tab", () => {

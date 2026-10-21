@@ -4,7 +4,7 @@
 
 ## Entry points
 
-- **API/trigger:** No direct route; called by domain, keywords, backlinks, AI visibility, rank tracking, audit and local SEO.
+- **API/trigger:** No direct route; called by domain, keywords, backlinks, AI visibility, rank tracking and audit.
 - **Source:** `*.go in this package; see README.md`
 
 ## Request or job flow

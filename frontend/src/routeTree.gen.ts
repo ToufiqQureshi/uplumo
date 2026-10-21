@@ -43,7 +43,6 @@ import { Route as AppPProjectIdContextRouteImport } from './routes/_app/p/$proje
 import { Route as AppPProjectIdDomainRouteImport } from './routes/_app/p/$projectId/domain'
 import { Route as AppPProjectIdEnquiriesRouteImport } from './routes/_app/p/$projectId/enquiries'
 import { Route as AppPProjectIdKeywordsRouteImport } from './routes/_app/p/$projectId/keywords'
-import { Route as AppPProjectIdLocalSeoRouteImport } from './routes/_app/p/$projectId/local-seo'
 import { Route as AppPProjectIdPromptExplorerRouteImport } from './routes/_app/p/$projectId/prompt-explorer'
 import { Route as AppPProjectIdPromptTrackingRouteImport } from './routes/_app/p/$projectId/prompt-tracking'
 import { Route as AppPProjectIdRankTrackingRouteImport } from './routes/_app/p/$projectId/rank-tracking'
@@ -233,11 +232,6 @@ const AppPProjectIdKeywordsRoute = AppPProjectIdKeywordsRouteImport.update({
   path: '/keywords',
   getParentRoute: () => AppPProjectIdRouteRoute,
 } as any)
-const AppPProjectIdLocalSeoRoute = AppPProjectIdLocalSeoRouteImport.update({
-  id: '/local-seo',
-  path: '/local-seo',
-  getParentRoute: () => AppPProjectIdRouteRoute,
-} as any)
 const AppPProjectIdPromptExplorerRoute =
   AppPProjectIdPromptExplorerRouteImport.update({
     id: '/prompt-explorer',
@@ -368,7 +362,6 @@ export interface FileRoutesByFullPath {
   '/p/$projectId/domain': typeof AppPProjectIdDomainRoute
   '/p/$projectId/enquiries': typeof AppPProjectIdEnquiriesRoute
   '/p/$projectId/keywords': typeof AppPProjectIdKeywordsRoute
-  '/p/$projectId/local-seo': typeof AppPProjectIdLocalSeoRoute
   '/p/$projectId/prompt-explorer': typeof AppPProjectIdPromptExplorerRoute
   '/p/$projectId/prompt-tracking': typeof AppPProjectIdPromptTrackingRoute
   '/p/$projectId/rank-tracking': typeof AppPProjectIdRankTrackingRouteWithChildren
@@ -417,7 +410,6 @@ export interface FileRoutesByTo {
   '/p/$projectId/domain': typeof AppPProjectIdDomainRoute
   '/p/$projectId/enquiries': typeof AppPProjectIdEnquiriesRoute
   '/p/$projectId/keywords': typeof AppPProjectIdKeywordsRoute
-  '/p/$projectId/local-seo': typeof AppPProjectIdLocalSeoRoute
   '/p/$projectId/prompt-explorer': typeof AppPProjectIdPromptExplorerRoute
   '/p/$projectId/prompt-tracking': typeof AppPProjectIdPromptTrackingRoute
   '/p/$projectId/sam': typeof AppPProjectIdSamRoute
@@ -470,7 +462,6 @@ export interface FileRoutesById {
   '/_app/p/$projectId/domain': typeof AppPProjectIdDomainRoute
   '/_app/p/$projectId/enquiries': typeof AppPProjectIdEnquiriesRoute
   '/_app/p/$projectId/keywords': typeof AppPProjectIdKeywordsRoute
-  '/_app/p/$projectId/local-seo': typeof AppPProjectIdLocalSeoRoute
   '/_app/p/$projectId/prompt-explorer': typeof AppPProjectIdPromptExplorerRoute
   '/_app/p/$projectId/prompt-tracking': typeof AppPProjectIdPromptTrackingRoute
   '/_app/p/$projectId/rank-tracking': typeof AppPProjectIdRankTrackingRouteWithChildren
@@ -523,7 +514,6 @@ export interface FileRouteTypes {
     | '/p/$projectId/domain'
     | '/p/$projectId/enquiries'
     | '/p/$projectId/keywords'
-    | '/p/$projectId/local-seo'
     | '/p/$projectId/prompt-explorer'
     | '/p/$projectId/prompt-tracking'
     | '/p/$projectId/rank-tracking'
@@ -572,7 +562,6 @@ export interface FileRouteTypes {
     | '/p/$projectId/domain'
     | '/p/$projectId/enquiries'
     | '/p/$projectId/keywords'
-    | '/p/$projectId/local-seo'
     | '/p/$projectId/prompt-explorer'
     | '/p/$projectId/prompt-tracking'
     | '/p/$projectId/sam'
@@ -624,7 +613,6 @@ export interface FileRouteTypes {
     | '/_app/p/$projectId/domain'
     | '/_app/p/$projectId/enquiries'
     | '/_app/p/$projectId/keywords'
-    | '/_app/p/$projectId/local-seo'
     | '/_app/p/$projectId/prompt-explorer'
     | '/_app/p/$projectId/prompt-tracking'
     | '/_app/p/$projectId/rank-tracking'
@@ -896,13 +884,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPProjectIdKeywordsRouteImport
       parentRoute: typeof AppPProjectIdRouteRoute
     }
-    '/_app/p/$projectId/local-seo': {
-      id: '/_app/p/$projectId/local-seo'
-      path: '/local-seo'
-      fullPath: '/p/$projectId/local-seo'
-      preLoaderRoute: typeof AppPProjectIdLocalSeoRouteImport
-      parentRoute: typeof AppPProjectIdRouteRoute
-    }
     '/_app/p/$projectId/prompt-explorer': {
       id: '/_app/p/$projectId/prompt-explorer'
       path: '/prompt-explorer'
@@ -1085,7 +1066,6 @@ interface AppPProjectIdRouteRouteChildren {
   AppPProjectIdDomainRoute: typeof AppPProjectIdDomainRoute
   AppPProjectIdEnquiriesRoute: typeof AppPProjectIdEnquiriesRoute
   AppPProjectIdKeywordsRoute: typeof AppPProjectIdKeywordsRoute
-  AppPProjectIdLocalSeoRoute: typeof AppPProjectIdLocalSeoRoute
   AppPProjectIdPromptExplorerRoute: typeof AppPProjectIdPromptExplorerRoute
   AppPProjectIdPromptTrackingRoute: typeof AppPProjectIdPromptTrackingRoute
   AppPProjectIdRankTrackingRoute: typeof AppPProjectIdRankTrackingRouteWithChildren
@@ -1110,7 +1090,6 @@ const AppPProjectIdRouteRouteChildren: AppPProjectIdRouteRouteChildren = {
   AppPProjectIdDomainRoute: AppPProjectIdDomainRoute,
   AppPProjectIdEnquiriesRoute: AppPProjectIdEnquiriesRoute,
   AppPProjectIdKeywordsRoute: AppPProjectIdKeywordsRoute,
-  AppPProjectIdLocalSeoRoute: AppPProjectIdLocalSeoRoute,
   AppPProjectIdPromptExplorerRoute: AppPProjectIdPromptExplorerRoute,
   AppPProjectIdPromptTrackingRoute: AppPProjectIdPromptTrackingRoute,
   AppPProjectIdRankTrackingRoute: AppPProjectIdRankTrackingRouteWithChildren,
