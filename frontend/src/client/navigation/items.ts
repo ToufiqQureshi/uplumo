@@ -48,7 +48,6 @@ const projectNavItems = [
     to: "/p/$projectId/analytics" as const,
     label: "Analytics",
     icon: ChartNoAxesCombined,
-    badge: "New",
   },
   {
     to: "/p/$projectId/search-performance" as const,
@@ -74,7 +73,6 @@ const projectNavItems = [
     to: "/p/$projectId/local-seo" as const,
     label: "Local SEO",
     icon: MapPin,
-    badge: "New",
   },
   {
     to: "/p/$projectId/audit" as const,
@@ -85,7 +83,6 @@ const projectNavItems = [
     to: "/p/$projectId/content-editor" as const,
     label: "Content Editor",
     icon: PenLine,
-    badge: "New",
   },
   {
     to: "/p/$projectId/saved" as const,
@@ -131,7 +128,7 @@ export type NavItem = {
 
 type NavGroup = { label: string; items: NavItem[] };
 
-// Project-independent. Rendered inside the project "Reports & AI" group when a
+// Project-independent. Rendered inside the project "Reports & setup" group when a
 // project is selected, and on its own (connectNavGroup) when none is.
 const aiNavItem: NavItem = {
   label: "Agent setup",
@@ -140,7 +137,7 @@ const aiNavItem: NavItem = {
 };
 
 // Shown only when no project is selected; with a project, Agent setup lives in
-// the "Reports & AI" group below.
+// the "Reports & setup" group below.
 export const connectNavGroup: NavGroup = {
   label: "AI",
   items: [aiNavItem],
@@ -180,9 +177,11 @@ export function getProjectNavItem(
   };
 }
 
-// Grouped by the job the user came to do: traffic and AI presence first (the
-// product's focus), then looking after their own site, then researching
-// anything, then sharing and automating.
+// Grouped by the job the user came to do, in plain words for owners who are
+// not SEO experts: customers and traffic first, then AI answers, then their
+// own website, then research, then sharing and setup. Related pages sit next
+// to each other (Saved Keywords under Keyword Research). Only the two lead
+// features carry "New", so the badge still draws the eye.
 export function getProjectNavGroups(projectId: string): NavGroup[] {
   const item = (path: ProjectNavPath) => getProjectNavItem(projectId, path);
 
@@ -192,36 +191,41 @@ export function getProjectNavGroups(projectId: string): NavGroup[] {
       items: [item("/p/$projectId")],
     },
     {
-      label: "Traffic & AI visibility",
+      label: "Customers & traffic",
       items: [
-        item("/p/$projectId/analytics"),
         item("/p/$projectId/enquiries"),
+        item("/p/$projectId/analytics"),
         item("/p/$projectId/search-performance"),
-        item("/p/$projectId/brand-lookup"),
+      ],
+    },
+    {
+      label: "AI answers (ChatGPT, Gemini)",
+      items: [
         item("/p/$projectId/prompt-tracking"),
+        item("/p/$projectId/brand-lookup"),
         item("/p/$projectId/prompt-explorer"),
       ],
     },
     {
-      label: "Your site",
+      label: "Your website",
       items: [
-        item("/p/$projectId/content-editor"),
+        item("/p/$projectId/audit"),
         item("/p/$projectId/rank-tracking"),
         item("/p/$projectId/local-seo"),
-        item("/p/$projectId/audit"),
-        item("/p/$projectId/saved"),
+        item("/p/$projectId/content-editor"),
       ],
     },
     {
       label: "Research",
       items: [
         item("/p/$projectId/keywords"),
+        item("/p/$projectId/saved"),
         item("/p/$projectId/domain"),
         item("/p/$projectId/backlinks"),
       ],
     },
     {
-      label: "Reports & AI",
+      label: "Reports & setup",
       items: [
         item("/p/$projectId/reports"),
         item("/p/$projectId/context"),
