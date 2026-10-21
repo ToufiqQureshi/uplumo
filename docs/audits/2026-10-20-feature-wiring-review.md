@@ -188,3 +188,22 @@ country. That small sample does not establish the cause. Railway documents
 trusted proxy CIDRs; deployed proxy trust needs direct validation before claiming
 geography is reconciled. No broad trust ranges, guessed locations, raw visitor IP
 logging or fabricated production traffic were introduced to fill the gap.
+
+## Optional rank suggestions cost boundary
+
+The tracker setup step purchased a Labs ranked-keywords task immediately after
+configuration creation. It now presents an optional action/credit hint and a
+free Skip/manual route; disabled queries never buy work on setup, focus or
+reload. The suggestions endpoint requires the explicit-action marker so older
+open bundles cannot continue automatic requests.
+
+Eight simultaneous identical suggestions requests also bought eight tasks on
+both a cold cache and an unavailable cache. They now share one bounded task
+using the existing full tenant/project/target/market cache key. Independent
+organizations do not join each other's work, and one abandoned waiter does not
+cancel another waiter's active request. Redis retains its existing 12-hour
+nonempty-result policy; no migration or paid retry was added. A single replica
+remains required. Real provider HTTP fakes and browser setup/Skip/double-click
+regressions failed before these corrections. Isolated overlay mutations prove
+legacy-action validation, coalescing, tenant isolation and waiter cancellation
+are necessary; no live paid calls were made.

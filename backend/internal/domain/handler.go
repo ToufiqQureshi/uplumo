@@ -179,14 +179,20 @@ func overviewHandler(d Deps) http.HandlerFunc {
 
 func keywordSuggestionsHandler(d Deps) http.HandlerFunc {
 	return handle(d, func(w http.ResponseWriter, r *http.Request, organizationID, projectID string) (any, error) {
-		var req requestBase
+		var req struct {
+			requestBase
+			UserInitiated bool `json:"userInitiated"`
+		}
 		if err := decode(w, r, &req); err != nil {
 			return nil, err
 		}
-		if err := validateBase(req); err != nil {
+		if !req.UserInitiated {
+			return nil, badRequest("Reload Rank Tracking and choose Find existing keywords to request suggestions.")
+		}
+		if err := validateBase(req.requestBase); err != nil {
 			return nil, err
 		}
-		resolved, err := resolveRequestMarket(r.Context(), d, organizationID, projectID, req)
+		resolved, err := resolveRequestMarket(r.Context(), d, organizationID, projectID, req.requestBase)
 		if err != nil {
 			return nil, err
 		}

@@ -20,3 +20,9 @@ DataForSEO paid endpoints, project market and plan checks.
 - Validate target, market and filter budget before spend; failed provider tasks may still be billed.
 - Keep scope semantics explicit: domain, subdomain, subfolder and exact URL do not support identical aggregates.
 - Escape user filters for SQL/provider syntax and cap response size.
+
+The optional suggestions route requires `userInitiated: true` from an explicit
+Rank Tracking action. `suggestions.go` shares identical organization/project/
+target/scope/market work for up to 90 seconds, rechecks the 12-hour nonempty
+cache and buys one task on a miss. See `decision.md` for failure/cancellation
+and one-replica constraints.

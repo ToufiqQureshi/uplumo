@@ -11,7 +11,15 @@ Read [flow.md](flow.md) for the request path and [decision.md](decision.md) for 
 ## Code map
 
 - `RankTrackingConfigModal.tsx`
+- `KeywordSuggestionStep.tsx`
 - `rankTrackingApi.ts`
 - `useRankCheckTrigger.ts`
 - `useRankRunPolling.ts`
 - `backend/internal/ranktracking`
+
+Optional tracker suggestions: configuration save → optional choice/credit hint
+(no lookup) → explicit Find existing keywords sends `userInitiated: true` →
+existing authorization/paid gate and validation → scoped coalescing/cache → one
+ranked-keywords task on a miss. Skip and manual entry buy no suggestion task.
+No automatic paid retry; a failure keeps the manual path. See the feature's
+`decision.md` for compatibility and one-replica constraints.

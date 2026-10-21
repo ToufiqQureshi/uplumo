@@ -170,7 +170,7 @@ func TestHandlerProjectMarketNotFound(t *testing.T) {
 func TestHandlerOtherEndpointsReturnTheirContracts(t *testing.T) {
 	t.Parallel()
 	keywords := &fakeProvider{result: rankedKeywordsResult(1, rankedItem("seo", 1, 2, 3, 4, 5, "https://example.com/p", ""))}
-	rec := serve(t, serveOptions{provider: keywords}, "keyword-suggestions", `{"domain":"example.com"}`)
+	rec := serve(t, serveOptions{provider: keywords}, "keyword-suggestions", `{"domain":"example.com","userInitiated":true}`)
 	if rec.Code != http.StatusOK || !strings.HasPrefix(rec.Body.String(), `[{"keyword":"seo"`) {
 		t.Fatalf("suggestions: %d %s", rec.Code, rec.Body)
 	}
@@ -202,7 +202,7 @@ func TestHandlerRejectsInvalidInputBeforeSpending(t *testing.T) {
 		{"domain over 2048 UTF-16 units", "overview", `{"domain":"` + emoji + `"}`},
 		{"bad scope", "overview", `{"domain":"example.com","scope":"everything"}`},
 		{"zero location", "overview", `{"domain":"example.com","locationCode":0}`},
-		{"negative location", "keyword-suggestions", `{"domain":"example.com","locationCode":-5}`},
+		{"negative location", "keyword-suggestions", `{"domain":"example.com","locationCode":-5,"userInitiated":true}`},
 		{"one letter language", "overview", `{"domain":"example.com","languageCode":"e"}`},
 		{"nine letter language", "overview", `{"domain":"example.com","languageCode":"abcdefghi"}`},
 		{"unknown field", "overview", `{"domain":"example.com","extra":true}`},
@@ -329,4 +329,14 @@ func TestHandlerServerSideFailures(t *testing.T) {
 			t.Fatalf("GET status = %d, want 405", rec.Code)
 		}
 	})
+}
+
+func TestKeywordSuggestionsRejectLegacyRequestsBeforePaidWork(t *testing.T) {
+	for _, body := range []string{`{"domain":"example.com"}`, `{"domain":"example.com","userInitiated":false}`, `{"domain":"example.com","userInitiated":"true"}`} {
+		provider := &fakeProvider{result: rankedKeywordsResult(0)}
+		rec := serve(t, serveOptions{provider: provider, plans: paid}, "keyword-suggestions", body)
+		if rec.Code != http.StatusBadRequest || provider.calls.Load() != 0 {
+			t.Fatalf("legacy request=%s status=%d purchases=%d body=%s", body, rec.Code, provider.calls.Load(), rec.Body)
+		}
+	}
 }

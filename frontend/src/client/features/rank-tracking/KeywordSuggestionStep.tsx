@@ -9,6 +9,8 @@ import { toast } from "sonner";
 import { getDomainKeywordSuggestions } from "@/client/features/domain/domainApi";
 import { addTrackingKeywords } from "./rankTrackingApi";
 import { isLabsLocationCode } from "@/client/features/keywords/locations";
+import { CreditCostHint } from "@/client/features/billing/credits/CreditCostHint";
+import { QueryError } from "@/client/components/QueryState";
 import { Spinner } from "@/client/components/Spinner";
 import {
   DataTable,
@@ -170,13 +172,11 @@ export function KeywordSuggestionStep({
   const suggestionsQuery = useQuery({
     queryKey: ["domainKeywordSuggestions", projectId, domain, locationCode],
     retry: false, // This domain suggestion lookup purchases a Labs task.
-    refetchOnReconnect: false,
-    refetchOnWindowFocus: false,
     queryFn: () =>
       getDomainKeywordSuggestions({
         data: { projectId, domain, locationCode },
       }),
-    enabled: labsSupported,
+    enabled: false,
   });
 
   const data = suggestionsQuery.data ?? [];
@@ -227,6 +227,30 @@ export function KeywordSuggestionStep({
     );
   }
 
+  if (suggestionsQuery.isPending && !suggestionsQuery.isFetching) {
+    return (
+      <>
+        <StepHeader
+          title="Find keywords or add your own"
+          description="Optional: look up keywords your site already ranks for. This lookup uses credits. Skip to add your own keywords manually."
+        />
+        <CreditCostHint feature="domain_research" />
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>
+            Skip
+          </Button>
+          <Button
+            onClick={() =>
+              void suggestionsQuery.refetch({ cancelRefetch: false })
+            }
+          >
+            Find existing keywords
+          </Button>
+        </DialogFooter>
+      </>
+    );
+  }
+
   if (suggestionsQuery.isLoading) {
     return (
       <>
@@ -243,8 +267,17 @@ export function KeywordSuggestionStep({
       <>
         <StepHeader
           title="Couldn't fetch keywords"
-          description="You can skip this step and add keywords manually later."
+          description="Skip to add keywords manually, or try this optional lookup again. A retry can use credits."
         />
+        <QueryError
+          error={suggestionsQuery.error}
+          fallback="Could not load keyword suggestions."
+          onRetry={() =>
+            void suggestionsQuery.refetch({ cancelRefetch: false })
+          }
+          isRetrying={suggestionsQuery.isFetching}
+        />
+        <CreditCostHint feature="domain_research" />
         <DialogFooter>
           <Button onClick={onClose}>Skip</Button>
         </DialogFooter>
