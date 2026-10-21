@@ -13,6 +13,8 @@ Handler validates scope, filters and plan before service; service normalizes the
 
 Paid calls per click: a new target buys the overview (summary + history, 2 tasks; exact URL 1; subfolder 2 list tasks). Only when the overview found links does the screen buy the selected table: 1 task for a block of 1,000 rows (about $0.06: $0.024 a task plus $0.000036 a row). Page sizes 50/100/200 and every page inside the first 1,000 rows are free; the next block is one more task. A target with no links buys nothing after the overview.
 
+Whole list (`whole_list.go`): when the cached overview says the target has at most 1,000 backlinks (Backlinks tab) or referring domains (Referring Domains tab), the tab buys that whole list once, unfiltered and `as_is`, and cuts every view from it: sort, Best links, one per domain, filters, pages, domain expansion. Top pages become a whole list when their unfiltered first block holds everything. A longer profile asks the provider for the exact view, one task per 1,000-row block. Subfolder scope always asks the provider (its scope is a URL filter).
+
 ## Dependencies and cost boundary
 
 DataForSEO paid endpoints and usage metering; project plan/credit checks.

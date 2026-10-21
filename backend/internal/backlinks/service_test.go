@@ -254,6 +254,114 @@ func TestPaidFieldsReachTheResponse(t *testing.T) {
 	}
 }
 
+// A profile that fits in one task is bought once, unfiltered; every view the
+// screen offers is then cut from it without another provider call.
+func TestSmallProfileBuysTheWholeListOnceForEveryView(t *testing.T) {
+	t.Parallel()
+	var mu sync.Mutex
+	rowsBodies := []map[string]any{}
+	link := func(domain, url string, rank, spam float64, seen string) map[string]any {
+		return map[string]any{"domain_from": domain, "url_from": url, "rank": rank, "backlink_spam_score": spam, "first_seen": seen, "dofollow": true}
+	}
+	items := []any{
+		link("a.com", "https://a.com/1", 10, 5, "2026-01-01"),
+		link("a.com", "https://a.com/2", 30, 5, "2026-03-01"),
+		link("spam.store", "https://spam.store/x", 50, 90, "2026-05-01"),
+		link("b.com", "https://b.com/blog", 20, 0, "2026-02-01"),
+	}
+	server := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.HasSuffix(r.URL.Path, "/summary/live"):
+			providerOK(w, r.URL.Path, map[string]any{"backlinks": 4, "referring_domains": 3})
+		case strings.HasSuffix(r.URL.Path, "/history/live"):
+			providerOK(w, r.URL.Path, map[string]any{"items": []any{}})
+		default:
+			var tasks []map[string]any
+			_ = json.NewDecoder(r.Body).Decode(&tasks)
+			mu.Lock()
+			rowsBodies = append(rowsBodies, tasks[0])
+			mu.Unlock()
+			providerOK(w, r.URL.Path, map[string]any{"items": items, "total_count": len(items)})
+		}
+	})
+	svc := newService(testClient(t, server, &usageRecorder{}), &memoryCache{}, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Now)
+	in := lookupInput{Target: "example.com", Scope: string(ScopeDomain)}
+	if _, err := svc.Overview(context.Background(), "org", in); err != nil {
+		t.Fatal(err)
+	}
+	get := func(mode, sort string, hideSpam bool, f rowsFilters, page int) []string {
+		t.Helper()
+		got, err := svc.Rows(context.Background(), "org", in, pageInput{Page: page, PageSize: 50, Sort: sort, Mode: mode}, f, hideSpam)
+		if err != nil {
+			t.Fatal(err)
+		}
+		urls := []string{}
+		for _, row := range got.Rows {
+			urls = append(urls, *row.URLFrom)
+		}
+		return urls
+	}
+	// The screen's default: one link per domain, spam hidden, newest first.
+	if got := strings.Join(get("one_per_domain", "first_seen,desc", true, rowsFilters{}, 1), " "); got != "https://a.com/2 https://b.com/blog" {
+		t.Fatalf("default view = %s", got)
+	}
+	if got := strings.Join(get("as_is", "rank,asc", false, rowsFilters{}, 1), " "); got != "https://a.com/1 https://b.com/blog https://a.com/2 https://spam.store/x" {
+		t.Fatalf("all links by rank = %s", got)
+	}
+	if got := strings.Join(get("as_is", "rank,desc", false, rowsFilters{DomainFrom: "a.com"}, 1), " "); got != "https://a.com/2 https://a.com/1" {
+		t.Fatalf("one domain's links = %s", got)
+	}
+	if got := strings.Join(get("as_is", "rank,desc", false, rowsFilters{Include: "blog"}, 1), " "); got != "https://b.com/blog" {
+		t.Fatalf("include filter = %s", got)
+	}
+	if got := get("as_is", "rank,desc", false, rowsFilters{}, 2); len(got) != 0 {
+		t.Fatalf("page 2 = %v, want empty", got)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if len(rowsBodies) != 1 {
+		t.Fatalf("rows provider calls = %d, want 1 for every view", len(rowsBodies))
+	}
+	if body := rowsBodies[0]; body["limit"] != float64(blockSize) || body["filters"] != nil || body["mode"] != "as_is" {
+		t.Fatalf("whole-list request = %v, want %d unfiltered as_is rows", body, blockSize)
+	}
+}
+
+// A profile longer than one task must ask the provider for the exact view.
+func TestLargeProfileAsksTheProviderForTheView(t *testing.T) {
+	t.Parallel()
+	var bodies []map[string]any
+	var mu sync.Mutex
+	server := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.HasSuffix(r.URL.Path, "/summary/live"):
+			providerOK(w, r.URL.Path, map[string]any{"backlinks": 5000})
+		case strings.HasSuffix(r.URL.Path, "/history/live"):
+			providerOK(w, r.URL.Path, map[string]any{"items": []any{}})
+		default:
+			var tasks []map[string]any
+			_ = json.NewDecoder(r.Body).Decode(&tasks)
+			mu.Lock()
+			bodies = append(bodies, tasks[0])
+			mu.Unlock()
+			providerOK(w, r.URL.Path, map[string]any{"items": []any{}, "total_count": 5000})
+		}
+	})
+	svc := newService(testClient(t, server, &usageRecorder{}), &memoryCache{}, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Now)
+	in := lookupInput{Target: "example.com", Scope: string(ScopeDomain)}
+	if _, err := svc.Overview(context.Background(), "org", in); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Rows(context.Background(), "org", in, pageInput{Page: 1, PageSize: 50, Sort: "first_seen,desc", Mode: "one_per_domain"}, rowsFilters{}, true); err != nil {
+		t.Fatal(err)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if len(bodies) != 1 || bodies[0]["mode"] != "one_per_domain" || bodies[0]["filters"] == nil {
+		t.Fatalf("provider requests = %v, want one filtered one_per_domain request", bodies)
+	}
+}
+
 // Changing the page size or moving to the next page inside the bought block
 // must not buy the same rows again; the next block is one more call.
 func TestRowsBuyOneBlockForEveryPageSizeInsideIt(t *testing.T) {

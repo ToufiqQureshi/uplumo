@@ -71,7 +71,7 @@ Pick one page that answers a real customer question and review it as a reader:
 - **Access:** Can search crawlers reach the page? Are important facts in visible text rather than only in an image or blocked script?
 - **Original value:** Does the page add something useful beyond repeating the same generic advice found everywhere?
 
-Do not add special â€œAI schemaâ€ or create hundreds of thin question pages to chase citations. Google's current [AI features guidance](https://developers.google.com/search/docs/appearance/ai-features) says normal Search eligibility and people-first content principles still apply; there is no special markup that guarantees inclusion. Structured data must describe visible page content and does not guarantee a display.
+Do not add special “AI schema” or create hundreds of thin question pages to chase citations. Google's current [AI features guidance](https://developers.google.com/search/docs/appearance/ai-features) says normal Search eligibility and people-first content principles still apply; there is no special markup that guarantees inclusion. Structured data must describe visible page content and does not guarantee a display.
 
 ### Measure what you can actually observe
 

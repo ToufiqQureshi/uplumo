@@ -237,13 +237,7 @@ func (s *Service) Rows(ctx context.Context, org string, in lookupInput, page pag
 	if countFilters(expr)+countFilters(scope)+boolInt(hideSpam)*2 > maxFilterConditions {
 		return Page[BacklinkRow]{}, inputError("Too many filter conditions (maximum 8).")
 	}
-	expr = joinWithAnd(scope, expr)
-	query := struct {
-		Target   Target
-		Filters  rowsFilters
-		HideSpam bool
-	}{target, filters, hideSpam}
-	return loadPage(ctx, s, "rows", org, query, page, func(block pageInput) ([]BacklinkRow, *int, error) {
+	buy := func(block pageInput, expr []any, hideSpam bool) ([]BacklinkRow, *int, error) {
 		items, total, err := s.provider.rows(ctx, org, target, block, expr, hideSpam)
 		if err != nil {
 			return nil, nil, err
@@ -253,6 +247,28 @@ func (s *Service) Rows(ctx context.Context, org string, in lookupInput, page pag
 			rows = append(rows, mapBacklink(v))
 		}
 		return rows, total, nil
+	}
+	all, fetchedAt, ok, err := ensureWhole(ctx, s, "rows", org, target, func(v Summary) *float64 { return v.Backlinks }, "rank,desc",
+		func(block pageInput) ([]BacklinkRow, *int, error) { return buy(block, nil, false) })
+	if err != nil {
+		return Page[BacklinkRow]{}, err
+	}
+	if ok {
+		return cut(all, rowsView(filters, hideSpam, page.Mode), page.Sort, page, fetchedAt), nil
+	}
+	expr = joinWithAnd(scope, expr)
+	unfiltered := len(expr) == 0 && !hideSpam && page.Mode == "as_is"
+	query := struct {
+		Target   Target
+		Filters  rowsFilters
+		HideSpam bool
+	}{target, filters, hideSpam}
+	return loadPage(ctx, s, "rows", org, query, page, func(block pageInput) ([]BacklinkRow, *int, error) {
+		rows, total, err := buy(block, expr, hideSpam)
+		if err == nil && unfiltered {
+			keepIfWhole(ctx, s, "rows", org, target, block, rows, total)
+		}
+		return rows, total, err
 	})
 }
 
@@ -263,17 +279,13 @@ func (s *Service) Domains(ctx context.Context, org string, in lookupInput, page 
 		return Page[ReferringDomainRow]{}, err
 	}
 	if target.Scope == ScopeSubfolder {
-		return Page[ReferringDomainRow]{}, inputError("Referring domains can't be broken down for a subfolder â€” use the Backlinks tab, or switch to Domain or Subdomains scope.")
+		return Page[ReferringDomainRow]{}, inputError("Referring domains can't be broken down for a subfolder — use the Backlinks tab, or switch to Domain or Subdomains scope.")
 	}
 	expr := buildDomainsFilters(filters)
 	if countFilters(expr) > maxFilterConditions {
 		return Page[ReferringDomainRow]{}, inputError("Too many filter conditions (maximum 8).")
 	}
-	query := struct {
-		Target  Target
-		Filters domainsFilters
-	}{target, filters}
-	return loadPage(ctx, s, "domains", org, query, page, func(block pageInput) ([]ReferringDomainRow, *int, error) {
+	buy := func(block pageInput, expr []any) ([]ReferringDomainRow, *int, error) {
 		items, total, err := s.provider.domains(ctx, org, target, block, expr)
 		if err != nil {
 			return nil, nil, err
@@ -283,6 +295,25 @@ func (s *Service) Domains(ctx context.Context, org string, in lookupInput, page 
 			rows = append(rows, ReferringDomainRow(v))
 		}
 		return rows, total, nil
+	}
+	all, fetchedAt, ok, err := ensureWhole(ctx, s, "domains", org, target, func(v Summary) *float64 { return v.ReferringDomains }, "backlinks,desc",
+		func(block pageInput) ([]ReferringDomainRow, *int, error) { return buy(block, nil) })
+	if err != nil {
+		return Page[ReferringDomainRow]{}, err
+	}
+	if ok {
+		return cut(all, domainsView(filters), page.Sort, page, fetchedAt), nil
+	}
+	query := struct {
+		Target  Target
+		Filters domainsFilters
+	}{target, filters}
+	return loadPage(ctx, s, "domains", org, query, page, func(block pageInput) ([]ReferringDomainRow, *int, error) {
+		rows, total, err := buy(block, expr)
+		if err == nil && len(expr) == 0 {
+			keepIfWhole(ctx, s, "domains", org, target, block, rows, total)
+		}
+		return rows, total, err
 	})
 }
 
@@ -296,6 +327,11 @@ func (s *Service) Pages(ctx context.Context, org string, in lookupInput, page pa
 	scope := scopeFilters("url", target)
 	if countFilters(expr)+countFilters(scope) > maxFilterConditions {
 		return Page[TopPageRow]{}, inputError("Too many filter conditions (maximum 8).")
+	}
+	// The overview has no page count, so the whole list only comes from an
+	// unfiltered first block that turned out to hold everything.
+	if all, fetchedAt, ok := readWhole[TopPageRow](ctx, s, "pages", org, target); ok && target.Scope != ScopeSubfolder {
+		return cut(all, pagesView(filters), page.Sort, page, fetchedAt), nil
 	}
 	expr = joinWithAnd(scope, expr)
 	query := struct {
@@ -315,8 +351,19 @@ func (s *Service) Pages(ctx context.Context, org string, in lookupInput, page pa
 			}
 			rows = append(rows, TopPageRow{Page: pageURL, Backlinks: v.Backlinks, ReferringDomains: v.ReferringDomains, Rank: v.Rank, BrokenBacklinks: v.BrokenBacklinks})
 		}
+		if len(expr) == 0 {
+			keepIfWhole(ctx, s, "pages", org, target, block, rows, total)
+		}
 		return rows, total, nil
 	})
+}
+
+// keepIfWhole stores an unfiltered first block that holds the whole list, so
+// every later sort, filter or page of that target is cut from it for free.
+func keepIfWhole[T any](ctx context.Context, s *Service, kind, org string, target Target, block pageInput, rows []T, total *int) {
+	if target.Scope != ScopeSubfolder && block.Page == 1 && total != nil && *total <= len(rows) {
+		writeWhole(ctx, s, kind, org, target, rows, timestamp(s.now()))
+	}
 }
 
 // blockSize is how many rows one provider call buys: the provider's maximum.
