@@ -1,9 +1,14 @@
-import { Plus, Trash2, X } from "lucide-react";
+import { QueryError } from "@/client/components/QueryState";
+import { Monitor, Plus, Save, Send, Trash2, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Button } from "@/client/components/ui/button";
 import type { ContentDraftSummary } from "./contentEditorApi";
 import type { ContentDraftInput } from "./scoring";
-import { searchPreviewTitle, searchPreviewUrl } from "./editor-display";
+import {
+  titleForDraft,
+  searchPreviewTitle,
+  searchPreviewUrl,
+} from "./editor-display";
 
 const reminderStorageKey = (projectId: string) =>
   `uplumo:content-editor:writer-reminder:${projectId}`;
@@ -180,6 +185,88 @@ export function Field({
         </span>
       </label>
       {children}
+    </div>
+  );
+}
+
+export function DraftToolbar({
+  draft,
+  saving,
+  dirty,
+  saved,
+  canSave,
+  onPreview,
+  onSave,
+  onPublish,
+}: {
+  draft: ContentDraftInput;
+  saving: boolean;
+  dirty: boolean;
+  saved: boolean;
+  canSave: boolean;
+  onPreview: () => void;
+  onSave: () => void;
+  onPublish: () => void;
+}) {
+  const words = draft.content.trim().match(/[\p{L}\p{N}]+/gu)?.length ?? 0;
+  const readMinutes = Math.ceil(words / 200);
+  return (
+    <div className="sticky top-16 z-10 -mx-1 flex flex-wrap items-center gap-3 rounded-xl border bg-background/95 px-4 py-3 backdrop-blur">
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium">{titleForDraft(draft)}</p>
+        <p className="text-xs text-muted-foreground">
+          {words.toLocaleString()} words ·{" "}
+          {words > 0 ? `about ${readMinutes} min read · ` : ""}
+          {saving
+            ? "Saving…"
+            : dirty
+              ? "Unsaved changes"
+              : saved
+                ? "Saved"
+                : "New draft"}
+        </p>
+      </div>
+      <Button variant="outline" onClick={onPreview}>
+        <Monitor aria-hidden />
+        Preview as on website
+      </Button>
+      <Button variant="outline" onClick={onSave} disabled={!canSave}>
+        <Save aria-hidden />
+        {saving ? "Saving…" : "Save draft"}
+      </Button>
+      <Button onClick={onPublish}>
+        <Send aria-hidden />
+        Publish
+      </Button>
+    </div>
+  );
+}
+
+export function DraftLoadingState({
+  error,
+  onRetry,
+  onNew,
+}: {
+  error: Error | null;
+  onRetry: () => void;
+  onNew: () => void;
+}) {
+  if (!error)
+    return (
+      <p role="status" aria-busy="true">
+        Opening saved draft…
+      </p>
+    );
+  return (
+    <div className="space-y-3">
+      <QueryError
+        error={error}
+        fallback="Could not open this saved draft."
+        onRetry={onRetry}
+      />
+      <Button variant="outline" onClick={onNew}>
+        Start a new draft
+      </Button>
     </div>
   );
 }

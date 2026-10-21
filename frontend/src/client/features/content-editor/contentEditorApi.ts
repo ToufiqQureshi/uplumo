@@ -159,12 +159,12 @@ export function saveContentDraft({
 }: {
   data: ContentDraftInput & { id?: string; projectId: string };
 }) {
-  const { projectId, ...input } = data;
+  const { projectId, lastReviewedAt, ...input } = data;
   return apiRequest(
     `/api/v1/projects/${encodeURIComponent(projectId)}/content/drafts/save`,
     draftSchema,
     "POST",
-    input,
+    { ...input, lastReviewedDate: lastReviewedAt },
   );
 }
 

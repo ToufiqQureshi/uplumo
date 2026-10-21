@@ -7,6 +7,7 @@ import { EditorSessionProvider } from "@/client/features/content-editor/editor-s
 
 export const Route = createFileRoute("/_app/p/$projectId/content-editor")({
   validateSearch: z.object({
+    draft: z.string().trim().min(1).max(128).optional().catch(undefined),
     growth: z.literal("1").optional().catch(undefined),
     keyword: z.string().trim().min(1).max(200).optional().catch(undefined),
   }),
@@ -15,7 +16,8 @@ export const Route = createFileRoute("/_app/p/$projectId/content-editor")({
 
 function ContentEditorRoute() {
   const { projectId } = Route.useParams();
-  const { keyword, growth } = Route.useSearch();
+  const { keyword, growth, draft } = Route.useSearch();
+  const navigate = Route.useNavigate();
   return (
     <div className="h-full overflow-auto px-4 py-4 pb-24 md:px-6 md:py-6 md:pb-8">
       <div className="mx-auto max-w-[1500px] space-y-5">
@@ -31,6 +33,14 @@ function ContentEditorRoute() {
             key={projectId}
             projectId={projectId}
             initialKeyword={keyword}
+            selectedDraftId={draft}
+            onDraftIdChange={(id) =>
+              void navigate({
+                search: (previous) => ({ ...previous, draft: id }),
+                replace: true,
+                ignoreBlocker: true,
+              })
+            }
           />
         </EditorSessionProvider>
       </div>

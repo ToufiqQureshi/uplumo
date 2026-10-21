@@ -158,3 +158,33 @@ settings API-key flow created a temporary key through the UI, persisted its list
 entry across reload, revoked it through the confirmation dialog and confirmed
 its absence after reload. The raw key was not logged or committed; no invitation
 email or paid branding activation was attempted.
+
+## Editor runtime corrections
+
+Saving and reloading a real draft originally opened an empty editor even though
+the article remained in Postgres. The editor now keeps only its opaque draft ID
+in the URL and reloads it through the scoped API. Missing/foreign IDs show an
+error rather than a writable blank replacement; unsaved navigation is blocked.
+The save/open mapping preserves author and review metadata.
+
+A second real-backend pass exposed a contract defect permissive fixtures had
+hidden: save requests sent response-only `lastReviewedAt`, whereas Go accepts
+`lastReviewedDate`. The client now maps that field explicitly, and fixtures
+reject the invalid request. The resulting 400 also revealed an unchanged-draft
+autosave loop every three seconds; failed input now waits for a new edit or an
+explicit Save draft. Red-before-fix API/browser regressions cover both defects.
+
+The corrected production SPA and Go 1.27.3 binary were exercised with real local
+Postgres: save article plus author/review date, read the persisted API result,
+reload the selected URL, confirm restored text/metadata and check mobile document
+width. One save, no paid calls and no browser exceptions were observed. External
+Google/payment/email/WordPress acceptance remains outside this local evidence.
+
+## Remaining production measurement check
+
+A read-only seven-day production aggregate contained 11 pageviews and no stored
+country. That small sample does not establish the cause. Railway documents
+`X-Real-IP`, while the application accepts forwarded addresses only from explicit
+trusted proxy CIDRs; deployed proxy trust needs direct validation before claiming
+geography is reconciled. No broad trust ranges, guessed locations, raw visitor IP
+logging or fabricated production traffic were introduced to fill the gap.

@@ -39,3 +39,19 @@ Creates and edits SEO drafts, content briefs, author profiles, internal-link sug
 
 Keep this file updated when the reference schema, draft-preservation behavior or
 review/apply boundary changes.
+
+## Preserve saved draft identity and editorial metadata
+
+- **Decision:** Save/open preserve `authorId` and normalize the returned review timestamp to its YYYY-MM-DD editor date. Record the selected opaque draft ID in a validated TanStack Router search parameter and reopen it through the existing project-scoped API on reload. Missing/forbidden drafts show an error before a writable editor. A new empty draft is labeled New draft, not Saved.
+- **Why:** A real Go/Postgres/browser pass saved the article but reload opened a blank new editor; source review and the browser regression also exposed author/review fields being dropped by the response-to-editor mapping. Users should not lose their byline/freshness state or mistake a blank editor for lost work.
+- **Preserve:** No article text in browser storage or URLs, no paid lookup on save/reload, no automatic publication. Backend authorization remains authoritative for every draft ID. Cached linked data must not overwrite later unsaved edits. New/delete clear the selected link; save/open update it without remounting the editor or adding autosave history entries.
+- **Decision:** Use the installed TanStack Router `useBlocker` for unsaved SPA navigation and before-unload protection. Internal ID synchronization bypasses the blocker only after existing save/open/new/delete handling; explicit discard choices retain their confirmations.
+- **Trace:** `ContentEditorPage.tsx`, `useLinkedDraft.ts` (installed query/router hooks), `EditorPanels.tsx` (existing toolbar/loading state extracted to keep the page bounded), `routes/_app/p/$projectId/content-editor.tsx`, `frontend/tests/content-editor.spec.ts`. The author-selection assertion failed before the mapping fix; tests exercise reload, safe missing-draft state, cancelled navigation and absence of paid calls. Existing Go storage/API contracts remain unchanged.
+
+The slow-save browser check preserves the existing input lock until the saved snapshot is applied, then verifies later edits remain unsaved. It does not pretend users can type into disabled fields.
+
+- **Contract correction:** The editor's date-only `lastReviewedAt` is serialized as Go's `lastReviewedDate`; responses remain RFC3339 `lastReviewedAt`. Real Go rejected the previous request with 400, while the initial permissive browser fixture incorrectly accepted it. The API payload unit regression fails without this mapping, and browser fixtures now reject the invalid response-only request field. Author and review-date persistence must be verified through real Go/database reloads, not solely permissive fixtures.
+
+- **Autosave failure boundary:** A refused save must not resubmit the unchanged draft every three seconds. The mutation carries the immutable submitted input; autosave pauses when that exact input failed. A later edit may save again, and Save draft remains an explicit retry. Real backend 400 logs exposed the loop, and the browser regression observed a second unchanged submission before the guard. Preserve unsaved content and the existing pending input lock; no paid generation or publication is added.
+
+Browser fixtures live in `frontend/tests/content-editor.fixtures.ts` so request/response contract handling stays in one bounded file shared by the browser scenarios. Fixtures reject response-only date fields rather than silently accepting every payload.

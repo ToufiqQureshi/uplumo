@@ -1,9 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Monitor, Save, Send } from "lucide-react";
 import { sortBy } from "remeda";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/client/components/ui/button";
 import { projectsQueryOptions } from "@/client/features/projects/projectQueries";
 import {
   contentEditorQueryKeys,
@@ -21,7 +19,12 @@ import {
   type ContentDraftInput,
   type EditorMode,
 } from "./scoring";
-import { WriterReminder } from "./EditorPanels";
+import {
+  DraftLoadingState,
+  DraftToolbar,
+  WriterReminder,
+} from "./EditorPanels";
+import { useLinkedDraft } from "./useLinkedDraft";
 import { ArticleComposer } from "./ArticleComposer";
 import { FreeSeoEditorProvider } from "./FreeSeoEditorContext";
 import {
@@ -29,7 +32,6 @@ import {
   type EditorTab,
 } from "./ContentEditorSidePanel";
 import { isArticleContentWithinLimit } from "./content-limits";
-import { titleForDraft } from "./editor-display";
 import { primaryTargetTopic } from "./target-topics";
 
 const blankDraft: ContentDraftInput = {
@@ -46,9 +48,9 @@ const asInput = (draft: ContentDraft): ContentDraftInput => ({
   slug: draft.slug,
   metaDescription: draft.metaDescription,
   content: draft.content,
+  authorId: draft.authorId,
+  lastReviewedAt: draft.lastReviewedAt?.slice(0, 10),
 });
-const wordCount = (text: string) =>
-  text.trim() ? (text.trim().match(/[\p{L}\p{N}]+/gu)?.length ?? 0) : 0;
 const slugFromTitle = (title: string) =>
   title
     .normalize("NFKD")
@@ -66,9 +68,13 @@ const blankDraftForKeyword = (keyword?: string): ContentDraftInput => ({
 export function ContentEditorPage({
   projectId,
   initialKeyword,
+  selectedDraftId,
+  onDraftIdChange,
 }: {
   projectId: string;
   initialKeyword?: string;
+  selectedDraftId?: string;
+  onDraftIdChange: (id: string | undefined) => void;
 }) {
   const queryClient = useQueryClient();
   const draftsQuery = useQuery({
@@ -97,15 +103,6 @@ export function ContentEditorPage({
     const timer = window.setTimeout(() => setScoredDraft(draft), 300);
     return () => window.clearTimeout(timer);
   }, [draft]);
-  useEffect(() => {
-    if (!dirty) return;
-    const warn = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = "";
-    };
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [dirty]);
   const [brief, setBrief] = useState<SearchBrief | null>(null);
   // A brief scores only the topic it was built for.
   const scoredTopic = primaryTargetTopic(scoredDraft.targetKeyword);
@@ -133,17 +130,21 @@ export function ContentEditorPage({
     setInitialized(true);
   }, [draftsQuery.data, draftsQuery.isPending, initialized]);
 
+  const restoreDraft = useCallback((saved?: ContentDraft) => {
+    const snapshot = saved ? asInput(saved) : blankDraft;
+    setDraftId(saved?.id);
+    setDraft(snapshot);
+    setSavedSnapshot(snapshot);
+    setSlugEdited(snapshot.slug !== slugFromTitle(snapshot.title));
+  }, []);
+
   const saveMutation = useMutation({
-    mutationFn: () =>
+    mutationFn: (input: ContentDraftInput) =>
       saveContentDraft({
-        data: { ...draft, projectId, ...(draftId ? { id: draftId } : {}) },
+        data: { ...input, projectId, ...(draftId ? { id: draftId } : {}) },
       }),
     onSuccess: async (saved) => {
-      const snapshot = asInput(saved);
-      setDraftId(saved.id);
-      setDraft(snapshot);
-      setSavedSnapshot(snapshot);
-      setSlugEdited(snapshot.slug !== slugFromTitle(snapshot.title));
+      restoreDraft(saved);
       await queryClient.cancelQueries({
         queryKey: contentEditorQueryKeys.drafts(projectId),
         exact: true,
@@ -176,6 +177,7 @@ export function ContentEditorPage({
           exact: true,
         });
       }
+      onDraftIdChange(saved.id);
       toast.success("Draft saved");
     },
     onError: (error) =>
@@ -189,14 +191,23 @@ export function ContentEditorPage({
 
   useEffect(() => {
     if (!initialized || !dirty || saveMutation.isPending) return;
+    if (saveMutation.isError && saveMutation.variables === draft) return;
     if (
       (!draft.title.trim() && !draft.content.trim()) ||
       !isArticleContentWithinLimit(draft.content)
     )
       return;
-    const timer = window.setTimeout(() => saveDraft(), 3000);
+    const timer = window.setTimeout(() => saveDraft(draft), 3000);
     return () => window.clearTimeout(timer);
-  }, [draft, dirty, initialized, saveDraft, saveMutation.isPending]);
+  }, [
+    draft,
+    dirty,
+    initialized,
+    saveDraft,
+    saveMutation.isPending,
+    saveMutation.isError,
+    saveMutation.variables,
+  ]);
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) =>
@@ -207,9 +218,8 @@ export function ContentEditorPage({
         exact: true,
       });
       if (id === draftId) {
-        setDraftId(undefined);
-        setDraft(blankDraft);
-        setSavedSnapshot(blankDraft);
+        restoreDraft();
+        onDraftIdChange(undefined);
       }
       queryClient.removeQueries({
         queryKey: contentEditorQueryKeys.draft(projectId, id),
@@ -244,16 +254,20 @@ export function ContentEditorPage({
         queryFn: () => getContentDraft({ data: { projectId, draftId: id } }),
       }),
     onSuccess: (saved) => {
-      const snapshot = asInput(saved);
-      setDraftId(saved.id);
-      setDraft(snapshot);
-      setSavedSnapshot(snapshot);
-      setSlugEdited(snapshot.slug !== slugFromTitle(snapshot.title));
+      restoreDraft(saved);
+      onDraftIdChange(saved.id);
     },
     onError: (error) =>
       toast.error(
         error instanceof Error ? error.message : "Could not open this draft.",
       ),
+  });
+  const linkedDraft = useLinkedDraft({
+    projectId,
+    selectedDraftId,
+    currentDraftId: draftId,
+    dirty,
+    onRestore: restoreDraft,
   });
   const editorBusy =
     saveMutation.isPending ||
@@ -267,11 +281,9 @@ export function ContentEditorPage({
       !window.confirm("Discard your unsaved changes and start a new draft?")
     )
       return;
-    setDraftId(undefined);
-    setDraft(blankDraft);
-    setSavedSnapshot(blankDraft);
-    setSlugEdited(false);
+    restoreDraft();
     setInitialized(true);
+    onDraftIdChange(undefined);
   };
 
   const selectDraft = (saved: ContentDraftSummary) => {
@@ -294,48 +306,34 @@ export function ContentEditorPage({
       return { ...current, [field]: value };
     });
   };
-  const words = wordCount(draft.content);
-  const readMinutes = Math.ceil(words / 200);
+  if (selectedDraftId && selectedDraftId !== draftId) {
+    return (
+      <DraftLoadingState
+        error={linkedDraft.error}
+        onRetry={() => void linkedDraft.refetch()}
+        onNew={startNewDraft}
+      />
+    );
+  }
 
   return (
     <FreeSeoEditorProvider onDraftFieldChange={update}>
       <div className="space-y-5">
-        <div className="sticky top-16 z-10 -mx-1 flex flex-wrap items-center gap-3 rounded-xl border bg-background/95 px-4 py-3 backdrop-blur">
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">
-              {titleForDraft(draft)}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {words.toLocaleString()} words ·{" "}
-              {words > 0 ? `about ${readMinutes} min read · ` : ""}
-              {saveMutation.isPending
-                ? "Saving…"
-                : dirty
-                  ? "Unsaved changes"
-                  : "Saved"}
-            </p>
-          </div>
-          <Button variant="outline" onClick={() => setPreviewOpen(true)}>
-            <Monitor aria-hidden />
-            Preview as on website
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => saveMutation.mutate()}
-            disabled={
-              editorBusy ||
-              !isArticleContentWithinLimit(draft.content) ||
-              (!draft.title.trim() && !draft.content.trim())
-            }
-          >
-            <Save aria-hidden />
-            {saveMutation.isPending ? "Saving…" : "Save draft"}
-          </Button>
-          <Button onClick={() => setTab("publish")}>
-            <Send aria-hidden />
-            Publish
-          </Button>
-        </div>
+        <DraftToolbar
+          draft={draft}
+          saving={saveMutation.isPending}
+          dirty={dirty}
+          saved={Boolean(draftId)}
+          canSave={
+            !editorBusy &&
+            isArticleContentWithinLimit(draft.content) &&
+            Boolean(draft.title.trim() || draft.content.trim())
+          }
+          onPreview={() => setPreviewOpen(true)}
+          onSave={() => saveMutation.mutate(draft)}
+          onPublish={() => setTab("publish")}
+        />
+
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
           <section className="min-w-0 space-y-5">
             <WriterReminder key={projectId} projectId={projectId} />

@@ -5,6 +5,10 @@ target topic, URL slug and search description are saved with the article. SEO
 and answer-readiness checks are local editorial guidance; they do not query
 Google or predict rankings.
 
+Draft state and save/open/delete actions live in `ContentEditorPage.tsx`;
+`useLinkedDraft.ts` handles URL-selected loading and unsaved navigation through
+TanStack Query/Router. `EditorPanels.tsx` contains the shared toolbar and preview.
+
 ## Scoring in the editor
 
 - Scores are deterministic and computed in the browser after a 300 ms pause in
@@ -79,7 +83,12 @@ Google or predict rankings.
 - Save, reopen and delete operations are project-scoped. Draft lists and draft
   details use TanStack Query; opening the same draft again while its cache is
   fresh reuses the cached response. The shared query client keeps in-memory
-  query data for five minutes. A full browser reload clears that cache.
+  query data for five minutes. A full browser reload clears that cache and
+  fetches the selected saved draft from its `draft` URL parameter. Only the
+  opaque draft ID enters the URL; article content stays in server storage and
+  the current in-memory editor. A refused autosave pauses for that unchanged
+  draft; a later edit or explicit Save draft can try again. Review dates use
+  `lastReviewedDate` in save requests and `lastReviewedAt` in responses.
 
 ## Search brief
 

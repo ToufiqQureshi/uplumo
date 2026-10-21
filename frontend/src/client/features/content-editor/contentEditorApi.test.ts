@@ -92,6 +92,43 @@ describe("content editor API contract", () => {
     ]);
   });
 
+  it("maps the editor review date to the Go save contract", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({
+        ...draft,
+        authorId: "author-1",
+        lastReviewedAt: "2026-10-20T00:00:00Z",
+      }),
+    );
+    await expect(
+      saveContentDraft({
+        data: {
+          projectId: draft.projectId,
+          title: draft.title,
+          targetKeyword: draft.targetKeyword,
+          slug: draft.slug,
+          metaDescription: draft.metaDescription,
+          content: draft.content,
+          authorId: "author-1",
+          lastReviewedAt: "2026-10-20",
+        },
+      }),
+    ).resolves.toMatchObject({
+      authorId: "author-1",
+      lastReviewedAt: "2026-10-20T00:00:00Z",
+    });
+    const raw = fetchMock.mock.calls[0]?.[1]?.body;
+    if (typeof raw !== "string")
+      throw new Error("Expected a JSON request body");
+    const body: unknown = JSON.parse(raw);
+    expect(body).toMatchObject({
+      authorId: "author-1",
+      lastReviewedDate: "2026-10-20",
+    });
+    expect(body).not.toHaveProperty("lastReviewedAt");
+    expect(body).not.toHaveProperty("projectId");
+  });
+
   it("loads one project-scoped draft, including its full article body", async () => {
     await expect(
       getContentDraft({ data: { projectId: "p1", draftId: "draft-1" } }),

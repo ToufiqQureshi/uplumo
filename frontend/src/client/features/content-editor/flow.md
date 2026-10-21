@@ -57,3 +57,12 @@ Growth handoff: explicit Improve this page -> `saveSearchContext` validates the
 source URL, bounded queries/reasons and stores a 30-minute project-scoped tab
 reference -> `SearchContextPanel` shows the existing page and evidence above
 the unchanged editor workflow. An invalid/expired reference is omitted.
+
+Saved draft identity: save/open → update the validated `draft` URL parameter
+with the opaque ID using replace navigation → reload fetches that ID through
+the existing project-scoped draft API/TanStack cache → restore article and
+author/review metadata. The request uses Go `lastReviewedDate` (YYYY-MM-DD);
+the response uses `lastReviewedAt` (RFC3339 midnight). Missing/forbidden IDs show an error without a writable
+blank replacement. No brief/AI/publish call occurs. New/delete clear the link.
+The router's blocker protects unsaved SPA exits and before-unload; internal ID
+synchronization does not discard content and does not prompt or remount.
