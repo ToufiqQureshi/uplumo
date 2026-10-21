@@ -1,141 +1,11 @@
+import { expect, test, type TestInfo } from "@playwright/test";
 import {
-  expect,
-  test,
-  type Page,
-  type Route,
-  type TestInfo,
-} from "@playwright/test";
-
-const project = {
-  id: "e2e-project",
-  name: "Example site",
-  domain: "example.com",
-  locationCode: 2840,
-  languageCode: "en",
-  createdAt: "2026-10-17T00:00:00.000Z",
-};
-
-const paidEndpoints =
-  /content\/brief|assistant\/generate|keywords\/research|domain|backlinks|brand|prompt|rank|local-seo/u;
-
-function isObjectRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function requestBody(route: Route) {
-  const body: unknown = route.request().postDataJSON();
-  if (!isObjectRecord(body)) throw new Error("Expected a JSON object body");
-  return body;
-}
-
-async function mockEditorApi(
-  page: Page,
-  requests: string[],
-  writerRequests: Record<string, unknown>[] = [],
-) {
-  await page.route("**/api/**", async (route: Route) => {
-    const pathname = new URL(route.request().url()).pathname;
-    requests.push(pathname);
-    const now = new Date().toISOString();
-    const status = {
-      plan: "basic",
-      status: "active",
-      currentPeriodEnd: null,
-      cancelAtPeriodEnd: false,
-      unlimited: false,
-      paymentsConfigured: true,
-      availablePlans: ["basic", "pro", "agency"],
-      usage: {
-        sites: { used: 1, limit: 1, exceeded: false },
-        members: { used: 1, limit: 1, exceeded: false },
-        trackedKeywords: { used: 0, limit: 100, exceeded: false },
-      },
-    };
-    const usage = {
-      plan: "basic",
-      unlimited: false,
-      chargesCredits: true,
-      balanceCredits: 3900,
-      monthlyCredits: 4000,
-      periodStart: now,
-      periodEnd: null,
-      spent: [],
-      costs: [{ feature: "ai_writing", unit: "action", credits: 13 }],
-    };
-    let body: unknown = {};
-
-    if (pathname === "/api/auth/get-session") {
-      body = {
-        user: {
-          id: "e2e-user",
-          name: "Editor Test",
-          email: "editor@example.com",
-          emailVerified: true,
-          createdAt: now,
-          updatedAt: now,
-        },
-        session: {
-          id: "e2e-session",
-          userId: "e2e-user",
-          expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-          token: "playwright-session",
-          createdAt: now,
-          updatedAt: now,
-        },
-      };
-    } else if (pathname.endsWith("/projects/e2e-project/get")) {
-      body = project;
-    } else if (pathname.endsWith("/content/drafts/list")) {
-      body = [];
-    } else if (pathname.endsWith("/content/drafts/save")) {
-      const input = requestBody(route);
-      body = {
-        ...input,
-        id: typeof input.id === "string" ? input.id : "e2e-draft",
-        projectId: project.id,
-        createdAt: now,
-        updatedAt: now,
-      };
-    } else if (pathname === "/api/v1/config/content-writer-status") {
-      body = {
-        configured: true,
-        message: "",
-        maxCreditsPerAction: 15,
-      };
-    } else if (pathname.endsWith("/content/assistant/generate")) {
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      writerRequests.push(requestBody(route));
-      body = { content: "## A useful outline" };
-    } else if (pathname === "/api/v1/billing/usage") {
-      body = usage;
-    } else if (pathname === "/api/v1/billing/status") {
-      body = status;
-    } else if (pathname === "/api/v1/billing/plans") {
-      body = { plans: [] };
-    }
-
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify(body),
-    });
-  });
-}
-
-async function openEditor(
-  page: Page,
-  requests: string[],
-  writerRequests: Record<string, unknown>[] = [],
-) {
-  await mockEditorApi(page, requests, writerRequests);
-  await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto(`/p/${project.id}/content-editor`);
-  await expect(
-    page.getByRole("heading", { name: "Content Editor" }),
-  ).toBeVisible();
-  await expect(page.getByLabel(/Article title/)).toBeVisible();
-  await expect(page.getByText("Your article", { exact: true })).toBeVisible();
-}
+  project,
+  paidEndpoints,
+  requestBody,
+  mockEditorApi,
+  openEditor,
+} from "./content-editor.fixtures";
 
 test("a rapid AI writer double click sends one keyed request", async ({
   page,
@@ -223,4 +93,183 @@ test("page load, 30 seconds of typing, and autosave trigger no paid lookups", as
   expect(
     requests.filter((path) => path.endsWith("/content/drafts/save")),
   ).toHaveLength(1);
+});
+
+test("saved draft link restores writing and metadata after reload", async ({
+  page,
+}) => {
+  const requests: string[] = [];
+  await openEditor(page, requests);
+  await page.route("**/api/v1/projects/*/content/authors/list", (route) =>
+    route.fulfill({
+      json: [
+        {
+          id: "author-review",
+          projectId: project.id,
+          name: "Review Author",
+          role: "Editor",
+          bio: "Writes practical guides",
+          profileUrl: "",
+          createdAt: "2026-10-20T00:00:00Z",
+          updatedAt: "2026-10-20T00:00:00Z",
+        },
+      ],
+    }),
+  );
+  await page
+    .getByLabel(/Article title/)
+    .fill("A useful guide that survives reload");
+  await page
+    .locator('[contenteditable="true"]')
+    .first()
+    .fill("A practical article that must stay in the saved draft.");
+  await page.getByRole("tab", { name: "Publish", exact: true }).click();
+  await page.getByLabel("Draft author").selectOption("author-review");
+  await page.getByRole("button", { name: "Mark as reviewed today" }).click();
+  const saved = page.waitForResponse(
+    (r) => r.url().endsWith("/content/drafts/save") && r.status() === 200,
+  );
+  await page.getByRole("button", { name: "Save draft", exact: true }).click();
+  await saved;
+  await expect(page.getByLabel("Draft author")).toHaveValue("author-review");
+  await expect(page.getByText(/^Reviewed \d{4}-\d{2}-\d{2}$/)).toBeVisible();
+  await expect(page).toHaveURL(/draft=e2e-draft/u);
+  await page.reload();
+  await expect(page.getByLabel(/Article title/)).toHaveValue(
+    "A useful guide that survives reload",
+  );
+  await expect(page.locator('[contenteditable="true"]').first()).toContainText(
+    "A practical article that must stay in the saved draft.",
+  );
+  await page.getByRole("tab", { name: "Publish", exact: true }).click();
+  await expect(page.getByLabel("Draft author")).toHaveValue("author-review");
+  await expect(page.getByText(/^Reviewed \d{4}-\d{2}-\d{2}$/)).toBeVisible();
+  expect(requests.filter((path) => paidEndpoints.test(path))).toEqual([]);
+});
+
+test("a missing saved draft never opens a writable blank replacement", async ({
+  page,
+}) => {
+  const requests: string[] = [];
+  await mockEditorApi(page, requests);
+  await page.route("**/api/v1/projects/*/content/drafts/missing/get", (route) =>
+    route.fulfill({
+      status: 404,
+      json: {
+        error: {
+          code: "not_found",
+          message: "This draft was not found in this project.",
+        },
+      },
+    }),
+  );
+  await page.goto(`/p/${project.id}/content-editor?draft=missing`);
+  await expect(
+    page.getByText("This draft was not found in this project."),
+  ).toBeVisible();
+  await expect(page.getByLabel(/Article title/)).toHaveCount(0);
+  expect(
+    requests.filter((path) => path.endsWith("/content/drafts/save")),
+  ).toEqual([]);
+  await page.getByRole("button", { name: "Start a new draft" }).click();
+  await expect(page.getByLabel(/Article title/)).toHaveValue("");
+  await expect(page).not.toHaveURL(/draft=/u);
+});
+
+test("unsaved editor navigation can be cancelled without losing writing", async ({
+  page,
+}) => {
+  const requests: string[] = [];
+  await openEditor(page, requests);
+  await page.getByLabel(/Article title/).fill("Keep this unsaved writing");
+  page.once("dialog", (dialog) => dialog.dismiss());
+  await page.getByRole("link", { name: "Dashboard", exact: true }).click();
+  await expect(page).toHaveURL(/\/content-editor$/u);
+  await expect(page.getByLabel(/Article title/)).toHaveValue(
+    "Keep this unsaved writing",
+  );
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("link", { name: "Dashboard", exact: true }).click();
+  await expect(page).toHaveURL(/\/p\/e2e-project$/u);
+  expect(requests.filter((path) => paidEndpoints.test(path))).toEqual([]);
+});
+
+test("a slow save locks editing until the saved snapshot is applied", async ({
+  page,
+}) => {
+  const requests: string[] = [];
+  await openEditor(page, requests);
+  let releaseSave: (() => void) | undefined;
+  const blocked = new Promise<void>((resolve) => {
+    releaseSave = resolve;
+  });
+  let submitted: Record<string, unknown> | undefined;
+  await page.route("**/content/drafts/save", async (route) => {
+    submitted = requestBody(route);
+    await blocked;
+    await route.fulfill({
+      json: {
+        ...submitted,
+        id: "slow-draft",
+        projectId: project.id,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    });
+  });
+  const title = page.getByLabel(/Article title/);
+  await title.fill("Original title");
+  await page.getByRole("button", { name: "Save draft", exact: true }).click();
+  await expect.poll(() => submitted?.title).toBe("Original title");
+  await expect(title).toBeDisabled();
+  releaseSave?.();
+  await expect(page).toHaveURL(/draft=slow-draft/u);
+  await expect(title).toBeEnabled();
+  await expect(title).toHaveValue("Original title");
+  await title.fill("New writing after the save completes");
+  await expect(page.getByText(/Unsaved changes/u)).toBeVisible();
+  expect(requests.filter((path) => paidEndpoints.test(path))).toEqual([]);
+});
+
+test("a refused autosave does not loop without a new edit or explicit retry", async ({
+  page,
+}) => {
+  const requests: string[] = [];
+  await openEditor(page, requests);
+  const attempts: Record<string, unknown>[] = [];
+  await page.route("**/content/drafts/save", async (route) => {
+    const input = requestBody(route);
+    attempts.push(input);
+    if (attempts.length === 1)
+      return route.fulfill({
+        status: 400,
+        json: {
+          error: {
+            code: "validation_error",
+            message: "This draft could not be saved.",
+          },
+        },
+      });
+    return route.fulfill({
+      json: {
+        ...input,
+        id: "retried-draft",
+        projectId: project.id,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    });
+  });
+  const title = page.getByLabel(/Article title/);
+  await title.fill("Unsaved writing");
+  await page.getByRole("button", { name: "Save draft", exact: true }).click();
+  await expect.poll(() => attempts.length).toBe(1);
+  await expect(title).toBeEnabled();
+  await page.waitForTimeout(7000);
+  expect(attempts).toHaveLength(1);
+  await title.fill("Corrected writing");
+  await expect(page).toHaveURL(/draft=retried-draft/u);
+  await expect(title).toHaveValue("Corrected writing");
+  expect(attempts).toHaveLength(2);
+  expect(requests.filter((path) => paidEndpoints.test(path))).toEqual([]);
 });
