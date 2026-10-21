@@ -7,7 +7,8 @@ The one list of what each Uplumo plan costs, limits and includes
 | ------ | ------------- | ----- | ---------------- | ------- | --------------- | ------------------------------------------------------------------- |
 | Free   | ₹0            | 1     | none             | 1       | 0               | Uplumo Analytics with AI traffic detection, starter site audit      |
 | Solo (`basic`)  | ₹999          | 1     | 100              | 1       | 4,000           | Keyword research, rank tracking, Google data, full site audit, AI writing assistant, IndexNow, SAM  |
-| Growth (`pro`)    | ₹2,499        | 1     | 500              | 3       | 10,000          | Backlinks, competitor research, AI Visibility |
+| Growth (`pro`)    | ₹2,499        | 2     | 500              | 3       | 10,000          | Backlinks, competitor research, AI Visibility |
+| Business (`business`) | ₹4,999   | 5     | 1,000            | 5       | 15,000          | Same tools as Growth, more sites, no white-label |
 | Agency | ₹9,999        | 10    | 1,500            | 10      | 25,000          | White-label reports                                                 |
 
 ## Who reads it
@@ -57,5 +58,5 @@ The one list of what each Uplumo plan costs, limits and includes
   cannot add more.
 - Keyword research has no monthly cap of its own on Solo.
 - The assistant (SAM) is limited by credits, not by a feature of its own.
-  Free has no credits; Solo, Growth and Agency can use SAM from their monthly
+  Free has no credits; every paid plan can use SAM from their monthly
   grant when the AI provider is configured.

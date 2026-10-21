@@ -13,7 +13,7 @@ Last updated: 20 Oct 2026
 
 | Date | Decision | Why |
 |---|---|---|
-| 21 Oct | Plans renamed **Solo (₹999, 1 site) / Growth (₹2,499, 1 site) / Agency (₹9,999, 10 sites, 25,000 credits)**. Internal ids stay `basic`/`pro`/`agency`. | Credits, not sites, cap provider cost; Agency at ₹5,999 for 10 sites was cheaper per site than Growth. |
+| 21 Oct | Four paid plans: **Solo ₹999 (1 site, 4,000 credits) / Growth ₹2,499 (2 sites, 10,000) / Business ₹4,999 (5 sites, 15,000, 1,000 keywords, 5 members, no white-label) / Agency ₹9,999 (10 sites, 25,000)**. Internal ids `basic`/`pro`/`business`/`agency`. Every card lists everything the plan includes. | Credits, not sites, cap provider cost; Agency at ₹5,999 for 10 sites was cheaper per site than Growth. |
 | 14 Oct | WordPress publishing is on the **Basic, Pro and Agency** plans. Free gets a link to the plans. | It is a paid feature with no provider cost. |
 | 14 Oct | Only an **owner or admin** can connect a website. Any member can publish. | The site password is sensitive. |
 | 14 Oct | Onboarding has a **6th step**, "connect website", and it can be skipped. | Customers can connect early without being blocked. |
@@ -60,7 +60,8 @@ Last updated: 20 Oct 2026
 | `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `PUBLIC_URL` | set | Login and links |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | set | Google login, Search Console, GA4 |
 | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` | set (**test mode**) | Billing |
-| `RAZORPAY_PLAN_ID_BASIC`, `_PRO`, `_AGENCY` | set (test) | Monthly plans |
+| `RAZORPAY_PLAN_ID_BASIC`, `_PRO`, `_AGENCY` | set (test) | Monthly plans. Test Agency plan is still ₹5,999: recreate at ₹9,999 |
+| `RAZORPAY_PLAN_ID_BUSINESS` | **not set** | Business ₹4,999 monthly plan; without it Business cannot be bought |
 | `LOOPS_API_KEY` + 3 `LOOPS_TRANSACTIONAL_*_ID` | set | Email |
 | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_CONTENT_IMAGE_BUCKET` | set (14 Oct) | Content editor images (`content-images` bucket) |
 | `DATAFORSEO_API_KEY` | **set 14 Oct** | SEO data; the account is not verified yet |

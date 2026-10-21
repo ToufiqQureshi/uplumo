@@ -16,7 +16,8 @@ func TestCatalogMatchesTheOwnersPlanTable(t *testing.T) {
 	}{
 		{Free, 0, 1, 0, 1, 0},
 		{Basic, 999, 1, 100, 1, 4000},
-		{Pro, 2499, 1, 500, 3, 10000},
+		{Pro, 2499, 2, 500, 3, 10000},
+		{Business, 4999, 5, 1000, 5, 15000},
 		{Agency, 9999, 10, 1500, 10, 25000},
 	}
 	got := Catalog()
@@ -36,7 +37,7 @@ func TestCatalogMatchesTheOwnersPlanTable(t *testing.T) {
 			t.Errorf("plan %s rank schedule = %q, want weekly", g.ID, g.RankSchedule)
 		}
 	}
-	if !slices.Equal(Paid(), []string{Basic, Pro, Agency}) {
+	if !slices.Equal(Paid(), []string{Basic, Pro, Business, Agency}) {
 		t.Errorf("Paid() = %v", Paid())
 	}
 }

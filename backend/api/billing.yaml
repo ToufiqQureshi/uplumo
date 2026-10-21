@@ -82,7 +82,7 @@ components:
       properties:
         plan:
           type: string
-          enum: [free, basic, pro, agency]
+          enum: [free, basic, pro, business, agency]
         unlimited:
           type: boolean
           description: An Uplumo staff workspace, topped up instead of refused.

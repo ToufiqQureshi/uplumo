@@ -178,16 +178,16 @@ func build(publicURL *url.URL, blogFiles fs.FS) (*Site, error) {
 	landing := base
 	landing.Path = "/"
 	landing.Title = "Uplumo: SEO and AI search analytics with honest INR pricing"
-	landing.Description = "Track Google rankings, audit your site and see where AI assistants mention you and send visitors. Choose Free, Solo, Growth or Agency pricing in rupees."
+	landing.Description = "Track Google rankings, audit your site and see where AI assistants mention you and send visitors. Choose Free, Solo, Growth, Business or Agency pricing in rupees."
 	landing.Canonical = origin + "/"
 	landing.FAQ = landingFAQ()
 	landing.JSONLD = jsonLD(origin, landing.Description, plans)
 
 	pricing := base
 	pricing.Path = "/pricing"
-	pricing.Title = "Uplumo pricing: Free, Solo, Growth and Agency plans"
-	pricing.Description = fmt.Sprintf("Start free. Solo is %s, Growth is %s and Agency is %s a month in rupees. See what each plan includes, cancel in one click.",
-		formatINR(price(planCatalog.Basic)), formatINR(price(planCatalog.Pro)), formatINR(price(planCatalog.Agency)))
+	pricing.Title = "Uplumo pricing: Free, Solo, Growth, Business and Agency plans"
+	pricing.Description = fmt.Sprintf("Start free. Solo is %s, Growth is %s, Business is %s and Agency is %s a month in rupees. See what each plan includes, cancel in one click.",
+		formatINR(price(planCatalog.Basic)), formatINR(price(planCatalog.Pro)), formatINR(price(planCatalog.Business)), formatINR(price(planCatalog.Agency)))
 	pricing.Canonical = origin + "/pricing"
 	pricing.FAQ = pricingFAQ()
 	pricing.JSONLD = jsonLD(origin, pricing.Description, plans)
@@ -481,7 +481,7 @@ func plural(n int, singular, plural string) string {
 }
 
 func includedTools(plan planCatalog.Definition) []string {
-	tools := []string{"Uplumo Analytics with AI traffic detection"}
+	tools := []string{"Uplumo Analytics with AI traffic detection", "Content editor with SEO and AI-answer scores"}
 	if plan.Allows(planCatalog.FullAudit) {
 		tools = append(tools, "Full site audit")
 	} else {
@@ -496,6 +496,7 @@ func includedTools(plan planCatalog.Definition) []string {
 	}{
 		{planCatalog.GoogleData, "Google Search Console and Google Analytics"},
 		{planCatalog.Keywords, "Keyword research, SERP analysis, Local SEO and Google Business research"},
+		{planCatalog.Keywords, "Search briefs from Google's top pages for every article"},
 		{planCatalog.RankTracking, "Rank tracking"},
 		{planCatalog.Publishing, "Publish articles to WordPress"},
 		{planCatalog.IndexNow, "IndexNow submissions to Bing and other engines"},
@@ -608,15 +609,19 @@ func landingFAQ() []QA {
 func pricingFAQ() []QA {
 	basic, _ := planCatalog.Get(planCatalog.Basic)
 	pro, _ := planCatalog.Get(planCatalog.Pro)
+	business, _ := planCatalog.Get(planCatalog.Business)
 	agency, _ := planCatalog.Get(planCatalog.Agency)
 	return []QA{
 		{"Is the Free plan really free?", "Yes. It costs " + formatINR(0) +
 			" and needs no card. Paid plans start at " + formatINR(basic.PriceINR) + " a month."},
 		{"What is the difference between Solo and Growth?", "Solo is for ranking one site: keyword research, rank tracking and your Google data. " +
-			"Growth adds what you need to beat competitors on the same site: backlink and competitor research, AI Visibility, " +
-			strconv.Itoa(pro.TrackedKeywords) + " tracked keywords and " + strconv.Itoa(pro.Members) + " team members."},
-		{"How do site limits work?", fmt.Sprintf("Free, Solo and Growth include one active website; Agency includes %d. "+
-			"Archiving a site frees a slot; your data stays in the workspace.", agency.Sites)},
+			"Growth adds what you need to beat competitors: backlink and competitor research, AI Visibility, " +
+			strconv.Itoa(pro.Sites) + " websites, " + strconv.Itoa(pro.TrackedKeywords) + " tracked keywords and " + strconv.Itoa(pro.Members) + " team members."},
+		{"Business or Agency?", "Both include everything in Growth. Business is for several brands or a freelancer's clients: " +
+			strconv.Itoa(business.Sites) + " websites and " + strconv.Itoa(business.Members) + " team members. Agency adds white-label reports " +
+			"with your own name, logo and colour, " + strconv.Itoa(agency.Sites) + " websites and " + strconv.Itoa(agency.Members) + " team members."},
+		{"How do site limits work?", fmt.Sprintf("Free and Solo include one active website, Growth includes %d, Business %d and Agency %d. "+
+			"Archiving a site frees a slot; your data stays in the workspace.", pro.Sites, business.Sites, agency.Sites)},
 		{"How do I cancel a paid plan?", "In one click from Billing. You keep the plan until the end of the month you paid for, " +
 			"and you are never charged again."},
 		{"How do I change plan?", "Write to us from your account's email address and we move you. Changing plan from Billing is not built yet."},

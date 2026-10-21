@@ -30,7 +30,7 @@ const creditsSchema = z.object({
   balanceUsd: z.number(),
   monthlyGrantCredits: z.number(),
   paymentsConfigured: z.boolean(),
-  availablePlans: z.array(z.enum(["basic", "pro", "agency"])),
+  availablePlans: z.array(z.enum(["basic", "pro", "business", "agency"])),
 });
 
 export type BillingCredits = z.infer<typeof creditsSchema>;

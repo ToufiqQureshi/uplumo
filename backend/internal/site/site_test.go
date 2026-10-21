@@ -141,10 +141,10 @@ func TestPagesCarryTheirMetadata(t *testing.T) {
 			if org.Type != "Organization" || org.URL != "https://uplumo.com/" || org.Logo != "https://uplumo.com/site/logo.svg" {
 				t.Errorf("Organization = %+v", org)
 			}
-			if app.Type != "SoftwareApplication" || app.Name != "Uplumo" || len(app.Offers) != 4 {
+			if app.Type != "SoftwareApplication" || app.Name != "Uplumo" || len(app.Offers) != 5 {
 				t.Fatalf("SoftwareApplication = %+v", app)
 			}
-			for i, want := range []string{"0", "999", "2499", "9999"} {
+			for i, want := range []string{"0", "999", "2499", "4999", "9999"} {
 				if o := app.Offers[i]; o.Price != want || o.Currency != "INR" {
 					t.Errorf("offer %d = %+v, want %s INR", i, o, want)
 				}
@@ -371,16 +371,16 @@ func TestPricingPageShowsWhatThePlanCatalogEnforces(t *testing.T) {
 	s.ServePricing(rec, httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/pricing", nil))
 	body := rec.Body.String()
 	for _, want := range []string{
-		"<th scope=\"row\">Websites</th><td>1</td><td>1</td><td>1</td><td>10</td>",
-		"<th scope=\"row\">Team members</th><td>1</td><td>1</td><td>3</td><td>10</td>",
-		"<th scope=\"row\">Monthly credits</th><td>0</td><td>4,000</td><td>10,000</td><td>25,000</td>",
-		"<th scope=\"row\">SAM SEO assistant</th><td>—</td><td>Included</td><td>Included</td><td>Included</td>",
-		"<th scope=\"row\">Rank tracking</th><td>—</td><td>100 keywords, weekly checks</td><td>500 keywords, weekly checks</td><td>1,500 keywords, weekly checks</td>",
-		"<th scope=\"row\">Rank check depth</th><td>—</td><td>Top 30</td><td>Top 40</td><td>Top 40</td>",
-		"<th scope=\"row\">Keyword research, SERP analysis, Local SEO and Google Business research</th><td>—</td><td>Included</td><td>Included</td><td>Included</td>",
-		"<th scope=\"row\">AI Visibility</th><td>—</td><td>—</td><td>Included</td><td>Included</td>",
-		"<th scope=\"row\">White-label reports</th><td>—</td><td>—</td><td>—</td><td>Included</td>",
-		"<th scope=\"row\">Monthly price</th><td>Free</td><td>₹999</td><td>₹2,499</td><td>₹9,999</td>",
+		"<th scope=\"row\">Websites</th><td>1</td><td>1</td><td>2</td><td>5</td><td>10</td>",
+		"<th scope=\"row\">Team members</th><td>1</td><td>1</td><td>3</td><td>5</td><td>10</td>",
+		"<th scope=\"row\">Monthly credits</th><td>0</td><td>4,000</td><td>10,000</td><td>15,000</td><td>25,000</td>",
+		"<th scope=\"row\">SAM SEO assistant</th><td>—</td><td>Included</td><td>Included</td><td>Included</td><td>Included</td>",
+		"<th scope=\"row\">Rank tracking</th><td>—</td><td>100 keywords, weekly checks</td><td>500 keywords, weekly checks</td><td>1,000 keywords, weekly checks</td><td>1,500 keywords, weekly checks</td>",
+		"<th scope=\"row\">Rank check depth</th><td>—</td><td>Top 30</td><td>Top 40</td><td>Top 40</td><td>Top 40</td>",
+		"<th scope=\"row\">Keyword research, SERP analysis, Local SEO and Google Business research</th><td>—</td><td>Included</td><td>Included</td><td>Included</td><td>Included</td>",
+		"<th scope=\"row\">AI Visibility</th><td>—</td><td>—</td><td>Included</td><td>Included</td><td>Included</td>",
+		"<th scope=\"row\">White-label reports</th><td>—</td><td>—</td><td>—</td><td>—</td><td>Included</td>",
+		"<th scope=\"row\">Monthly price</th><td>Free</td><td>₹999</td><td>₹2,499</td><td>₹4,999</td><td>₹9,999</td>",
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("pricing page lacks the row %s", want)
@@ -391,7 +391,8 @@ func TestPricingPageShowsWhatThePlanCatalogEnforces(t *testing.T) {
 		want []string
 	}{
 		{"Solo", []string{"4,000 credits / month", "1 website", "1 team member", "100 tracked keywords, checked weekly", "Rank checks cover the top 30 results", "Uplumo Analytics with AI traffic detection", "SAM SEO assistant", "Keyword research, SERP analysis, Local SEO and Google Business research", "Publish articles to WordPress"}},
-		{"Growth", []string{"10,000 credits / month", "1 website", "3 team members", "500 tracked keywords, checked weekly", "Rank checks cover the top 40 results", "Publish articles to WordPress", "Backlink research", "AI Visibility"}},
+		{"Growth", []string{"10,000 credits / month", "2 websites", "3 team members", "500 tracked keywords, checked weekly", "Rank checks cover the top 40 results", "Publish articles to WordPress", "Backlink research", "AI Visibility"}},
+		{"Business", []string{"15,000 credits / month", "5 websites", "5 team members", "1,000 tracked keywords, checked weekly", "AI Visibility", "Backlink research"}},
 		{"Agency", []string{"25,000 credits / month", "10 websites", "10 team members", "1,500 tracked keywords, checked weekly", "AI writing assistant", "White-label reports"}},
 	} {
 		start := strings.Index(body, `<h3 id="plan-`+tc.plan+`">`)

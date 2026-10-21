@@ -71,7 +71,7 @@ mean each one has been tried on production with real provider keys.
 | Local SEO            | Business search, profile, Google Maps rank grid                                                                                                                                            |
 | Assistant (SAM)      | Chat with tools over the project's data                                                                                                                                                    |
 | MCP server           | Tools for Claude, ChatGPT and Cursor, with OAuth                                                                                                                                           |
-| Billing              | Free, Basic, Pro and Agency on Razorpay Subscriptions, with site, tracked-keyword and member limits; webhooks, cancel, monthly credits with a spend guard on every paid lookup and AI call |
+| Billing              | Free, Solo, Growth, Business and Agency on Razorpay Subscriptions, with site, tracked-keyword and member limits; webhooks, cancel, monthly credits with a spend guard on every paid lookup and AI call |
 | Privacy              | `cmd/erase-user` erases one account                                                                                                                                                        |
 
 ## Not built yet
@@ -136,7 +136,7 @@ Secrets go into Railway variables only, never into the repo or chat.
   Every paid data lookup and AI call spends credits; customers see each plan's
   monthly grant on the pricing page and see their balance and estimated action
   costs in the app.
-  Monthly credits: Basic 4,000, Pro 10,000, Agency 25,000 (a credit is 1/1280
+  Monthly credits: Solo 4,000, Growth 10,000, Business 15,000, Agency 25,000 (a credit is 1/1280
   of a dollar of provider cost). No credits means no request is sent. Each
   workspace may spend at most a third of its monthly credits in a day, so one
   heavy client never stops the others; `PROVIDER_DAILY_LIMIT_USD` (default
@@ -148,14 +148,14 @@ Secrets go into Railway variables only, never into the repo or chat.
   below is `backend/internal/plans/catalog.go`. Free is one site with
   analytics and a starter audit.
 
-  | Limit               | Solo  | Growth | Agency             |
-  | ------------------- | ----- | ------ | ------------------ |
-  | Price per month     | ₹999  | ₹2,499 | ₹9,999             |
-  | Sites               | 1     | 1      | 10, then ₹400 each |
-  | Tracked keywords    | 100   | 500    | 1,500              |
-  | White-label reports | no    | no     | yes                |
-  | Client access       | no    | no     | yes                |
-  | Team members        | 1     | 3      | 10                 |
+  | Limit               | Solo  | Growth | Business | Agency             |
+  | ------------------- | ----- | ------ | -------- | ------------------ |
+  | Price per month     | ₹999  | ₹2,499 | ₹4,999   | ₹9,999             |
+  | Sites               | 1     | 2      | 5        | 10, then ₹400 each |
+  | Tracked keywords    | 100   | 500    | 1,000    | 1,500              |
+  | White-label reports | no    | no     | no       | yes                |
+  | Client access       | no    | no     | no       | yes                |
+  | Team members        | 1     | 3      | 5        | 10                 |
 
   Sites and white-label are what separate Pro from Agency: a small agency
   with four client sites must not fit in Pro. Basic and Pro differ by

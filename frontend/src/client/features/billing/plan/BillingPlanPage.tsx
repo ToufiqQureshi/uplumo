@@ -39,7 +39,7 @@ const inr = new Intl.NumberFormat("en-IN", {
   maximumFractionDigits: 0,
 });
 
-type PaidPlan = BillingPlan & { id: "basic" | "pro" | "agency" };
+type PaidPlan = BillingPlan & { id: "basic" | "pro" | "business" | "agency" };
 
 export function BillingPlanPage() {
   const statusQuery = useQuery(billingStatusQueryOptions);
@@ -359,7 +359,7 @@ function UpgradeButton({
   name,
   price,
 }: {
-  plan: "basic" | "pro" | "agency";
+  plan: "basic" | "pro" | "business" | "agency";
   name: string;
   price: number;
 }) {

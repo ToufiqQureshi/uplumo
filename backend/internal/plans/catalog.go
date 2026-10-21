@@ -7,10 +7,12 @@ import "slices"
 
 // Plan ids, as stored on a subscription.
 const (
-	Free   = "free"
-	Basic  = "basic"
-	Pro    = "pro"
-	Agency = "agency"
+	Free  = "free"
+	Basic = "basic"
+	Pro   = "pro"
+	// Business sits between Growth and Agency: more sites, no white-label.
+	Business = "business"
+	Agency   = "agency"
 )
 
 // RankScheduleWeekly is the default recurring promise on every paid plan.
@@ -104,30 +106,64 @@ var catalog = []Definition{
 	},
 	{
 		ID: Basic, Name: "Solo", PriceINR: 999, Sites: 1, TrackedKeywords: 100, Members: 1, MonthlyCredits: 4000, MaxSerpDepth: 30, RankSchedule: RankScheduleWeekly,
-		Summary: "For one site that wants to rank: keywords, rankings and Google data.",
+		Summary: "For one business website that wants to rank on Google.",
 		Highlights: []string{
 			"1 website",
-			"Everything in Free",
-			"Keyword research",
+			"1 team member",
 			"Rank tracking for 100 keywords, checked weekly",
+			"Uplumo Analytics with AI traffic detection",
+			"Keyword research and SERP analysis",
+			"Local SEO and Google Business research",
 			"Google Search Console and Google Analytics",
 			"Full site audit",
+			"Content editor with SEO and AI-answer scores",
+			"AI writing assistant",
 			"Publish articles straight to your WordPress site",
 			"Tell Bing and other IndexNow search engines about new pages instantly",
-			"AI writing assistant",
 		},
 		features: basicFeatures,
 	},
 	{
-		ID: Pro, Name: "Growth", PriceINR: 2499, Sites: 1, TrackedKeywords: 500, Members: 3, MonthlyCredits: 10000, MaxSerpDepth: 40, RankSchedule: RankScheduleWeekly,
-		Summary: "For a growing business: competitors, backlinks and AI search.",
+		ID: Pro, Name: "Growth", PriceINR: 2499, Sites: 2, TrackedKeywords: 500, Members: 3, MonthlyCredits: 10000, MaxSerpDepth: 40, RankSchedule: RankScheduleWeekly,
+		Summary: "For a growing business: beat competitors on Google and in AI answers.",
 		Highlights: []string{
-			"1 website",
-			"Everything in Solo",
+			"2 websites",
+			"3 team members",
 			"Rank tracking for 500 keywords, checked weekly",
 			"AI Visibility across ChatGPT, Perplexity, Gemini, AI Overviews and Claude",
-			"Backlink and competitor research",
-			"3 team members",
+			"Backlink research",
+			"Competitor and domain research",
+			"Uplumo Analytics with AI traffic detection",
+			"Keyword research and SERP analysis",
+			"Local SEO and Google Business research",
+			"Google Search Console and Google Analytics",
+			"Full site audit",
+			"Content editor with SEO and AI-answer scores",
+			"AI writing assistant",
+			"Publish articles straight to your WordPress site",
+			"Tell Bing and other IndexNow search engines about new pages instantly",
+		},
+		features: proFeatures,
+	},
+	{
+		ID: Business, Name: "Business", PriceINR: 4999, Sites: 5, TrackedKeywords: 1000, Members: 5, MonthlyCredits: 15000, MaxSerpDepth: 40, RankSchedule: RankScheduleWeekly,
+		Summary: "For several brands or a freelancer's clients, without agency branding.",
+		Highlights: []string{
+			"5 websites",
+			"5 team members",
+			"Rank tracking for 1,000 keywords, checked weekly",
+			"AI Visibility across ChatGPT, Perplexity, Gemini, AI Overviews and Claude",
+			"Backlink research",
+			"Competitor and domain research",
+			"Uplumo Analytics with AI traffic detection",
+			"Keyword research and SERP analysis",
+			"Local SEO and Google Business research",
+			"Google Search Console and Google Analytics",
+			"Full site audit",
+			"Content editor with SEO and AI-answer scores",
+			"AI writing assistant",
+			"Publish articles straight to your WordPress site",
+			"Tell Bing and other IndexNow search engines about new pages instantly",
 		},
 		features: proFeatures,
 	},
@@ -136,10 +172,21 @@ var catalog = []Definition{
 		Summary: "For agencies: client sites and reports under your own brand.",
 		Highlights: []string{
 			"10 websites",
-			"Everything in Growth",
+			"10 team members",
 			"Rank tracking for 1,500 keywords, checked weekly",
 			"White-label reports with your name, logo and colour",
-			"10 team members",
+			"AI Visibility across ChatGPT, Perplexity, Gemini, AI Overviews and Claude",
+			"Backlink research",
+			"Competitor and domain research",
+			"Uplumo Analytics with AI traffic detection",
+			"Keyword research and SERP analysis",
+			"Local SEO and Google Business research",
+			"Google Search Console and Google Analytics",
+			"Full site audit",
+			"Content editor with SEO and AI-answer scores",
+			"AI writing assistant",
+			"Publish articles straight to your WordPress site",
+			"Tell Bing and other IndexNow search engines about new pages instantly",
 		},
 		features: agencyFeatures,
 	},
@@ -151,7 +198,7 @@ var Unlimited = Definition{ID: Agency, Name: "Agency", features: agencyFeatures}
 
 // Paid lists the ids of the plans that are sold, cheapest first.
 func Paid() []string {
-	return []string{Basic, Pro, Agency}
+	return []string{Basic, Pro, Business, Agency}
 }
 
 // Catalog returns every plan, cheapest first. The caller owns the result.

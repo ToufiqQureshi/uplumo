@@ -276,7 +276,7 @@ func (s *Tracking) allowed(ctx context.Context, org string) error {
 	return nil
 }
 
-var errTrackingPlan = errors.New("AI Visibility is included in Growth and Agency")
+var errTrackingPlan = errors.New("AI Visibility is included in Growth and above")
 var errTrackingBusy = errors.New("a check is already running")
 var errTrackingMissing = errors.New("tracking not found")
 
