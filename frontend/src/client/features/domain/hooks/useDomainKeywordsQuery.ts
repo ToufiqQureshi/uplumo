@@ -45,6 +45,7 @@ export function useDomainKeywordsQuery(input: DomainKeywordsQueryInput) {
   return useQuery({
     enabled: input.enabled && Boolean(input.domain),
     retry: false,
+    retryOnMount: false,
     refetchOnReconnect: false,
     refetchOnWindowFocus: false,
     queryKey: [
@@ -73,6 +74,7 @@ export function useDomainKeywordsQuery(input: DomainKeywordsQueryInput) {
           filters: filtersPayload,
         },
       }),
-    staleTime: 60_000,
+    staleTime: 12 * 60 * 60_000,
+    gcTime: 12 * 60 * 60_000,
   });
 }

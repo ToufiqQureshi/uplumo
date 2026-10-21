@@ -95,6 +95,8 @@ export function PromptExplorerPage({ projectId, urlState, onSubmit }: Props) {
     enabled: hasActivePrompt && planStatus === "paid",
     staleTime: 5 * 60 * 1000,
     retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const handleSubmit = (event: FormEvent) => {

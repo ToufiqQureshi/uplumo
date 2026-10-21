@@ -53,6 +53,7 @@ type Service struct {
 	logger      *slog.Logger
 	now         func() time.Time
 	suggestions singleflight.Group
+	lookups     singleflight.Group
 }
 
 // NewService creates a service backed by the shared DataForSEO client and Redis.
@@ -181,31 +182,27 @@ func (s *Service) Overview(ctx context.Context, organizationID, projectID, rawDo
 	if err != nil {
 		return OverviewResult{}, err
 	}
-	var cached OverviewResult
-	if s.readCache(ctx, key, &cached) && cached.HasData {
-		cached.Scope, cached.DisplayTarget = target.Scope, target.Display
-		return cached, nil
-	}
-	metrics, err := s.provider.overview(ctx, organizationID, target.Hostname, locationCode, languageCode)
-	if err != nil {
-		return OverviewResult{}, err
-	}
-	var traffic, keywords *float64
-	if metrics.Organic != nil {
-		traffic = roundNullable(metrics.Organic.ETV)
-		keywords = roundNullable(metrics.Organic.Count)
-	}
-	result := OverviewResult{
-		Domain: target.Hostname, Scope: target.Scope, DisplayTarget: target.Display,
-		OrganicTraffic: traffic, OrganicKeywords: keywords,
-		Backlinks: nil, ReferringDomains: nil,
-		HasData:   keywords != nil && *keywords > 0,
-		FetchedAt: s.now().UTC().Format(time.RFC3339Nano),
-	}
-	if result.HasData {
-		s.writeCache(ctx, key, result)
-	}
-	return result, nil
+	result, err := cachedDomainLookup(ctx, s, key, func(value OverviewResult) bool { return value.HasData }, func(shared context.Context) (OverviewResult, error) {
+		metrics, err := s.provider.overview(shared, organizationID, target.Hostname, locationCode, languageCode)
+		if err != nil {
+			return OverviewResult{}, err
+		}
+		var traffic, keywords *float64
+		if metrics.Organic != nil {
+			traffic = roundNullable(metrics.Organic.ETV)
+			keywords = roundNullable(metrics.Organic.Count)
+		}
+		result := OverviewResult{
+			Domain: target.Hostname, Scope: target.Scope, DisplayTarget: target.Display,
+			OrganicTraffic: traffic, OrganicKeywords: keywords,
+			Backlinks: nil, ReferringDomains: nil,
+			HasData:   keywords != nil && *keywords > 0,
+			FetchedAt: s.now().UTC().Format(time.RFC3339Nano),
+		}
+		return result, nil
+	})
+	result.Scope, result.DisplayTarget = target.Scope, target.Display
+	return result, err
 }
 
 // KeywordsPage returns sorted, filtered, paginated ranked keyword rows.
@@ -244,36 +241,33 @@ func (s *Service) KeywordsPage(ctx context.Context, organizationID string, input
 	if err != nil {
 		return KeywordsPageResult{}, err
 	}
-	var cached KeywordsPageResult
-	if s.readCache(ctx, key, &cached) {
-		return cached, nil
-	}
-	request := map[string]any{
-		"target": target.Hostname, "location_code": locationCode,
-		"language_code": languageCode, "limit": pageSize, "offset": offset,
-		"order_by": orderBy,
-	}
-	if len(filters) > 0 {
-		request["filters"] = filters
-	}
-	response, err := s.provider.rankedKeywords(ctx, organizationID, request)
-	if err != nil {
-		return KeywordsPageResult{}, err
-	}
-	keywords := make([]KeywordRow, 0, len(response.Items))
-	for _, item := range response.Items {
-		if mapped, ok := mapKeyword(item); ok {
-			keywords = append(keywords, mapped)
+	return cachedDomainLookup(ctx, s, key, nil, func(shared context.Context) (KeywordsPageResult, error) {
+		request := map[string]any{
+			"target": target.Hostname, "location_code": locationCode,
+			"language_code": languageCode, "limit": pageSize, "offset": offset,
+			"order_by": orderBy,
 		}
-	}
-	result := KeywordsPageResult{
-		Domain: target.Hostname, Page: page, PageSize: pageSize,
-		TotalCount: response.TotalCount,
-		HasMore:    hasMore(offset, len(response.Items), response.TotalCount, pageSize),
-		Keywords:   keywords, FetchedAt: s.now().UTC().Format(time.RFC3339Nano),
-	}
-	s.writeCache(ctx, key, result)
-	return result, nil
+		if len(filters) > 0 {
+			request["filters"] = filters
+		}
+		response, err := s.provider.rankedKeywords(shared, organizationID, request)
+		if err != nil {
+			return KeywordsPageResult{}, err
+		}
+		keywords := make([]KeywordRow, 0, len(response.Items))
+		for _, item := range response.Items {
+			if mapped, ok := mapKeyword(item); ok {
+				keywords = append(keywords, mapped)
+			}
+		}
+		result := KeywordsPageResult{
+			Domain: target.Hostname, Page: page, PageSize: pageSize,
+			TotalCount: response.TotalCount,
+			HasMore:    hasMore(offset, len(response.Items), response.TotalCount, pageSize),
+			Keywords:   keywords, FetchedAt: s.now().UTC().Format(time.RFC3339Nano),
+		}
+		return result, nil
+	})
 }
 
 // PagesPage returns the organic pages reported for a target.
@@ -312,37 +306,34 @@ func (s *Service) PagesPage(ctx context.Context, organizationID string, input Pa
 	if err != nil {
 		return PagesPageResult{}, err
 	}
-	var cached PagesPageResult
-	if s.readCache(ctx, key, &cached) {
-		return cached, nil
-	}
-	request := map[string]any{
-		"target": target.Hostname, "location_code": locationCode,
-		"language_code": languageCode, "limit": pageSize, "offset": offset,
-		"order_by": orderBy,
-	}
-	if len(filters) > 0 {
-		request["filters"] = filters
-	}
-	response, err := s.provider.relevantPages(ctx, organizationID, request)
-	if err != nil {
-		return PagesPageResult{}, err
-	}
-	pages := make([]PageResult, 0, len(response.Items))
-	for _, item := range response.Items {
-		mapped := mapPage(item)
-		if mapped != nil {
-			pages = append(pages, *mapped)
+	return cachedDomainLookup(ctx, s, key, nil, func(shared context.Context) (PagesPageResult, error) {
+		request := map[string]any{
+			"target": target.Hostname, "location_code": locationCode,
+			"language_code": languageCode, "limit": pageSize, "offset": offset,
+			"order_by": orderBy,
 		}
-	}
-	result := PagesPageResult{
-		Domain: target.Hostname, Page: page, PageSize: pageSize,
-		TotalCount: response.TotalCount,
-		HasMore:    hasMore(offset, len(response.Items), response.TotalCount, pageSize),
-		Pages:      pages, FetchedAt: s.now().UTC().Format(time.RFC3339Nano),
-	}
-	s.writeCache(ctx, key, result)
-	return result, nil
+		if len(filters) > 0 {
+			request["filters"] = filters
+		}
+		response, err := s.provider.relevantPages(shared, organizationID, request)
+		if err != nil {
+			return PagesPageResult{}, err
+		}
+		pages := make([]PageResult, 0, len(response.Items))
+		for _, item := range response.Items {
+			mapped := mapPage(item)
+			if mapped != nil {
+				pages = append(pages, *mapped)
+			}
+		}
+		result := PagesPageResult{
+			Domain: target.Hostname, Page: page, PageSize: pageSize,
+			TotalCount: response.TotalCount,
+			HasMore:    hasMore(offset, len(response.Items), response.TotalCount, pageSize),
+			Pages:      pages, FetchedAt: s.now().UTC().Format(time.RFC3339Nano),
+		}
+		return result, nil
+	})
 }
 
 func mapKeyword(item rankedKeywordItem) (KeywordRow, bool) {

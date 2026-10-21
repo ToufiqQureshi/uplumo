@@ -26,6 +26,12 @@ Redis cache; DataForSEO AI endpoints; plans/billing.
 - Cache only successful complete results; preserve per-platform partial failures and safe citation URLs.
 - On one server, an organization-scoped in-flight key coalesces concurrent
   identical Brand Lookups before the six/eight paid tasks are reserved.
+- Identical Prompt Explorer requests share a bounded three-minute flight keyed
+  by organization, project, normalized prompt, sorted models, web search and
+  country. The winner rechecks each model cache before reserving up to one
+  answer per missing model (two when web search permits the existing bounded
+  retry). Each caller retains its model order and highlight brand. Separate
+  processes are not coalesced.
 - A cached prompt may contain user-entered text; retain expiry and privacy-erasure limitations in the feature README.
 
 ## Saved prompt tracking
@@ -34,3 +40,9 @@ Redis cache; DataForSEO AI endpoints; plans/billing.
 
 Preparation boundary: `BrandLookup` rechecks cancellation after `cacheGet` and before `flights.DoChan`. A cancelled request returns its context error
 without starting a new provider operation. Existing shared work is unaffected.
+
+Citation shaping: `responseAnnotation.DirectURL` preserves Gemini’s original
+publisher. `extractCitations` validates it before falling back to the redirect,
+then deduplicates and computes publisher/brand matching from the selected URL.
+It never follows or fetches citation URLs. Only Gemini’s cache namespace advances
+to `prompt-response-v2`; the next explicit uncached Gemini run buys a fresh answer.

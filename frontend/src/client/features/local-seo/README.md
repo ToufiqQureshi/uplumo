@@ -14,3 +14,7 @@ Read [flow.md](flow.md) for the request path and [decision.md](decision.md) for 
 A grid that stopped before every point was searched (credits ran out) shows
 `summary.stoppedReason` under the grid summary; the points already searched
 stay visible.
+
+Business profile hours read the provider's `work_time.work_hours`, with a
+fallback for older responses containing root `work_hours`. Other profile
+fields remain in the API response even when the summary card does not show them.

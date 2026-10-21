@@ -32,6 +32,10 @@ DataForSEO; Google Ads for selected markets; Postgres saved rows; Redis caches; 
 - **Trace:** `research_provider.go`, `research.go`, `research_serp.go` and the
   provider/SERP regression tests. Raw provider-shaped fixtures are synthetic;
   post-deployment comparison with live raw responses is still required.
+  `research_test.go:TestRowMapping` distinguishes measured clickstream zero from
+  missing clickstream volume: zero must remain zero, while only absent volume
+  falls back to the national figure. This corrects the old opposite assertion
+  that failed the merged PR's Go CI; it does not relax the missing-data case.
 
 ## Verification
 

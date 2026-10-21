@@ -16,6 +16,71 @@ Validates target scopes and returns organic estimates, ranked terms, pages, comp
 
 DataForSEO paid endpoints, project market and plan checks.
 
+## Shared report purchases
+
+- **Decision:** Overview, keyword pages and page pages use one instance-local
+  singleflight group with their full existing cache identity, independent of
+  the already-shared optional suggestions route. Recheck cache inside bounded
+  90-second detached work; keep each waiter's cancellation independent.
+- **Why:** Eight concurrent equivalent cold requests bought eight tasks for
+  each report endpoint. Existing Redis caching did not protect simultaneous
+  misses, including users with multiple tabs.
+- **Preserve:** Existing input/access checks, organization/project/market/view
+  separation, no automatic retries, empty-overview retry behavior, cache-outage
+  fallback and per-caller scope/display labels. Distinct pages/sorts/filters
+  still buy distinct views. Different server processes are not coalesced.
+- **Trace:** `lookup.go`, `service.go`, `concurrency_test.go`. Tests use the real
+  DataForSEO transport with a synthetic HTTP provider response, reproduce the
+  eight-task bug before fixing, assert one task per organization afterwards,
+  and cover cancelled preparation and a cancelled first waiter.
+
+## Provider-field delivery audit
+
+This inventory compares the official contracts with `provider.go`, `service.go`,
+frontend `domainApi.ts`, `DomainOverviewPage.tsx`, the two domain tables and
+`utils.ts` exports. It is source/contract verification, not a live captured
+provider response. Nullable or type-specific fields are not guaranteed to be
+populated for every target. Existing decoder coverage is intentionally stated
+separately from the concurrency fixes above; the delivery gaps below remain.
+
+| Endpoint/field family | Request and decoder | API / screen / export |
+| --- | --- | --- |
+| Domain rank overview: `metrics.organic.etv`, `count` | Hostname + resolved market + `limit:1`; kept by `organicMetrics` | Rounded `organicTraffic` / `organicKeywords`; two overview tiles; no overview export |
+| Overview organic ranking buckets (`pos_1`, `pos_2_3`, `pos_4_10`, then `pos_11_20` through `pos_91_100`), `estimated_paid_traffic_cost`, `is_new`, `is_up`, `is_down`, `is_lost` | Discarded during Go JSON decoding | Missing from API, UI and exports |
+| Overview `metrics.paid` | All documented non-clickstream metrics discarded | No paid search summary; `hasData` checks only organic count |
+| Ranked keywords / optional suggestions: keyword, search volume, CPC, difficulty, absolute rank, ETV, URL | Kept; difficulty prefers `keyword_properties`; URL path can be derived | Keyword table and CSV/Sheets have seven columns; optional suggestions keep six fields and omit URL |
+| Ranked keyword supplemental data | Competition/level, bid bounds, monthly volumes/trends, categories, intent, keyword language/core term, SERP features/freshness, top-ten backlink averages, rank-group/type/change, title/snippet, traffic value and page backlinks/rank data are not decoded | Missing from API, UI and export; conditional rich snippets/sitelinks are also not decoded |
+| Relevant pages: address, `metrics.organic.etv`, `count` | Kept, traffic/count rounded | Page/traffic/keywords table and three-column export; relative path is derived |
+| Relevant pages ranking distribution/change/traffic value and `metrics.paid` | Same narrow `providerMetrics` decoder as overview | Missing from API, UI and export |
+| Transport identifiers/status/cost, echoed target/market, counts | Status/cost handled at shared transport; page `total_count` retained | Operational metadata is not a missing customer metric; `fetchedAt` is our retrieval time, not provider dataset freshness |
+
+For overview and pages, the decoder keeps two of the 38 documented non-clickstream
+metric leaf fields across the organic and paid objects. That describes schema
+coverage, not the proportion of useful populated data in any live response.
+
+**Options and scope:** UI ranked-keyword/pages requests omit `item_types`, so
+the documented default includes organic and paid. A future delivery fix must
+retain the result type or deliberately select and label the intended view;
+do not silently describe every returned row as organic. Clickstream is omitted
+(default false): its conditional normalized volumes, traffic and demographic
+fields are not purchased by these requests. Do not enable the documented double
+price to fill this audit. `load_rank_absolute` controls aggregate
+`metrics_absolute`; omitting it does not establish a missing row-rank defect.
+MCP's ranked-keywords/competitor methods are separate direct provider paths and
+are not covered by the page-query cache/coalescing change.
+
+Official contracts:
+
+- [Domain Rank Overview](https://docs.dataforseo.com/v3/dataforseo_labs-google-domain_rank_overview-live/)
+- [Ranked Keywords](https://docs.dataforseo.com/v3/dataforseo_labs/google/ranked_keywords/live/)
+- [Relevant Pages](https://docs.dataforseo.com/v3/dataforseo_labs-google-relevant_pages-live/)
+
+**Preserve when closing gaps:** no extra paid lookup, optional data stays nullable,
+zero is retained, result-type/market/scope labels remain truthful, cache versions
+change when old responses lack newly delivered metrics, and provider-shaped
+fixtures must reach API/schema/render/export tests. Full live raw-to-screen
+comparison and implementation of this supplemental field delivery remain open.
+
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.

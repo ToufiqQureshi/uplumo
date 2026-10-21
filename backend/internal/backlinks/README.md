@@ -4,7 +4,7 @@
 
 | Behavior in TypeScript and its tests | Go behavior / edge case to keep |
 |---|---|
-| Overview fetches the DataForSEO summary and one year of daily history for domain scopes. | Exact page scope omits history. History dates cover UTC yesterday back one calendar year; a credit refusal on either task fails the request, but if only the history task fails after the summary was billed, the summary is returned without a trend and cached for ten minutes. |
+| Overview fetches the DataForSEO summary and one year of monthly history for domain scopes. | Exact page scope omits history. History dates cover UTC yesterday back one calendar year; a credit refusal on either task fails the request, but if only the history task fails after the summary was billed, the summary is returned without a trend and cached for ten minutes. |
 | A subfolder cannot be targeted directly by summary/history. | Two sequential backlinks list tasks count all links and one-per-domain links with a `url_to` prefix filter; rank, spam, broken/new/lost values and trends stay null/empty. |
 | Target scopes include exact URL, subfolder, domain and subdomains; persisted `page` is an alias for exact URL. | Normalize host through IDNA, remove leading `www.`, reject IPs, invalid suffixes, credentials and exact URLs with queries/fragments. A subfolder needs a non-root path. |
 | Backlinks rows support all-links or strongest-per-domain mode, sort, pagination, spam hiding and include/exclude/numeric/link/lost/broken/domain filters. | Strict sort mapping, `50/100/200` page sizes, a maximum of eight provider filter conditions including scope and spam filters; include terms OR, excludes AND, escaped LIKE metacharacters. |
@@ -25,9 +25,13 @@ Routes are `POST /api/v1/projects/{projectId}/backlinks/{overview,backlinks,refe
 - Never call DataForSEO before validating target, scope, filters, sort and pagination. Provider tasks are billed even on failure.
 - `Client.Do(..., false)` is mandatory: a replay can charge the organization twice.
 - Cache entries are organization-scoped; cache failures must not turn a valid provider call into an error.
-- Concurrent identical overview cache misses on one server share in-flight work;
+- Concurrent identical overview and table-block cache misses on one server share in-flight work;
   the organization/scope/target key prevents cross-tenant sharing. Different
-  server instances may still race, and other tabs do not use this coalescing.
+  server instances may still race. Table identities include the kind, full
+  query, sort, mode and block, so different views and organizations cannot
+  accidentally share results. A speculative whole-list purchase also fills the
+  normal unfiltered first-block cache: an undercounted overview must not make
+  the same block get bought again on every lookup.
 - DataForSEO summary/history are whole-target endpoints. Subfolder counts must stay filtered and cannot claim unavailable rank/trend data.
 - UI response fields and nullability match the TypeScript schemas. New API contracts are validated with Zod.
 

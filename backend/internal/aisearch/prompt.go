@@ -86,7 +86,12 @@ func extractCitations(r llmResponse) []Citation {
 		}
 		for _, section := range item.Sections {
 			for _, annotation := range section.Annotations {
-				pageURL, ok := safeHTTPURL(derefOr(annotation.URL, ""))
+				// Gemini provides the original publisher separately from its
+				// Vertex redirect. Prefer that safe source without fetching it.
+				pageURL, ok := safeHTTPURL(derefOr(annotation.DirectURL, ""))
+				if !ok {
+					pageURL, ok = safeHTTPURL(derefOr(annotation.URL, ""))
+				}
 				if !ok || seen[pageURL] {
 					continue
 				}

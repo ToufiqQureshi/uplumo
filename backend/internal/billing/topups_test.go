@@ -124,7 +124,11 @@ func TestTopUpCreditsDoNotReduceTheMonthlyPlanGrant(t *testing.T) {
 	ctx := t.Context()
 	f := newFixture(ctx, t)
 	f.sellTiers()
-	charge := func() { f.deliver(ctx, t, f.eventOnPlan(PlanPro, "subscription.charged", "sub_1", "active")) }
+	chargeAt := t1
+	charge := func() {
+		f.deliver(ctx, t, f.chargeOnPlan(PlanPro, chargeAt))
+		chargeAt = chargeAt.Add(time.Second)
+	}
 	charge() // 10000 Pro credits
 
 	orderID := "order_" + rand.Text()

@@ -351,6 +351,14 @@ func TestHandleWebhookIsIdempotent(t *testing.T) {
 }
 
 func TestHandleWebhookConcurrentRedeliveriesApplyOnce(t *testing.T) {
+	for _, changedHeader := range []bool{false, true} {
+		t.Run(fmt.Sprintf("changed_header_%t", changedHeader), func(t *testing.T) {
+			testConcurrentChargedRedeliveries(t, changedHeader)
+		})
+	}
+}
+
+func testConcurrentChargedRedeliveries(t *testing.T, changedHeader bool) {
 	ctx := context.Background()
 	f := newFixture(ctx, t)
 	body := f.event("subscription.charged", "sub_1", "active", t1)
@@ -358,7 +366,11 @@ func TestHandleWebhookConcurrentRedeliveriesApplyOnce(t *testing.T) {
 	results := make(chan WebhookResult, 8)
 	for range cap(results) {
 		go func() {
-			result, err := f.svc.HandleWebhook(ctx, body, sign(body), "evt_concurrent-"+f.org)
+			eventID := "evt_concurrent-" + f.org
+			if changedHeader {
+				eventID += rand.Text()
+			}
+			result, err := f.svc.HandleWebhook(ctx, body, sign(body), eventID)
 			if err != nil {
 				t.Errorf("HandleWebhook() error = %v", err)
 			}
@@ -373,6 +385,59 @@ func TestHandleWebhookConcurrentRedeliveriesApplyOnce(t *testing.T) {
 	}
 	if processed != 1 {
 		t.Fatalf("%d deliveries processed, want exactly 1", processed)
+	}
+	if got, err := NewCreditLedgerService(f.pool).GetBalance(ctx, f.org); err != nil || got != f.svc.MonthlyGrantFor(PlanPro) {
+		t.Fatalf("balance = %d, %v; want one monthly grant", got, err)
+	}
+}
+
+func TestChargedBodyReplayCannotRefillSpentCredits(t *testing.T) {
+	ctx := context.Background()
+	f := newFixture(ctx, t)
+	body := f.event("subscription.charged", "sub_1", "active", t1)
+	f.deliver(ctx, t, body)
+	ledger := NewCreditLedgerService(f.pool)
+	amount := f.svc.MonthlyGrantFor(PlanPro)
+	reservation, err := ledger.Reserve(ctx, f.org, amount, "spend-"+rand.Text())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ledger.Settle(ctx, reservation.ID, amount); err != nil {
+		t.Fatal(err)
+	}
+	if got := f.deliverAs(ctx, t, "evt_new_header-"+f.org, body); got != WebhookDuplicate {
+		t.Fatalf("replayed signed body = %s, want duplicate", got)
+	}
+	if got, err := ledger.GetBalance(ctx, f.org); err != nil || got != 0 {
+		t.Fatalf("balance = %d, %v; replay must not refill spent credits", got, err)
+	}
+}
+
+func TestChargeAtRolloverCapCannotGrantOnReplayAfterSpending(t *testing.T) {
+	ctx := t.Context()
+	f := newFixture(ctx, t)
+	for _, at := range []time.Time{t1, t1.Add(time.Second)} {
+		f.deliver(ctx, t, f.event("subscription.charged", "sub_1", "active", at))
+	}
+	body := f.event("subscription.charged", "sub_1", "active", t1.Add(2*time.Second))
+	f.deliver(ctx, t, body)
+	ledger := NewCreditLedgerService(f.pool)
+	amount := f.svc.MonthlyGrantFor(PlanPro)
+	if got, err := ledger.GetBalance(ctx, f.org); err != nil || got != 2*amount {
+		t.Fatalf("balance = %d, %v; want two-month rollover cap", got, err)
+	}
+	reservation, err := ledger.Reserve(ctx, f.org, amount, "spend-"+rand.Text())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ledger.Settle(ctx, reservation.ID, amount); err != nil {
+		t.Fatal(err)
+	}
+	if got := f.deliverAs(ctx, t, "evt_replayed_capped_charge-"+f.org, body); got != WebhookDuplicate {
+		t.Fatalf("replayed capped charge = %s, want duplicate", got)
+	}
+	if got, err := ledger.GetBalance(ctx, f.org); err != nil || got != amount {
+		t.Fatalf("balance = %d, %v; capped charge replay must not refill credits", got, err)
 	}
 }
 

@@ -14,7 +14,8 @@ export function useDomainOverviewQuery(input: Input) {
 
   return useQuery({
     enabled: trimmedDomain !== "",
-    retry: false, // The paid POST may already have completed when a 5xx reaches us.
+    retry: false,
+    retryOnMount: false, // The paid POST may already have completed when a 5xx reaches us.
     refetchOnReconnect: false,
     refetchOnWindowFocus: false,
     queryKey: [
@@ -33,6 +34,7 @@ export function useDomainOverviewQuery(input: Input) {
           locationCode: input.locationCode,
         },
       }),
-    staleTime: 5 * 60_000,
+    staleTime: (query) => (query.state.data?.hasData ? 12 * 60 * 60_000 : 0),
+    gcTime: 12 * 60 * 60_000,
   });
 }

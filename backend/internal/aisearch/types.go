@@ -89,8 +89,9 @@ type crossItem struct {
 }
 
 type responseAnnotation struct {
-	Title *string `json:"title"`
-	URL   *string `json:"url"`
+	Title     *string `json:"title"`
+	URL       *string `json:"url"`
+	DirectURL *string `json:"direct_url"`
 }
 
 type responseSection struct {

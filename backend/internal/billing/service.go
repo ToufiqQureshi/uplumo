@@ -5,6 +5,7 @@ package billing
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -527,6 +528,14 @@ func (s *Service) HandleWebhook(ctx context.Context, body []byte, signature, eve
 	if plan == "" {
 		return "", fmt.Errorf("%w: subscription %s of organization %s is on plan %q", ErrUnknownPlan, sub.ID, orgID, sub.PlanID)
 	}
+	grantCredits := s.grantFor(event.Event, sub.Status, plan)
+	grantIdentity := ""
+	if grantCredits > 0 {
+		// The delivery header is not covered by Razorpay's signature. Bind
+		// monthly credits to the verified body as well, so replaying it with
+		// a different header cannot mint another grant.
+		grantIdentity = fmt.Sprintf("signed-plan-grant:%x", sha256.Sum256(body))
+	}
 	outcome, err := s.repo.applyEvent(ctx, eventID, subscription{
 		OrganizationID:   orgID,
 		ID:               sub.ID,
@@ -534,7 +543,7 @@ func (s *Service) HandleWebhook(ctx context.Context, body []byte, signature, eve
 		Status:           sub.Status,
 		CurrentPeriodEnd: periodEnd,
 		EventAt:          time.Unix(event.CreatedAt, 0).UTC(),
-	}, liveStatuses, s.grantFor(event.Event, sub.Status, plan))
+	}, liveStatuses, grantCredits, grantIdentity)
 	if err != nil {
 		return "", fmt.Errorf("apply %s event %s: %w", event.Event, eventID, err)
 	}

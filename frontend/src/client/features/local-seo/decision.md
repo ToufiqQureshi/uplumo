@@ -15,3 +15,17 @@ Looks up local businesses/profiles and runs a bounded local search rank grid.
 ## Verification pointers
 
 - `localSeoApi.test.ts`
+
+## Provider business hours
+
+- **Decision:** Read profile opening hours from `work_time.work_hours`, falling
+  back to root `work_hours` only when the nested value is absent.
+- **Why:** The current My Business Info response nests hours under `work_time`;
+  the summary card previously looked only at the root and hid paid-for hours.
+- **Preserve:** Resolve data already delivered by the authorized profile API;
+  add no paid request or automatic retry. Missing hours remain absent. Keep
+  older cached response shapes working and prefer current nested values.
+- **Trace:** `LocalSEOPage.tsx` and mounted `profile-hours.test.ts` (current,
+  legacy and both-present cases). Official contract:
+  https://docs.dataforseo.com/v3/business_data-google-my_business_info-live/.
+  These tests use synthetic provider-shaped records; no live DFS call was made.

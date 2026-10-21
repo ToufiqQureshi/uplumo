@@ -29,6 +29,9 @@ Go package: `backend/internal/domain`; provider requests use the shared DataForS
 - The paid overview, keywords, pages and rank-tracking suggestions queries
   disable automatic 5xx retries. `domain-paid-retry.test.ts` guards the
   overview path; manual refetch is an explicit user decision.
+- Overview/keywords/pages retain successful snapshots for 12 hours, matching
+  the backend. A tab remount reuses a fresh result and does not retry a previous
+  paid error automatically. Empty overviews stay stale for a later lookup.
 
 The suggestions wrapper adds the Go explicit-action marker. Its only UI caller
 is Rank Tracking's optional Find existing keywords action; request fields and

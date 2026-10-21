@@ -48,6 +48,14 @@ const columns = [
           <span className="truncate text-xs text-muted-foreground">
             {row.original.domain}
           </span>
+          {row.original.description ? (
+            <p
+              className="line-clamp-2 text-xs text-muted-foreground"
+              title={row.original.description}
+            >
+              {row.original.description}
+            </p>
+          ) : null}
         </div>
       );
     },
@@ -114,12 +122,19 @@ export function SerpAnalysisCard({
                     void exportRows({
                       format,
                       feature: "serp_analysis",
-                      headers: ["Rank", "Title", "URL", "Domain"],
+                      headers: [
+                        "Rank",
+                        "Title",
+                        "URL",
+                        "Domain",
+                        "Description",
+                      ],
                       rows: items.map((item) => [
                         item.rank,
                         item.title ?? "",
                         item.url,
                         item.domain,
+                        item.description,
                       ]),
                       filename: "serp-analysis",
                     })

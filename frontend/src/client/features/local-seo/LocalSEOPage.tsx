@@ -304,6 +304,14 @@ function RankGridResults({ result }: { result: LocalGridResult }) {
 }
 
 function ProfileCard({ profile }: { profile: Business }) {
+  const workTime = profile.work_time;
+  const details: Business = {
+    ...profile,
+    work_hours:
+      (workTime && typeof workTime === "object" && "work_hours" in workTime
+        ? workTime.work_hours
+        : undefined) ?? profile.work_hours,
+  };
   const fields = [
     "title",
     "category",
@@ -319,12 +327,12 @@ function ProfileCard({ profile }: { profile: Business }) {
       <h2 className="mb-3 text-xl font-semibold">Business profile audit</h2>
       <div className="grid gap-3 md:grid-cols-3">
         {fields
-          .filter((field) => profile[field] != null)
+          .filter((field) => details[field] != null)
           .map((field) => (
             <Metric
               key={field}
               label={field.replaceAll("_", " ")}
-              value={displayValue(profile[field])}
+              value={displayValue(details[field])}
             />
           ))}
       </div>

@@ -70,7 +70,13 @@ not change shape.
 - Concurrent identical Brand Lookup cache misses share one six-call (or
   competitor-expanded) fan-out within a server process. The key includes
   organization and project; each caller keeps its own display query. This
-  does not coordinate multiple server instances or Prompt Explorer calls.
+  does not coordinate multiple server instances. Prompt Explorer similarly
+  shares identical model-set requests before reserving paid answers; caller
+  model order and highlight brand are applied separately to the shared result.
+- Gemini citation links prefer the safe original `direct_url` over the Vertex
+  redirect; an absent/unsafe original falls back to a safe `url` without
+  fetching either. Gemini answer cache keys use `prompt-response-v2` so old
+  redirect-only results expire without being reused. Other model caches remain.
 - **Untrusted URLs.** Citations come from LLM answers. Only `http(s)` URLs without
   credentials are returned (`safeHTTPURL`), because the page renders them as links.
 - **ChatGPT is US/English only.** It is always queried with 2840/`en` and left out

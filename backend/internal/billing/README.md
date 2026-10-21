@@ -57,7 +57,16 @@ it) is what one workspace may cost us at the providers. 1,000 credits are one
 US dollar of provider cost before the 1.28 markup, so a credit is 1/1280 of a
 dollar of provider cost. Each paid charge of a plan grants that plan's
 `MonthlyCredits` (`internal/plans`: Solo 4,000, Growth 10,000, Business 15,000, Agency 25,000)
-once per webhook event; unused credits roll over up to two months of the
+once per signed charge body, deduplicating both the delivery event ID and a
+SHA-256 fingerprint of the verified body in the grant transaction. Changing
+the unsigned delivery header cannot grant credits again, even after spending
+the original grant. These fingerprints protect newly processed charges;
+historical event-ID-only records cannot reconstruct old signed bodies. This
+identity covers byte-identical signed bodies with changed delivery headers;
+it does not deduplicate different valid event bodies for the same payment.
+The subscription event adapter does not read a payment ID, so semantic
+per-payment deduplication remains unverified.
+Unused credits roll over up to two months of the
 plan: each grant expires after two months and reservations consume the oldest
 unexpired grants first. The hourly expiry worker records `expire` ledger rows;
 balance reads and reservations also expire that workspace's overdue grants.
@@ -72,7 +81,13 @@ Plan-wise limits beside credits: sites, tracked keywords, members and the
 deepest rank-tracking check (`MaxSerpDepth`: Solo top 30, Growth, Business and Agency
 top 40). `TestWeeklyRankTrackingFitsInTheMonthlyCredits` keeps each plan's
 plain tracked keywords, checked weekly on desktop at its deepest depth, within
-its monthly credit grant. Choosing both devices doubles that estimate.
+its monthly credit grant using a 4.35-week average. This is not a guarantee
+for a five-run billing month: Business at 1,000 plain keywords, desktop, depth
+40 can need 5 × 10 queued batches × ceil($0.24 × 1,280) = 15,400 credits,
+above its 15,000-credit grant. Early target detection can lower actual spend
+but cannot guarantee it. Prices, grants and tracked-keyword limits are
+unchanged; resolving the promise versus allowance requires an owner decision.
+Choosing both devices doubles the estimate.
 
 After a downgrade, existing sites, members and tracked keywords are retained.
 `Service.UsageAgainstPlan` reports the overage to Billing, and the shared

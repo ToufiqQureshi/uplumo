@@ -42,6 +42,12 @@ Validation runs before the provider: failed provider tasks are billed.
 - Empty overviews and empty suggestions are never cached (a later lookup must
   retry); a cached entry without data is ignored.
 - Redis down is soft: log and call the provider.
+- Concurrent equivalent overview/keyword-page/page-page misses share one
+  provider task per server process. Organization, project, market and every
+  result-changing request input remain in the identity; overview scope labels
+  are reapplied for each caller after sharing hostname-level metrics.
+- Shared report purchases finish for other waiters if the first caller leaves,
+  with a 90-second bound; already-cancelled preparation buys nothing.
 
 ## Differences from the TypeScript version
 

@@ -37,3 +37,34 @@ Use the package tests next to the source files in `README.md`. For changes cross
 - **Why:** Preparation could return a cache miss/project result after the caller left, and `context.WithoutCancel` then revived it into paid work.
 - **Preserve:** Active callers keep existing cache-outage fallback and tenant/cost checks. Already-registered bounded shared work can finish for other waiters; this does not add a retry, limit or pricing change.
 - **Trace:** `cancellation_test.go` interrupts the first Redis GET with a hook and drains the flight; the former six AI tasks must remain at zero. Tests synchronize existing work before counting calls; see the shared [fixture decision](../platform/spend/spendtest/decision.md).
+
+## Share concurrent Prompt Explorer purchases
+
+- **Decision:** Coalesce identical Prompt Explorer cache misses per server and
+  organization/project before budget reservation, using the existing
+  `singleflight.Group` with a three-minute detached deadline. Recheck each model
+  cache inside the flight; keep caller order and brand highlighting separate.
+- **Why:** Eight concurrent same-scope requests bought eight answers per model.
+  A shared purchase gives one answer per model while retaining tenant isolation.
+- **Preserve:** Failed answers are not cached, cancelled requests do not start
+  new purchases, existing bounded web-search behavior remains explicit, and
+  neither prices nor model selection change. Multiple processes remain a gap.
+- **Trace:** `service.go`, `prompt_concurrency_test.go`; fake-provider tests use
+  real Redis and assert one task per model for one organization, two for two
+  organizations, caller order/highlight independence and no cancelled purchase.
+  No live paid-provider comparison or deployed verification was performed.
+
+## Preserve the original Gemini citation source
+
+- **Decision:** Decode annotation `direct_url` and prefer it when safe, with
+  safe `url` fallback. Version only Gemini's prompt cache namespace.
+- **Why:** DFS returns a Vertex redirect in `url`; dropping `direct_url` made
+  publisher domains and brand highlighting describe Google’s redirect instead
+  of the cited source. Previously cached payloads cannot recover the lost URL.
+- **Preserve:** Do not fetch citations, allow credentials/unsafe schemes, add
+  paid calls during shaping, change other model caches or alter prices. A
+  fresh explicit Gemini lookup may buy an answer rather than use old cache.
+- **Trace:** `types.go`, `prompt.go`, `service.go`, `citation_source_test.go`;
+  provider-shaped HTTP regression failed before the fix and checks the original
+  source, absent/unsafe/credentialed fallback and both URLs unsafe. Official
+  contract: https://docs.dataforseo.com/v3/ai_optimization-gemini-llm_responses-live/.

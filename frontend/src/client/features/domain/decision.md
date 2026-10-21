@@ -17,6 +17,20 @@ Shows organic estimates, keyword/page tables and filtered domain research.
 - `domainRouteState.test.ts`
 - `components/domainResultLinks.test.ts`
 
+## Reuse paid report snapshots
+
+- **Decision:** Align overview/keyword/page query freshness and retention with
+  the existing 12-hour server cache, and disable `retryOnMount` on these paid
+  queries. An overview without data stays stale; manual Retry remains explicit.
+- **Why:** Returning after six minutes reissued all three paid endpoint calls,
+  and remounting a previously failed query retried it despite `retry: false`.
+  The server cache cannot recover the cost of repeating a failed paid request.
+- **Preserve:** Project/market/view query identities, no focus/reconnect retries,
+  explicit manual retry, existing empty-overview retry behavior and unchanged
+  request/response schemas. This does not make different page/filter views free.
+- **Trace:** The three `hooks/useDomain*Query.ts` files and the mounted
+  `domain-cache.test.ts` regressions (fail before fixes, pass afterwards).
+
 ## Explicit suggestions request contract
 
 - **Decision:** Only the keyword-suggestions API wrapper adds `userInitiated: true`; overview/page requests retain their existing contracts.
