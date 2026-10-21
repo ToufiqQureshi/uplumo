@@ -22,7 +22,15 @@ Use the package tests next to the source files in `README.md`. For changes cross
 
 ## Require explicit, authorized snapshot purchases
 
-- **Decision:** Keep dashboard reads free of paid work. Refresh checks the existing Backlinks plan gate; missing provider returns unavailable, and stale/provider failures remain visible. Coalesce concurrent requests per organization/project and re-check the 24-hour saved snapshot inside a bounded 90-second operation.
+- **Decision:** Keep dashboard reads free of paid work. Refresh checks the existing Backlinks plan gate; missing provider returns unavailable, and stale/provider failures remain visible. Coalesce concurrent requests per organization/project/domain and re-check the 24-hour saved snapshot inside a bounded 90-second operation.
 - **Why:** A real browser trace showed a visit-triggered refresh; its route also omitted the normal Backlinks paid gate. Concurrent snapshot misses could each buy a task, and stale failures previously claimed success.
 - **Preserve:** Zero tasks on ordinary reads or fresh snapshot reuse; one summary task for an explicit stale/missing refresh, no history or automatic paid retry. Retain stale data on failure and tenant predicates on reads/writes. Coalescing is instance-local, so one replica remains required.
 - **Trace:** `service.go`, `handler.go`, `types.go`, real-Postgres `repository_test.go`; root-mounted plan regression in `httpapi/backlinks_test.go`; client browser regression.
+
+The refresh payload must contain `userInitiated: true`; legacy empty requests
+from an already-open older SPA are rejected before any plan/provider work. This
+is a versioned action contract, not proof of a human click or an authorization
+replacement. The current project domain participates in coalescing and snapshot
+lookup: a previous domain finishing later cannot hide the current domain's data.
+The domain-switch regression uses real Postgres and a blocked provider; malformed
+and legacy request tests assert zero provider calls without an earlier plan gate.

@@ -102,7 +102,7 @@ func TestBacklinksEndToEndAttributesPaidProviderTaskToAuthorizedProjectOrganizat
 	// A dashboard refresh must obey the same paid-feature gate as Backlinks.
 	exec(ctx, t, pool, `UPDATE projects SET domain='example.com' WHERE id=$1`, ownProject)
 	gated := NewHandler(Deps{Logger: discardLogger, DB: healthy, Redis: healthy, Auth: auth.NewService(pool, testSecret), Billing: billing.NewReadOnlyService(pool), DashboardOverview: &dashboardoverview.Service{Store: dashboardoverview.Repository{DB: pool}, Backlinks: backlinks.NewService(client, rdb, discardLogger)}, Site: pages})
-	request := httptest.NewRequestWithContext(ctx, http.MethodPost, "/api/v1/projects/"+ownProject+"/dashboard/backlinks/refresh", strings.NewReader(`{}`))
+	request := httptest.NewRequestWithContext(ctx, http.MethodPost, "/api/v1/projects/"+ownProject+"/dashboard/backlinks/refresh", strings.NewReader(`{"userInitiated":true}`))
 	request.AddCookie(&http.Cookie{Name: "__Secure-better-auth.session_token", Value: sign(token), HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode})
 	refused := httptest.NewRecorder()
 	gated.ServeHTTP(refused, request)

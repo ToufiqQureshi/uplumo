@@ -7,5 +7,5 @@ export const Route = createFileRoute("/_app/p/$projectId/")({
 
 function DashboardRoute() {
   const { projectId } = Route.useParams();
-  return <DashboardPage projectId={projectId} />;
+  return <DashboardPage key={projectId} projectId={projectId} />;
 }

@@ -64,8 +64,8 @@ func TestRepositoryReadsProjectScopedDashboardCards(t *testing.T) {
 	if err != nil || audit == nil || audit.PagesCrawled != 12 || audit.TotalIssueTypes != 3 || len(audit.TopIssues) != 3 || audit.TopIssues[0].Count != 1 {
 		t.Fatalf("audit=%+v err=%v", audit, err)
 	}
-	snapshot, found, err := repo.LatestBacklinkSnapshot(context.Background(), "p")
-	if err != nil || !found || snapshot.Domain != "old.example" {
+	snapshot, found, err := repo.LatestBacklinkSnapshot(context.Background(), "p", "example.com")
+	if err != nil || !found || snapshot.Domain != "example.com" {
 		t.Fatalf("snapshot=%+v found=%v err=%v", snapshot, found, err)
 	}
 	if _, err = repo.ProjectDomain(context.Background(), "p", "other-org"); !errors.Is(err, ErrProjectNotFound) {
@@ -159,5 +159,57 @@ func TestFailedRefreshKeepsStaleDataAndReturnsTheRefusal(t *testing.T) {
 	}
 	if provider.calls.Load() != 1 {
 		t.Fatalf("failure was automatically retried: %d", provider.calls.Load())
+	}
+}
+
+type domainSnapshotProvider func(context.Context, string, string) (backlinks.Summary, error)
+
+func (f domainSnapshotProvider) DashboardSummary(ctx context.Context, org, domain string) (backlinks.Summary, error) {
+	return f(ctx, org, domain)
+}
+
+func TestDomainChangeDoesNotJoinOldPurchaseOrHideNewSnapshot(t *testing.T) {
+	db := dashboardDB(t)
+	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
+	defer cancel()
+	oldStarted, releaseOld := make(chan struct{}), make(chan struct{})
+	defer close(releaseOld)
+	var calls atomic.Int32
+	provider := domainSnapshotProvider(func(ctx context.Context, _, domain string) (backlinks.Summary, error) {
+		calls.Add(1)
+		if domain == "example.com" {
+			close(oldStarted)
+			select {
+			case <-releaseOld:
+			case <-ctx.Done():
+				return backlinks.Summary{}, ctx.Err()
+			}
+		}
+		return backlinks.Summary{}, nil
+	})
+	svc := &Service{Store: Repository{DB: db}, Backlinks: provider}
+	oldDone := make(chan error, 1)
+	go func() { oldDone <- svc.RefreshBacklinkSnapshot(ctx, "o", "p") }()
+	select {
+	case <-oldStarted:
+	case <-ctx.Done():
+		t.Fatal(ctx.Err())
+	}
+	if _, err := db.Exec(ctx, "UPDATE projects SET domain='new.example' WHERE id='p'"); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.RefreshBacklinkSnapshot(ctx, "o", "p"); err != nil {
+		t.Fatalf("new domain joined the blocked old-domain purchase: %v", err)
+	}
+	releaseOld <- struct{}{}
+	if err := <-oldDone; err != nil {
+		t.Fatal(err)
+	}
+	overview, err := svc.Get(ctx, "o", "p")
+	if err != nil || overview.Backlinks == nil || overview.Backlinks.Domain != "new.example" || calls.Load() != 2 {
+		t.Fatalf("current snapshot=%+v err=%v purchases=%d", overview.Backlinks, err, calls.Load())
+	}
+	if err := svc.RefreshBacklinkSnapshot(ctx, "o", "p"); err != nil || calls.Load() != 2 {
+		t.Fatalf("current domain cache missed: %v purchases=%d", err, calls.Load())
 	}
 }

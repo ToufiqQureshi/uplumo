@@ -70,11 +70,13 @@ func (d Deps) get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (d Deps) refresh(w http.ResponseWriter, r *http.Request) {
-	var body map[string]any
+	var body struct {
+		UserInitiated bool `json:"userInitiated"`
+	}
 	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 8<<10))
 	dec.DisallowUnknownFields()
-	if dec.Decode(&body) != nil || body == nil || len(body) != 0 || dec.Decode(new(any)) != io.EOF {
-		httpx.WriteError(w, http.StatusBadRequest, "invalid_request", "Choose a valid dashboard request.")
+	if dec.Decode(&body) != nil || !body.UserInitiated || dec.Decode(new(any)) != io.EOF {
+		httpx.WriteError(w, http.StatusBadRequest, "invalid_request", "Reload the dashboard and click Refresh backlink snapshot to request an update.")
 		return
 	}
 	if d.Service == nil {

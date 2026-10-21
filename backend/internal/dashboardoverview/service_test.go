@@ -20,7 +20,7 @@ func (s *storeStub) ProjectDomain(_ context.Context, p, o string) (*string, erro
 	return s.domain, nil
 }
 func (s *storeStub) LatestAudit(context.Context, string) (*AuditSummary, error) { return s.audit, nil }
-func (s *storeStub) LatestBacklinkSnapshot(context.Context, string) (BacklinkSummary, bool, error) {
+func (s *storeStub) LatestBacklinkSnapshot(context.Context, string, string) (BacklinkSummary, bool, error) {
 	return s.snapshot, s.found, nil
 }
 func TestServiceScopesProjectAndMarksSnapshotStaleness(t *testing.T) {

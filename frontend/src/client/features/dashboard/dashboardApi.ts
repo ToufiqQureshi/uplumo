@@ -90,7 +90,7 @@ export async function refreshDashboardBacklinkSnapshot({ data }: ProjectInput) {
     `/api/v1/projects/${encodeURIComponent(data.projectId)}/dashboard/backlinks/refresh`,
     z.object({ ok: z.literal(true) }),
     "POST",
-    {},
+    { userInitiated: true },
   );
 }
 

@@ -6,6 +6,30 @@ test("dashboard visits never refresh paid backlinks automatically", async ({
 }) => {
   await installGrowthFixtures(page);
   const refreshes: string[] = [];
+  const projects = [
+    {
+      id: "e2e-project",
+      name: "Example site",
+      domain: "example.com",
+      locationCode: 2840,
+      languageCode: "en",
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: "second-project",
+      name: "Second site",
+      domain: "second.example",
+      locationCode: 2840,
+      languageCode: "en",
+      createdAt: new Date().toISOString(),
+    },
+  ];
+  await page.route("**/api/v1/projects/list", (route) =>
+    route.fulfill({ json: projects }),
+  );
+  await page.route("**/api/v1/projects/second-project/get", (route) =>
+    route.fulfill({ json: projects[1] }),
+  );
   await page.route("**/api/v1/projects/*/activation/get", (route) =>
     route.fulfill({
       json: {
@@ -36,6 +60,7 @@ test("dashboard visits never refresh paid backlinks automatically", async ({
       return route.fulfill({
         json: { audit: null, backlinks: null, backlinkRefreshAvailable: true },
       });
+    expect(route.request().postDataJSON()).toEqual({ userInitiated: true });
     refreshes.push(path);
     return route.fulfill({
       status: 503,
@@ -66,5 +91,17 @@ test("dashboard visits never refresh paid backlinks automatically", async ({
     }),
   ).toBeVisible();
   await page.waitForLoadState("networkidle");
+  expect(refreshes).toHaveLength(1);
+  await page.getByRole("combobox", { name: "Switch project" }).click();
+  await page.getByRole("option", { name: /Second site/u }).click();
+  await expect(page).toHaveURL(/\/p\/second-project/u);
+  await expect(
+    page.getByRole("heading", { name: "Backlink pulse" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Something went wrong on our side. Try again.", {
+      exact: true,
+    }),
+  ).toHaveCount(0);
   expect(refreshes).toHaveLength(1);
 });

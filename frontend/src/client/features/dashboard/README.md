@@ -16,3 +16,6 @@ Read [flow.md](flow.md) for the request path and [decision.md](decision.md) for 
 Backlink snapshots refresh only after a button click, with credit guidance and
 no automatic retry. Missing provider, stale data and refresh errors are visible;
 opening/reloading a dashboard never buys a backlink task.
+
+Refresh sends an explicit-action marker; older automatic empty requests are rejected.
+Switching projects resets local refresh/error state.

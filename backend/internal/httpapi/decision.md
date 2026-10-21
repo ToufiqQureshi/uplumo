@@ -32,3 +32,5 @@ Preserve: DNT/GPC before storage/collection, session expiry, hidden-time exclusi
 - **Why:** The refresh was an alternate path to a paid summary and omitted the normal Backlinks feature check.
 - **Preserve:** Session and project membership precede the plan/provider path. An unauthorized/Free request buys no task; saved dashboard reads remain accessible.
 - **Trace:** `httpapi.go`; `backlinks_test.go` uses real authentication, Postgres plan state and provider-usage recording to check the mounted bypass is refused before another purchase.
+
+The mounted plan regression sends the explicit `userInitiated: true` contract, so its 402 proves the plan gate, rather than failing at request validation.

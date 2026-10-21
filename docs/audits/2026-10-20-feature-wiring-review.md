@@ -142,3 +142,19 @@ parameters/fragments did not appear in the destination report. Desktop/mobile
 UI rendered those real results without document overflow. This used a normal
 browser user agent because synthetic headless user agents are intentionally
 filtered; no production analytics traffic was fabricated.
+
+Release review additionally caught three dashboard edge cases: older already-open
+clients could still submit an empty automatic refresh request; domain changes
+could join the previous domain's in-flight purchase; and a prior mutation error
+could survive a project switch. Refresh now requires the explicit action marker,
+coalesces by organization/project/domain, reads snapshots for the current domain,
+and remounts project-local view state on project changes. Tests were observed
+failing before each correction. Isolated Go overlay mutations also verify the
+legacy marker, domain coalescing and current-domain SQL predicates are necessary.
+
+Additional authenticated local checks opened Personal settings, Team membership
+and Report branding against real Go APIs with no page exceptions. The personal
+settings API-key flow created a temporary key through the UI, persisted its list
+entry across reload, revoked it through the confirmation dialog and confirmed
+its absence after reload. The raw key was not logged or committed; no invitation
+email or paid branding activation was attempted.

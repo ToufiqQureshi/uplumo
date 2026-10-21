@@ -64,8 +64,28 @@ func TestRefreshAnswersARefusalAsOutOfCredits(t *testing.T) {
 	mux := http.NewServeMux()
 	Mount(mux, Deps{Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), Service: &Service{Store: writableStore{&storeStub{domain: &domain}}, Backlinks: provider}, WithSession: withSession, WithProjectAccess: withProject})
 	rec := httptest.NewRecorder()
-	mux.ServeHTTP(rec, httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/api/v1/projects/p/dashboard/backlinks/refresh", strings.NewReader(`{}`)))
+	mux.ServeHTTP(rec, httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/api/v1/projects/p/dashboard/backlinks/refresh", strings.NewReader(`{"userInitiated":true}`)))
 	if provider.calls != 1 || rec.Code != http.StatusPaymentRequired || !strings.Contains(rec.Body.String(), "insufficient_credits") {
 		t.Fatalf("refresh = %d %s after %d calls, want 402 insufficient_credits", rec.Code, rec.Body, provider.calls)
+	}
+}
+
+func TestRefreshRejectsLegacyAndNonExplicitRequestsBeforeProvider(t *testing.T) {
+	domain := "example.com"
+	provider := &refusingBacklinks{}
+	identity := func(next http.Handler) http.Handler { return next }
+	project := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			next.ServeHTTP(w, r.WithContext(auth.WithProjectOrganization(r.Context(), "org-1")))
+		})
+	}
+	mux := http.NewServeMux()
+	Mount(mux, Deps{Service: &Service{Store: writableStore{&storeStub{domain: &domain}}, Backlinks: provider}, WithSession: identity, WithProjectAccess: project})
+	for _, body := range []string{`{}`, `null`, `{"userInitiated":false}`, `{"userInitiated":"true"}`, `{"userInitiated":true,"extra":1}`, `{"userInitiated":true} {}`} {
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/projects/p/dashboard/backlinks/refresh", strings.NewReader(body)))
+		if rec.Code != http.StatusBadRequest || provider.calls != 0 {
+			t.Fatalf("body=%s status=%d purchases=%d: %s", body, rec.Code, provider.calls, rec.Body)
+		}
 	}
 }

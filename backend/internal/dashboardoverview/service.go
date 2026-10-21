@@ -18,7 +18,7 @@ var ErrBacklinksUnavailable = errors.New("dashboard backlinks unavailable")
 type Store interface {
 	ProjectDomain(context.Context, string, string) (*string, error)
 	LatestAudit(context.Context, string) (*AuditSummary, error)
-	LatestBacklinkSnapshot(context.Context, string) (BacklinkSummary, bool, error)
+	LatestBacklinkSnapshot(context.Context, string, string) (BacklinkSummary, bool, error)
 }
 type backlinkSnapshotWriter interface {
 	InsertBacklinkSnapshot(context.Context, string, BacklinkSummary) error
@@ -47,7 +47,11 @@ func (s *Service) Get(ctx context.Context, organizationID, projectID string) (Ov
 	if err != nil {
 		return Overview{}, err
 	}
-	snapshot, found, err := s.Store.LatestBacklinkSnapshot(ctx, projectID)
+	snapshotDomain := ""
+	if domain != nil {
+		snapshotDomain = *domain
+	}
+	snapshot, found, err := s.Store.LatestBacklinkSnapshot(ctx, projectID, snapshotDomain)
 	if err != nil {
 		return Overview{}, err
 	}
@@ -65,10 +69,14 @@ func (s *Service) RefreshBacklinkSnapshot(ctx context.Context, organizationID, p
 	if s == nil || s.Store == nil {
 		return fmt.Errorf("dashboard overview store unavailable")
 	}
-	result := s.refreshes.DoChan(organizationID+"\x00"+projectID, func() (any, error) {
+	domain, err := s.Store.ProjectDomain(ctx, projectID, organizationID)
+	if err != nil || domain == nil {
+		return err
+	}
+	result := s.refreshes.DoChan(organizationID+"\x00"+projectID+"\x00"+*domain, func() (any, error) {
 		shared, cancel := context.WithTimeout(context.WithoutCancel(ctx), 90*time.Second)
 		defer cancel()
-		return nil, s.refreshBacklinkSnapshot(shared, organizationID, projectID)
+		return nil, s.refreshBacklinkSnapshot(shared, organizationID, projectID, *domain)
 	})
 	select {
 	case <-ctx.Done():
@@ -78,16 +86,12 @@ func (s *Service) RefreshBacklinkSnapshot(ctx context.Context, organizationID, p
 	}
 }
 
-func (s *Service) refreshBacklinkSnapshot(ctx context.Context, organizationID, projectID string) error {
-	domain, err := s.Store.ProjectDomain(ctx, projectID, organizationID)
-	if err != nil || domain == nil {
-		return err
-	}
-	latest, found, err := s.Store.LatestBacklinkSnapshot(ctx, projectID)
+func (s *Service) refreshBacklinkSnapshot(ctx context.Context, organizationID, projectID, domain string) error {
+	latest, found, err := s.Store.LatestBacklinkSnapshot(ctx, projectID, domain)
 	if err != nil {
 		return err
 	}
-	matches := found && latest.Domain == *domain
+	matches := found && latest.Domain == domain
 	if matches && fresh(latest.CapturedAt, s.now()) {
 		return nil
 	}
@@ -98,12 +102,12 @@ func (s *Service) refreshBacklinkSnapshot(ctx context.Context, organizationID, p
 	if s.Backlinks == nil {
 		return ErrBacklinksUnavailable
 	}
-	summary, err := s.Backlinks.DashboardSummary(ctx, organizationID, *domain)
+	summary, err := s.Backlinks.DashboardSummary(ctx, organizationID, domain)
 	if err != nil {
 		return err
 	}
 	snapshot := BacklinkSummary{
-		Domain: *domain, Rank: toInt64(summary.Rank), Backlinks: toInt64(summary.Backlinks),
+		Domain: domain, Rank: toInt64(summary.Rank), Backlinks: toInt64(summary.Backlinks),
 		ReferringDomains: toInt64(summary.ReferringDomains), NewBacklinks: toInt64(summary.NewBacklinks),
 		LostBacklinks: toInt64(summary.LostBacklinks), NewReferringDomains: toInt64(summary.NewReferringDomains),
 		LostReferringDomains: toInt64(summary.LostReferringDomains),
