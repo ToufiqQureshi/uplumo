@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { draftAfterSave } from "./draft-save";
+import { sameDraft } from "./draft-save";
 
 const base = {
   title: "Teal saree guide",
@@ -9,15 +9,14 @@ const base = {
   content: "Teal is a deep blue-green shade.",
 };
 
-describe("draftAfterSave", () => {
-  it("keeps text typed while the autosave was in flight", () => {
-    const sent = base;
-    const current = { ...base, content: base.content + " A teal silk saree" };
-    expect(draftAfterSave(current, sent, { ...sent })).toBe(current);
+describe("sameDraft", () => {
+  it("sees text typed while an autosave was in flight", () => {
+    expect(
+      sameDraft({ ...base, content: base.content + " A teal" }, base),
+    ).toBe(false);
   });
 
-  it("takes the server copy when nothing changed during the save", () => {
-    const saved = { ...base, slug: "teal-saree" };
-    expect(draftAfterSave({ ...base }, base, saved)).toBe(saved);
+  it("matches an unchanged draft", () => {
+    expect(sameDraft({ ...base }, base)).toBe(true);
   });
 });

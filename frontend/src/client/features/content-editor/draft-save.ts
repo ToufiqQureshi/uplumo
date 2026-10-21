@@ -1,18 +1,11 @@
 import type { ContentDraftInput } from "./scoring";
 
+/**
+ * True when two drafts are identical. The editor compares the draft it sent
+ * in an autosave with the one on screen when the reply arrives: if they
+ * differ, the writer kept typing and the reply must not overwrite it.
+ */
+// Saving never locks the editor's fields (autosave once dropped typed keys),
+// so the page compares drafts instead.
 export const sameDraft = (a: ContentDraftInput, b: ContentDraftInput) =>
   JSON.stringify(a) === JSON.stringify(b);
-
-/**
- * The draft to show after a save returns. The writer keeps typing while an
- * autosave is in flight, so the server's copy replaces the editor only when
- * nothing changed since the save was sent; newer edits stay and the next
- * autosave sends them.
- */
-export function draftAfterSave(
-  current: ContentDraftInput,
-  sent: ContentDraftInput,
-  saved: ContentDraftInput,
-): ContentDraftInput {
-  return sameDraft(current, sent) ? saved : current;
-}
