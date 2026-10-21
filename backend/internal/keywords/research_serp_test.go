@@ -4,8 +4,59 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"log/slog"
+	"sync"
 	"testing"
+	"time"
 )
+
+func TestConcurrentSerpMissesSharePaidWorkWithinEachOrganization(t *testing.T) {
+	for _, separateOrganizations := range []bool{false, true} {
+		t.Run(fmt.Sprint(separateOrganizations), func(t *testing.T) {
+			data := &fakeData{serpFn: func(SerpRequest) ([]SerpItem, error) {
+				time.Sleep(50 * time.Millisecond)
+				return []SerpItem{organic(1, "example.com")}, nil
+			}}
+			service := &ResearchService{Data: data, Cache: &memoryLocationCache{}, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+			start := make(chan struct{})
+			var workers sync.WaitGroup
+			for i := range 8 {
+				workers.Go(func() {
+					<-start
+					org := "org"
+					if separateOrganizations && i%2 == 1 {
+						org = "other-org"
+					}
+					result, err := service.SerpAnalysis(t.Context(), SerpAnalysisInput{OrganizationID: org, ProjectID: "p1", Keyword: "hotel", LocationCode: 2356, LanguageCode: "en", Depth: 20})
+					if err != nil || len(result.Items) != 1 {
+						t.Errorf("SERP result: %+v, %v", result, err)
+					}
+				})
+			}
+			close(start)
+			workers.Wait()
+			want := 1
+			if separateOrganizations {
+				want = 2
+			}
+			if len(data.serps) != want {
+				t.Fatalf("paid SERP calls = %d, want %d", len(data.serps), want)
+			}
+		})
+	}
+}
+
+func TestCancelledSerpDoesNotStartPaidWork(t *testing.T) {
+	data := &fakeData{}
+	service := &ResearchService{Data: data, Cache: &memoryLocationCache{}, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	_, err := service.SerpAnalysis(ctx, SerpAnalysisInput{OrganizationID: "org", ProjectID: "p1", Keyword: "hotel", LocationCode: 2356, LanguageCode: "en", Depth: 20})
+	if !errors.Is(err, context.Canceled) || len(data.serps) != 0 {
+		t.Fatalf("cancelled SERP: err=%v paid calls=%d", err, len(data.serps))
+	}
+}
 
 func organic(rank int, domain string) SerpItem {
 	g := rank

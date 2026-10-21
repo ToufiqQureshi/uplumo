@@ -234,10 +234,14 @@ func labsItems(results []json.RawMessage) ([]wireLabsItem, error) {
 		return nil, nil
 	}
 	var result struct {
-		Items []wireLabsItem `json:"items"`
+		Items           []wireLabsItem `json:"items"`
+		SeedKeywordData *wireLabsItem  `json:"seed_keyword_data"`
 	}
 	if err := json.Unmarshal(results[0], &result); err != nil {
 		return nil, fmt.Errorf("decode Labs result: %w", err)
+	}
+	if result.SeedKeywordData != nil {
+		result.Items = append([]wireLabsItem{*result.SeedKeywordData}, result.Items...)
 	}
 	return result.Items, nil
 }

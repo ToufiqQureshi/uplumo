@@ -16,6 +16,23 @@ Owns keyword/serp research, location resolution, saved keywords and local busine
 
 DataForSEO; Google Ads for selected markets; Postgres saved rows; Redis caches; platform market registry.
 
+## Preserve paid seed data and coalesce SERP purchases
+
+- **Decision:** Parse `seed_keyword_data` ahead of suggestions, retain measured
+  clickstream zero, and invalidate older research snapshots with cache version 6.
+  Concurrent equivalent SERPs at the same depth share the existing singleflight
+  group, under the organization/project/market cache key plus depth.
+- **Why:** The provider returns seed data outside `items`; ignoring it removed
+  exact metrics the customer already paid for. Eight concurrent cold SERPs
+  previously bought eight tasks. A measured zero is not missing data.
+- **Preserve:** No extra overview call, no automatic paid retry, separate
+  organization/market/depth identities, bounded detached work for active waiters,
+  and no new purchase for an already-cancelled caller. Deeper empty results must
+  not evict a useful shallower snapshot. Coalescing is per server process.
+- **Trace:** `research_provider.go`, `research.go`, `research_serp.go` and the
+  provider/SERP regression tests. Raw provider-shaped fixtures are synthetic;
+  post-deployment comparison with live raw responses is still required.
+
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.

@@ -17,6 +17,12 @@ actions. All data comes from the Go keywords API.
   depth-100 snapshot one level deeper than the current one. A failed deep
   fetch drops back to the cached shallow snapshot instead of re-billing on
   every retry.
+  Successful snapshots stay fresh and retained in TanStack Query for 12 hours,
+  matching the server cache; revisiting the same keyword does not refetch it.
+- A missing exact seed shows an approximate-match notice in every mode,
+  including Auto. Exact matching trims whitespace and ignores case.
+- Research CSV/Sheets exports include both top bids, referring domains,
+  quarterly change and monthly-search history alongside the core metrics.
 - Saved keywords: filtered/sorted/paged list (page sizes 50/100/250), bulk
   remove (max 2000 ids), tag assign (append/replace), tag rename/recolor, and
   a delete that fails with `tag_in_use` while any keyword still carries the

@@ -213,7 +213,6 @@ export function useKeywordResearchController(
       hasSearched,
       isLoading,
       lastSearchError,
-      keywordMode: input.keywordMode,
     });
 
   const retrySearch = useCallback(() => {

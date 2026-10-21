@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Link } from "@tanstack/react-router";
-import { Link2 } from "lucide-react";
+import { Info, Link2 } from "lucide-react";
+import { Alert, AlertDescription } from "@/client/components/ui/alert";
 import type { OnChangeFn, SortingState } from "@tanstack/react-table";
 import {
   BacklinksOverviewPanels,
@@ -28,6 +29,25 @@ import {
   toScopeSearchParam,
 } from "@/shared/researchScope";
 import type { useSearchTabNavigation } from "@/client/features/search-tabs/useSearchTabNavigation";
+
+/**
+ * How many links (or linking domains, one per domain) the spam filter hid
+ * from an unfiltered backlinks table, so a table of 17 next to a total of
+ * 2,000 is explained. Other filters make the comparison meaningless.
+ */
+function hiddenSpamCount(
+  searchState: BacklinksSearchState,
+  overview: NonNullable<BacklinksPageData["overviewQuery"]["data"]>,
+  shown: number | null | undefined,
+) {
+  if (searchState.tab !== "backlinks" || searchState.includeSpam) return 0;
+  if (shown == null) return 0;
+  const total =
+    searchState.view === "all"
+      ? overview.summary.backlinks
+      : overview.summary.referringDomains;
+  return total == null ? 0 : Math.max(0, Math.round(total - shown));
+}
 
 type BacklinksBodyProps = {
   projectId: string;
@@ -150,6 +170,31 @@ export function BacklinksBody({
     );
   }
 
+  if (!overviewData.summary.backlinks) {
+    return (
+      <>
+        {tabControls}
+        <Alert variant="info">
+          <Info />
+          <AlertDescription className="text-foreground">
+            No backlinks found for <strong>{overviewData.displayTarget}</strong>
+            . Check the spelling of the domain. A new site may simply have no
+            links yet. Nothing more was loaded, so no further credits were used.
+          </AlertDescription>
+        </Alert>
+      </>
+    );
+  }
+
+  const hiddenAsSpam =
+    filters.backlinks.activeFilterCount > 0
+      ? 0
+      : hiddenSpamCount(
+          searchState,
+          overviewData,
+          backlinksRowsPage?.totalCount,
+        );
+
   return (
     <>
       {tabControls}
@@ -160,6 +205,17 @@ export function BacklinksBody({
           summaryStats={summaryStats}
         />
         <div className="px-4 pb-4">
+          {hiddenAsSpam > 0 ? (
+            <Alert variant="info" className="mb-3">
+              <Info />
+              <AlertDescription className="text-foreground">
+                Best links is on, so about {hiddenAsSpam.toLocaleString()}{" "}
+                {searchState.view === "all" ? "links" : "linking domains"} with
+                a high spam score are hidden. Turn Best links off to see them
+                too.
+              </AlertDescription>
+            </Alert>
+          ) : null}
           <BacklinksResultsCard
             projectId={projectId}
             activeTab={searchState.tab}

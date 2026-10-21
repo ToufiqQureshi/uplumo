@@ -24,6 +24,11 @@ function keywordResearchHeaders(locationName?: string) {
     `Competition${scope}`,
     "Score",
     "Intent",
+    "Top bid low (USD)",
+    "Top bid high (USD)",
+    "Ref. domains",
+    "3-mo trend (%)",
+    "Monthly searches",
   ];
 }
 
@@ -37,6 +42,11 @@ function keywordResearchExportRow(row: KeywordResearchRow): CsvValue[] {
     row.competition ?? "",
     row.keywordDifficulty ?? "",
     row.intent,
+    row.topOfPageBidLow ?? "",
+    row.topOfPageBidHigh ?? "",
+    row.referringDomains ?? "",
+    row.quarterlyChange ?? "",
+    JSON.stringify(row.trend),
   ];
 }
 

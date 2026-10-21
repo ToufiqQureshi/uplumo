@@ -43,6 +43,37 @@ const BACKLINKS_RESULTS_TABS: Array<{
   { tab: "pages", label: "Top Pages" },
 ];
 
+// The server buys table rows in blocks of this many (backlinks/service.go
+// `blockSize`) and keeps them a day; a block costs about $0.06, 77 credits.
+const ROWS_PER_PURCHASE = 1000;
+const CREDITS_PER_PURCHASE = 77;
+
+/**
+ * Paging inside the rows already bought is free. Say so, and say what the
+ * next page costs when it starts a new block, before the customer clicks.
+ */
+function NextBlockHint({
+  page,
+  pageSize,
+  hasNextPage,
+}: {
+  page: number;
+  pageSize: number;
+  hasNextPage: boolean;
+}) {
+  const loadedUpTo =
+    (Math.floor(((page - 1) * pageSize) / ROWS_PER_PURCHASE) + 1) *
+    ROWS_PER_PURCHASE;
+  const nextStartsNewBlock = page * pageSize >= loadedUpTo;
+  return (
+    <p className="px-4 pt-2 text-xs text-muted-foreground">
+      {hasNextPage && nextStartsNewBlock
+        ? `Next page loads rows ${(loadedUpTo + 1).toLocaleString()}–${(loadedUpTo + ROWS_PER_PURCHASE).toLocaleString()} (about ${CREDITS_PER_PURCHASE} credits).`
+        : `Up to ${loadedUpTo.toLocaleString()} rows are loaded: changing page or rows per page is free.`}
+    </p>
+  );
+}
+
 export function BacklinksResultsCard({
   projectId,
   activeTab,
@@ -237,16 +268,23 @@ export function BacklinksResultsCard({
     ),
     // Kept visible on tab errors so a failing page still offers a way back.
     footer: (
-      <TablePagination
-        page={pagination.page}
-        pageSize={pagination.pageSize}
-        pageSizes={BACKLINKS_PAGE_SIZES}
-        totalCount={pagination.totalCount}
-        hasNextPage={pagination.hasNextPage}
-        isLoading={pagination.isFetching}
-        onPageChange={onPageChange}
-        onPageSizeChange={onPageSizeChange}
-      />
+      <>
+        <NextBlockHint
+          page={pagination.page}
+          pageSize={pagination.pageSize}
+          hasNextPage={pagination.hasNextPage}
+        />
+        <TablePagination
+          page={pagination.page}
+          pageSize={pagination.pageSize}
+          pageSizes={BACKLINKS_PAGE_SIZES}
+          totalCount={pagination.totalCount}
+          hasNextPage={pagination.hasNextPage}
+          isLoading={pagination.isFetching}
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
+        />
+      </>
     ),
   };
 

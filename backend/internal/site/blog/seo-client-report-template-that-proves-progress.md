@@ -54,20 +54,20 @@ Before changing a live site, save the current configuration and test the change 
 
 Use one page for the summary, then attach detail only where it changes a decision:
 
-1. **Goal:** â€œIncrease qualified enquiries for [service] in [market].â€
+1. **Goal:** “Increase qualified enquiries for [service] in [market].”
 2. **Outcome:** leads, calls or sales recorded, with source and date range.
 3. **Search evidence:** clicks, impressions and queries for the pages tied to that goal.
 4. **Work completed:** specific page or technical change, date, and reason.
 5. **What changed:** compare a fair period and name any limitations.
 6. **Next action:** task, owner, due date and the signal that will show progress.
 
-Example: â€œWe clarified the commercial AC repair page on 3 September and added response-area details. Search Console shows 18 more clicks over the following 28 days than the preceding 28 days. The call log has 4 enquiries tagged to organic search; two became quotes. This is an encouraging early signal, but the period is too short to attribute all change to the page edit.â€
+Example: “We clarified the commercial AC repair page on 3 September and added response-area details. Search Console shows 18 more clicks over the following 28 days than the preceding 28 days. The call log has 4 enquiries tagged to organic search; two became quotes. This is an encouraging early signal, but the period is too short to attribute all change to the page edit.”
 
 ### Keep the evidence honest
 
 State whether numbers are clicks, sessions, leads or closed revenue. Search Console clicks are not GA4 sessions; Analytics can miss visits due to consent, blockers or scripts. Do not add traffic estimates from different SEO tools together or claim that a rank change caused revenue without evidence. Google's [guide to Search Console and Analytics](https://support.google.com/webmasters/answer/10269533?hl=en) explains why reports differ.
 
-Attach a short â€œwhat changedâ€ note to each report. If results declined, show what was checked and what the evidence says; a clear diagnosis builds more trust than a green arrow without context. For a concise investigation of confusing clicks and impressions, use our [Search Console worksheet](/blog/search-console-impressions-clicks-down). For an owner-friendly monthly cadence, use the [30-day SEO plan](/blog/seo-30-day-plan-small-business).
+Attach a short “what changed” note to each report. If results declined, show what was checked and what the evidence says; a clear diagnosis builds more trust than a green arrow without context. For a concise investigation of confusing clicks and impressions, use our [Search Console worksheet](/blog/search-console-impressions-clicks-down). For an owner-friendly monthly cadence, use the [30-day SEO plan](/blog/seo-30-day-plan-small-business).
 ## FAQ
 
 **Should an SEO client report include keyword rankings?**

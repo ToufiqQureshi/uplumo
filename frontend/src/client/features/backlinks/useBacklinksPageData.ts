@@ -112,6 +112,12 @@ export function useBacklinksPageData({
     queryFn: () => getBacklinksOverview({ projectId, target, scope }),
   });
 
+  // Each table is a paid call. It waits for the overview and is skipped when
+  // the overview found no links (a typo or a new site): the table could only
+  // come back empty, and the customer would pay for it.
+  const overviewLinks = overviewQuery.data?.summary.backlinks ?? 0;
+  const tablesReady = targetReady && overviewLinks > 0;
+
   const rowsSort = toSort(
     sort,
     order,
@@ -139,7 +145,7 @@ export function useBacklinksPageData({
       rowsMode,
       searchState.includeSpam ?? false,
     ],
-    enabled: targetReady && tab === "backlinks" && !rowsFilterError,
+    enabled: tablesReady && tab === "backlinks" && !rowsFilterError,
     retry: false,
     refetchOnReconnect: false,
     refetchOnWindowFocus: false,
@@ -178,7 +184,7 @@ export function useBacklinksPageData({
       domainsSort.order,
       domainsFilters,
     ],
-    enabled: targetReady && tab === "domains",
+    enabled: tablesReady && tab === "domains",
     retry: false,
     refetchOnReconnect: false,
     refetchOnWindowFocus: false,
@@ -213,7 +219,7 @@ export function useBacklinksPageData({
       pagesSort.order,
       pagesFilters,
     ],
-    enabled: targetReady && tab === "pages",
+    enabled: tablesReady && tab === "pages",
     retry: false,
     refetchOnReconnect: false,
     refetchOnWindowFocus: false,

@@ -28,7 +28,7 @@ const (
 	// not for a day, so the full blend is bought again once the provider recovers.
 	partialResearchCacheTTL = 10 * time.Minute
 	serpCacheTTL            = 12 * time.Hour
-	researchCacheVer        = 5 // v5: auto mode blends suggestions and ideas
+	researchCacheVer        = 6 // v6: preserve the separately returned seed metrics
 	metricsBatchSize        = 700
 	SerpShallowDepth        = 20
 	SerpDeepDepth           = 100
@@ -154,7 +154,7 @@ func labsRows(items []LabsItem) []ResearchRow {
 		}
 		seen[k] = true
 		volume := it.Info
-		if it.Clickstream != nil && it.Clickstream.SearchVolume != nil && *it.Clickstream.SearchVolume != 0 {
+		if it.Clickstream != nil && it.Clickstream.SearchVolume != nil {
 			volume = *it.Clickstream
 		}
 		rows = append(rows, ResearchRow{

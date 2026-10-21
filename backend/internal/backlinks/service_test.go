@@ -226,6 +226,197 @@ func TestEmptyProviderListReturnsEmptyArray(t *testing.T) {
 	}
 }
 
+// Everything the paid tasks return that the screen shows must survive the
+// mapping: the link's context, page title, placement, status and dates.
+func TestPaidFieldsReachTheResponse(t *testing.T) {
+	t.Parallel()
+	var row providerBacklink
+	if err := json.Unmarshal([]byte(`{"text_pre":"Developed by","anchor":"revmerito","text_post":"in 2024","page_from_title":"LeVivanta","semantic_location":"footer","url_to_status_code":403,"domain_from_country":"IN","is_new":true,"is_broken":true,"last_seen":"2026-02-18 14:25:13 +00:00"}`), &row); err != nil {
+		t.Fatal(err)
+	}
+	got := mapBacklink(row)
+	if *got.TextBefore != "Developed by" || *got.TextAfter != "in 2024" || *got.SourceTitle != "LeVivanta" || *got.Placement != "footer" || *got.TargetStatus != 403 || *got.SourceCountry != "IN" || !got.IsNew || !got.IsBroken {
+		t.Fatalf("row = %+v", got)
+	}
+	if got.LastSeen == nil || *got.LastSeen != "2026-02-18 14:25:13 +00:00" {
+		t.Fatalf("lastSeen = %v, want the provider's last_seen", got.LastSeen)
+	}
+	var summary providerSummary
+	if err := json.Unmarshal([]byte(`{"first_seen":"2023-08-31","referring_ips":2004,"referring_subnets":220,"referring_domains_nofollow":18,"referring_links_tld":{"store":349,"com":89},"referring_links_countries":{"":2154,"IN":22}}`), &summary); err != nil {
+		t.Fatal(err)
+	}
+	profile := mapSummary(summary).Profile
+	if *profile.ReferringIPs != 2004 || *profile.ReferringSubnets != 220 || *profile.ReferringDomainsNofollow != 18 || profile.TLDs["store"] != 349 || *profile.FirstSeen != "2023-08-31" {
+		t.Fatalf("profile = %+v", profile)
+	}
+	if _, blank := profile.Countries[""]; blank || profile.Countries["IN"] != 22 || profile.PlatformTypes == nil {
+		t.Fatalf("countries = %v, platforms = %v: want the blank key dropped and empty maps, not nil", profile.Countries, profile.PlatformTypes)
+	}
+}
+
+// A profile that fits in one task is bought once, unfiltered; every view the
+// screen offers is then cut from it without another provider call.
+func TestSmallProfileBuysTheWholeListOnceForEveryView(t *testing.T) {
+	t.Parallel()
+	var mu sync.Mutex
+	rowsBodies := []map[string]any{}
+	link := func(domain, url string, rank, spam float64, seen string) map[string]any {
+		return map[string]any{"domain_from": domain, "url_from": url, "rank": rank, "backlink_spam_score": spam, "first_seen": seen, "dofollow": true}
+	}
+	items := []any{
+		link("a.com", "https://a.com/1", 10, 5, "2026-01-01"),
+		link("a.com", "https://a.com/2", 30, 5, "2026-03-01"),
+		link("spam.store", "https://spam.store/x", 50, 90, "2026-05-01"),
+		link("b.com", "https://b.com/blog", 20, 0, "2026-02-01"),
+	}
+	server := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.HasSuffix(r.URL.Path, "/summary/live"):
+			providerOK(w, r.URL.Path, map[string]any{"backlinks": 4, "referring_domains": 3})
+		case strings.HasSuffix(r.URL.Path, "/history/live"):
+			providerOK(w, r.URL.Path, map[string]any{"items": []any{}})
+		default:
+			var tasks []map[string]any
+			_ = json.NewDecoder(r.Body).Decode(&tasks)
+			mu.Lock()
+			rowsBodies = append(rowsBodies, tasks[0])
+			mu.Unlock()
+			providerOK(w, r.URL.Path, map[string]any{"items": items, "total_count": len(items)})
+		}
+	})
+	svc := newService(testClient(t, server, &usageRecorder{}), &memoryCache{}, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Now)
+	in := lookupInput{Target: "example.com", Scope: string(ScopeDomain)}
+	if _, err := svc.Overview(context.Background(), "org", in); err != nil {
+		t.Fatal(err)
+	}
+	get := func(mode, sort string, hideSpam bool, f rowsFilters, page int) []string {
+		t.Helper()
+		got, err := svc.Rows(context.Background(), "org", in, pageInput{Page: page, PageSize: 50, Sort: sort, Mode: mode}, f, hideSpam)
+		if err != nil {
+			t.Fatal(err)
+		}
+		urls := []string{}
+		for _, row := range got.Rows {
+			urls = append(urls, *row.URLFrom)
+		}
+		return urls
+	}
+	// The screen's default: one link per domain, spam hidden, newest first.
+	if got := strings.Join(get("one_per_domain", "first_seen,desc", true, rowsFilters{}, 1), " "); got != "https://a.com/2 https://b.com/blog" {
+		t.Fatalf("default view = %s", got)
+	}
+	if got := strings.Join(get("as_is", "rank,asc", false, rowsFilters{}, 1), " "); got != "https://a.com/1 https://b.com/blog https://a.com/2 https://spam.store/x" {
+		t.Fatalf("all links by rank = %s", got)
+	}
+	if got := strings.Join(get("as_is", "rank,desc", false, rowsFilters{DomainFrom: "a.com"}, 1), " "); got != "https://a.com/2 https://a.com/1" {
+		t.Fatalf("one domain's links = %s", got)
+	}
+	if got := strings.Join(get("as_is", "rank,desc", false, rowsFilters{Include: "blog"}, 1), " "); got != "https://b.com/blog" {
+		t.Fatalf("include filter = %s", got)
+	}
+	if got := get("as_is", "rank,desc", false, rowsFilters{}, 2); len(got) != 0 {
+		t.Fatalf("page 2 = %v, want empty", got)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if len(rowsBodies) != 1 {
+		t.Fatalf("rows provider calls = %d, want 1 for every view", len(rowsBodies))
+	}
+	if body := rowsBodies[0]; body["limit"] != float64(blockSize) || body["filters"] != nil || body["mode"] != "as_is" {
+		t.Fatalf("whole-list request = %v, want %d unfiltered as_is rows", body, blockSize)
+	}
+}
+
+// A profile longer than one task must ask the provider for the exact view.
+func TestLargeProfileAsksTheProviderForTheView(t *testing.T) {
+	t.Parallel()
+	var bodies []map[string]any
+	var mu sync.Mutex
+	server := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.HasSuffix(r.URL.Path, "/summary/live"):
+			providerOK(w, r.URL.Path, map[string]any{"backlinks": 5000})
+		case strings.HasSuffix(r.URL.Path, "/history/live"):
+			providerOK(w, r.URL.Path, map[string]any{"items": []any{}})
+		default:
+			var tasks []map[string]any
+			_ = json.NewDecoder(r.Body).Decode(&tasks)
+			mu.Lock()
+			bodies = append(bodies, tasks[0])
+			mu.Unlock()
+			providerOK(w, r.URL.Path, map[string]any{"items": []any{}, "total_count": 5000})
+		}
+	})
+	svc := newService(testClient(t, server, &usageRecorder{}), &memoryCache{}, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Now)
+	in := lookupInput{Target: "example.com", Scope: string(ScopeDomain)}
+	if _, err := svc.Overview(context.Background(), "org", in); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Rows(context.Background(), "org", in, pageInput{Page: 1, PageSize: 50, Sort: "first_seen,desc", Mode: "one_per_domain"}, rowsFilters{}, true); err != nil {
+		t.Fatal(err)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if len(bodies) != 1 || bodies[0]["mode"] != "one_per_domain" || bodies[0]["filters"] == nil {
+		t.Fatalf("provider requests = %v, want one filtered one_per_domain request", bodies)
+	}
+}
+
+// Changing the page size or moving to the next page inside the bought block
+// must not buy the same rows again; the next block is one more call.
+func TestRowsBuyOneBlockForEveryPageSizeInsideIt(t *testing.T) {
+	t.Parallel()
+	var mu sync.Mutex
+	var bodies []map[string]any
+	server := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var tasks []map[string]any
+		_ = json.NewDecoder(r.Body).Decode(&tasks)
+		mu.Lock()
+		bodies = append(bodies, tasks[0])
+		mu.Unlock()
+		offset := int(tasks[0]["offset"].(float64))
+		items := []any{}
+		for i := range min(int(tasks[0]["limit"].(float64)), 2077-offset) {
+			items = append(items, map[string]any{"url_from": fmt.Sprintf("https://s%d.example/", offset+i)})
+		}
+		providerOK(w, r.URL.Path, map[string]any{"items": items, "total_count": 2077})
+	})
+	svc := newService(testClient(t, server, &usageRecorder{}), &memoryCache{}, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Now)
+	get := func(page, size int) Page[BacklinkRow] {
+		t.Helper()
+		got, err := svc.Rows(context.Background(), "org", lookupInput{Target: "example.com"}, pageInput{Page: page, PageSize: size, Sort: "rank,desc", Mode: "as_is"}, rowsFilters{}, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return got
+	}
+	first := get(1, 50)
+	get(1, 100)
+	get(1, 200)
+	second := get(2, 50)
+	if len(first.Rows) != 50 || *first.Rows[0].URLFrom != "https://s0.example/" || !first.HasMore {
+		t.Fatalf("page 1 of 50 = %d rows, first %v, hasMore %v", len(first.Rows), *first.Rows[0].URLFrom, first.HasMore)
+	}
+	if *second.Rows[0].URLFrom != "https://s50.example/" || second.Page != 2 || second.PageSize != 50 {
+		t.Fatalf("page 2 starts at %v (page %d size %d), want s50", *second.Rows[0].URLFrom, second.Page, second.PageSize)
+	}
+	mu.Lock()
+	if len(bodies) != 1 || bodies[0]["limit"] != float64(blockSize) || bodies[0]["offset"] != float64(0) {
+		t.Fatalf("provider requests = %d, want one block of %d at offset 0", len(bodies), blockSize)
+	}
+	mu.Unlock()
+	get(5, 200)
+	last := get(11, 200)
+	if len(last.Rows) != 77 || last.HasMore || *last.Rows[0].URLFrom != "https://s2000.example/" {
+		t.Fatalf("last page = %d rows, hasMore %v", len(last.Rows), last.HasMore)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if len(bodies) != 2 || bodies[1]["offset"] != float64(2000) {
+		t.Fatalf("provider requests = %d, want one more block at offset 2000", len(bodies))
+	}
+}
+
 func TestProviderTimeoutIsReturnedToCaller(t *testing.T) {
 	t.Parallel()
 	var calls atomic.Int32

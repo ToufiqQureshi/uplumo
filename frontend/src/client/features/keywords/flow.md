@@ -24,6 +24,10 @@ Go package: `backend/internal/keywords`; market normalization is shared with `ba
 ## Cost, security and failure boundaries
 
 - Research and SERP calls can be billed by the provider; reject invalid requests before spend and do not add blind POST retries.
+- SERP snapshots remain fresh/retained for 12 hours; revisiting a loaded keyword
+  or remounting its panel makes no request while that snapshot is fresh.
+- Keep all research table metrics and monthly history in CSV/Sheets exports;
+  preserve zero versus null. Approximate seed metrics always carry a notice.
 - Cache keys must include every option that changes results, project and organization scope.
 - Show absent/null provider metrics as unavailable, not as zero.
 - Location results must use canonical provider locations; do not silently fall back to a different geography.

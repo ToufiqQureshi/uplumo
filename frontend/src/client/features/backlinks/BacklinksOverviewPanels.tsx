@@ -7,6 +7,7 @@ import {
   BacklinksNewLostChart,
   BacklinksTrendChart,
 } from "./BacklinksPageCharts";
+import { BacklinksProfilePanel } from "./BacklinksProfilePanel";
 import type { BacklinksOverviewData } from "./backlinksPageTypes";
 import { formatRelativeTimestamp } from "./backlinksPageUtils";
 
@@ -61,10 +62,44 @@ export function BacklinksOverviewPanels({
           ) : null}
         </p>
       </div>
-      <div className="px-4 pb-4">
+      <div className="space-y-3 px-4 pb-4">
+        <CrawlerBlockedAlert summary={data.summary} />
         <OverviewGrid data={data} summaryStats={summaryStats} />
+        {data.summary.profile ? (
+          <BacklinksProfilePanel profile={data.summary.profile} />
+        ) : null}
       </div>
     </>
+  );
+}
+
+/**
+ * The provider marks a link broken when its crawler cannot open the linked
+ * page. A site that blocks the crawler (403) then shows almost every link as
+ * broken although visitors reach it fine, so say so instead of alarming.
+ */
+function CrawlerBlockedAlert({
+  summary,
+}: {
+  summary: BacklinksOverviewData["summary"];
+}) {
+  const { backlinks, brokenBacklinks } = summary;
+  if (
+    !backlinks ||
+    brokenBacklinks == null ||
+    brokenBacklinks < backlinks * 0.8
+  )
+    return null;
+  return (
+    <Alert variant="info">
+      <Info />
+      <AlertDescription className="text-foreground">
+        Almost every link is marked broken. This usually means the site blocks
+        the link crawler (for example a firewall or CDN answering 403), not that
+        the links are broken. Open a few links below: if the pages load, the
+        links work. The Flags column shows the status the crawler got.
+      </AlertDescription>
+    </Alert>
   );
 }
 

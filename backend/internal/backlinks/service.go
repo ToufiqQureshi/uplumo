@@ -18,7 +18,9 @@ import (
 )
 
 const (
-	cacheTTL            = 6 * time.Hour
+	// The provider's backlink index changes slowly, and the screen shows when
+	// a report was fetched, so a day of reuse saves a paid repeat per lookup.
+	cacheTTL            = 24 * time.Hour
 	partialCacheTTL     = 10 * time.Minute
 	cacheWriteTimeout   = 2 * time.Second
 	maxFilterConditions = 8
@@ -230,36 +232,44 @@ func (s *Service) Rows(ctx context.Context, org string, in lookupInput, page pag
 	if err != nil {
 		return Page[BacklinkRow]{}, err
 	}
-	key, err := cacheKey("rows", org, struct {
-		Target   Target
-		Page     pageInput
-		Filters  rowsFilters
-		HideSpam bool
-	}{target, page, filters, hideSpam})
-	if err != nil {
-		return Page[BacklinkRow]{}, err
-	}
-	var cached Page[BacklinkRow]
-	if s.readCache(ctx, key, &cached) {
-		return cached, nil
-	}
 	expr := buildRowsFilters(filters)
 	scope := scopeFilters("url_to", target)
 	if countFilters(expr)+countFilters(scope)+boolInt(hideSpam)*2 > maxFilterConditions {
 		return Page[BacklinkRow]{}, inputError("Too many filter conditions (maximum 8).")
 	}
-	expr = joinWithAnd(scope, expr)
-	items, total, err := s.provider.rows(ctx, org, target, page, expr, hideSpam)
+	buy := func(block pageInput, expr []any, hideSpam bool) ([]BacklinkRow, *int, error) {
+		items, total, err := s.provider.rows(ctx, org, target, block, expr, hideSpam)
+		if err != nil {
+			return nil, nil, err
+		}
+		rows := make([]BacklinkRow, 0, len(items))
+		for _, v := range items {
+			rows = append(rows, mapBacklink(v))
+		}
+		return rows, total, nil
+	}
+	all, fetchedAt, ok, err := ensureWhole(ctx, s, "rows", org, target, func(v Summary) *float64 { return v.Backlinks }, "rank,desc",
+		func(block pageInput) ([]BacklinkRow, *int, error) { return buy(block, nil, false) })
 	if err != nil {
 		return Page[BacklinkRow]{}, err
 	}
-	rows := make([]BacklinkRow, 0, len(items))
-	for _, v := range items {
-		rows = append(rows, mapBacklink(v))
+	if ok {
+		return cut(all, rowsView(filters, hideSpam, page.Mode), page.Sort, page, fetchedAt), nil
 	}
-	out := pageResult(rows, total, page, s.now())
-	s.writeCache(ctx, key, out)
-	return out, nil
+	expr = joinWithAnd(scope, expr)
+	unfiltered := len(expr) == 0 && !hideSpam && page.Mode == "as_is"
+	query := struct {
+		Target   Target
+		Filters  rowsFilters
+		HideSpam bool
+	}{target, filters, hideSpam}
+	return loadPage(ctx, s, "rows", org, query, page, func(block pageInput) ([]BacklinkRow, *int, error) {
+		rows, total, err := buy(block, expr, hideSpam)
+		if err == nil && unfiltered {
+			keepIfWhole(ctx, s, "rows", org, target, block, rows, total)
+		}
+		return rows, total, err
+	})
 }
 
 // Domains returns paginated referring domains matching the request filters.
@@ -268,18 +278,6 @@ func (s *Service) Domains(ctx context.Context, org string, in lookupInput, page 
 	if err != nil {
 		return Page[ReferringDomainRow]{}, err
 	}
-	key, err := cacheKey("domains", org, struct {
-		Target  Target
-		Page    pageInput
-		Filters domainsFilters
-	}{target, page, filters})
-	if err != nil {
-		return Page[ReferringDomainRow]{}, err
-	}
-	var cached Page[ReferringDomainRow]
-	if s.readCache(ctx, key, &cached) {
-		return cached, nil
-	}
 	if target.Scope == ScopeSubfolder {
 		return Page[ReferringDomainRow]{}, inputError("Referring domains can't be broken down for a subfolder — use the Backlinks tab, or switch to Domain or Subdomains scope.")
 	}
@@ -287,17 +285,36 @@ func (s *Service) Domains(ctx context.Context, org string, in lookupInput, page 
 	if countFilters(expr) > maxFilterConditions {
 		return Page[ReferringDomainRow]{}, inputError("Too many filter conditions (maximum 8).")
 	}
-	items, total, err := s.provider.domains(ctx, org, target, page, expr)
+	buy := func(block pageInput, expr []any) ([]ReferringDomainRow, *int, error) {
+		items, total, err := s.provider.domains(ctx, org, target, block, expr)
+		if err != nil {
+			return nil, nil, err
+		}
+		rows := make([]ReferringDomainRow, 0, len(items))
+		for _, v := range items {
+			rows = append(rows, ReferringDomainRow(v))
+		}
+		return rows, total, nil
+	}
+	all, fetchedAt, ok, err := ensureWhole(ctx, s, "domains", org, target, func(v Summary) *float64 { return v.ReferringDomains }, "backlinks,desc",
+		func(block pageInput) ([]ReferringDomainRow, *int, error) { return buy(block, nil) })
 	if err != nil {
 		return Page[ReferringDomainRow]{}, err
 	}
-	rows := make([]ReferringDomainRow, 0, len(items))
-	for _, v := range items {
-		rows = append(rows, ReferringDomainRow(v))
+	if ok {
+		return cut(all, domainsView(filters), page.Sort, page, fetchedAt), nil
 	}
-	out := pageResult(rows, total, page, s.now())
-	s.writeCache(ctx, key, out)
-	return out, nil
+	query := struct {
+		Target  Target
+		Filters domainsFilters
+	}{target, filters}
+	return loadPage(ctx, s, "domains", org, query, page, func(block pageInput) ([]ReferringDomainRow, *int, error) {
+		rows, total, err := buy(block, expr)
+		if err == nil && len(expr) == 0 {
+			keepIfWhole(ctx, s, "domains", org, target, block, rows, total)
+		}
+		return rows, total, err
+	})
 }
 
 // Pages returns top pages and their backlink metrics for a target.
@@ -306,39 +323,96 @@ func (s *Service) Pages(ctx context.Context, org string, in lookupInput, page pa
 	if err != nil {
 		return Page[TopPageRow]{}, err
 	}
-	key, err := cacheKey("pages", org, struct {
-		Target  Target
-		Page    pageInput
-		Filters pagesFilters
-	}{target, page, filters})
-	if err != nil {
-		return Page[TopPageRow]{}, err
-	}
-	var cached Page[TopPageRow]
-	if s.readCache(ctx, key, &cached) {
-		return cached, nil
-	}
 	expr := buildPagesFilters(filters)
 	scope := scopeFilters("url", target)
 	if countFilters(expr)+countFilters(scope) > maxFilterConditions {
 		return Page[TopPageRow]{}, inputError("Too many filter conditions (maximum 8).")
 	}
+	// The overview has no page count, so the whole list only comes from an
+	// unfiltered first block that turned out to hold everything.
+	if all, fetchedAt, ok := readWhole[TopPageRow](ctx, s, "pages", org, target); ok && target.Scope != ScopeSubfolder {
+		return cut(all, pagesView(filters), page.Sort, page, fetchedAt), nil
+	}
 	expr = joinWithAnd(scope, expr)
-	items, total, err := s.provider.pages(ctx, org, target, page, expr)
-	if err != nil {
-		return Page[TopPageRow]{}, err
-	}
-	rows := make([]TopPageRow, 0, len(items))
-	for _, v := range items {
-		pageURL := v.Page
-		if pageURL == nil {
-			pageURL = v.URL
+	query := struct {
+		Target  Target
+		Filters pagesFilters
+	}{target, filters}
+	return loadPage(ctx, s, "pages", org, query, page, func(block pageInput) ([]TopPageRow, *int, error) {
+		items, total, err := s.provider.pages(ctx, org, target, block, expr)
+		if err != nil {
+			return nil, nil, err
 		}
-		rows = append(rows, TopPageRow{Page: pageURL, Backlinks: v.Backlinks, ReferringDomains: v.ReferringDomains, Rank: v.Rank, BrokenBacklinks: v.BrokenBacklinks})
+		rows := make([]TopPageRow, 0, len(items))
+		for _, v := range items {
+			pageURL := v.Page
+			if pageURL == nil {
+				pageURL = v.URL
+			}
+			rows = append(rows, TopPageRow{Page: pageURL, Backlinks: v.Backlinks, ReferringDomains: v.ReferringDomains, Rank: v.Rank, BrokenBacklinks: v.BrokenBacklinks})
+		}
+		if len(expr) == 0 {
+			keepIfWhole(ctx, s, "pages", org, target, block, rows, total)
+		}
+		return rows, total, nil
+	})
+}
+
+// keepIfWhole stores an unfiltered first block that holds the whole list, so
+// every later sort, filter or page of that target is cut from it for free.
+func keepIfWhole[T any](ctx context.Context, s *Service, kind, org string, target Target, block pageInput, rows []T, total *int) {
+	if target.Scope != ScopeSubfolder && block.Page == 1 && total != nil && *total <= len(rows) {
+		writeWhole(ctx, s, kind, org, target, rows, timestamp(s.now()))
 	}
-	out := pageResult(rows, total, page, s.now())
-	s.writeCache(ctx, key, out)
-	return out, nil
+}
+
+// blockSize is how many rows one provider call buys: the provider's maximum.
+// Every page size the screen offers (50, 100, 200) divides it, so a page never
+// spans two blocks, and changing the page size or paging through the first
+// 1,000 rows is served from the cache. A task is $0.024 plus $0.000036 a row
+// (measured live), so a block is about $0.06; most targets have fewer than
+// 1,000 links, which makes the first table the only one the customer buys.
+const blockSize = 1000
+
+type rowBlock[T any] struct {
+	Rows      []T    `json:"rows"`
+	Total     *int   `json:"total"`
+	FetchedAt string `json:"fetchedAt"`
+}
+
+// loadPage answers one page from the cached block that holds it, buying that
+// block once when it is not cached. query holds everything but the paging.
+func loadPage[T any](ctx context.Context, s *Service, kind, org string, query any, page pageInput, buy func(pageInput) ([]T, *int, error)) (Page[T], error) {
+	offset := (page.Page - 1) * page.PageSize
+	block := page
+	block.Page, block.PageSize = offset/blockSize+1, blockSize
+	key, err := cacheKey(kind, org, struct {
+		Query any
+		Block pageInput
+	}{query, block})
+	if err != nil {
+		return Page[T]{}, err
+	}
+	var got rowBlock[T]
+	if !s.readCache(ctx, key, &got) {
+		rows, total, err := buy(block)
+		if err != nil {
+			return Page[T]{}, err
+		}
+		got = rowBlock[T]{Rows: rows, Total: total, FetchedAt: timestamp(s.now())}
+		s.writeCache(ctx, key, got)
+	}
+	if got.Rows == nil {
+		got.Rows = []T{}
+	}
+	start := min(offset-(block.Page-1)*blockSize, len(got.Rows))
+	end := min(start+page.PageSize, len(got.Rows))
+	rows := got.Rows[start:end]
+	hasMore := end < len(got.Rows) || len(got.Rows) == blockSize
+	if got.Total != nil {
+		hasMore = offset+len(rows) < *got.Total
+	}
+	return Page[T]{Rows: rows, TotalCount: got.Total, HasMore: hasMore, Page: page.Page, PageSize: page.PageSize, FetchedAt: got.FetchedAt}, nil
 }
 
 func (s *Service) readCache(ctx context.Context, key string, dst any) bool {
@@ -383,14 +457,9 @@ func cacheKey(kind, org string, value any) (string, error) {
 		return "", fmt.Errorf("encode backlinks cache key: %w", err)
 	}
 	sum := sha256.Sum256(raw)
-	return "backlinks:" + kind + ":" + org + ":" + hex.EncodeToString(sum[:]), nil
-}
-func pageResult[T any](rows []T, total *int, page pageInput, now time.Time) Page[T] {
-	hasMore := len(rows) == page.PageSize
-	if total != nil {
-		hasMore = (page.Page-1)*page.PageSize+len(rows) < *total
-	}
-	return Page[T]{Rows: rows, TotalCount: total, HasMore: hasMore, Page: page.Page, PageSize: page.PageSize, FetchedAt: timestamp(now)}
+	// v2: ranks on the 0-100 scale and the paid profile fields; entries cached
+	// before that must not be served.
+	return "backlinks:v2:" + kind + ":" + org + ":" + hex.EncodeToString(sum[:]), nil
 }
 func floatInt(v *int) *float64 {
 	if v == nil {
@@ -413,7 +482,21 @@ func boolInt(v bool) int {
 }
 
 func mapSummary(v providerSummary) Summary {
-	return Summary{Rank: v.Rank, Backlinks: v.Backlinks, ReferringPages: v.ReferringPages, ReferringDomains: v.ReferringDomains, BrokenBacklinks: v.BrokenBacklinks, BrokenPages: v.BrokenPages, BacklinksSpamScore: v.BacklinksSpamScore, TargetSpamScore: v.Info.TargetSpamScore, NewBacklinks: v.NewBacklinks, LostBacklinks: v.LostBacklinks, NewReferringDomains: first(v.NewReferringDomains, v.NewReferringDomainsLegacy), LostReferringDomains: first(v.LostReferringDomains, v.LostReferringDomainsLegacy)}
+	return Summary{Rank: v.Rank, Backlinks: v.Backlinks, ReferringPages: v.ReferringPages, ReferringDomains: v.ReferringDomains, BrokenBacklinks: v.BrokenBacklinks, BrokenPages: v.BrokenPages, BacklinksSpamScore: v.BacklinksSpamScore, TargetSpamScore: v.Info.TargetSpamScore, NewBacklinks: v.NewBacklinks, LostBacklinks: v.LostBacklinks, NewReferringDomains: first(v.NewReferringDomains, v.NewReferringDomainsLegacy), LostReferringDomains: first(v.LostReferringDomains, v.LostReferringDomainsLegacy),
+		Profile: Profile{FirstSeen: v.FirstSeen, CrawledPages: v.CrawledPages, ReferringDomainsNofollow: v.ReferringDomainsNofollow, ReferringIPs: v.ReferringIPs, ReferringSubnets: v.ReferringSubnets,
+			TLDs: counts(v.TLDs), LinkTypes: counts(v.LinkTypes), LinkAttributes: counts(v.LinkAttributes), PlatformTypes: counts(v.PlatformTypes), Placements: counts(v.Placements), Countries: counts(v.Countries)}}
+}
+
+// counts drops the provider's blank key (links it could not classify) and
+// never returns nil, so the screen always gets an object.
+func counts(m map[string]float64) map[string]float64 {
+	out := make(map[string]float64, len(m))
+	for k, v := range m {
+		if k != "" {
+			out[k] = v
+		}
+	}
+	return out
 }
 func mapBacklink(v providerBacklink) BacklinkRow {
 	spam := first(v.SpamScore, v.SpamScoreLegacy)
@@ -430,15 +513,13 @@ func mapBacklink(v providerBacklink) BacklinkRow {
 	} else if v.LostDate != nil {
 		lost = *v.LostDate != ""
 	}
-	broken := false
-	if v.IsBroken != nil {
-		broken = *v.IsBroken
-	}
+	broken := v.IsBroken != nil && *v.IsBroken
 	last := v.LostDate
 	if last == nil {
-		last = v.LastVisited
+		last = v.LastSeen
 	}
-	return BacklinkRow{DomainFrom: v.DomainFrom, URLFrom: v.URLFrom, URLTo: v.URLTo, Anchor: v.Anchor, ItemType: v.ItemType, IsDofollow: v.Dofollow, RelAttributes: attrs, Rank: v.Rank, DomainFromRank: v.DomainFromRank, PageFromRank: v.PageFromRank, SpamScore: spam, FirstSeen: v.FirstSeen, LastSeen: last, IsLost: lost, IsBroken: broken, LinksCount: v.LinksCount}
+	return BacklinkRow{DomainFrom: v.DomainFrom, URLFrom: v.URLFrom, URLTo: v.URLTo, Anchor: v.Anchor, ItemType: v.ItemType, IsDofollow: v.Dofollow, RelAttributes: attrs, Rank: v.Rank, DomainFromRank: v.DomainFromRank, PageFromRank: v.PageFromRank, SpamScore: spam, FirstSeen: v.FirstSeen, LastSeen: last, IsLost: lost, IsBroken: broken, IsNew: v.IsNew != nil && *v.IsNew, LinksCount: v.LinksCount,
+		TextBefore: v.TextPre, TextAfter: v.TextPost, SourceTitle: v.PageFromTitle, Placement: v.Placement, TargetStatus: v.TargetStatus, SourceCountry: v.Country}
 }
 
 func buildRowsFilters(f rowsFilters) []any {
