@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   getDashboardActivation,
   getDashboardOverview,
+  refreshDashboardBacklinkSnapshot,
   markDashboardStepClicked,
   setDashboardStepDismissed,
 } from "./dashboardApi";
@@ -44,6 +45,17 @@ describe("dashboard API", () => {
     ).rejects.toThrow();
   });
 
+  it("marks an explicit snapshot refresh so old automatic clients are rejected", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(Response.json({ ok: true }));
+    await refreshDashboardBacklinkSnapshot({ data: { projectId: "p1" } });
+    expect(fetchMock.mock.calls[0]).toMatchObject([
+      "/api/v1/projects/p1/dashboard/backlinks/refresh",
+      { method: "POST", body: JSON.stringify({ userInitiated: true }) },
+    ]);
+  });
+
   it("accepts empty overview cards and sends only supported activation changes", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
@@ -52,7 +64,11 @@ describe("dashboard API", () => {
       .mockResolvedValueOnce(Response.json({ ok: true }));
     await expect(
       getDashboardOverview({ data: { projectId: "p1" } }),
-    ).resolves.toEqual({ audit: null, backlinks: null });
+    ).resolves.toEqual({
+      audit: null,
+      backlinks: null,
+      backlinkRefreshAvailable: false,
+    });
     await markDashboardStepClicked({
       data: { projectId: "p1", step: "competitor" },
     });

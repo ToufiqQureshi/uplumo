@@ -2,18 +2,23 @@ package dashboardoverview
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"time"
 
 	"github.com/toufiqqureshi/uplumo/backend/internal/backlinks"
+	"golang.org/x/sync/singleflight"
 )
+
+// ErrBacklinksUnavailable indicates no provider is wired for a requested refresh.
+var ErrBacklinksUnavailable = errors.New("dashboard backlinks unavailable")
 
 // Store provides project and dashboard overview data.
 type Store interface {
 	ProjectDomain(context.Context, string, string) (*string, error)
 	LatestAudit(context.Context, string) (*AuditSummary, error)
-	LatestBacklinkSnapshot(context.Context, string) (BacklinkSummary, bool, error)
+	LatestBacklinkSnapshot(context.Context, string, string) (BacklinkSummary, bool, error)
 }
 type backlinkSnapshotWriter interface {
 	InsertBacklinkSnapshot(context.Context, string, BacklinkSummary) error
@@ -25,7 +30,8 @@ type Service struct {
 	Backlinks interface {
 		DashboardSummary(context.Context, string, string) (backlinks.Summary, error)
 	}
-	Now func() time.Time
+	Now       func() time.Time
+	refreshes singleflight.Group
 }
 
 // Get assembles the dashboard overview for an organization project.
@@ -41,7 +47,11 @@ func (s *Service) Get(ctx context.Context, organizationID, projectID string) (Ov
 	if err != nil {
 		return Overview{}, err
 	}
-	snapshot, found, err := s.Store.LatestBacklinkSnapshot(ctx, projectID)
+	snapshotDomain := ""
+	if domain != nil {
+		snapshotDomain = *domain
+	}
+	snapshot, found, err := s.Store.LatestBacklinkSnapshot(ctx, projectID, snapshotDomain)
 	if err != nil {
 		return Overview{}, err
 	}
@@ -50,7 +60,7 @@ func (s *Service) Get(ctx context.Context, organizationID, projectID string) (Ov
 		snapshot.Stale = !fresh(snapshot.CapturedAt, s.now())
 		backlinks = &snapshot
 	}
-	return Overview{Audit: audit, Backlinks: backlinks}, nil
+	return Overview{Audit: audit, Backlinks: backlinks, BacklinkRefreshAvailable: s.Backlinks != nil}, nil
 }
 
 // RefreshBacklinkSnapshot captures one provider summary per project and domain
@@ -63,11 +73,25 @@ func (s *Service) RefreshBacklinkSnapshot(ctx context.Context, organizationID, p
 	if err != nil || domain == nil {
 		return err
 	}
-	latest, found, err := s.Store.LatestBacklinkSnapshot(ctx, projectID)
+	result := s.refreshes.DoChan(organizationID+"\x00"+projectID+"\x00"+*domain, func() (any, error) {
+		shared, cancel := context.WithTimeout(context.WithoutCancel(ctx), 90*time.Second)
+		defer cancel()
+		return nil, s.refreshBacklinkSnapshot(shared, organizationID, projectID, *domain)
+	})
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case done := <-result:
+		return done.Err
+	}
+}
+
+func (s *Service) refreshBacklinkSnapshot(ctx context.Context, organizationID, projectID, domain string) error {
+	latest, found, err := s.Store.LatestBacklinkSnapshot(ctx, projectID, domain)
 	if err != nil {
 		return err
 	}
-	matches := found && latest.Domain == *domain
+	matches := found && latest.Domain == domain
 	if matches && fresh(latest.CapturedAt, s.now()) {
 		return nil
 	}
@@ -76,19 +100,14 @@ func (s *Service) RefreshBacklinkSnapshot(ctx context.Context, organizationID, p
 		return fmt.Errorf("dashboard backlink snapshot writer unavailable")
 	}
 	if s.Backlinks == nil {
-		// No provider configured: there is nothing to refresh, and the
-		// dashboard simply shows no backlink card. Not a failure.
-		return nil
+		return ErrBacklinksUnavailable
 	}
-	summary, err := s.Backlinks.DashboardSummary(ctx, organizationID, *domain)
+	summary, err := s.Backlinks.DashboardSummary(ctx, organizationID, domain)
 	if err != nil {
-		if matches {
-			return nil
-		}
 		return err
 	}
 	snapshot := BacklinkSummary{
-		Domain: *domain, Rank: toInt64(summary.Rank), Backlinks: toInt64(summary.Backlinks),
+		Domain: domain, Rank: toInt64(summary.Rank), Backlinks: toInt64(summary.Backlinks),
 		ReferringDomains: toInt64(summary.ReferringDomains), NewBacklinks: toInt64(summary.NewBacklinks),
 		LostBacklinks: toInt64(summary.LostBacklinks), NewReferringDomains: toInt64(summary.NewReferringDomains),
 		LostReferringDomains: toInt64(summary.LostReferringDomains),

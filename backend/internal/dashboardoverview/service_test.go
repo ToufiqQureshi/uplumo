@@ -2,6 +2,7 @@ package dashboardoverview
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 )
@@ -19,7 +20,7 @@ func (s *storeStub) ProjectDomain(_ context.Context, p, o string) (*string, erro
 	return s.domain, nil
 }
 func (s *storeStub) LatestAudit(context.Context, string) (*AuditSummary, error) { return s.audit, nil }
-func (s *storeStub) LatestBacklinkSnapshot(context.Context, string) (BacklinkSummary, bool, error) {
+func (s *storeStub) LatestBacklinkSnapshot(context.Context, string, string) (BacklinkSummary, bool, error) {
 	return s.snapshot, s.found, nil
 }
 func TestServiceScopesProjectAndMarksSnapshotStaleness(t *testing.T) {
@@ -47,10 +48,14 @@ func TestSortIssuesMatchesSeverityThenPageCount(t *testing.T) {
 		t.Fatalf("sorted issues=%+v", rows)
 	}
 }
-func TestRefreshWithoutBacklinkProviderIsNotAFailure(t *testing.T) {
+func TestRefreshWithoutBacklinkProviderReportsUnavailable(t *testing.T) {
 	domain := "example.com"
 	svc := &Service{Store: writableStore{&storeStub{domain: &domain}}}
-	if err := svc.RefreshBacklinkSnapshot(context.Background(), "org-1", "project-1"); err != nil {
+	got, err := svc.Get(t.Context(), "org-1", "project-1")
+	if err != nil || got.BacklinkRefreshAvailable {
+		t.Fatalf("unavailable provider advertised: %+v, %v", got, err)
+	}
+	if err := svc.RefreshBacklinkSnapshot(context.Background(), "org-1", "project-1"); !errors.Is(err, ErrBacklinksUnavailable) {
 		t.Fatalf("refresh without provider: %v", err)
 	}
 }

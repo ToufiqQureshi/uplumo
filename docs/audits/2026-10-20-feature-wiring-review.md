@@ -24,7 +24,7 @@ implementation, including composed screens that need no separate backend.
 | branding | `branding` | PG workspace settings | Wired; plan gated |
 | content-editor | `contenteditor`, `contentauthors`, `linksuggest` | PG drafts/authors/briefs; optional storage; paid AI/SERP | Wired; local score does not require paid AI |
 | crawler-access | `crawleraccess` | PG encrypted crawler credentials | Wired; secrets stay server-side |
-| dashboard | `dashboardoverview`, `activation`, `ga4` | Saved PG state; explicit provider refresh | Composed service-backed overview |
+| dashboard | `dashboardoverview`, `activation`, `ga4` | Saved PG state; explicit provider refresh | Runtime review caught automatic paid refresh and missing plan gate; corrected with regression tests |
 | domain | `domain` | Redis cache; DataForSEO | Wired; explicit paid lookup |
 | gsc | `gsc`, `google` and search-performance | PG Google connections/property selection | Composed connection/re-engagement UI |
 | indexnow | `indexnow` | PG keys/submission history; Redis rate limit | Wired; submission is not proof of indexing |
@@ -97,3 +97,64 @@ provider test-mode validation before live keys; WordPress/email delivery needs
 configured destinations. SAM's in-memory turn lock must become distributed
 before adding server replicas (documented in its README). No deployment,
 production setting, secret or production database was changed.
+
+## Runtime review follow-up
+
+A separate local review used the real `cmd/server` binary, its production SPA
+build, disposable migrated Postgres/Redis and an authenticated local account.
+Account creation/sign-in and the six-step onboarding skip/finish path used real
+APIs. Email verification was seeded in the local database; no verification
+email delivery or production identity bypass was tested.
+
+The 25-route browser pass opened the main project features, integrations,
+Agent setup, Billing, credits, Help and Settings. It found no uncaught page
+exception in those observed flows. Search Performance returned the expected
+configuration-unavailable response because Google credentials were deliberately
+absent. The settings/context path redirects to the canonical context page; it
+is not a missing backend. Empty states and Free-plan gates are not acceptance
+proof for paid/connected reports. Screenshots and runtime logs were retained
+outside the repository, without production customer data.
+
+This runtime pass caught an issue the source matrix did not: `DashboardPage`
+used a mount effect to call the otherwise explicit backlink-refresh endpoint.
+Its route also omitted the normal paid Backlinks gate, simultaneous stale
+reads could buy duplicate summaries, and stale refresh errors could be hidden
+as success. The dashboard fix removes the effect, adds a pending-disabled
+explicit action/credit guidance, shares the paid route gate, coalesces scoped
+refreshes, and retains saved data while reporting failure.
+
+Verification: the browser regression failed before the fix on the unwanted
+page-open POST, then passed for visits/reload and one explicit failed action
+without retries. Real-Postgres tests cover saved snapshot reuse/persistence,
+eight concurrent refreshes, organization isolation and retained stale data.
+Isolated mutations proved the tests reject removing the mounted plan gate
+(200 instead of 402), removing coalescing (8 purchases instead of 1), and hiding
+a stale refusal as success. Existing paid provider guards and the one-replica
+constraint remain in force.
+
+Native Analytics was additionally exercised through a controlled publisher
+page in Chromium, the real Go tracker/collector, local Postgres, authenticated
+report APIs and the actual dashboard with no mocked analytics response. It
+recorded two pageviews in one session, one new recognized browser, Facebook
+paid-social campaign attribution, over ten seconds of visible engagement, one
+internal click with an observed arrival and one external destination. Query
+parameters/fragments did not appear in the destination report. Desktop/mobile
+UI rendered those real results without document overflow. This used a normal
+browser user agent because synthetic headless user agents are intentionally
+filtered; no production analytics traffic was fabricated.
+
+Release review additionally caught three dashboard edge cases: older already-open
+clients could still submit an empty automatic refresh request; domain changes
+could join the previous domain's in-flight purchase; and a prior mutation error
+could survive a project switch. Refresh now requires the explicit action marker,
+coalesces by organization/project/domain, reads snapshots for the current domain,
+and remounts project-local view state on project changes. Tests were observed
+failing before each correction. Isolated Go overlay mutations also verify the
+legacy marker, domain coalescing and current-domain SQL predicates are necessary.
+
+Additional authenticated local checks opened Personal settings, Team membership
+and Report branding against real Go APIs with no page exceptions. The personal
+settings API-key flow created a temporary key through the UI, persisted its list
+entry across reload, revoked it through the confirmation dialog and confirmed
+its absence after reload. The raw key was not logged or committed; no invitation
+email or paid branding activation was attempted.

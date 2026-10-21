@@ -4,8 +4,9 @@ import "time"
 
 // Overview contains the audit and backlink summaries shown on a project dashboard.
 type Overview struct {
-	Audit     *AuditSummary    `json:"audit"`
-	Backlinks *BacklinkSummary `json:"backlinks"`
+	Audit                    *AuditSummary    `json:"audit"`
+	Backlinks                *BacklinkSummary `json:"backlinks"`
+	BacklinkRefreshAvailable bool             `json:"backlinkRefreshAvailable"`
 }
 
 // AuditSummary contains the latest audit status and leading issues.

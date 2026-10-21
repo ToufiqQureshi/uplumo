@@ -176,3 +176,12 @@ Owner-approved scope: one focused PR adds optional 180-day browser recognition a
 - **Why:** There is no separate development team; source changes alone do not establish that customers can use the result.
 - **Preserve:** Validate real data paths and failure/cost behavior, report remaining limits honestly, protect existing customer data and credentials, and never turn test-mode billing into live charges without validated payment readiness. Every change still updates the affected decision record.
 - **Trace:** Root agent guide, feature decision records, PR checks and deployment/live verification evidence. This records owner authorization; it does not alter agent rules or assert production readiness without evidence.
+
+## Patched Go certificate verification in release builds
+
+- **Decision:** Require Go 1.27.3 in `backend/go.mod` and pin the Docker Go builder to the same patched release.
+- **Why:** The release `govulncheck` found reachable standard-library advisory [GO-2026-6809](https://pkg.go.dev/vuln/GO-2026-6809), concerning compromised intermediate certificate distrust, with the local Go 1.27.2 toolchain. The official advisory identifies 1.27.3 as fixed. A floating minor Docker tag does not document the minimum safe compiler for local builds or CI.
+- **Preserve:** Keep certificate verification enabled and retain the existing application, provider billing and migration behavior. Future toolchain updates must check the official advisory database and build both server executables. No vulnerability exclusion or CI bypass was added.
+- **Trace:** `backend/go.mod`, root `Dockerfile`; full Go checks against disposable Postgres/Redis and `govulncheck` on the patched compiler. This maintenance correction accompanies the dashboard release review; no product pricing or agent/CI rules changed.
+
+- **Release readiness:** `railway.json` uses the existing `/readyz` endpoint, which checks Postgres and Redis with deadlines, instead of liveness-only `/api/health`. A listening process must not qualify as a healthy replacement while required stores are unavailable. `docs/DEPLOY.md` documents both meanings; existing mounted readiness tests cover dependency failures. Live readiness is checked before and after rollout.

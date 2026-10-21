@@ -64,9 +64,9 @@ func (r Repository) LatestAudit(ctx context.Context, projectID string) (*AuditSu
 }
 
 // LatestBacklinkSnapshot returns the latest stored backlink summary.
-func (r Repository) LatestBacklinkSnapshot(ctx context.Context, projectID string) (BacklinkSummary, bool, error) {
+func (r Repository) LatestBacklinkSnapshot(ctx context.Context, projectID, domain string) (BacklinkSummary, bool, error) {
 	var item BacklinkSummary
-	err := r.DB.QueryRow(ctx, `SELECT domain,rank,backlinks,referring_domains,new_backlinks,lost_backlinks,new_referring_domains,lost_referring_domains,captured_at FROM backlink_snapshots WHERE project_id=$1 ORDER BY id DESC LIMIT 1`, projectID).Scan(&item.Domain, &item.Rank, &item.Backlinks, &item.ReferringDomains, &item.NewBacklinks, &item.LostBacklinks, &item.NewReferringDomains, &item.LostReferringDomains, &item.CapturedAt)
+	err := r.DB.QueryRow(ctx, `SELECT domain,rank,backlinks,referring_domains,new_backlinks,lost_backlinks,new_referring_domains,lost_referring_domains,captured_at FROM backlink_snapshots WHERE project_id=$1 AND domain=$2 ORDER BY id DESC LIMIT 1`, projectID, domain).Scan(&item.Domain, &item.Rank, &item.Backlinks, &item.ReferringDomains, &item.NewBacklinks, &item.LostBacklinks, &item.NewReferringDomains, &item.LostReferringDomains, &item.CapturedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return BacklinkSummary{}, false, nil
 	}

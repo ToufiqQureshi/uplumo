@@ -13,6 +13,8 @@ import (
 
 	"github.com/toufiqqureshi/uplumo/backend/internal/auth"
 	"github.com/toufiqqureshi/uplumo/backend/internal/backlinks"
+	"github.com/toufiqqureshi/uplumo/backend/internal/billing"
+	"github.com/toufiqqureshi/uplumo/backend/internal/dashboardoverview"
 	"github.com/toufiqqureshi/uplumo/backend/internal/database"
 	"github.com/toufiqqureshi/uplumo/backend/internal/kv"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/dataforseo"
@@ -97,4 +99,16 @@ func TestBacklinksEndToEndAttributesPaidProviderTaskToAuthorizedProjectOrganizat
 	if got := usage(otherOrg); got != 0 {
 		t.Errorf("other organization usage=%d, want 0", got)
 	}
+	// A dashboard refresh must obey the same paid-feature gate as Backlinks.
+	exec(ctx, t, pool, `UPDATE projects SET domain='example.com' WHERE id=$1`, ownProject)
+	gated := NewHandler(Deps{Logger: discardLogger, DB: healthy, Redis: healthy, Auth: auth.NewService(pool, testSecret), Billing: billing.NewReadOnlyService(pool), DashboardOverview: &dashboardoverview.Service{Store: dashboardoverview.Repository{DB: pool}, Backlinks: backlinks.NewService(client, rdb, discardLogger)}, Site: pages})
+	request := httptest.NewRequestWithContext(ctx, http.MethodPost, "/api/v1/projects/"+ownProject+"/dashboard/backlinks/refresh", strings.NewReader(`{"userInitiated":true}`))
+	request.AddCookie(&http.Cookie{Name: "__Secure-better-auth.session_token", Value: sign(token), HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode})
+	refused := httptest.NewRecorder()
+	gated.ServeHTTP(refused, request)
+	assertError(t, refused, http.StatusPaymentRequired, "payment_required")
+	if got := usage(ownOrg); got != 1 {
+		t.Fatalf("Free dashboard bypass bought another provider task: usage=%d", got)
+	}
+
 }

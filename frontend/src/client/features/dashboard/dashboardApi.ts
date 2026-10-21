@@ -77,6 +77,7 @@ export async function getDashboardOverview({ data }: ProjectInput) {
     z.object({
       audit: dashboardAuditSchema.nullable(),
       backlinks: dashboardBacklinksSchema.nullable(),
+      backlinkRefreshAvailable: z.boolean().default(false),
     }),
     "POST",
     {},
@@ -89,7 +90,7 @@ export async function refreshDashboardBacklinkSnapshot({ data }: ProjectInput) {
     `/api/v1/projects/${encodeURIComponent(data.projectId)}/dashboard/backlinks/refresh`,
     z.object({ ok: z.literal(true) }),
     "POST",
-    {},
+    { userInitiated: true },
   );
 }
 

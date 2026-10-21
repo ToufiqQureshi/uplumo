@@ -22,14 +22,17 @@ git fetch origin && git checkout --detach origin/main
 railway up --service uplumo -e production
 ```
 
-After a deploy, open `https://uplumo.com/api/health` and the page you changed.
+After a deploy, require `https://uplumo.com/readyz` to return 200, then open the
+page you changed. `/api/health` is only process liveness; `/readyz` checks
+Postgres and Redis with bounded timeouts. Railway uses `/readyz` before routing
+traffic to a replacement deployment.
 
 ## 1. Create the project
 
 1. Create the Postgres database in Supabase. In Railway, create a project and add **Redis**.
 2. Add a service from the GitHub repo `ToufiqQureshi/uplumo`, branch `main`.
    Railway reads `railway.json`: it builds the Dockerfile and checks
-   `/api/health`.
+   `/readyz`.
 
 ## 2. Set the variables
 

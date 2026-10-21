@@ -336,7 +336,7 @@ func NewHandler(d Deps) http.Handler {
 		Logger: d.Logger, Service: d.Domain, Plans: domainPlans, ProjectMarkets: d.ProjectMarkets, WithSession: withSession,
 		WithProjectAccess: func(next http.Handler) http.Handler { return requireProjectAccess(d.Logger, d.Auth, next) },
 	})
-	dashboardoverview.Mount(mux, dashboardoverview.Deps{Logger: d.Logger, Service: d.DashboardOverview, WithSession: withSession, WithProjectAccess: func(next http.Handler) http.Handler { return requireProjectAccess(d.Logger, d.Auth, next) }})
+	dashboardoverview.Mount(mux, dashboardoverview.Deps{Logger: d.Logger, Service: d.DashboardOverview, Plans: backlinkPlans, WithSession: withSession, WithProjectAccess: func(next http.Handler) http.Handler { return requireProjectAccess(d.Logger, d.Auth, next) }})
 	keywords.MountSaved(mux, keywords.SavedDeps{
 		Logger: d.Logger, Service: d.SavedKeywords, ProjectMarkets: d.ProjectMarkets, WithSession: withSession,
 		WithProjectAccess: func(next http.Handler) http.Handler { return requireProjectAccess(d.Logger, d.Auth, next) },

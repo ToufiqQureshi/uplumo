@@ -1,3 +1,5 @@
+import { QueryError } from "@/client/components/QueryState";
+import { CreditCostHint } from "@/client/features/billing/credits/CreditCostHint";
 import { CardShell } from "@/client/components/CardShell";
 import { Button } from "@/client/components/ui/button";
 import { Link } from "@tanstack/react-router";
@@ -218,25 +220,54 @@ export function BacklinkPulseCard({
   projectId,
   backlinks,
   refreshing,
+  canRefresh,
+  onRefresh,
+  refreshError,
 }: {
   projectId: string;
   backlinks: DashboardBacklinkSummary | null;
   refreshing: boolean;
+  canRefresh: boolean;
+  onRefresh: () => void;
+  refreshError: unknown;
 }) {
-  if (!backlinks && refreshing) {
-    return (
-      <CardShell title="Backlink pulse" stamp="Taking your first snapshot…">
-        <StatGridSkeleton />
-      </CardShell>
-    );
-  }
+  const refresh = canRefresh ? (
+    <div className="mt-4 space-y-2">
+      <p className="text-xs text-muted-foreground">
+        Refresh only when you need it. A new snapshot uses credits; saved
+        snapshots are reused for 24 hours.
+      </p>
+      <CreditCostHint feature="backlinks" />
+      <Button
+        size="sm"
+        variant="outline"
+        pending={refreshing}
+        onClick={onRefresh}
+      >
+        Refresh backlink snapshot
+      </Button>
+    </div>
+  ) : (
+    <p className="mt-4 text-xs text-muted-foreground">
+      Backlink data is temporarily unavailable.
+    </p>
+  );
+  const error = refreshError ? (
+    <QueryError
+      error={refreshError}
+      fallback="Could not refresh backlinks. Your saved snapshot is unchanged."
+    />
+  ) : null;
 
   if (!backlinks) {
     return (
       <CardShell title="Backlink pulse">
         <p className="text-sm text-muted-foreground">
-          We&rsquo;ll snapshot who links to your domain — nothing to set up.
+          See how many sites link to your domain. Refresh a snapshot when you
+          need an update.
         </p>
+        {refresh}
+        {error}
       </CardShell>
     );
   }
@@ -258,6 +289,11 @@ export function BacklinkPulseCard({
         </Link>
       }
     >
+      {backlinks.stale ? (
+        <p className="mb-3 text-xs text-muted-foreground">
+          This snapshot is more than 24 hours old.
+        </p>
+      ) : null}
       <div className="grid grid-cols-2 gap-3">
         <StatTile
           label="Ref. domains"
@@ -294,6 +330,8 @@ export function BacklinkPulseCard({
           }
         />
       </div>
+      {backlinks.stale ? refresh : null}
+      {error}
     </CardShell>
   );
 }
