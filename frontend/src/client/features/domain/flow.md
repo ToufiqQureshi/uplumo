@@ -29,3 +29,7 @@ Go package: `backend/internal/domain`; provider requests use the shared DataForS
 - The paid overview, keywords, pages and rank-tracking suggestions queries
   disable automatic 5xx retries. `domain-paid-retry.test.ts` guards the
   overview path; manual refetch is an explicit user decision.
+
+The suggestions wrapper adds the Go explicit-action marker. Its only UI caller
+is Rank Tracking's optional Find existing keywords action; request fields and
+legacy-client behavior are covered by `domainApi.test.ts` and Go handler tests.

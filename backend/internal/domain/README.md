@@ -72,3 +72,13 @@ The Go MCP `get_ranked_keywords` tool uses the same DataForSEO Labs ranked-keywo
 
 
 The Go domain provider also exposes a bounded Labs SERP competitor lookup for the MCP registry, with location, language, item-type, and pagination validation. See the MCP package tests for tool-contract coverage.
+
+The optional suggestions route requires `userInitiated: true` from an explicit
+Rank Tracking action. `suggestions.go` shares identical organization/project/
+target/scope/market work for up to 90 seconds, rechecks the 12-hour nonempty
+cache and buys one task on a miss. See `decision.md` for failure/cancellation
+and one-replica constraints.
+
+Cancellation during cache/project preparation is rechecked before detaching
+paid work. Active callers retain cache-outage fallback; existing shared work
+can finish for other waiters. See the cancellation decision and regressions.

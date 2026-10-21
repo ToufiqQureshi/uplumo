@@ -59,3 +59,27 @@ func TestRefreshWithoutBacklinkProviderReportsUnavailable(t *testing.T) {
 		t.Fatalf("refresh without provider: %v", err)
 	}
 }
+
+type cancelProjectLookup struct {
+	writableStore
+	cancel context.CancelFunc
+}
+
+func (s cancelProjectLookup) ProjectDomain(ctx context.Context, projectID, org string) (*string, error) {
+	domain, err := s.writableStore.ProjectDomain(ctx, projectID, org)
+	s.cancel()
+	return domain, err
+}
+
+func TestRefreshCancelledDuringProjectLookupDoesNotBuyTasks(t *testing.T) {
+	domain := "example.com"
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	provider := &snapshotProvider{}
+	svc := &Service{Store: cancelProjectLookup{writableStore{&storeStub{domain: &domain}}, cancel}, Backlinks: provider}
+	err := svc.RefreshBacklinkSnapshot(ctx, "org", "project")
+	_, _, _ = svc.refreshes.Do("org\x00project\x00example.com", func() (any, error) { return nil, nil })
+	if !errors.Is(err, context.Canceled) || provider.calls.Load() != 0 {
+		t.Fatalf("cancelled refresh=%v purchases=%d", err, provider.calls.Load())
+	}
+}

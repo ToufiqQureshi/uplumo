@@ -12,3 +12,10 @@ Tests need to prove that a feature requests a spend hold and settles the expecte
 - Return copies from recorded slices so assertions cannot mutate the helper's internal state. _Why:_ This keeps the behavior explicit so future changes do not silently alter customer-visible results.
 - Keep the helper test-only; its default allow behavior is unsafe for production. _Why:_ Keeping this boundary prevents unrelated code or test helpers from changing production behavior or creating hidden work.
 - Add tests that assert both refused calls and successful hold/settlement behavior when changing spend integration. _Why:_ This work consumes paid quota or shared capacity, so authorization and bounds must be checked before dispatch.
+
+## Deterministic preparation cancellation
+
+- **Decision:** Reuse `CancelOnReadCache` across paid-service tests to cancel the caller inside its first cache read and remember that read's key.
+- **Why:** A cancelled cache miss previously detached provider work after the public method had already returned. Recording the real key lets each test drain its existing in-flight group before asserting zero purchases, avoiding sleeps and false passes from asynchronous work.
+- **Preserve:** Test support only, no production wiring, no real provider calls or SQL mocks. Capture the first key exactly once so concurrent cache reads cannot race on recorded state.
+- **Trace:** `cancelcache.go`; Domain suggestions, Backlinks, Keyword Research and AI search cancellation regressions. Each was observed buying tasks before its service's cancellation recheck.

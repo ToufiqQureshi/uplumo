@@ -26,3 +26,6 @@ DataForSEO paid endpoints and usage metering; project plan/credit checks.
   is detached from the first caller's context (capped at three minutes).
 - A history failure after a billed summary answers with the summary and no
   trend, cached ten minutes; a credit refusal still fails the request.
+
+Preparation boundary: `Overview` rechecks cancellation after `readCache` and before `flights.DoChan`. A cancelled request returns its context error
+without starting a new provider operation. Existing shared work is unaffected.

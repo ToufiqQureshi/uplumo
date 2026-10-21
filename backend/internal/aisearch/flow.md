@@ -31,3 +31,6 @@ Redis cache; DataForSEO AI endpoints; plans/billing.
 ## Saved prompt tracking
 
 `tracking_handler.go` reads saved state/evidence or validates explicit save/estimate/run requests. `tracking_store.go` snapshots approved configuration and writes an `ai_visibility` job in the same transaction. Two supervised workers in `tracking_worker.go` reserve one workspace budget, checkpoint accepted tasks, and poll free task reads; retries never replay uncertain paid submissions. The five-minute scheduler claims due projects, reconciles exhausted jobs and expires 13-month evidence.
+
+Preparation boundary: `BrandLookup` rechecks cancellation after `cacheGet` and before `flights.DoChan`. A cancelled request returns its context error
+without starting a new provider operation. Existing shared work is unaffected.

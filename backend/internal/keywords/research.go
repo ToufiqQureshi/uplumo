@@ -295,6 +295,9 @@ func (s *ResearchService) Research(ctx context.Context, in ResearchInput) (Resea
 	if s.cached(ctx, key, &hit) && len(hit.Rows) > 0 && validSource(hit.Source) {
 		return hit, nil
 	}
+	if err := ctx.Err(); err != nil {
+		return ResearchResult{}, err
+	}
 	flight := s.flights.DoChan(key, func() (any, error) {
 		// The shared purchase outlives any one waiter: another caller may still
 		// need it, and a cancelled paid call may already have been billed.

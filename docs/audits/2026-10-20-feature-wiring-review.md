@@ -95,8 +95,8 @@ cache path is optimal, all features are bug-free, or all merged PRs are live.
 Live Google reconciliation needs connected accounts; payment lifecycle needs
 provider test-mode validation before live keys; WordPress/email delivery needs
 configured destinations. SAM's in-memory turn lock must become distributed
-before adding server replicas (documented in its README). No deployment,
-production setting, secret or production database was changed.
+before adding server replicas (documented in its README). The original source-only review did not deploy or change production settings,
+secrets or the production database. Release actions are verified separately.
 
 ## Runtime review follow-up
 
@@ -188,3 +188,34 @@ country. That small sample does not establish the cause. Railway documents
 trusted proxy CIDRs; deployed proxy trust needs direct validation before claiming
 geography is reconciled. No broad trust ranges, guessed locations, raw visitor IP
 logging or fabricated production traffic were introduced to fill the gap.
+
+## Optional rank suggestions cost boundary
+
+The tracker setup step purchased a Labs ranked-keywords task immediately after
+configuration creation. It now presents an optional action/credit hint and a
+free Skip/manual route; disabled queries never buy work on setup, focus or
+reload. The suggestions endpoint requires the explicit-action marker so older
+open bundles cannot continue automatic requests.
+
+Eight simultaneous identical suggestions requests also bought eight tasks on
+both a cold cache and an unavailable cache. They now share one bounded task
+using the existing full tenant/project/target/market cache key. Independent
+organizations do not join each other's work, and one abandoned waiter does not
+cancel another waiter's active request. Redis retains its existing 12-hour
+nonempty-result policy; no migration or paid retry was added. A single replica
+remains required. Real provider HTTP fakes and browser setup/Skip/double-click
+regressions failed before these corrections. Isolated overlay mutations prove
+legacy-action validation, coalescing, tenant isolation and waiter cancellation
+are necessary; no live paid calls were made.
+
+Release review also reproduced preparation-cancellation purchases in five paths:
+suggestions (1 task), Backlinks (2), Keyword Research (1), Brand Lookup (6) and
+dashboard refresh (1). Each now rechecks the request after cache/project lookup
+and before detaching paid work. Deterministic tests drain any registered flight
+before counting calls; the corrected expectation is zero. Active cache-outage
+fallback and already-started shared work remain intact.
+
+Further real Go/Postgres/browser checks saved and reloaded Project Context,
+created a saved keyword through the free save API, displayed it after reload,
+deleted it through the UI confirmation and confirmed removal after reload.
+No paid metric refresh/research was invoked and no browser exception occurred.

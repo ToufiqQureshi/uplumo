@@ -11,3 +11,7 @@ Read [flow.md](flow.md) for the request path and [decision.md](decision.md) for 
 - `domainRouteState.ts`
 - `backend/internal/domain/handler.go`
 - `backend/internal/domain/provider.go`
+
+The suggestions wrapper adds the Go explicit-action marker. Its only UI caller
+is Rank Tracking's optional Find existing keywords action; request fields and
+legacy-client behavior are covered by `domainApi.test.ts` and Go handler tests.

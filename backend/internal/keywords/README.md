@@ -69,3 +69,7 @@ fails but the other returned rows, `oneLegResult` answers with that leg
 (`source` is `suggestions` or `ideas`) and caches it for ten minutes
 (`partialResearchCacheTTL`) so a retry costs nothing; a credit refusal, a
 replay, a customer who left, or a working leg with no rows is still an error.
+
+Cancellation during cache/project preparation is rechecked before detaching
+paid work. Active callers retain cache-outage fallback; existing shared work
+can finish for other waiters. See the cancellation decision and regressions.

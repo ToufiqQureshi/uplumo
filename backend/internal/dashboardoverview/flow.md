@@ -25,3 +25,6 @@ Snapshot refresh: explicit button + `userInitiated: true` → strict request val
 in-flight operation → re-check saved 24-hour snapshot → at most one metered
 summary task → Postgres save → invalidate overview. No history task, automatic
 retry or page-load purchase. Failures retain saved data and surface an error.
+
+Preparation boundary: `RefreshBacklinkSnapshot` rechecks cancellation after `ProjectDomain` and before `refreshes.DoChan`. A cancelled request returns its context error
+without starting a new provider operation. Existing shared work is unaffected.

@@ -34,3 +34,10 @@ replacement. The current project domain participates in coalescing and snapshot
 lookup: a previous domain finishing later cannot hide the current domain's data.
 The domain-switch regression uses real Postgres and a blocked provider; malformed
 and legacy request tests assert zero provider calls without an earlier plan gate.
+
+## Cancellation before a new paid operation
+
+- **Decision:** `RefreshBacklinkSnapshot` rechecks cancellation after `ProjectDomain` and before `refreshes.DoChan`.
+- **Why:** Preparation could return a cache miss/project result after the caller left, and `context.WithoutCancel` then revived it into paid work.
+- **Preserve:** Active callers keep existing cache-outage fallback and tenant/cost checks. Already-registered bounded shared work can finish for other waiters; this does not add a retry, limit or pricing change.
+- **Trace:** `service_test.go` cancels during project lookup and drains the scoped flight; the former snapshot purchase must remain at zero. Tests synchronize existing work before counting calls; see the shared [fixture decision](../platform/spend/spendtest/decision.md).

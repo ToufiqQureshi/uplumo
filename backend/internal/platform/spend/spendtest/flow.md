@@ -15,3 +15,8 @@ This helper has no network or database dependency. It implements the `Guard` con
 ## Safety boundary
 
 Never wire this helper into a server binary: it allows provider work by default and does not enforce real customer or budget limits.
+
+`CancelOnReadCache` records the first lookup key and cancels its caller during
+Get. The service must return cancellation before detaching a paid operation;
+the test drains any existing flight under that captured key before counting
+fake-provider tasks. It never persists cache data.

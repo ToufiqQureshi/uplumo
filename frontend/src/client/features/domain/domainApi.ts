@@ -114,7 +114,7 @@ export function getDomainKeywordSuggestions({ data }: { data: DomainTarget }) {
   return post(
     "keyword-suggestions",
     keywordSuggestionsSchema,
-    data,
+    { ...data, userInitiated: true },
     async () => [],
   );
 }

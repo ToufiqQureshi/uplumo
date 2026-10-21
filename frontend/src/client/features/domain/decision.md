@@ -16,3 +16,10 @@ Shows organic estimates, keyword/page tables and filtered domain research.
 
 - `domainRouteState.test.ts`
 - `components/domainResultLinks.test.ts`
+
+## Explicit suggestions request contract
+
+- **Decision:** Only the keyword-suggestions API wrapper adds `userInitiated: true`; overview/page requests retain their existing contracts.
+- **Why:** Older Rank Tracking bundles automatically called this paid endpoint on setup. The Go handler now rejects those legacy payloads before provider work; the wrapper's payload test guards compatibility with its strict decoder.
+- **Preserve:** This marker is not authorization or proof of a click. The caller must remain an explicit action with no automatic retry; existing tenant, market, plan and spend checks still apply.
+- **Trace:** `domainApi.ts`, `domainApi.test.ts`; [backend cost/concurrency decision](../../../../../backend/internal/domain/decision.md) and [Rank Tracking UX decision](../rank-tracking/decision.md).

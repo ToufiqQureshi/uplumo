@@ -73,6 +73,9 @@ func (s *Service) RefreshBacklinkSnapshot(ctx context.Context, organizationID, p
 	if err != nil || domain == nil {
 		return err
 	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	result := s.refreshes.DoChan(organizationID+"\x00"+projectID+"\x00"+*domain, func() (any, error) {
 		shared, cancel := context.WithTimeout(context.WithoutCancel(ctx), 90*time.Second)
 		defer cancel()

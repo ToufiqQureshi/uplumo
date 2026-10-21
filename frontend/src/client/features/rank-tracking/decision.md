@@ -16,3 +16,10 @@ Configures keywords, devices/locations and manual or scheduled rank checks with 
 ## Verification pointers
 
 - `RankTrackingFilters.test.ts`
+
+## Optional suggestions need their own action
+
+- **Decision:** Saving a tracker opens a choice between Find existing keywords (with credit guidance) and Skip/manual entry. Keep its TanStack query disabled until explicit refetch, join rapid double clicks and retain no automatic retries. Show API failure details without blocking manual entry; a clearly warned, explicit retry can recover cached failures without an automatic purchase.
+- **Why:** A real browser regression observed a paid Labs lookup as soon as the setup step mounted. Creating a configuration does not authorize buying a separate suggestions report.
+- **Preserve:** Supported-country handling and empty keyword selection remain. Opening, skipping, reload and focus buy no suggestions; an explicit action makes at most one request. Rank checks keep their separate selected-keyword/schedule/credit controls.
+- **Trace:** `KeywordSuggestionStep.tsx`, `frontend/tests/rank-suggestions-spend.spec.ts`; [request contract](../domain/decision.md) and [server legacy/cost/concurrency guards](../../../../../backend/internal/domain/decision.md). API fixtures reproduce timing and payloads; no live provider spend was used.

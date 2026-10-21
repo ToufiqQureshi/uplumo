@@ -7,3 +7,4 @@ Read [flow.md](flow.md) for how tests record holds/settlements and [decision.md]
 ## Source map
 
 - `spendtest.go`
+- `cancelcache.go`: interrupt preparation deterministically in paid-service tests

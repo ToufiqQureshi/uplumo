@@ -27,3 +27,10 @@ Go package: `backend/internal/ranktracking`; jobs use the shared queue, provider
 - Scheduled checks must stop or pause on limits; resuming must not duplicate tasks or charges.
 - A partial provider error remains a partial run, not fabricated position data.
 - Opening tracker screens must not start a check.
+
+Optional tracker suggestions: configuration save → optional choice/credit hint
+(no lookup) → explicit Find existing keywords sends `userInitiated: true` →
+existing authorization/paid gate and validation → scoped coalescing/cache → one
+ranked-keywords task on a miss. Skip and manual entry buy no suggestion task.
+No automatic paid retry; a failure keeps the manual path. See the feature's
+`decision.md` for compatibility and one-replica constraints.
