@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   Link2,
   MessageSquare,
+  MessagesSquare,
   PenLine,
   Search,
   Sparkles,
@@ -46,6 +47,12 @@ const projectNavItems = [
     // Without exact matching, the index path is a prefix of every project
     // route and the Dashboard item would render active everywhere.
     activeOptions: { exact: true, includeSearch: false },
+  },
+  {
+    to: "/p/$projectId/sam" as const,
+    label: "SAM assistant",
+    icon: MessagesSquare,
+    badge: "Beta",
   },
   {
     to: "/p/$projectId/analytics" as const,
@@ -209,7 +216,7 @@ export function getProjectNavGroups(projectId: string): NavGroup[] {
   return [
     {
       label: "Home",
-      items: [item("/p/$projectId")],
+      items: [item("/p/$projectId"), item("/p/$projectId/sam")],
     },
     {
       label: "Customers & traffic",

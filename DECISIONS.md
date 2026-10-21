@@ -211,7 +211,8 @@ Owner-approved scope: one focused PR adds optional 180-day browser recognition a
 ## Sidebar grouping for non-technical owners
 
 - **Decision:** the project sidebar (`frontend/src/client/navigation/items.ts`,
-  `getProjectNavGroups`) has 11 rows in plain-language groups: Home,
+  `getProjectNavGroups`) has 12 rows in plain-language groups: Home
+  (Dashboard, SAM assistant with a "Beta" badge),
   Customers & traffic, Your website, Research, Reports & setup. Related pages
   share one row and switch with a tab strip under the header
   (`AppShell.tsx`): Traffic (Analytics, Search Performance), AI Visibility
