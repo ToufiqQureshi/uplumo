@@ -1,4 +1,4 @@
-import { Link, useLocation } from "@tanstack/react-router";
+import { Link, useLocation, useMatchRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -15,6 +15,7 @@ import { switchOrganization } from "@/client/features/team/organizationApi";
 import {
   accountNavGroup,
   connectNavGroup,
+  findActivePage,
   getProjectNavGroups,
   type NavItem,
 } from "@/client/navigation/items";
@@ -57,14 +58,20 @@ const navButtonClass =
   "h-10 gap-3 rounded-lg px-3 font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground data-active:bg-sidebar-accent data-active:font-semibold data-active:text-sidebar-foreground data-active:shadow-[inset_2px_0_0_var(--highlight)]";
 
 function SidebarNavLink({
-  item: { icon: Icon, label, badge, link },
+  item,
   placeholder = false,
 }: {
   item: NavItem;
   /** Show the row without its link, while its project is still unknown. */
   placeholder?: boolean;
 }) {
+  const { icon: Icon, label, badge, link } = item;
   const { setOpenMobile } = useSidebar();
+  const matchRoute = useMatchRoute();
+  // A tabbed row stays lit on every one of its tabs, not only the first.
+  const tabActive = item.tabs
+    ? Boolean(findActivePage(matchRoute, item))
+    : false;
   const row = (isActive: boolean) => (
     <SidebarMenuButton
       render={<span />}
@@ -91,7 +98,7 @@ function SidebarNavLink({
           }}
           onClick={() => setOpenMobile(false)}
         >
-          {({ isActive }) => row(isActive)}
+          {({ isActive }) => row(isActive || tabActive)}
         </Link>
       )}
     </SidebarMenuItem>

@@ -17,7 +17,11 @@ import {
   Sparkles,
   TrendingUp,
 } from "lucide-react";
-import { linkOptions, type LinkOptions } from "@tanstack/react-router";
+import {
+  linkOptions,
+  type LinkOptions,
+  type useMatchRoute,
+} from "@tanstack/react-router";
 import type { ComponentType } from "react";
 import { GoogleGlyphMuted } from "@/client/features/gsc/GoogleGlyph";
 
@@ -124,6 +128,8 @@ export type NavItem = {
   /** A short tag after the label, such as "New". */
   badge?: string;
   link: LinkOptions;
+  /** Sibling pages shown as tabs above the page; the item opens the first. */
+  tabs?: NavItem[];
 };
 
 type NavGroup = { label: string; items: NavItem[] };
@@ -142,6 +148,28 @@ export const connectNavGroup: NavGroup = {
   label: "AI",
   items: [aiNavItem],
 };
+
+// One sidebar row for several related pages. The pages keep their own routes,
+// so old links and each page's paid-query settings are untouched; switching a
+// tab is the same navigation the sidebar used to do.
+function tabbedItem(
+  label: string,
+  icon: NavItem["icon"],
+  tabs: NavItem[],
+  badge?: string,
+): NavItem {
+  return { label, icon, badge, link: tabs[0].link, tabs };
+}
+
+/** The page of `item` (itself or one of its tabs) the current URL is on. */
+export function findActivePage(
+  matchRoute: ReturnType<typeof useMatchRoute>,
+  item: NavItem,
+): NavItem | undefined {
+  return (item.tabs ?? [item]).find((page) =>
+    matchRoute({ ...page.link, fuzzy: !page.link.activeOptions?.exact }),
+  );
+}
 
 // Pinned to the sidebar footer, above the account menu.
 export const accountNavGroup: NavGroup = {
@@ -178,10 +206,9 @@ export function getProjectNavItem(
 }
 
 // Grouped by the job the user came to do, in plain words for owners who are
-// not SEO experts: customers and traffic first, then AI answers, then their
-// own website, then research, then sharing and setup. Related pages sit next
-// to each other (Saved Keywords under Keyword Research). Only the two lead
-// features carry "New", so the badge still draws the eye.
+// not SEO experts. Related pages share one row and switch with tabs, so the
+// sidebar fits one screen. Only the two lead features carry "New", so the
+// badge still draws the eye.
 export function getProjectNavGroups(projectId: string): NavGroup[] {
   const item = (path: ProjectNavPath) => getProjectNavItem(projectId, path);
 
@@ -194,16 +221,20 @@ export function getProjectNavGroups(projectId: string): NavGroup[] {
       label: "Customers & traffic",
       items: [
         item("/p/$projectId/enquiries"),
-        item("/p/$projectId/analytics"),
-        item("/p/$projectId/search-performance"),
-      ],
-    },
-    {
-      label: "AI answers (ChatGPT, Gemini)",
-      items: [
-        item("/p/$projectId/prompt-tracking"),
-        item("/p/$projectId/brand-lookup"),
-        item("/p/$projectId/prompt-explorer"),
+        tabbedItem("Traffic", ChartNoAxesCombined, [
+          item("/p/$projectId/analytics"),
+          item("/p/$projectId/search-performance"),
+        ]),
+        tabbedItem(
+          "AI Visibility",
+          Sparkles,
+          [
+            item("/p/$projectId/prompt-tracking"),
+            item("/p/$projectId/brand-lookup"),
+            item("/p/$projectId/prompt-explorer"),
+          ],
+          "New",
+        ),
       ],
     },
     {
@@ -218,18 +249,21 @@ export function getProjectNavGroups(projectId: string): NavGroup[] {
     {
       label: "Research",
       items: [
-        item("/p/$projectId/keywords"),
-        item("/p/$projectId/saved"),
-        item("/p/$projectId/domain"),
-        item("/p/$projectId/backlinks"),
+        tabbedItem("Keywords", Search, [
+          item("/p/$projectId/keywords"),
+          item("/p/$projectId/saved"),
+        ]),
+        tabbedItem("Competitors", Globe, [
+          item("/p/$projectId/domain"),
+          item("/p/$projectId/backlinks"),
+        ]),
       ],
     },
     {
       label: "Reports & setup",
       items: [
         item("/p/$projectId/reports"),
-        item("/p/$projectId/context"),
-        aiNavItem,
+        tabbedItem("Setup", Brain, [item("/p/$projectId/context"), aiNavItem]),
       ],
     },
   ];

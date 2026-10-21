@@ -211,17 +211,21 @@ Owner-approved scope: one focused PR adds optional 180-day browser recognition a
 ## Sidebar grouping for non-technical owners
 
 - **Decision:** the project sidebar (`frontend/src/client/navigation/items.ts`,
-  `getProjectNavGroups`) groups pages as Home, Customers & traffic, AI answers
-  (ChatGPT, Gemini), Your website, Research, Reports & setup. Saved Keywords
-  sits under Keyword Research. "New" stays only on AI Visibility Tracker and
-  Missed Enquiries Finder. Routes and page titles did not change.
-- **Why:** owner feedback that 17 items with five "New" badges felt crowded and
-  jargon-heavy for small-business users. Merging related pages into tabbed
-  pages (AI Visibility, Traffic, Keywords, Competitors) is the follow-up that
-  actually cuts the item count; it ships one group per PR.
-- **Preserve:** nav labels still match each page title (breadcrumb agrees).
-  Any tab merge must keep `retry: false`, `refetchOnWindowFocus: false` and
-  the paid-cache settings on paid queries, so switching tabs never buys a
-  DataForSEO or OpenRouter call again; old URLs must redirect.
-- **Trace:** `frontend/src/client/navigation/items.ts`; checked with
-  `pnpm ci:check` and `pnpm test`. No browser screenshot was taken.
+  `getProjectNavGroups`) has 12 rows in plain-language groups: Home,
+  Customers & traffic, Your website, Research, Reports & setup. Related pages
+  share one row and switch with a tab strip under the header
+  (`AppShell.tsx`): Traffic (Analytics, Search Performance), AI Visibility
+  (Tracker, Brand Lookup, Prompt Explorer), Keywords (Research, Saved),
+  Competitors (Domain Overview, Backlinks), Setup (Context, Agent setup).
+  "New" stays only on AI Visibility and Missed Enquiries Finder.
+- **Why:** owner feedback that 17 rows with five "New" badges felt crowded
+  and jargon-heavy for small-business users. Tabs link to the existing routes
+  instead of rebuilding pages, which needs no redirects and no page rewrite.
+- **Preserve:** every page stays reachable exactly once (sidebar row or tab,
+  asserted in `navigation/items.test.ts`). Tabs are plain navigation between
+  routes: they must never start a paid DataForSEO or OpenRouter call; each
+  page keeps its own `retry: false`, no-refetch-on-focus and cache settings.
+  Tab and breadcrumb labels match each page's title.
+- **Trace:** `navigation/items.ts`, `layout/AppShell.tsx`,
+  `components/Sidebar.tsx`; checked with `pnpm ci:check` and `pnpm test`. No
+  browser screenshot was taken.
