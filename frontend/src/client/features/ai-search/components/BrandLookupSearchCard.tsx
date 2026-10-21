@@ -1,5 +1,4 @@
 import type { FormEvent } from "react";
-import { applyBillingMarkupUsd } from "@/shared/billing";
 import { ResearchScopeSelect } from "@/client/components/ResearchScopeSelect";
 import { SearchCard, SearchInput } from "@/client/components/SearchCard";
 import { Field, FieldDescription } from "@/client/components/ui/field";
@@ -22,27 +21,12 @@ type Props = {
 };
 
 /**
- * One brand lookup = 6 DataForSEO calls (aggregated_metrics + top_pages +
- * mentions_search × 2 platforms). Rounded up with headroom because
- * mentions_search is row-priced at the full 100-row sample per platform.
- */
-const BRAND_LOOKUP_RAW_COST_USD = 0.85;
-
-/**
  * Adding competitors triggers 2 extra cross_aggregated_metrics calls (one per
- * platform). Measured live (Jun 2026) at $0.101 each — $0.202 total for a
- * 4-group comparison — via `pnpm billing:brand-lookup --competitors=...`. A
- * fixed estimate, marked up once at module load exactly like the base.
+ * platform), measured live at $0.101 each: about 260 credits (1 credit is
+ * $1/1280 of provider cost). The base lookup's credits come from the usage
+ * costs, as for every paid action, so the screen shows one number for it.
  */
-const BRAND_LOOKUP_COMPETITOR_RAW_COST_USD = 0.2;
-
-// Customers are billed the marked-up USD, so that is the number shown.
-const BRAND_LOOKUP_DISPLAYED_COST_USD = applyBillingMarkupUsd(
-  BRAND_LOOKUP_RAW_COST_USD,
-);
-const BRAND_LOOKUP_COMPETITOR_DISPLAYED_COST_USD = applyBillingMarkupUsd(
-  BRAND_LOOKUP_COMPETITOR_RAW_COST_USD,
-);
+const BRAND_LOOKUP_COMPETITOR_EXTRA_CREDITS = 260;
 
 export function BrandLookupSearchCard({
   query,
@@ -87,20 +71,12 @@ export function BrandLookupSearchCard({
                 Voice.
               </FieldDescription>
             </Field>
-            <p className="text-xs text-muted-foreground tabular-nums">
-              Est.{" "}
-              <span className="font-medium text-foreground">
-                ${BRAND_LOOKUP_DISPLAYED_COST_USD.toFixed(2)}
-              </span>
-              {hasCompetitors ? (
-                <span>
-                  {" "}
-                  plus ~$
-                  {BRAND_LOOKUP_COMPETITOR_DISPLAYED_COST_USD.toFixed(2)} to
-                  compare competitors
-                </span>
-              ) : null}
-            </p>
+            {hasCompetitors ? (
+              <p className="text-xs text-muted-foreground tabular-nums">
+                Comparing competitors adds about{" "}
+                {BRAND_LOOKUP_COMPETITOR_EXTRA_CREDITS} credits.
+              </p>
+            ) : null}
           </>
         }
       >
@@ -123,7 +99,7 @@ export function BrandLookupSearchCard({
           disabledReason={scopeDisabledReason}
         />
       </SearchCard>
-      <CreditCostHint feature="ai_visibility" />
+      <CreditCostHint feature="ai_visibility" action="brand_lookup" />
     </div>
   );
 }

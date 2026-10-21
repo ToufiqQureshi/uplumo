@@ -62,7 +62,7 @@ export function WebsiteConnectionCard({ projectId }: { projectId: string }) {
   if (status && status.plan === "free" && !status.unlimited) {
     return (
       <Notice>
-        Publishing to your website is part of Basic, Pro and Agency.{" "}
+        Publishing to your website is part of every paid plan.{" "}
         <Link to="/billing/plan" className="underline underline-offset-4">
           See plans
         </Link>

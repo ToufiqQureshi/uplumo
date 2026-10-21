@@ -99,7 +99,7 @@ type Razorpay struct {
 	KeyID         string
 	KeySecret     string
 	WebhookSecret string
-	// PlanIDs maps a plan ("basic", "pro", "agency") to the Razorpay plan
+	// PlanIDs maps a plan ("basic", "pro", "business", "agency") to the Razorpay plan
 	// that bills it. A plan without an id cannot be bought.
 	PlanIDs map[string]string
 }
@@ -292,7 +292,7 @@ func loadRazorpay(getenv func(string) string) (*Razorpay, error) {
 	}
 	planIDs := map[string]string{}
 	for plan, name := range map[string]string{
-		"basic": "RAZORPAY_PLAN_ID_BASIC", "pro": "RAZORPAY_PLAN_ID_PRO", "agency": "RAZORPAY_PLAN_ID_AGENCY",
+		"basic": "RAZORPAY_PLAN_ID_BASIC", "pro": "RAZORPAY_PLAN_ID_PRO", "business": "RAZORPAY_PLAN_ID_BUSINESS", "agency": "RAZORPAY_PLAN_ID_AGENCY",
 	} {
 		if id := strings.TrimSpace(getenv(name)); id != "" {
 			planIDs[plan] = id
@@ -304,7 +304,7 @@ func loadRazorpay(getenv func(string) string) (*Razorpay, error) {
 	case len(missing) > 0:
 		return nil, fmt.Errorf("set RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET and a plan id, or none; missing %s", strings.Join(missing, ", "))
 	case len(planIDs) == 0:
-		return nil, errors.New("set at least one of RAZORPAY_PLAN_ID_BASIC, RAZORPAY_PLAN_ID_PRO, RAZORPAY_PLAN_ID_AGENCY: without a plan nothing can be bought")
+		return nil, errors.New("set at least one of RAZORPAY_PLAN_ID_BASIC, RAZORPAY_PLAN_ID_PRO, RAZORPAY_PLAN_ID_BUSINESS, RAZORPAY_PLAN_ID_AGENCY: without a plan nothing can be bought")
 	}
 	return &Razorpay{KeyID: values[0], KeySecret: values[1], WebhookSecret: values[2], PlanIDs: planIDs}, nil
 }

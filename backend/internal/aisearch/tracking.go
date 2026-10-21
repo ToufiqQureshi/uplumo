@@ -14,6 +14,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/toufiqqureshi/uplumo/backend/internal/billing"
+	"github.com/toufiqqureshi/uplumo/backend/internal/platform/dataforseo"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/market"
 )
 
@@ -78,6 +79,27 @@ type BrandObservation struct {
 	Cited     bool   `json:"cited"`
 }
 
+// RecommendedBrand is a business the AI itself named in its answer
+// (DataForSEO brand_entities), in the order it named them. It shows who the AI
+// recommends instead of the tracked brand, without the customer having to
+// guess their competitors first.
+type RecommendedBrand struct {
+	Name     string `json:"name"`
+	Category string `json:"category,omitempty"`
+	Position int    `json:"position"`
+}
+
+// storedBrand is one element of the brands column: a tracked brand's
+// observation, or (Recommended set) a brand the AI named. Both live in one
+// column so no migration is needed; rows written before recommendations were
+// kept simply have none.
+type storedBrand struct {
+	BrandObservation
+	Recommended bool   `json:"recommended,omitempty"`
+	Category    string `json:"category,omitempty"`
+	Position    int    `json:"position,omitempty"`
+}
+
 // TrackingAnswer is saved evidence for one question and engine.
 type TrackingAnswer struct {
 	ID          string             `json:"id"`
@@ -89,6 +111,7 @@ type TrackingAnswer struct {
 	Answer      string             `json:"answer"`
 	Citations   []Citation         `json:"citations"`
 	Brands      []BrandObservation `json:"brands"`
+	Recommended []RecommendedBrand `json:"recommended"`
 	ErrorCode   string             `json:"errorCode"`
 	CollectedAt *time.Time         `json:"collectedAt"`
 }
@@ -194,7 +217,7 @@ func (c TrackingConfig) estimate() TrackingEstimate {
 	for _, engine := range c.Engines {
 		cost := 0.0012
 		if engine == "claude" || engine == "perplexity" {
-			cost = 0.5
+			cost = dataforseo.AIResponseCeilingUSD
 		}
 		usd += float64(n) * cost
 	}
@@ -253,7 +276,7 @@ func (s *Tracking) allowed(ctx context.Context, org string) error {
 	return nil
 }
 
-var errTrackingPlan = errors.New("AI Visibility is included in Pro and Agency")
+var errTrackingPlan = errors.New("AI Visibility is included in Growth and above")
 var errTrackingBusy = errors.New("a check is already running")
 var errTrackingMissing = errors.New("tracking not found")
 

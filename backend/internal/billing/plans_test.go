@@ -302,18 +302,15 @@ func TestUnusedCreditsRollOverUpToTwoMonths(t *testing.T) {
 	}
 }
 
-func TestWorkspaceDailyLimitIsAThirdOfTheMonth(t *testing.T) {
+// A paying customer is limited by the credits they bought, not by a day cap.
+func TestPaidWorkspaceHasNoDailyLimit(t *testing.T) {
 	ctx := context.Background()
 	f := newFixture(ctx, t)
 	f.sellTiers()
+	f.deliver(ctx, t, f.eventOnPlan(PlanPro, "subscription.charged", "sub_1", "active"))
 	got, err := f.svc.WorkspaceDailyLimitUSD(ctx, f.org)
 	if err != nil || got != 0 {
-		t.Fatalf("free workspace daily limit = %v, %v; want 0 (it has no credits to spend)", got, err)
-	}
-	f.deliver(ctx, t, f.eventOnPlan(PlanPro, "subscription.charged", "sub_1", "active"))
-	got, err = f.svc.WorkspaceDailyLimitUSD(ctx, f.org)
-	if want := 10000.0 / 3 / 1280; err != nil || got < want-1e-9 || got > want+1e-9 {
-		t.Fatalf("Pro daily limit = %v, %v; want %v", got, err, want)
+		t.Fatalf("Pro daily limit = %v, %v; want 0 (no daily cap; credits are the limit)", got, err)
 	}
 }
 

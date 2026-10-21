@@ -20,6 +20,13 @@ const (
 	maxCitedSourcesPerQuery = 10
 	maxBrandsPerQuery       = 20
 	monthsOfTrend           = 12
+	// The answer and retrieved pages are the largest part of a lookup: 25
+	// prompts per platform at these caps keep the response well under 1 MB.
+	maxAnswerLength           = 6000
+	maxRetrievedPagesPerQuery = 20
+	maxDescriptionLength      = 240
+	maxFanOutQueriesPerQuery  = 10
+	maxModelNameLength        = 60
 )
 
 // platformBundle is everything fetched for one platform. complete is false
@@ -457,6 +464,10 @@ func shapeTopQueries(bundles []successBundle, pageFilter *ResearchTarget) []TopQ
 				LastSeenAt:      item.LastResponseAt,
 				CitedSources:    shapeQuerySources(item),
 				BrandsMentioned: shapeBrands(item),
+				Model:           truncatedPtr(item.ModelName, maxModelNameLength),
+				Answer:          truncatedPtr(item.Answer, maxAnswerLength),
+				RetrievedPages:  shapeRetrievedPages(item),
+				FanOutQueries:   shapeFanOutQueries(item),
 			})
 		}
 		slices.SortStableFunc(queries, byVolume)
@@ -480,6 +491,42 @@ func shapeQuerySources(item mentionItem) []CitedSource {
 		sources = append(sources, cited)
 	}
 	return sources[:min(len(sources), maxCitedSourcesPerQuery)]
+}
+
+// truncatedPtr trims s to limit, or is nil when s is absent or blank.
+func truncatedPtr(s *string, limit int) *string {
+	if s == nil || strings.TrimSpace(*s) == "" {
+		return nil
+	}
+	return stringPtr(truncate(*s, limit))
+}
+
+// shapeRetrievedPages lists the pages the platform looked at, which shows
+// whether the target's pages were found even when they were not cited.
+func shapeRetrievedPages(item mentionItem) []RetrievedPage {
+	pages := []RetrievedPage{}
+	for _, result := range item.SearchResults {
+		pageURL, ok := pageSource(result.URL)
+		if !ok {
+			continue
+		}
+		pages = append(pages, RetrievedPage{
+			URL: pageURL, Domain: safeHostname(pageURL),
+			Title:       truncatedPtr(result.Title, maxTitleLength),
+			Description: truncatedPtr(result.Description, maxDescriptionLength),
+		})
+	}
+	return pages[:min(len(pages), maxRetrievedPagesPerQuery)]
+}
+
+func shapeFanOutQueries(item mentionItem) []string {
+	queries := []string{}
+	for _, query := range item.FanOutQueries {
+		if strings.TrimSpace(query) != "" {
+			queries = append(queries, truncate(query, maxQuestionLength))
+		}
+	}
+	return queries[:min(len(queries), maxFanOutQueriesPerQuery)]
 }
 
 func shapeBrands(item mentionItem) []string {

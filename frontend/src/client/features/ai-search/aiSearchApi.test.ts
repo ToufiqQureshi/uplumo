@@ -59,6 +59,47 @@ describe("lookupBrand", () => {
     );
   });
 
+  it("keeps the AI answer, the pages it looked at and its searches for each prompt", async () => {
+    const query = {
+      question: "is it cheaper to book direct?",
+      platform: "chat_gpt",
+      aiSearchVolume: 4,
+      firstSeenAt: null,
+      lastSeenAt: null,
+      citedSources: [],
+      brandsMentioned: [],
+      model: "gpt-5-2",
+      answer: "Booking direct is often cheaper.",
+      retrievedPages: [
+        {
+          url: "https://www.acme.com/direct",
+          domain: "acme.com",
+          title: "Direct booking",
+          description: "Hotels avoid commissions.",
+        },
+      ],
+      fanOutQueries: ["direct vs ota price"],
+    };
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      Response.json({ ...lookupResult, topQueries: [query] }),
+    );
+    const result = await lookupBrand({
+      projectId: "p1",
+      query: "acme.com",
+      competitors: [],
+      locationCode: 2840,
+      languageCode: "en",
+    });
+    expect(result.topQueries[0]).toMatchObject({
+      answer: "Booking direct is often cheaper.",
+      model: "gpt-5-2",
+      fanOutQueries: ["direct vs ota price"],
+    });
+    expect(result.topQueries[0].retrievedPages?.[0].url).toBe(
+      "https://www.acme.com/direct",
+    );
+  });
+
   it("rejects a response that breaks the contract", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       Response.json({ ...lookupResult, hasData: "yes" }),

@@ -153,6 +153,39 @@ func TestDoBudgetedSettlesActualEndpoints(t *testing.T) {
 	}
 }
 
+func TestDoBudgetedChargesNothingWhenNothingWasDelivered(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = io.WriteString(w, `{"status_code":20000,"tasks":[{"status_code":20000,"path":["v3","serp"],"cost":0.006}]}`)
+	}))
+	defer server.Close()
+	for _, tc := range []struct {
+		name         string
+		workErr      error
+		wantCustomer float64
+	}{
+		{"usable result", nil, 0.006},
+		{"other failure still bills the finished work", errors.New("parse"), 0.006},
+		{"nothing delivered", fmt.Errorf("brief: %w", ErrNothingDelivered), 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			guard := &costAwareGuard{}
+			client := guardedClient(t, server, &testRecorder{}, guard, 0)
+			err := client.DoBudgeted(context.Background(), "org", spend.KeywordResearch, 0.0072, func(request DoBudgetedRequest) error {
+				if _, err := request(http.MethodPost, "/v3/serp/google/organic/live/advanced", []byte(`[{}]`), false); err != nil {
+					return err
+				}
+				return tc.workErr
+			})
+			if !errors.Is(err, tc.workErr) {
+				t.Fatalf("err = %v, want %v", err, tc.workErr)
+			}
+			if guard.providerCost != 0.006 || guard.customerCost != tc.wantCustomer {
+				t.Fatalf("settled provider %v customer %v, want provider 0.006 (always recorded) customer %v", guard.providerCost, guard.customerCost, tc.wantCustomer)
+			}
+		})
+	}
+}
+
 func TestResponseSuccessfulCostSettlesOnlySuccessfulTasks(t *testing.T) {
 	payload := []byte(`{"tasks":[{"cost":0.002,"status_code":20000},{"cost":0.004,"status_code":20100},{"cost":0.01,"status_code":40501},{"cost":0.003,"status_code":0}]}`)
 	if got := math.Round(responseSuccessfulCost(payload)*1e6) / 1e6; got != 0.009 {

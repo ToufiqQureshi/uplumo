@@ -32,6 +32,7 @@ import {
   type EditorTab,
 } from "./ContentEditorSidePanel";
 import { isArticleContentWithinLimit } from "./content-limits";
+import { sameDraft } from "./draft-save";
 import { primaryTargetTopic } from "./target-topics";
 
 const blankDraft: ContentDraftInput = {
@@ -98,7 +99,7 @@ export function ContentEditorPage({
   const [imageUploadBusy, setImageUploadBusy] = useState(false);
   const [scoredDraft, setScoredDraft] = useState(draft);
   const [slugEdited, setSlugEdited] = useState(false);
-  const dirty = JSON.stringify(draft) !== JSON.stringify(savedSnapshot);
+  const dirty = !sameDraft(draft, savedSnapshot);
   useEffect(() => {
     const timer = window.setTimeout(() => setScoredDraft(draft), 300);
     return () => window.clearTimeout(timer);
@@ -130,21 +131,24 @@ export function ContentEditorPage({
     setInitialized(true);
   }, [draftsQuery.data, draftsQuery.isPending, initialized]);
 
-  const restoreDraft = useCallback((saved?: ContentDraft) => {
-    const snapshot = saved ? asInput(saved) : blankDraft;
-    setDraftId(saved?.id);
-    setDraft(snapshot);
-    setSavedSnapshot(snapshot);
-    setSlugEdited(snapshot.slug !== slugFromTitle(snapshot.title));
-  }, []);
+  const restoreDraft = useCallback(
+    (saved?: ContentDraft, sent?: ContentDraftInput) => {
+      const snapshot = saved ? asInput(saved) : blankDraft;
+      setDraftId(saved?.id);
+      setSavedSnapshot(snapshot);
+      setDraft((now) => (!sent || sameDraft(now, sent) ? snapshot : now));
+      setSlugEdited(snapshot.slug !== slugFromTitle(snapshot.title));
+    },
+    [],
+  );
 
   const saveMutation = useMutation({
-    mutationFn: (input: ContentDraftInput) =>
+    mutationFn: (sent: ContentDraftInput) =>
       saveContentDraft({
-        data: { ...input, projectId, ...(draftId ? { id: draftId } : {}) },
+        data: { ...sent, projectId, ...(draftId ? { id: draftId } : {}) },
       }),
-    onSuccess: async (saved) => {
-      restoreDraft(saved);
+    onSuccess: async (saved, sent) => {
+      restoreDraft(saved, sent);
       await queryClient.cancelQueries({
         queryKey: contentEditorQueryKeys.drafts(projectId),
         exact: true,
@@ -178,7 +182,6 @@ export function ContentEditorPage({
         });
       }
       onDraftIdChange(saved.id);
-      toast.success("Draft saved");
     },
     onError: (error) =>
       toast.error(
@@ -269,11 +272,9 @@ export function ContentEditorPage({
     dirty,
     onRestore: restoreDraft,
   });
-  const editorBusy =
-    saveMutation.isPending ||
-    openMutation.isPending ||
-    deleteMutation.isPending ||
-    imageUploadBusy;
+  const writingLocked =
+    openMutation.isPending || deleteMutation.isPending || imageUploadBusy;
+  const editorBusy = saveMutation.isPending || writingLocked;
 
   const startNewDraft = () => {
     if (
@@ -330,7 +331,11 @@ export function ContentEditorPage({
             Boolean(draft.title.trim() || draft.content.trim())
           }
           onPreview={() => setPreviewOpen(true)}
-          onSave={() => saveMutation.mutate(draft)}
+          onSave={() =>
+            saveMutation.mutate(draft, {
+              onSuccess: () => toast.success("Draft saved"),
+            })
+          }
           onPublish={() => setTab("publish")}
         />
 
@@ -346,7 +351,7 @@ export function ContentEditorPage({
                   ? `/p/${projectId}/keywords?q=${encodeURIComponent(primaryTargetTopic(draft.targetKeyword))}`
                   : undefined
               }
-              disabled={editorBusy}
+              disabled={writingLocked}
               onImageUploadStateChange={setImageUploadBusy}
               onChange={update}
               previewOpen={previewOpen}

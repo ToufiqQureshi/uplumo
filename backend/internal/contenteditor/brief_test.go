@@ -221,8 +221,43 @@ func TestDataForSEOBriefProviderSkipsUnreadablePagesButNeedsThree(t *testing.T) 
 	}
 
 	delete(client.pages, "https://site5.test/page")
-	if _, err := (DataForSEOBriefProvider{Client: client}).Fetch(context.Background(), "org", BriefInput{Keyword: "seo", LocationCode: 2840, LanguageCode: "en"}); !errors.Is(err, ErrBriefUnavailable) {
-		t.Fatalf("two readable pages: err = %v, want ErrBriefUnavailable so the hold is released", err)
+	_, err = (DataForSEOBriefProvider{Client: client}).Fetch(context.Background(), "org", BriefInput{Keyword: "seo", LocationCode: 2840, LanguageCode: "en"})
+	if !errors.Is(err, ErrBriefUnavailable) || !errors.Is(err, dataforseo.ErrNothingDelivered) {
+		t.Fatalf("two readable pages: err = %v, want ErrBriefUnavailable and ErrNothingDelivered so the customer is not charged", err)
+	}
+}
+
+// Shop and marketplace results often parse to no text. A brief keeps trying
+// later results instead of failing when the first eight are unreadable.
+func TestDataForSEOBriefProviderReadsPastUnreadableTopResults(t *testing.T) {
+	text := "Teal silk sarees suit weddings and pooja."
+	client := &fakeBudgetClient{serp: serpWithOrganic(20), pages: map[string][]byte{
+		"https://site9.test/page":  parsedPage("One", text),
+		"https://site10.test/page": parsedPage("Two", text),
+		"https://site11.test/page": parsedPage("Three", text),
+	}}
+	brief, err := (DataForSEOBriefProvider{Client: client}).Fetch(context.Background(), "org", BriefInput{Keyword: "teal saree", LocationCode: 2356, LanguageCode: "en"})
+	if err != nil || len(brief.Competitors) != 3 {
+		t.Fatalf("Fetch = %d competitors, err %v; want the 3 readable pages after 9 unreadable ones", len(brief.Competitors), err)
+	}
+	if want := 1 + briefParseAttempts; client.requestCount != want {
+		t.Fatalf("requests = %d, want %d: never more than %d parses", client.requestCount, want, briefParseAttempts)
+	}
+	if client.ceiling != briefCeiling {
+		t.Fatalf("ceiling = %v, want the quoted %v so the customer never pays for the extra parses", client.ceiling, briefCeiling)
+	}
+}
+
+func TestDataForSEOBriefProviderStopsAtEightReadablePages(t *testing.T) {
+	client := &fakeBudgetClient{serp: serpWithOrganic(20), pages: map[string][]byte{}}
+	for i := range 20 {
+		client.pages[fmt.Sprintf("https://site%d.test/page", i)] = parsedPage("Heading", "Readable text about sarees.")
+	}
+	if _, err := (DataForSEOBriefProvider{Client: client}).Fetch(context.Background(), "org", BriefInput{Keyword: "saree", LocationCode: 2356, LanguageCode: "en"}); err != nil {
+		t.Fatal(err)
+	}
+	if client.requestCount != 1+briefParses {
+		t.Fatalf("requests = %d, want %d: stop parsing once %d pages are read", client.requestCount, 1+briefParses, briefParses)
 	}
 }
 

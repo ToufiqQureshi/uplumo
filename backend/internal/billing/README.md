@@ -3,14 +3,14 @@
 Two things live here: the plan a workspace is on, and the internal credit
 ledger.
 
-**Plan.** Basic, Pro and Agency are sold as Razorpay subscriptions per
+**Plan.** Solo (`basic`), Growth (`pro`), Business (`business`) and Agency (`agency`) are sold as Razorpay subscriptions per
 workspace (organization), stored in `go_billing_subscriptions`. What each one
 costs, limits and includes is in `internal/plans`; this package only answers
 "which plan is this workspace on" and "does that plan include X".
 
 `GET /api/v1/billing/status` reads the plan, `GET /api/v1/billing/plans`
 returns the catalog for the Billing screen, `POST /api/v1/billing/checkout`
-(`{"plan": "basic" | "pro" | "agency"}`) starts a subscription, and
+(`{"plan": "basic" | "pro" | "business" | "agency"}`) starts a subscription, and
 `POST /webhooks/razorpay` keeps it in step with Razorpay. The webhook rules
 (which events, replay and ordering safety, which statuses keep a plan on) are
 in `backend/README.md` under Billing.
@@ -56,7 +56,7 @@ Being a member of someone else's workspace unlocks nothing there.
 it) is what one workspace may cost us at the providers. 1,000 credits are one
 US dollar of provider cost before the 1.28 markup, so a credit is 1/1280 of a
 dollar of provider cost. Each paid charge of a plan grants that plan's
-`MonthlyCredits` (`internal/plans`: Basic 4,000, Pro 10,000, Agency 25,000)
+`MonthlyCredits` (`internal/plans`: Solo 4,000, Growth 10,000, Business 15,000, Agency 25,000)
 once per webhook event; unused credits roll over up to two months of the
 plan: each grant expires after two months and reservations consume the oldest
 unexpired grants first. The hourly expiry worker records `expire` ledger rows;
@@ -69,7 +69,7 @@ typical cost of each action (`costs.go`, `api/billing.yaml`), and `POST
 /api/v1/billing/usage-events` lists settled spends.
 
 Plan-wise limits beside credits: sites, tracked keywords, members and the
-deepest rank-tracking check (`MaxSerpDepth`: Basic top 30, Pro and Agency
+deepest rank-tracking check (`MaxSerpDepth`: Solo top 30, Growth, Business and Agency
 top 40). `TestWeeklyRankTrackingFitsInTheMonthlyCredits` keeps each plan's
 plain tracked keywords, checked weekly on desktop at its deepest depth, within
 its monthly credit grant. Choosing both devices doubles that estimate.
@@ -118,17 +118,29 @@ assistant. Rules that must never break:
   left uncharged to customers are logged separately for investigation.
 - **It fails closed.** A ledger or database error stops the request. SAM
   refuses a turn whose credits cannot be checked.
-- **Per-workspace daily limit.** One workspace may spend at most a third
-  of its plan's monthly credits (in provider dollars) in a UTC day
-  (`Service.WorkspaceDailyLimitUSD`); past it, only that workspace gets
-  `spend.ErrWorkspaceDailyLimit` (`429 daily_credit_limit`) until midnight
-  UTC. One heavy client never pauses anyone else. Staff workspaces have none.
+- **The customer is told what an action cost.** Every credit settled for a
+  request is counted on its context (`spend.WithCreditMeter`, `RecordCredits`)
+  and `requireSession` sends the total as `X-Credits-Used` just before the
+  response starts; the browser shows it as a toast ("63 credits used") and
+  refreshes the balance. It is the ledger's settled amount, not the hold or the
+  hint. A streamed response (SAM) that charges after its first byte carries none.
+- **No per-workspace daily limit.** `Service.WorkspaceDailyLimitUSD` returns 0:
+  a customer may spend the credits they bought in any order, and each call
+  charges its real cost times 1.28, so spending cannot pass what was paid. The
+  guard can still enforce a limit when a value is set
+  (`spend.ErrWorkspaceDailyLimit`, `429 daily_credit_limit`), but nothing sets
+  one. Running out of credits is `402 insufficient_credits`.
 - **Global emergency limit.** Every settled cost, staff included, is logged
   in `go_provider_spend`. Once today's total across all workspaces plus a
   request's estimate passes `PROVIDER_DAILY_LIMIT_USD` (default $100), every
   paid request is refused with `spend.ErrPaused` (`503 usage_paused`) and an
   error reaches Sentry. With per-workspace limits it should only trip on a
   bug; set it above the sum of your clients' daily limits.
+- **AI visibility.** Its two actions have separate hints (`ActionCost.Action`:
+  `prompt_explorer` about 128 credits, `brand_lookup` about 910), because a brand
+  lookup bills seven times a prompt run. Their holds use per-endpoint ceilings
+  (`dataforseo.AIResponseCeilingUSD` $0.10, `AIMentionsCeilingUSD` $0.25), above
+  what live calls billed; a flat $0.50 held more than a Pro workspace's day.
 - **AI.** A model's cost is only known after it answers, so every AI call
   holds its ceiling first (`AIMeter.Hold` with `openrouter.MaxCostUSD`: the
   input counted at three bytes a token plus the whole output budget, at the
@@ -141,8 +153,7 @@ assistant. Rules that must never break:
   which was Uplumo's money. SAM stops a turn at one dollar. When OpenRouter
   reports no cost, a conservative estimate from tokens (or from the streamed
   text) is charged instead of nothing.
-- Without payments (self-hosted) nobody is charged credits, but the daily
-  limit still applies.
+- Without payments (self-hosted) nobody is charged credits.
 
 Edge cases: two requests racing the last credits are decided by the row
 lock, so one is refused. Both daily limits count today's open holds at their

@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/toufiqqureshi/uplumo/backend/internal/auth"
+	"github.com/toufiqqureshi/uplumo/backend/internal/platform/dataforseo"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/spend"
 )
 
@@ -109,6 +111,23 @@ func TestBriefRouteRefusesBeforeAnyPaidCall(t *testing.T) {
 				t.Fatalf("status = %d code %q calls %d; want %d %q and no fetch", rec.Code, briefErrorCode(t, rec), getter.calls, tt.status, tt.code)
 			}
 		})
+	}
+}
+
+// The message may promise "No credits were used" only when that is true.
+func TestBriefRouteOnlyPromisesNoChargeWhenNothingWasCharged(t *testing.T) {
+	for _, tt := range []struct {
+		err      error
+		noCharge bool
+	}{
+		{fmt.Errorf("%w: %w", ErrBriefUnavailable, dataforseo.ErrNothingDelivered), true},
+		{ErrBriefUnavailable, true},
+		{errors.New("decode failed after the SERP was bought"), false},
+	} {
+		rec := postBrief(briefMux(&briefGetterFake{err: tt.err}, briefPlansFake{allowed: true}, projectMarketFake{}), `{"keyword":"seo"}`)
+		if got := strings.Contains(rec.Body.String(), "No credits were used"); got != tt.noCharge {
+			t.Errorf("%v: says no credits used = %v, want %v (%s)", tt.err, got, tt.noCharge, rec.Body.String())
+		}
 	}
 }
 

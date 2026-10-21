@@ -1,80 +1,75 @@
 import { sortBy } from "remeda";
 import { makeScoreCheck as check, type ScoreCheck } from "./scoring-utils";
 
-// freshnessRule: the "Show freshness" check passes only when the draft has
-// a reviewed date less than 12 months old. The check keeps its 5-point
-// weight; only the source of truth changed from a guessed date in the text
-// to the draft's reviewed date.
-
-export function freshnessCheck(
-  d: ContentDraftInput,
-  now: Date = new Date(),
-): { passed: boolean; message: string; weight: number } {
-  const weight = 5;
-  if (!d.lastReviewedAt?.trim()) {
-    return {
-      passed: false,
-      message: "Mark this draft as reviewed to show readers it is fresh.",
-      weight,
-    };
-  }
-  if (!freshWithinTwelveMonths(d.lastReviewedAt, now)) {
-    return {
-      passed: false,
-      message:
-        "The last review is more than 12 months old; mark it reviewed after checking the facts.",
-      weight,
-    };
-  }
-  return {
-    passed: true,
-    message: "Reviewed within the last 12 months.",
-    weight,
-  };
-}
-
-// freshWithinTwelveMonths compares calendar months: the review stays fresh
-// through the same day of the twelfth month, and a day after expires.
-export function freshWithinTwelveMonths(reviewed: string, now: Date): boolean {
-  const parsed = new Date(`${reviewed}T00:00:00Z`);
-  if (Number.isNaN(parsed.getTime())) return false;
-  const ageMonths =
-    (now.getUTCFullYear() - parsed.getUTCFullYear()) * 12 +
-    (now.getUTCMonth() - parsed.getUTCMonth());
-  if (ageMonths < 12) return true;
-  if (ageMonths > 12) return false;
-  // Exactly 12 months: fresh until the same calendar day passes.
-  return parsed.getUTCDate() >= now.getUTCDate();
-}
 import {
   containsPhrase as has,
   countWords as count,
   headings as heads,
   headingsAtLevel,
+  linkTargets,
+  mentionsTopic,
   normalizeText as norm,
   paragraphs as paras,
   phraseCount,
   words,
 } from "./scoring-text";
 import type { ContentBrief, ContentDraftInput } from "./scoring";
+import {
+  definesTopic,
+  experienceCheck,
+  freshnessCheck,
+  realFaq,
+  searchDescriptionCheck,
+} from "./scoring-signals";
+
+export { freshnessCheck, freshWithinTwelveMonths } from "./scoring-signals";
+
+const LIST_OR_TABLE = /^\s*(?:[-*+] |\d+[.)] )|\|.+\|/mu;
+
+// Topic placement looks where a reader and Google look first. The title
+// field is the page's H1, so a second H1 in the body is not required.
+function topicPlacement(d: ContentDraftInput, body: string): ScoreCheck {
+  const topic = d.targetKeyword.trim();
+  if (!topic) {
+    return check(
+      "topic-placement",
+      "Topic placement",
+      "Add a target topic to check placement.",
+      15,
+      0,
+    );
+  }
+  const subheadings = [
+    ...headingsAtLevel(body, 2),
+    ...headingsAtLevel(body, 3),
+  ].join("\n");
+  const places: Array<[string, string]> = [
+    ["title", d.title || (headingsAtLevel(body, 1)[0] ?? "")],
+    ["opening", words(body).slice(0, 100).join(" ")],
+    ["a subheading", subheadings],
+    ["search description", d.metaDescription],
+  ];
+  const missing = places
+    .filter(([, text]) => !mentionsTopic(text, topic))
+    .map(([name]) => name);
+  const placed = places.length - missing.length;
+  return check(
+    "topic-placement",
+    "Topic placement",
+    placed +
+      "/4: title, opening, a subheading and search description" +
+      (missing.length ? ". Missing in: " + missing.join(", ") + "." : "."),
+    15,
+    (15 * placed) / 4,
+  );
+}
 
 export function staticSeo(
   d: ContentDraftInput,
   body: string,
   siteDomain?: string,
 ): ScoreCheck[] {
-  const topic = d.targetKeyword.trim(),
-    h2 = headingsAtLevel(body, 2),
-    places = [
-      d.title,
-      headingsAtLevel(body, 1)[0] ?? "",
-      words(body).slice(0, 100).join(" "),
-      h2.join(" "),
-    ],
-    placed = places.filter((p) => topic && has(p, topic)).length;
-  const links = [...body.matchAll(/\[[^\]]+\]\(([^)]+)\)/giu)].map(
-      (m) => m[1] ?? "",
-    ),
+  const links = linkTargets(body),
     inside = links.filter((url) => isInternalLink(url, siteDomain)).length,
     outside = links.length - inside;
   const images = [...body.matchAll(/!\[([^\]]*)\]\(([^)]+)\)/gu)],
@@ -89,20 +84,11 @@ export function staticSeo(
     allWords.filter((word) => hindiWords.has(norm(word))).length /
     Math.max(1, allWords.length);
   const english =
-    allWords.length > 0 && hindiShare < 0.05 && !/[\u0900-\u097f]/u.test(body);
+    allWords.length > 0 && hindiShare < 0.05 && !/[ऀ-ॿ]/u.test(body);
   const pc = paras(body).map(count).filter(Boolean),
-    avg = pc.length ? pc.reduce((a, b) => a + b, 0) / pc.length : 0,
-    list = /^\s*(?:[-*+] |\d+[.)] )|\|.+\|/mu.test(body);
+    avg = pc.length ? pc.reduce((a, b) => a + b, 0) / pc.length : 0;
   return [
-    check(
-      "topic-placement",
-      "Topic placement",
-      topic
-        ? placed + "/4: title, H1, opening 100 words and H2."
-        : "Add a target topic to check placement.",
-      15,
-      topic ? (15 * placed) / 4 : 0,
-    ),
+    topicPlacement(d, body),
     check(
       "headings",
       "Clear sections",
@@ -115,12 +101,15 @@ export function staticSeo(
       "Scannable format",
       "Use a list or table where useful.",
       5,
-      list ? 5 : 0,
+      LIST_OR_TABLE.test(body) ? 5 : 0,
     ),
     check(
       "sources-internal",
       "Sources and internal links",
-      outside + " external source(s), " + inside + " internal link(s).",
+      outside +
+        " link(s) to other sites, " +
+        inside +
+        " to your own pages. Images do not count.",
       8,
       Math.min(8, (outside ? 5 : 0) + (inside ? 3 : 0)),
     ),
@@ -142,6 +131,8 @@ export function staticSeo(
       images.length ? 5 : 0,
       images.length ? (5 * alt) / images.length : 0,
     ),
+    searchDescriptionCheck(d),
+    experienceCheck(body),
   ];
 }
 function isInternalLink(url: string, siteDomain?: string) {
@@ -181,15 +172,7 @@ export function briefSeo(
       return s + Math.max(1, t.domains) * coverage;
     }, 0),
     over = terms.filter((t) => phraseCount(body, t.term) > t.max).length;
-  const topic = d.targetKeyword.trim(),
-    places = [
-      d.title,
-      headingsAtLevel(body, 1)[0] ?? "",
-      words(body).slice(0, 100).join(" "),
-      headingsAtLevel(body, 2).join(" "),
-    ],
-    pc = places.filter((p) => topic && has(p, topic)).length,
-    h2 = headingsAtLevel(body, 2),
+  const h2 = headingsAtLevel(body, 2),
     sh = brief.subtopics.filter((t) => h2.some((h) => has(h, t))).length;
   const lengths = sortBy(
       brief.competitorTexts.map(count).filter((n) => n > 0),
@@ -223,24 +206,18 @@ export function briefSeo(
       10,
       terms.length ? (10 * (terms.length - over)) / terms.length : 10,
     ),
-    check(
-      "topic-placement",
-      "Topic placement",
-      pc + "/4: title, H1, opening 100 words and H2.",
-      15,
-      (15 * pc) / 4,
-    ),
+    topicPlacement(d, body),
     check(
       "depth",
       "Draft depth",
       n +
-        " words; competitor range " +
+        " words; top pages use " +
         lo +
         "–" +
         hi +
         " words (" +
         lengths.length +
-        " samples).",
+        " pages). Cover the topic fully; length alone is not a goal.",
       10,
       depth,
     ),
@@ -253,6 +230,7 @@ export function briefSeo(
     ),
   ];
 }
+
 export function aeo(
   d: ContentDraftInput,
   body: string,
@@ -261,7 +239,12 @@ export function aeo(
   const first = paras(body)[0] ?? "",
     opening = count(first),
     topic = d.targetKeyword.trim(),
-    direct = opening >= 40 && opening <= 80 && (!topic || has(first, topic)),
+    // Google: no ideal length and no need to chunk content for AI. The
+    // check only asks that the article opens with a real answer.
+    direct =
+      opening >= 25 &&
+      opening <= 120 &&
+      (!topic || mentionsTopic(first, topic)),
     qheads = heads(body).filter((h) => h.includes("?") || h.includes("？")),
     questions = brief?.questions ?? [];
   const answered = questions.filter((q) => {
@@ -271,19 +254,8 @@ export function aeo(
       body.slice(body.indexOf(h) + h.length).split(/\n#{1,6}\s/u)[0] ?? "";
     return count(answer) >= 15;
   }).length;
-  const list = /^\s*(?:[-*+] |\d+[.)] )|\|.+\|/mu.test(body),
-    external = [...body.matchAll(/\[[^\]]+\]\(([^)]+)\)/giu)].some(
-      (m) => !isInternalLink(m[1] ?? "", brief?.siteDomain),
-    ),
-    esc = topic.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
-    definition =
-      !!topic &&
-      new RegExp(
-        esc + "\\s+(?:is|are|means|refers to|is defined as)\\b",
-        "iu",
-      ).test(body),
-    faq = heads(body).some((h) =>
-      /\bfaq|frequently asked questions\b/iu.test(h),
+  const external = linkTargets(body).some(
+      (url) => !isInternalLink(url, brief?.siteDomain),
     ),
     entities = new Set(
       body
@@ -297,68 +269,86 @@ export function aeo(
         .match(/\b[A-Z][\p{L}\p{N}&.-]*(?:\s+[A-Z][\p{L}\p{N}&.-]*){0,3}/gu) ??
         [],
     ).size,
-    freshness = freshnessCheck(d);
+    freshness = freshnessCheck(d),
+    author = Boolean(d.authorId?.trim());
   return [
     check(
       "direct-answer",
       "Direct answer",
-      "Opening passage has " +
+      "Opening paragraph has " +
         opening +
         " words and " +
         (topic
-          ? (has(first, topic) ? "names" : "does not name") + " the topic."
+          ? (mentionsTopic(first, topic) ? "names" : "does not name") +
+            " the topic. Answer the reader's question first."
           : "is present."),
-      20,
-      direct ? 20 : 0,
+      15,
+      direct ? 15 : 0,
     ),
     check(
       "definition",
-      "Define the topic",
-      "Add a plain definition of the target topic or key entity.",
+      "Explain the topic simply",
+      "Say plainly what the topic is, e.g. “Teal is a deep blue-green shade.”",
       10,
-      definition ? 10 : 0,
+      topic && definesTopic(body, topic) ? 10 : 0,
     ),
-    check(
-      "question-coverage",
-      "Answer brief questions",
-      answered +
-        "/" +
-        questions.length +
-        " questions have a matching heading and answer.",
-      25,
-      questions.length
-        ? (25 * answered) / questions.length
-        : qheads.length
-          ? 15
-          : 0,
-    ),
+    questions.length
+      ? check(
+          "question-coverage",
+          "Answer the questions people ask",
+          answered +
+            "/" +
+            questions.length +
+            " questions from the brief have a matching heading and answer.",
+          20,
+          (20 * answered) / questions.length,
+        )
+      : check(
+          "question-coverage",
+          "Answer the questions people ask",
+          "Not applicable yet: get a search brief to see the questions people ask.",
+          0,
+          0,
+        ),
     check(
       "list-table",
       "Scannable format",
       "Use a list, steps or comparison table where useful.",
-      10,
-      list ? 10 : 0,
+      5,
+      LIST_OR_TABLE.test(body) ? 5 : 0,
     ),
     check(
       "sources",
       "Support factual claims",
-      "Link reliable sources for claims readers may verify.",
+      external
+        ? "Links to sources readers can check. Images do not count."
+        : "Link a reliable source for facts readers may want to check.",
       15,
       external ? 15 : 0,
     ),
     check(
       "faq",
       "FAQ section",
-      "Add an FAQ section when useful.",
-      10,
-      faq ? 10 : 0,
+      "An FAQ heading with real questions and answers (not the template text).",
+      5,
+      realFaq(body) ? 5 : 0,
     ),
     check(
       "entities",
-      "Name entities clearly",
-      entities + " named entities detected.",
+      "Name things clearly",
+      entities + " names of people, places, brands or products found.",
       5,
       entities >= 2 ? 5 : entities === 1 ? 2 : 0,
+    ),
+    experienceCheck(body),
+    check(
+      "author",
+      "Show who wrote it",
+      author
+        ? "An author is selected for the byline."
+        : "Publish tab → choose an author so readers know who wrote it.",
+      10,
+      author ? 10 : 0,
     ),
     check(
       "freshness",

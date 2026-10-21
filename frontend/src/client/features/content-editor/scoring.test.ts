@@ -233,7 +233,7 @@ Updated in 2026.`;
       (total, item) => total + item.weight,
       0,
     );
-    expect(activeWeight).toBe(95);
+    expect(activeWeight).toBe(110);
     expect(result.score).toBe(
       Math.round(
         (result.checks.reduce((total, item) => total + item.earned, 0) * 100) /
@@ -242,7 +242,7 @@ Updated in 2026.`;
     );
   });
 
-  it("scores AEO dimensions independently and keeps the approved 100-point weights", () => {
+  it("scores AEO dimensions independently on 100 points with a brief", () => {
     const result = scoreContent("aeo", draft, brief);
     expect(result.checks.map((c) => c.id)).toEqual([
       "direct-answer",
@@ -252,12 +252,14 @@ Updated in 2026.`;
       "sources",
       "faq",
       "entities",
+      "experience",
+      "author",
       "freshness",
     ]);
     expect(result.checks.reduce((sum, c) => sum + c.weight, 0)).toBe(100);
     expect(
       result.checks.find((c) => c.id === "question-coverage")?.earned,
-    ).toBe(25);
+    ).toBe(20);
   });
 
   it("separates same-site links from external sources", () => {
@@ -310,6 +312,7 @@ Updated in 2026.`;
       ...draft,
       targetKeyword: "SEO",
       title: "Seoul travel",
+      metaDescription: "Seoul travel tips.",
       content: "Seoul travel guide for visitors.",
     });
     expect(result.checks.find((c) => c.id === "topic-placement")?.earned).toBe(

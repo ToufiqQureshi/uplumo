@@ -15,16 +15,22 @@ import { BILLING_ROUTE } from "@/shared/billing";
  */
 export function CreditCostHint({
   feature,
+  action,
   className,
 }: {
   feature: CreditFeature;
+  /** The action of the feature, where its actions cost very differently. */
+  action?: string;
   className?: string;
 }) {
   const { data: usage } = useBillingUsage();
   if (!usage) return null;
   const level = creditLevel(usage);
   if (level === "not_charged") return null;
-  const cost = usage.costs.find((c) => c.feature === feature);
+  const cost = usage.costs.find(
+    (c) =>
+      c.feature === feature && (action === undefined || c.action === action),
+  );
 
   if (level === "out") {
     return (

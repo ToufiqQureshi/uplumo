@@ -11,6 +11,13 @@ reads use saved snapshots and do not call DataForSEO.
 The Brand Lookup page can also show first-party AI referral totals from Uplumo
 Analytics. Those site-wide visits are kept separate from citation counts and
 are not matched to specific cited URLs.
+Each top query keeps what the mentions call returns with it: the AI model, its
+full answer (6,000 characters), the pages it retrieved (20, with description)
+and the searches it ran (`TopQuery`, shown under "See the AI answer"). A real
+Brand Lookup is six tasks and bills about $0.71 (search $0.151 x2, aggregated
+$0.101 x2, top pages $0.101 x2); its hold is six AI-mentions ceilings of $0.25.
+A Prompt Explorer run holds $0.10 per model answer (twice that with web
+search, which may retry once); a real ChatGPT answer with web search bills $0.03.
 
 ## Flow
 
@@ -132,8 +139,15 @@ configuration and evidence for 13 months. Organization/project deletion cascades
   collection queue even for Run now. Answers arrive asynchronously. Claude and
   Perplexity use their model APIs and can differ from consumer apps. Their
   country is passed to web search; their language follows the question itself.
+- Each collected answer keeps what the scraper returns with it: the answer's
+  markdown (rendered, with AI-vendor images shown as links, not loaded), its
+  cited sources with publisher name and date, and the businesses the AI named
+  (`brand_entities`, in order, up to 20). Those are stored in the `brands`
+  column after the tracked brands, flagged `recommended`, so no migration was
+  needed; `splitStoredBrands` separates them on read. Tracked brands stay
+  first because rate queries read `brands->0`.
 - A full run reserves its ceiling before any paid call. Consumer collection is
-  budgeted at $0.0012 per answer; model API collection conservatively holds $0.50
+  budgeted at $0.0012 per answer; model API collection holds $0.10
   per answer. Actual successful usage settles after submission. No automatic
   retry purchases a fresh answer. Successful queued submissions are billed even
   if later collection fails; polling is free.

@@ -16,17 +16,32 @@ TanStack Query/Router. `EditorPanels.tsx` contains the shared toolbar and previe
   cached input; until one is available, the editor says it is using only
   brief-independent checks. Fixtures used by tests are never loaded into the
   product UI.
-- With a brief, SEO uses the approved 100-point weights: term coverage (30),
-  term ranges (10), topic placement (15), depth (10), brief subtopics (10),
-  list/table (5), sources and internal links (8), readability (7), and image
-  alt text (5). Terms are selected by competitor-domain prevalence. Depth uses
-  the 25th–75th percentile of available competitor article lengths, with a
-  bounded fallback when there are no samples.
-- Without a brief, SEO displays only local checks, scaled against the points
-  available in that mode. It does not imply competitor coverage or article
-  depth has been checked. AEO remains separately scored against its direct
-  answer, definition, question coverage, structure, sources, FAQ, entities and
-  freshness checks.
+- The checks follow Google's own guidance (people-first content, E-E-A-T,
+  "no ideal length", "no need to chunk content for AI"). Both scores are the
+  points earned out of the points that apply, scaled to 100; a check that
+  does not apply yet (no images, no brief questions) has weight 0.
+- With a brief, SEO weights: term coverage (30), term ranges (10), topic
+  placement (15), depth (10), brief subtopics (10), list/table (5), sources
+  and internal links (8), readability (7), image alt text (5), search
+  description written (5), own experience (10). Terms are selected by
+  competitor-domain prevalence. Depth uses the 25th–75th percentile of
+  competitor article lengths, with a bounded fallback when there are no
+  samples. Without a brief, SEO shows only the local checks.
+- Topic placement looks at the title (the page's H1; a body H1 is not
+  needed), the opening 100 words, any H2/H3 and the search description. The
+  topic matches as the exact phrase or all its meaningful words in any order,
+  so writers are never pushed to repeat an exact keyword.
+- AEO weights (100 with a brief): direct answer (15: opening paragraph of
+  25–120 words that names the topic), plain definition (10: a sentence that
+  starts with the topic and says "is/means", or Hinglish "hota hai/matlab";
+  questions and headings do not count), brief questions answered (20; not
+  applicable without a brief), list/table (5), sources (15), FAQ with a real
+  question and an answer of 8+ words (5; the inserted template text does not
+  count), named entities (5), own experience (10), author selected (10),
+  reviewed within 12 months (5).
+- Links count as sources; image sources (`![alt](url)`) never do.
+- "Own experience" looks for first-person evidence ("we tested", "I wore",
+  "maine dekha"), the Experience in E-E-A-T. It is a nudge, not proof.
 - Readability is scored only when the draft contains no Devanagari script and
   fewer than 5% common Hindi/Hinglish markers. Other language drafts receive no
   readability penalty. Image alt text remains checked against the existing
@@ -96,18 +111,22 @@ TanStack Query/Router. `EditorPanels.tsx` contains the shared toolbar and previe
   `{"keyword", "refresh"}` (backend: `contenteditor/brief*.go`). Only when the
   writer presses the button: a brief costs credits, so it never runs on its
   own, and it is never fetched while typing.
-- One brief = a depth-30 Google SERP plus up to 8 competitor pages read with
-  DataForSEO content parsing, **one page per call** (the live endpoint takes
-  one task). Unreadable pages are skipped; fewer than 3 readable pages means
-  no brief and no charge. Published-rate estimate $0.0072 (about 9.2 credits); the customer
-  pays the successful task cost DataForSEO reports; unexpected price drift
-  above the preflight estimate is logged for investigation.
+- One brief = a depth-30 Google SERP plus up to 8 readable competitor pages
+  read with DataForSEO content parsing, **one page per call** (the live
+  endpoint takes one task). Shop and marketplace results often parse to no
+  text, so up to 16 results are tried, stopping at 8 readable pages. Fewer
+  than 3 readable pages means no brief and **no charge**: the work returns
+  `dataforseo.ErrNothingDelivered` and `DoBudgeted` settles 0 customer
+  credits while the provider cost is still recorded. Published-rate estimate
+  $0.0072 (about 9.2 credits); the customer pays the successful task cost
+  DataForSEO reports, capped at that ceiling, so the extra parses (at most
+  $0.0012) are Uplumo's.
 - The cache (`go_content_brief_cache`) is shared by every workspace for 30
   days, keyed by keyword, location and language. A cache hit is free; two
   requests for the same key at once make one provider call (advisory lock).
   The customer's own domain is filtered out when the brief is read, never in
   the key. "Refresh" rebuilds it and charges the refreshing workspace.
-- Plans: Basic and up (`plans.Keywords` gate). It fails closed: no plan
+- Plans: Solo (`basic`) and up (`plans.Keywords` gate). It fails closed: no plan
   service or a failing plan check means nothing is fetched.
 - The brief gives terms (phrases most pages use, ranked by how many pages use
   them, with a 25th–75th percentile use range), subtopics (phrases several

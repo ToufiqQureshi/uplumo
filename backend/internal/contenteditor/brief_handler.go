@@ -10,11 +10,12 @@ import (
 	"time"
 
 	"github.com/toufiqqureshi/uplumo/backend/internal/auth"
+	"github.com/toufiqqureshi/uplumo/backend/internal/platform/dataforseo"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/httpx"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/spend"
 )
 
-// A brief fetch makes one SERP call and up to eight page parses in sequence.
+// A brief fetch makes one SERP call and up to sixteen page parses in sequence.
 const briefRequestTimeout = 90 * time.Second
 
 // BriefGetter returns a brief for an organization; BriefService implements it.
@@ -85,7 +86,7 @@ func (d BriefDeps) brief(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !allowed {
-		httpx.WriteError(w, http.StatusPaymentRequired, "plan_required", "Search briefs are included in Basic and higher plans.")
+		httpx.WriteError(w, http.StatusPaymentRequired, "plan_required", "Search briefs are included in Solo and higher plans.")
 		return
 	}
 	domain, location, language, err := d.Projects.ProjectMarket(r.Context(), org, r.PathValue("projectId"))
@@ -106,13 +107,18 @@ func (d BriefDeps) brief(w http.ResponseWriter, r *http.Request) {
 		case errors.As(err, &validation):
 			httpx.WriteError(w, http.StatusBadRequest, "validation_error", validation.Message)
 		case spend.WriteHTTPError(w, err):
+		case errors.Is(err, dataforseo.ErrNothingDelivered):
+			d.Logger.WarnContext(r.Context(), "brief unavailable", "err", err)
+			httpx.WriteError(w, http.StatusBadGateway, "provider_error", "Google's top pages for this topic could not be read (shops and marketplaces often block it), so there is no brief. No credits were used. Try a more specific topic, or write without a brief.")
 		case errors.Is(err, ErrBriefUnavailable):
 			d.Logger.WarnContext(r.Context(), "brief unavailable", "err", err)
 			httpx.WriteError(w, http.StatusBadGateway, "provider_error", "Search data is temporarily unavailable. No credits were used. Try again later.")
 		case r.Context().Err() != nil:
 		default:
+			// Part of the paid work may have finished and been billed, so this
+			// message makes no promise about credits.
 			d.Logger.ErrorContext(r.Context(), "build brief", "err", err)
-			httpx.WriteError(w, http.StatusBadGateway, "provider_error", "Search data is temporarily unavailable. No credits were used. Try again later.")
+			httpx.WriteError(w, http.StatusBadGateway, "provider_error", "Search data is temporarily unavailable. Try again later.")
 		}
 		return
 	}

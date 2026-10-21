@@ -349,7 +349,7 @@ func (h handler) requirePlan(w http.ResponseWriter, r *http.Request) bool {
 		return false
 	}
 	if !allowed {
-		httpx.WriteError(w, http.StatusPaymentRequired, "plan_required", "Publishing to your website is available on Basic, Pro and Agency.")
+		httpx.WriteError(w, http.StatusPaymentRequired, "plan_required", "Publishing to your website is available on every paid plan.")
 		return false
 	}
 	return true

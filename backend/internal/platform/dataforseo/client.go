@@ -35,6 +35,10 @@ const (
 // ErrInvalidRequest marks a request the client refuses to send.
 var ErrInvalidRequest = errors.New("invalid DataForSEO request")
 
+// ErrNothingDelivered is returned by DoBudgeted work that paid the provider
+// but produced nothing the customer can use, so the customer is not charged.
+var ErrNothingDelivered = errors.New("the paid work produced no usable result")
+
 // Cost is the provider-reported price of one DataForSEO task.
 type Cost struct {
 	Path []string
@@ -249,6 +253,11 @@ func (c *Client) DoBudgeted(ctx context.Context, organizationID string, feature 
 	providerTotal, customerTotal := providerCost, customerCost
 	endpointPaths := append([]string(nil), endpoints...)
 	mu.Unlock()
+	if errors.Is(workErr, ErrNothingDelivered) {
+		// The provider was paid but the customer got nothing they can use;
+		// Uplumo absorbs the recorded provider cost.
+		customerTotal = 0
+	}
 	if customerTotal > ceilingUSD {
 		// The customer was quoted the ceiling and the provider already did the
 		// work, so the result is returned and Uplumo absorbs the overage.

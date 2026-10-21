@@ -30,7 +30,9 @@ per operation (`billing.CreditsForUSD`); a $1 successful task should consume
 1,280 credits. A multi-call (`DoBudgeted`) hold is also the most the customer
 pays: if the provider reports a higher successful cost, the customer is
 charged the held amount, Uplumo absorbs the rest, and the overage is logged so
-the estimate in `pricing.go` can be fixed.
+the estimate in `pricing.go` can be fixed. Work that paid the provider but
+produced nothing usable (a content brief with fewer than 3 readable pages)
+returns `dataforseo.ErrNothingDelivered`, and the customer is charged nothing.
 
 Provider-billed failed tasks still refund customer credits. Those are real
 Uplumo losses; the spend guard logs the unrecovered amount as an error so the

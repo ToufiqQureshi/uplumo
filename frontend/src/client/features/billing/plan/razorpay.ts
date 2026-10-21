@@ -45,7 +45,7 @@ function loadCheckoutScript(): Promise<void> {
  */
 export async function openRazorpayCheckout(
   session: { keyId: string; subscriptionId: string },
-  planName = "Pro",
+  planName = "Growth",
 ): Promise<boolean> {
   await loadCheckoutScript();
   const Razorpay = window.Razorpay;

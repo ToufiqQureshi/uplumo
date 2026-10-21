@@ -145,3 +145,25 @@ func TestFeaturesListsEveryPaidFeatureOnce(t *testing.T) {
 		t.Fatalf("Features() has %d features, want 9", len(seen))
 	}
 }
+
+func TestCreditMeterCountsCreditsOfDerivedAndDetachedContexts(t *testing.T) {
+	ctx := WithCreditMeter(context.Background())
+	derived, cancel := context.WithCancel(ctx)
+	RecordCredits(derived, 20)
+	cancel()
+	// Paid work that outlives the request (a coalesced call, a settle after the
+	// customer left) still counts for the request that started it.
+	RecordCredits(context.WithoutCancel(derived), 5)
+	RecordCredits(ctx, 0)
+	RecordCredits(ctx, -3)
+	if got := CreditsCharged(ctx); got != 25 {
+		t.Fatalf("credits charged = %d, want 25", got)
+	}
+}
+
+func TestCreditMeterIsInertWithoutAMeter(t *testing.T) {
+	RecordCredits(context.Background(), 10)
+	if got := CreditsCharged(context.Background()); got != 0 {
+		t.Fatalf("credits charged = %d, want 0 without a meter", got)
+	}
+}

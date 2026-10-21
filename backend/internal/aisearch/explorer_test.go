@@ -96,8 +96,8 @@ func TestExplorePromptPreflightsAllModelsAndDoesNotHoldOnCacheHit(t *testing.T) 
 			paidHolds = append(paidHolds, request)
 		}
 	}
-	if len(paidHolds) != 1 || paidHolds[0].EstimateUSD != 2 {
-		t.Fatalf("paid holds = %+v; want one $2 hold covering four possible calls", paidHolds)
+	if want := 4 * dataforseo.AIResponseCeilingUSD; len(paidHolds) != 1 || paidHolds[0].EstimateUSD != want {
+		t.Fatalf("paid holds = %+v; want one hold of four $0.10 answer ceilings", paidHolds)
 	}
 	calls := api.total()
 	settlements := len(guard.Settled())

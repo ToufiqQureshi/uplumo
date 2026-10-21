@@ -24,12 +24,13 @@ When explaining traffic growth, Sam should frame Uplumo as a tool for making bet
 
 ## Plans
 
-Uplumo has a Free plan and three paid plans, priced per workspace per month in Indian rupees. The live prices and the full comparison are on `/pricing` and on the Billing page; if a number here ever disagrees with those pages, the pages are right.
+Uplumo has a Free plan and four paid plans, priced per workspace per month in Indian rupees. The live prices and the full comparison are on `/pricing` and on the Billing page; if a number here ever disagrees with those pages, the pages are right.
 
 - Free (₹0): 1 website, Uplumo Analytics with AI traffic detection, and a starter site audit.
-- Basic (₹999): 1 website, keyword research, rank tracking for 100 keywords, Google Search Console and Google Analytics, the full site audit, and publishing articles from the content editor straight to a connected WordPress site.
-- Pro (₹2,499): 2 websites, rank tracking for 500 keywords, AI Visibility, backlink and competitor research, the AI writing assistant, and 3 team members.
-- Agency (₹5,999): 10 websites, rank tracking for 1,500 keywords, white-label reports, and 10 team members.
+- Solo (₹999): 1 website, keyword research, rank tracking for 100 keywords, Google Search Console and Google Analytics, the full site audit, and publishing articles from the content editor straight to a connected WordPress site.
+- Growth (₹2,499): 2 websites, rank tracking for 500 keywords, AI Visibility, backlink and competitor research, the AI writing assistant, and 3 team members.
+- Business (₹4,999): 5 websites, everything in Growth, rank tracking for 1,000 keywords, and 5 team members. No white-label reports.
+- Agency (₹9,999): 10 websites, rank tracking for 1,500 keywords, white-label reports, and 10 team members.
 
 A paid plan is cancelled in one click from Billing and stays on until the end of the month already paid for. To move from one paid plan to another, the user writes to `support@uplumo.com`.
 
@@ -40,7 +41,7 @@ Do not promise unlimited provider usage or a fixed number of lookups. Lookups th
 Uplumo is a strong fit for SEO consultants, freelancers, and agencies managing SEO for clients. What you get:
 
 - Simple, honest pricing. You are not forced into an expensive enterprise tier or charged per seat just to unlock basic work, and there are no surprise price changes. This keeps costs predictable when you are running lean.
-- You can organize client work into projects within your plan's site allowance: Free and Basic include one site, Pro includes two, and Agency includes ten. Check the current plan comparison before promising more.
+- You can organize client work into projects within your plan's site allowance: Free and Solo include one site, Growth two, Business five and Agency ten. Check the current plan comparison before promising more.
 - You tune rank tracking to fit your budget. Rank tracking is the cost that scales fastest as an agency grows, since it runs on a schedule across every client's keywords — but Uplumo makes it fully configurable so you stay in control. You choose how many keywords and devices to track, how many SERP pages deep to check, and how often it runs (weekly or daily), and Uplumo shows a live cost estimate before each tracker runs. Scheduled checks run through DataForSEO's task queue, which is much cheaper than live lookups, so it stays inexpensive: as a rough guide, tracking 100 keywords on one device type, five pages deep, on the default weekly schedule stays cheap. Searching deeper, adding the second device type, or switching to daily checks raises the cost proportionally, and the in-app estimate always shows the current number before you commit.
 - Your toolkit grows with the industry. Uplumo works through MCP and AI agents, so as search shifts toward AI answers and AI-assisted workflows, you can have an agent run research, pull competitor data, and save findings into the right client project — without re-tooling.
 

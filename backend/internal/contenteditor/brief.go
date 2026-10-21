@@ -24,12 +24,18 @@ import (
 // Brief limits. The preflight estimate uses DataForSEO's list prices:
 // a depth-30 live SERP ($0.002 per 10 results = $0.006) plus eight content
 // parses ($0.00015 each = $0.0012). About 9.2 credits; the customer is
-// charged the successful task cost reported by the provider; pricing drift
-// can exceed the estimate and is logged by the spend guard.
+// charged the successful task cost reported by the provider, never above the
+// ceiling.
+//
+// Shop and marketplace pages often parse to no text, so up to
+// briefParseAttempts results are tried to find briefParses readable pages.
+// The extra parses (at most $0.0012) are paid by Uplumo: the customer's
+// charge stays capped at the quoted ceiling.
 const (
 	briefCacheTTL        = 30 * 24 * time.Hour
 	briefDepth           = 30
 	briefParses          = 8
+	briefParseAttempts   = 16
 	briefMinParsed       = 3
 	briefCeiling         = 0.006 + briefParses*0.00015
 	briefMaxQuestions    = 100
@@ -252,18 +258,21 @@ func (p DataForSEOBriefProvider) Fetch(ctx context.Context, organizationID strin
 			return err
 		}
 		brief.Questions = extractBriefQuestions(serpResult)
-		urls := make([]string, 0, briefParses)
+		urls := make([]string, 0, briefParseAttempts)
 		for _, item := range extractOrganicItems(serpResult) {
 			link, _ := item["url"].(string)
 			if hostFromURL(link) == "" || slices.Contains(urls, link) {
 				continue
 			}
 			urls = append(urls, link)
-			if len(urls) == briefParses {
+			if len(urls) == briefParseAttempts {
 				break
 			}
 		}
 		for _, link := range urls {
+			if len(brief.Competitors) == briefParses {
+				break
+			}
 			if err := ctx.Err(); err != nil {
 				return err
 			}
@@ -281,7 +290,8 @@ func (p DataForSEOBriefProvider) Fetch(ctx context.Context, organizationID strin
 			}
 		}
 		if len(brief.Competitors) < briefMinParsed {
-			return fmt.Errorf("%w: only %d of %d competitor pages could be read", ErrBriefUnavailable, len(brief.Competitors), len(urls))
+			// No brief means no charge, as the editor promises.
+			return fmt.Errorf("%w: %w: only %d of %d competitor pages could be read", ErrBriefUnavailable, dataforseo.ErrNothingDelivered, len(brief.Competitors), len(urls))
 		}
 		brief.Terms = briefTerms(brief.Competitors)
 		brief.Subtopics = briefSubtopics(brief.Competitors)

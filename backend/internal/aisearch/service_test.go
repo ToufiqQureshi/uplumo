@@ -59,8 +59,8 @@ func TestBrandLookupPreflightsWholeFanoutAndCacheHitHasNoHold(t *testing.T) {
 		t.Fatal(err)
 	}
 	held := guard.Held()
-	if len(held) != 1 || held[0].EstimateUSD != 3 {
-		t.Fatalf("holds = %+v; want one $3 hold for six provider calls", held)
+	if want := 6 * dataforseo.AIMentionsCeilingUSD; len(held) != 1 || held[0].EstimateUSD != want {
+		t.Fatalf("holds = %+v; want one hold of six $0.25 mentions ceilings", held)
 	}
 	if _, err := svc.BrandLookup(context.Background(), org, "p", lookupInput()); err != nil {
 		t.Fatal(err)

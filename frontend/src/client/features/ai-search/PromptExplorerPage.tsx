@@ -6,6 +6,7 @@ import { Columns3, MessageSquare, SearchCheck, Sparkles } from "lucide-react";
 import { explorePrompt } from "@/client/features/ai-search/aiSearchApi";
 import { useHostedPlanGate } from "@/client/features/billing/HostedPlanGate";
 import { ResearchPageShell } from "@/client/features/ai-search/ResearchPageShell";
+import { AiVisibilityGuide } from "@/client/features/ai-search/AiVisibilityGuide";
 import { PromptExplorerForm } from "@/client/features/ai-search/components/PromptExplorerForm";
 import { PromptExplorerResults } from "@/client/features/ai-search/components/PromptExplorerResults";
 import { RecentSearches } from "@/client/components/RecentSearches";
@@ -148,6 +149,9 @@ export function PromptExplorerPage({ projectId, urlState, onSubmit }: Props) {
 
   return (
     <ResearchPageShell
+      guide={
+        <AiVisibilityGuide current="prompt-explorer" projectId={projectId} />
+      }
       title="Prompt Explorer"
       description="Ask any prompt across ChatGPT, Claude, Gemini, and Perplexity side-by-side."
       planStatus={planStatus}

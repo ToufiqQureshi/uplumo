@@ -18,6 +18,7 @@ import (
 	"github.com/toufiqqureshi/uplumo/backend/internal/domain"
 	"github.com/toufiqqureshi/uplumo/backend/internal/kv"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/dataforseo"
+	"github.com/toufiqqureshi/uplumo/backend/internal/platform/spend"
 	"github.com/toufiqqureshi/uplumo/backend/internal/site"
 )
 
@@ -138,12 +139,32 @@ func TestPaidLookupsSpendTheWorkspacesCreditsEndToEnd(t *testing.T) {
 		t.Fatalf("usage = %+v, want %d credits left and %d spent on domain_research", usage, balance, spentCredits)
 	}
 	// Site audit's page speed test runs on Google's free API, so it has no cost.
-	if len(usage.Costs) != 8 {
-		t.Fatalf("usage lists %d action costs, want 8", len(usage.Costs))
+	if len(usage.Costs) != 9 { // AI visibility lists brand lookup and prompt explorer apart
+		t.Fatalf("usage lists %d action costs, want 9", len(usage.Costs))
 	}
 	for _, cost := range usage.Costs {
 		if cost.Feature == "site_audit" {
 			t.Fatalf("usage lists a cost for site_audit, which uses no credits: %+v", cost)
 		}
+	}
+}
+
+func TestResponseCarriesTheCreditsTheRequestCharged(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		charged int64
+		want    string
+	}{{"charged", 63, "63"}, {"free request", 0, ""}} {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := spend.WithCreditMeter(context.Background())
+			recorder := httptest.NewRecorder()
+			w := &creditsUsedWriter{ResponseWriter: recorder, ctx: ctx}
+			spend.RecordCredits(ctx, tt.charged)
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("{}"))
+			if got := recorder.Header().Get(usageHeaderName); got != tt.want {
+				t.Fatalf("%s = %q, want %q", usageHeaderName, got, tt.want)
+			}
+		})
 	}
 }

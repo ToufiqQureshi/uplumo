@@ -109,7 +109,7 @@ func (s *Tracking) Execute(ctx context.Context, job jobs.Job) error {
 			if a.Status != "submitted" {
 				continue
 			}
-			done, answer, citations, e := s.collect(ctx, a)
+			done, answer, citations, recommended, e := s.collect(ctx, a)
 			if e != nil {
 				pending = true
 				s.Search.logger.WarnContext(ctx, "AI tracking task read failed", "run", payload.RunID, "err", e)
@@ -119,7 +119,7 @@ func (s *Tracking) Execute(ctx context.Context, job jobs.Job) error {
 				pending = true
 				continue
 			}
-			if e = s.finishAnswer(ctx, a.ID, c, answer, citations, ""); e != nil {
+			if e = s.finishAnswer(ctx, a.ID, c, answer, citations, recommended, ""); e != nil {
 				return e
 			}
 		}
@@ -186,7 +186,7 @@ func (s *Tracking) submit(ctx context.Context, org, run string, c TrackingConfig
 				if e != nil {
 					return e
 				}
-				if e = s.finishAnswer(ctx, a.ID, c, extractText(raw), extractCitations(raw), ""); e != nil {
+				if e = s.finishAnswer(ctx, a.ID, c, extractText(raw), extractCitations(raw), nil, ""); e != nil {
 					return e
 				}
 			}
@@ -251,10 +251,10 @@ func (s *Tracking) submit(ctx context.Context, org, run string, c TrackingConfig
 	}
 	return nil
 }
-func (s *Tracking) collect(ctx context.Context, a TrackingAnswer) (bool, string, []Citation, error) {
+func (s *Tracking) collect(ctx context.Context, a TrackingAnswer) (bool, string, []Citation, []RecommendedBrand, error) {
 	raw, err := s.Search.provider.client.DoUnmetered(ctx, http.MethodGet, trackingEndpoint(a.Engine)+"/task_get/advanced/"+url.PathEscape(a.TaskID), nil, true)
 	if err != nil {
-		return false, "", nil, err
+		return false, "", nil, nil, err
 	}
 	var env struct {
 		StatusCode int `json:"status_code"`
@@ -264,48 +264,66 @@ func (s *Tracking) collect(ctx context.Context, a TrackingAnswer) (bool, string,
 		} `json:"tasks"`
 	}
 	if err = json.Unmarshal(raw, &env); err != nil {
-		return false, "", nil, err
+		return false, "", nil, nil, err
 	}
 	if env.StatusCode != 20000 || len(env.Tasks) != 1 {
-		return false, "", nil, errors.New("invalid task response")
+		return false, "", nil, nil, errors.New("invalid task response")
 	}
 	code := env.Tasks[0].StatusCode
 	if slices.Contains([]int{20100, 40601, 40602}, code) {
-		return false, "", nil, nil
+		return false, "", nil, nil, nil
 	}
 	if code != 20000 && code != 40102 {
 		_, err = s.DB.Exec(ctx, `UPDATE go_ai_tracking_answers SET status='failed',error_code='provider_failed' WHERE id=$1 AND status='submitted'`, a.ID)
-		return false, "", nil, err
+		return false, "", nil, nil, err
 	}
 	if len(env.Tasks[0].Result) == 0 {
-		return true, "", []Citation{}, nil
+		return true, "", []Citation{}, nil, nil
 	}
-	answer, citations, err := parseTrackingAnswer(env.Tasks[0].Result[0], a.Engine)
-	return err == nil, answer, citations, err
+	answer, citations, recommended, err := parseTrackingAnswer(env.Tasks[0].Result[0], a.Engine)
+	return err == nil, answer, citations, recommended, err
 }
 
 type trackingSource struct {
-	URL   string  `json:"url"`
-	Title *string `json:"title"`
+	URL             string  `json:"url"`
+	Title           *string `json:"title"`
+	SourceName      *string `json:"source_name"`
+	PublicationDate *string `json:"publication_date"`
 }
 
-func parseTrackingAnswer(raw []byte, engine string) (string, []Citation, error) {
+type trackingBrandEntity struct {
+	Title    string `json:"title"`
+	Category string `json:"category"`
+}
+
+const maxRecommendedBrands = 20
+
+func parseTrackingAnswer(raw []byte, engine string) (string, []Citation, []RecommendedBrand, error) {
 	var r struct {
 		Markdown string           `json:"markdown"`
 		Sources  []trackingSource `json:"sources"`
 		Items    []struct {
-			Type       string           `json:"type"`
-			Markdown   string           `json:"markdown"`
-			References []trackingSource `json:"references"`
-			Items      []struct {
+			Type          string                `json:"type"`
+			Markdown      string                `json:"markdown"`
+			References    []trackingSource      `json:"references"`
+			BrandEntities []trackingBrandEntity `json:"brand_entities"`
+			Items         []struct {
 				References []trackingSource `json:"references"`
 			} `json:"items"`
 		} `json:"items"`
 	}
 	if err := json.Unmarshal(raw, &r); err != nil {
-		return "", nil, err
+		return "", nil, nil, err
 	}
 	text, sources := r.Markdown, r.Sources
+	var entities []trackingBrandEntity
+	for _, i := range r.Items {
+		// An AI Overview result also lists organic results; only the
+		// overview's own brands were named by the AI.
+		if engine != "google_ai_overview" || i.Type == "ai_overview" {
+			entities = append(entities, i.BrandEntities...)
+		}
+	}
 	if engine == "google_ai_overview" {
 		text = ""
 		sources = nil
@@ -328,20 +346,40 @@ func parseTrackingAnswer(raw []byte, engine string) (string, []Citation, error) 
 			continue
 		}
 		seen[safe] = true
-		citations = append(citations, Citation{URL: safe, Domain: safeHostname(safe), Title: source.Title})
+		citations = append(citations, Citation{URL: safe, Domain: safeHostname(safe), Title: source.Title,
+			Source: truncatedPtr(source.SourceName, maxTitleLength), PublishedAt: truncatedPtr(source.PublicationDate, 40)})
 		if len(citations) >= maxCitations {
 			break
 		}
 	}
-	return truncate(text, 64000), citations, nil
+	return truncate(text, 64000), citations, recommendedBrands(entities), nil
+}
+
+// recommendedBrands keeps the distinct brands the AI named, first mention first.
+func recommendedBrands(entities []trackingBrandEntity) []RecommendedBrand {
+	brands := []RecommendedBrand{}
+	seen := map[string]bool{}
+	for _, e := range entities {
+		name := strings.TrimSpace(e.Title)
+		key := strings.ToLower(name)
+		if name == "" || seen[key] {
+			continue
+		}
+		seen[key] = true
+		brands = append(brands, RecommendedBrand{Name: truncate(name, maxBrandEntityLength), Category: truncate(e.Category, 60), Position: len(brands) + 1})
+		if len(brands) == maxRecommendedBrands {
+			break
+		}
+	}
+	return brands
 }
 
 var trackingURLs = regexp.MustCompile(`https?://[^\s)\]>]+|www\.[^\s)\]>]+`)
 
-func (s *Tracking) finishAnswer(ctx context.Context, id string, c TrackingConfig, text string, citations []Citation, code string) error {
+func (s *Tracking) finishAnswer(ctx context.Context, id string, c TrackingConfig, text string, citations []Citation, recommended []RecommendedBrand, code string) error {
 	brands := []TrackedBrand{{c.Brand, c.Domain}}
 	brands = append(brands, c.Competitors...)
-	observed := make([]BrandObservation, 0, len(brands))
+	observed := make([]storedBrand, 0, len(brands)+len(recommended))
 	prose := trackingProse(text)
 	for _, b := range brands {
 		cited := false
@@ -350,7 +388,11 @@ func (s *Tracking) finishAnswer(ctx context.Context, id string, c TrackingConfig
 				cited = true
 			}
 		}
-		observed = append(observed, BrandObservation{b.Name, b.Domain, mentionsBrand(prose, b.Name), cited})
+		observed = append(observed, storedBrand{BrandObservation: BrandObservation{b.Name, b.Domain, mentionsBrand(prose, b.Name), cited}})
+	}
+	// Tracked brands stay first: rate queries read brands->0 as the target.
+	for _, r := range recommended {
+		observed = append(observed, storedBrand{BrandObservation: BrandObservation{Name: r.Name}, Recommended: true, Category: r.Category, Position: r.Position})
 	}
 	if citations == nil {
 		citations = []Citation{}

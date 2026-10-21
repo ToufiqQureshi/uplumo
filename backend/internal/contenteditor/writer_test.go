@@ -217,3 +217,18 @@ func TestWriterActionsHaveBoundedTokenBudgets(t *testing.T) {
 		}
 	}
 }
+
+// Live, "Fact check" rewrote the passage with a new heading because the
+// shared AEO focus asked for question headings. It must only list claims.
+func TestFactCheckAndTitlePromptsDoNotRewrite(t *testing.T) {
+	for _, mode := range []string{"seo", "aeo"} {
+		fact := writerSystemPrompt(WriterFactCheck, mode)
+		if !strings.Contains(fact, "Do not rewrite") || strings.Contains(fact, "question-based headings") {
+			t.Errorf("%s fact check prompt = %q", mode, fact)
+		}
+		title := writerSystemPrompt(WriterTitleMeta, mode)
+		if !strings.Contains(title, "'Title: <title>'") || !strings.Contains(title, "'Description:") {
+			t.Errorf("%s title prompt = %q, want the Title:/Description: lines the editor parses", mode, title)
+		}
+	}
+}

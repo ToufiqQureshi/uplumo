@@ -157,7 +157,7 @@ func (h handler) extendWriteDeadline(w http.ResponseWriter, r *http.Request) {
 func (h handler) writeError(w http.ResponseWriter, r *http.Request, operation string, err error) {
 	switch {
 	case errors.Is(err, ErrNotIncluded):
-		httpx.WriteError(w, http.StatusPaymentRequired, "plan_required", "IndexNow is available on Basic, Pro and Agency.")
+		httpx.WriteError(w, http.StatusPaymentRequired, "plan_required", "IndexNow is available on every paid plan.")
 	case errors.Is(err, ErrProjectNotFound):
 		httpx.WriteError(w, http.StatusNotFound, "not_found", "This project is no longer available.")
 	case errors.Is(err, ErrNoDomain):

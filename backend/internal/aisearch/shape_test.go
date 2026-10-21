@@ -2,6 +2,7 @@ package aisearch
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -94,6 +95,55 @@ func TestShapeResultCapsLongTextAndDerivesDomainFromURL(t *testing.T) {
 	}
 	if n := len(query.BrandsMentioned[0]); n != 200 {
 		t.Errorf("brand length = %d, want 200", n)
+	}
+}
+
+// The mentions call already returns the AI's answer, the pages it retrieved and
+// the searches it ran; dropping them hid what was paid for.
+func TestShapeResultKeepsTheAnswerRetrievedPagesAndFanOutQueries(t *testing.T) {
+	var item mentionItem
+	raw := `{"question":"is it cheaper to book direct?","model_name":"gpt-5-2","answer":"Booking direct is often cheaper.",
+		"search_results":[
+			{"title":"Direct booking pros and cons","url":"https://www.revmerito.com/direct-booking?utm_source=chatgpt.com","description":"Hotels avoid commissions."},
+			{"title":"bad link","url":"javascript:alert(1)","description":"x"}],
+		"fan_out_queries":["direct vs ota price"," ","hotel direct booking savings"],
+		"sources":[{"url":"https://www.forbes.com/a","title":"Forbes"}]}`
+	if err := json.Unmarshal([]byte(raw), &item); err != nil {
+		t.Fatal(err)
+	}
+	args := baseArgs()
+	args.platforms = []platformOutcome{{platform: platformChatGPT, ok: true, bundle: platformBundle{mentions: []mentionItem{item}, complete: true}}}
+
+	query := shapeResult(args).TopQueries[0]
+
+	if derefOr(query.Answer, "") != "Booking direct is often cheaper." || derefOr(query.Model, "") != "gpt-5-2" {
+		t.Errorf("answer/model = %v / %v, want the AI's answer and model kept", query.Answer, query.Model)
+	}
+	if len(query.RetrievedPages) != 1 || *query.RetrievedPages[0].Domain != "revmerito.com" || derefOr(query.RetrievedPages[0].Description, "") != "Hotels avoid commissions." {
+		t.Errorf("retrieved pages = %+v, want the one safe page with its description", query.RetrievedPages)
+	}
+	if !reflect.DeepEqual(query.FanOutQueries, []string{"direct vs ota price", "hotel direct booking savings"}) {
+		t.Errorf("fan-out queries = %v, want the two non-blank searches", query.FanOutQueries)
+	}
+}
+
+func TestShapeResultCapsTheAnswerAndRetrievedPages(t *testing.T) {
+	var results []mentionSearchResult
+	for i := range 30 {
+		results = append(results, mentionSearchResult{URL: ptr(fmt.Sprintf("https://site%d.example/page", i)), Description: ptr(strings.Repeat("d", 500))})
+	}
+	args := baseArgs()
+	args.platforms = []platformOutcome{{platform: platformGoogle, ok: true, bundle: platformBundle{
+		mentions: []mentionItem{{Question: ptr("q"), Answer: ptr(strings.Repeat("a", 9000)), SearchResults: results}}, complete: true,
+	}}}
+
+	query := shapeResult(args).TopQueries[0]
+
+	if n := utf16Len(*query.Answer); n != maxAnswerLength {
+		t.Errorf("answer length = %d, want %d", n, maxAnswerLength)
+	}
+	if len(query.RetrievedPages) != maxRetrievedPagesPerQuery || utf16Len(*query.RetrievedPages[0].Description) != maxDescriptionLength {
+		t.Errorf("retrieved pages = %d with a %d character description, want %d capped at %d", len(query.RetrievedPages), utf16Len(*query.RetrievedPages[0].Description), maxRetrievedPagesPerQuery, maxDescriptionLength)
 	}
 }
 

@@ -18,6 +18,7 @@ import {
   PLATFORM_SHORT_LABEL,
 } from "@/client/features/ai-search/platformLabels";
 import { formatUrlForDisplay } from "@/client/components/table/url";
+import { QueryAnswerDetails } from "@/client/features/ai-search/components/QueryAnswerDetails";
 import type { BrandLookupResult } from "@/types/schemas/ai-search";
 
 type TopPageRow = BrandLookupResult["topPages"][number];
@@ -277,6 +278,7 @@ export function buildTopQueriesColumns({
               Brands: {row.original.brandsMentioned.slice(0, 5).join(", ")}
             </p>
           ) : null}
+          <QueryAnswerDetails query={row.original} />
         </>
       ),
     }),

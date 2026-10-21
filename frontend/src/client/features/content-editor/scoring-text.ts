@@ -28,6 +28,36 @@ export function phraseCount(text: string, phrase: string) {
 }
 export const containsPhrase = (text: string, phrase: string) =>
   phraseCount(text, phrase) > 0;
+
+const STOP_WORDS = new Set(
+  "a an and are as at be by for from how in into is it of on or the to what why with your".split(
+    " ",
+  ),
+);
+/** The words of a topic that carry meaning, for close-variant matches. */
+export const topicWords = (topic: string) =>
+  words(normalizeText(topic)).filter((word) => !STOP_WORDS.has(word));
+
+/**
+ * True when text names the topic: the exact phrase, or every meaningful
+ * word of it in any order ("ethnic wear in teal green"). Writers should not
+ * have to repeat an exact keyword to earn placement points; Google matches
+ * meaning, and forcing the exact phrase pushes keyword stuffing.
+ */
+export function mentionsTopic(text: string, topic: string) {
+  if (!topic.trim()) return false;
+  if (containsPhrase(text, topic)) return true;
+  const wanted = topicWords(topic);
+  if (wanted.length < 2) return false;
+  const present = new Set(words(normalizeText(text)));
+  return wanted.every((word) => present.has(word));
+}
+
+/** Link targets in Markdown, never image sources (`![alt](src)`). */
+export const linkTargets = (body: string) =>
+  [...body.matchAll(/(?<!!)\[[^\]]+\]\(([^)\s]+)[^)]*\)/gu)].map(
+    (match) => match[1] ?? "",
+  );
 export const paragraphs = (text: string) =>
   text
     .split(/\n\s*\n/u)

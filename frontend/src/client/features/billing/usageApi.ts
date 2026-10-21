@@ -17,7 +17,7 @@ const featureSchema = z.enum([
 export type CreditFeature = z.infer<typeof featureSchema>;
 
 const usageSchema = z.object({
-  plan: z.enum(["free", "basic", "pro", "agency"]),
+  plan: z.enum(["free", "basic", "pro", "business", "agency"]),
   unlimited: z.boolean(),
   chargesCredits: z.boolean(),
   balanceCredits: z.number().int().nonnegative(),
@@ -36,6 +36,8 @@ const usageSchema = z.object({
   costs: z.array(
     z.object({
       feature: featureSchema,
+      // Tells apart actions of one feature that cost very differently.
+      action: z.string().optional(),
       unit: z.string(),
       credits: z.number().int().positive(),
     }),
@@ -77,7 +79,7 @@ export function creditLevel(usage: BillingUsage): CreditLevel {
   return "ok";
 }
 
-const billingUsageQueryKey = ["billing", "usage"] as const;
+export const billingUsageQueryKey = ["billing", "usage"] as const;
 
 /** The active workspace's credits, spend this month and typical costs. */
 export function useBillingUsage({

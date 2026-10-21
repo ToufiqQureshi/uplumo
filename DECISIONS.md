@@ -13,6 +13,7 @@ Last updated: 20 Oct 2026
 
 | Date | Decision | Why |
 |---|---|---|
+| 21 Oct | Four paid plans: **Solo ₹999 (1 site, 4,000 credits) / Growth ₹2,499 (2 sites, 10,000) / Business ₹4,999 (5 sites, 15,000, 1,000 keywords, 5 members, no white-label) / Agency ₹9,999 (10 sites, 25,000)**. Internal ids `basic`/`pro`/`business`/`agency`. Every card lists everything the plan includes. | Credits, not sites, cap provider cost; Agency at ₹5,999 for 10 sites was cheaper per site than Growth. |
 | 14 Oct | WordPress publishing is on the **Basic, Pro and Agency** plans. Free gets a link to the plans. | It is a paid feature with no provider cost. |
 | 14 Oct | Only an **owner or admin** can connect a website. Any member can publish. | The site password is sensitive. |
 | 14 Oct | Onboarding has a **6th step**, "connect website", and it can be skipped. | Customers can connect early without being blocked. |
@@ -35,7 +36,9 @@ Last updated: 20 Oct 2026
 | 19 Oct | **A paid action that loses one call keeps what was already paid for.** Keyword Research answers with the leg that worked, Backlinks with the summary and no trend, Local SEO with the points already searched; each is cached ten minutes only. Credit refusals, replays and a departed customer still fail. | Before, the customer paid for the first call and saw an error, and the retry paid again. |
 | 19 Oct | Each paid call in one user action holds credits under its own key (`spend.ScopedKey`); the browser's `Idempotency-Key` identifies the action, not the hold. | The 17 Oct change reused one key for every call in a request, so Backlinks overview, Local SEO grids, SAM turns and Keyword Research failed after the first call was charged. |
 | 19 Oct | HTTP `writeTimeout` is 150s (was 30s) and a budgeted operation stops starting calls after 120s. | A provider call can take 60s; at 30s the connection closed and the customer saw a generic error after paying. |
-| 19 Oct | The "about N credits" hints are the live measured cost of one click (keyword search 61, domain tab 40, backlink report 64, 3×3 map grid 27). AI Visibility is still 128 and is wrong for Brand Lookup (about 900): waiting for the owner. | Customers saw 26 and paid 40. |
+| 19 Oct | The "about N credits" hints are the live measured cost of one click (keyword search 61, domain tab 40, backlink report 64, 3×3 map grid 27). AI Visibility has two hints: prompt explorer 128 and brand lookup about 910 (a real lookup billed $0.706 and 964 credits). | Customers saw 26 and paid 40. |
+| 19 Oct | **No per-workspace daily credit limit.** `WorkspaceDailyLimitUSD` returns 0; the credits a customer bought are the limit. The global `PROVIDER_DAILY_LIMIT_USD` brake stays until the owner removes it. | Owner: a customer who paid must not be stopped by a day cap. It showed "used today's share" to paying customers. |
+| 19 Oct | AI call hold ceilings are per endpoint: $0.10 per model answer, $0.25 per mentions task (was a flat $0.50). | A flat $0.50 made 4 models with web search hold $4.00 and Brand Lookup $6, so neither could run; live calls bill $0.03 and $0.10-0.15. |
 | 20 Oct | **IndexNow** is on **Basic, Pro and Agency**, not Free. Pages published live to WordPress from Uplumo are submitted automatically once the project has set up IndexNow. | Owner decision. Each workspace may make 60 IndexNow requests an hour, so one cannot get Uplumo's servers rate-limited for everyone. Google does not use IndexNow. |
 
 ## 2. Waiting for the owner
@@ -57,7 +60,8 @@ Last updated: 20 Oct 2026
 | `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `PUBLIC_URL` | set | Login and links |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | set | Google login, Search Console, GA4 |
 | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` | set (**test mode**) | Billing |
-| `RAZORPAY_PLAN_ID_BASIC`, `_PRO`, `_AGENCY` | set (test) | Monthly plans |
+| `RAZORPAY_PLAN_ID_BASIC`, `_PRO`, `_AGENCY` | set (test) | Monthly plans. Test Agency plan is still ₹5,999: recreate at ₹9,999 |
+| `RAZORPAY_PLAN_ID_BUSINESS` | **not set** | Business ₹4,999 monthly plan; without it Business cannot be bought |
 | `LOOPS_API_KEY` + 3 `LOOPS_TRANSACTIONAL_*_ID` | set | Email |
 | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_CONTENT_IMAGE_BUCKET` | set (14 Oct) | Content editor images (`content-images` bucket) |
 | `DATAFORSEO_API_KEY` | **set 14 Oct** | SEO data; the account is not verified yet |

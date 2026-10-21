@@ -63,7 +63,7 @@ func MountOAuth(mux *http.ServeMux, deps OAuthDeps) {
 				return
 			}
 			if !allowed {
-				httpx.WriteError(w, http.StatusPaymentRequired, "plan_required", "Connecting Google Search Console and Google Analytics is part of the Basic plan and above.")
+				httpx.WriteError(w, http.StatusPaymentRequired, "plan_required", "Connecting Google Search Console and Google Analytics is part of the Solo plan and above.")
 				return
 			}
 		}

@@ -38,7 +38,10 @@ export function ResearchPageShell<TData>({
   backLink,
   renderResults,
   history,
+  guide,
 }: {
+  /** Explains which AI visibility tool to use, under the page title. */
+  guide?: ReactNode;
   title: string;
   description: string;
   planStatus: "loading" | PlanStatus;
@@ -95,6 +98,7 @@ export function ResearchPageShell<TData>({
           description={description}
           backLink={resultData && !isLoading ? backLink : undefined}
         />
+        {guide}
 
         {planStatus === "loading" ? (
           <SkeletonCard />

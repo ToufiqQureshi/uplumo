@@ -60,6 +60,34 @@ describe("CreditCostHint", () => {
     expect(render()).toBe("");
   });
 
+  it("shows the cost of the action asked for, not of another action of the feature", () => {
+    usageState.data = {
+      ...proUsage,
+      costs: [
+        {
+          feature: "ai_visibility",
+          action: "prompt_explorer",
+          unit: "prompt on 4 AI models",
+          credits: 128,
+        },
+        {
+          feature: "ai_visibility",
+          action: "brand_lookup",
+          unit: "brand lookup",
+          credits: 909,
+        },
+      ],
+    };
+    const brandLookup = renderToStaticMarkup(
+      createElement(CreditCostHint, {
+        feature: "ai_visibility",
+        action: "brand_lookup",
+      }),
+    );
+    expect(brandLookup).toContain("About 909 credits per brand lookup");
+    expect(brandLookup).not.toContain("128");
+  });
+
   it("still shows the balance for a feature without a listed cost", () => {
     usageState.data = { ...proUsage, costs: [] };
     expect(render()).toContain("7,420 left");

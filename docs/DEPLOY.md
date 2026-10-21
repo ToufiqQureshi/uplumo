@@ -94,9 +94,10 @@ Billing uses Razorpay **Subscriptions**. Do this once in Test Mode, then again
 in Live Mode:
 
 1. Create one monthly plan for each plan Uplumo sells, with the amount in
-   `backend/internal/plans/catalog.go`: Basic ₹999, Pro ₹2,499, Agency
-   ₹5,999. Their ids (`plan_...`) are `RAZORPAY_PLAN_ID_BASIC`,
-   `RAZORPAY_PLAN_ID_PRO` and `RAZORPAY_PLAN_ID_AGENCY`. A plan left without
+   `backend/internal/plans/catalog.go`: Solo ₹999, Growth ₹2,499, Business
+   ₹4,999, Agency ₹9,999 (ids `basic`, `pro`, `business`, `agency`). Their
+   ids (`plan_...`) are `RAZORPAY_PLAN_ID_BASIC`, `RAZORPAY_PLAN_ID_PRO`,
+   `RAZORPAY_PLAN_ID_BUSINESS` and `RAZORPAY_PLAN_ID_AGENCY`. A plan left without
    an id simply cannot be bought.
 2. Add a webhook to `https://uplumo.com/webhooks/razorpay` with a secret of
    your own; the same value is `RAZORPAY_WEBHOOK_SECRET`. Subscribe it to

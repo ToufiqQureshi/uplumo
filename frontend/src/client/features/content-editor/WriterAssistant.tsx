@@ -12,6 +12,9 @@ import type { ScoreCheck } from "./scoring";
 import type { ContentDraftInput, EditorMode } from "./scoring";
 import { useEditorSession } from "./editor-session";
 import { writerContext } from "./writer-context";
+import { useFreeSeoEditor } from "./FreeSeoEditorContext";
+import { TitleMetaChoices } from "./TitleMetaChoices";
+import { PRIMARY_ACTIONS, writerActions } from "./writer-actions";
 import {
   applyWriterTarget,
   captureWriterTarget,
@@ -19,19 +22,6 @@ import {
   type WriterAction,
   type WriterTarget,
 } from "./writer-target";
-
-const actions = [
-  ["outline", "Create outline"],
-  ["write_section", "Write this section"],
-  ["fill_gap", "Fill a gap"],
-  ["answer_first", "Answer first"],
-  ["fix_top_issue", "Fix top issue"],
-  ["title_meta", "Title and meta options"],
-  ["faq", "FAQ from brief questions"],
-  ["destuff", "Remove repetition"],
-  ["fact_check", "Fact check"],
-  ["tone_language", "Tone and language"],
-] as const;
 
 export function WriterAssistant({
   projectId,
@@ -53,6 +43,7 @@ export function WriterAssistant({
   onClearTask?: () => void;
 }) {
   const { editor } = useEditorSession();
+  const { setDraftField } = useFreeSeoEditor();
   const [instructions, setInstructions] = useState("");
   const [language, setLanguage] = useState("");
   const [result, setResult] = useState("");
@@ -136,6 +127,41 @@ export function WriterAssistant({
     );
   };
 
+  const actionButton = ({
+    id,
+    label,
+    hint,
+  }: {
+    id: WriterAction;
+    label: string;
+    hint: string;
+  }) => (
+    <Button
+      key={id}
+      type="button"
+      size="sm"
+      variant="outline"
+      className="h-auto min-h-12 justify-start py-2 text-left whitespace-normal"
+      disabled={
+        disabled ||
+        writerDisabled ||
+        mutation.isPending ||
+        (id !== "outline" && !draft.content.trim())
+      }
+      onClick={() => runAction(id)}
+    >
+      {mutation.isPending && mutation.variables?.action === id ? (
+        <LoaderCircle aria-hidden className="animate-spin" />
+      ) : null}
+      <span className="flex flex-col items-start gap-0.5">
+        <span>{label}</span>
+        <span className="text-xs font-normal text-muted-foreground">
+          {hint}
+        </span>
+      </span>
+    </Button>
+  );
+
   return (
     <section className="space-y-3 rounded-xl border bg-card p-4">
       <div className="flex items-center gap-2">
@@ -143,11 +169,8 @@ export function WriterAssistant({
         <h2 className="font-medium">AI writing assistant</h2>
       </div>
       <p className="text-xs leading-5 text-muted-foreground">
-        Select text for rewrite actions. AI changes only that passage; other
-        writing actions add a suggestion at your cursor. The selected text or
-        current section is sent with a short summary of the brief. Usage is
-        charged to your organization’s AI credits. Review suggestions before
-        using them; generated facts may need verification.
+        AI only suggests; nothing changes in your article until you press Insert
+        or Replace. Check every fact before you publish.
       </p>
       {task ? (
         <div className="space-y-2 rounded-lg border bg-muted p-3 text-sm">
@@ -209,39 +232,23 @@ export function WriterAssistant({
         />
       </label>
       <div className="grid grid-cols-2 gap-2">
-        {actions.map(([action, label]) => (
-          <Button
-            key={action}
-            type="button"
-            size="sm"
-            variant="outline"
-            className="h-auto min-h-12 justify-start py-2 text-left whitespace-normal"
-            disabled={
-              disabled ||
-              writerDisabled ||
-              mutation.isPending ||
-              (action !== "outline" && !draft.content.trim())
-            }
-            onClick={() => runAction(action)}
-          >
-            {mutation.isPending && mutation.variables?.action === action ? (
-              <LoaderCircle aria-hidden className="animate-spin" />
-            ) : null}
-            <span className="flex flex-col items-start gap-0.5">
-              <span>{label}</span>
-              {availability.data ? (
-                <span className="text-xs font-normal text-muted-foreground">
-                  Up to {availability.data.maxCreditsPerAction} credits
-                </span>
-              ) : null}
-            </span>
-          </Button>
-        ))}
+        {writerActions.slice(0, PRIMARY_ACTIONS).map(actionButton)}
       </div>
-      <p className="text-xs text-muted-foreground">
-        The final charge uses the AI provider&apos;s actual tokens and never
-        exceeds the maximum shown on each action.
-      </p>
+      <details className="text-sm">
+        <summary className="cursor-pointer text-muted-foreground">
+          More AI actions
+        </summary>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          {writerActions.slice(PRIMARY_ACTIONS).map(actionButton)}
+        </div>
+      </details>
+      {availability.data ? (
+        <p className="text-xs text-muted-foreground">
+          Each action usually uses 1–5 credits, never more than{" "}
+          {availability.data.maxCreditsPerAction}. You pay only for what the AI
+          actually wrote.
+        </p>
+      ) : null}
       {error ? (
         <p role="alert" className="text-sm text-destructive">
           {error}
@@ -290,10 +297,14 @@ export function WriterAssistant({
               ? "Replace selected passage"
               : "Insert at saved cursor"}
           </Button>
+          {target?.action === "title_meta" ? (
+            <TitleMetaChoices suggestion={result} onUse={setDraftField} />
+          ) : null}
           {target && writerTargetMode(target.action) === "review" ? (
             <p className="text-xs text-muted-foreground">
-              Review and copy these notes manually; they do not replace your
-              article.
+              {target.action === "fact_check"
+                ? "These are notes to check; your article is not changed."
+                : "Review and copy these notes manually; they do not replace your article."}
             </p>
           ) : null}
           <Button

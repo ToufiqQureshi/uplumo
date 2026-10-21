@@ -49,21 +49,22 @@ export function scoreContent(
                 "sources-internal",
                 "readability",
                 "alt-text",
+                "search-description",
+                "experience",
               ].includes(c.id),
             ),
           ]
         : staticSeo(draft, body)
       : aeo(draft, body, brief);
-  let score =
-      mode === "seo"
-        ? Math.round(
-            (sum(checks) * 100) /
-              Math.max(
-                1,
-                checks.reduce((total, item) => total + item.weight, 0),
-              ),
-          )
-        : sum(checks),
+  // Checks that do not apply yet (no images, no brief questions) carry no
+  // weight, and the score is scaled to the points that do apply.
+  let score = Math.round(
+      (sum(checks) * 100) /
+        Math.max(
+          1,
+          checks.reduce((total, item) => total + item.weight, 0),
+        ),
+    ),
     scoreCap: ReturnType<typeof seoScoreCap>;
   if (
     !draft.title.trim() &&
