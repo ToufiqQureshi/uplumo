@@ -8,6 +8,8 @@
 2. `localSeoApi.ts` sends businesses, profile or rank-grid action.
 3. Go `localseo` validates bounds and plan access, then calls the shared keyword/DataForSEO local SERP provider.
 4. UI shows business rows or each grid point and its rank/result status.
+   The profile card resolves `work_time.work_hours` before the legacy root
+   `work_hours` field; displaying hours adds no provider request.
 
 ## Implementation map
 

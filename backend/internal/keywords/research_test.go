@@ -213,18 +213,22 @@ func TestRowMapping(t *testing.T) {
 		{Keyword: "beta", Info: Info{SearchVolume: &five}, Clickstream: &Info{SearchVolume: &zero}},
 		{Keyword: "  "},
 		{Keyword: "gamma", MainIntent: strp("navigational")},
+		{Keyword: "delta", Info: Info{SearchVolume: &five}, Clickstream: &Info{}},
 	})
-	if len(rows) != 3 || rows[0].Keyword != "alpha" {
+	if len(rows) != 4 || rows[0].Keyword != "alpha" {
 		t.Fatalf("rows = %+v, want deduped and normalized", rows)
 	}
 	if *rows[0].SearchVolume != 50 || len(rows[0].Trend) != 1 || *rows[0].CPC != 2 || rows[0].Intent != "informational" {
 		t.Errorf("alpha = %+v, want the clickstream volume and trend with the plain CPC", rows[0])
 	}
-	if *rows[1].SearchVolume != 5 || rows[1].Trend == nil {
-		t.Errorf("beta = %+v, want a zero clickstream volume ignored", rows[1])
+	if rows[1].SearchVolume == nil || *rows[1].SearchVolume != 0 || rows[1].Trend == nil {
+		t.Errorf("beta = %+v, want the provider's measured zero retained", rows[1])
 	}
 	if rows[2].Intent != "navigational" || rows[2].SearchVolume != nil || rows[2].Trend == nil {
 		t.Errorf("gamma = %+v", rows[2])
+	}
+	if rows[3].SearchVolume == nil || *rows[3].SearchVolume != 5 || rows[3].Trend == nil {
+		t.Errorf("delta = %+v, want national fallback only when clickstream volume is absent", rows[3])
 	}
 
 	ads := adsRows([]AdsItem{{Keyword: "Delta", SearchVolume: intp(70), CompetitionIndex: floatp(55)}, {Keyword: "delta"}, {Keyword: "eps"}})

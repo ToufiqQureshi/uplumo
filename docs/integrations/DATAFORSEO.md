@@ -2,14 +2,15 @@
 
 `backend/internal/platform/dataforseo/client.go` is the shared authenticated transport. Feature providers build endpoint-specific request bodies. The client validates paths, requests a spend hold, sends the request, records task-reported costs in `go_dataforseo_usage`, and settles holds. See its colocated README and `backend/internal/platform/spend/README.md` for ceilings and limit semantics.
 
-Paid POSTs use `Client.Do(..., false)` and must not be automatically retried on network or 5xx errors: a timeout does not prove the provider did not bill. Query hooks for Backlinks, Domain and the rank-tracking keyword suggestion explicitly set `retry: false`, `refetchOnWindowFocus: false` and `refetchOnReconnect: false`, because the global query policy retries some errors and refetches stale queries on focus and reconnect. Explicit user Retry remains available. Overview cache misses for concurrent equivalent Backlinks requests on one server share an in-flight operation, keyed by organization, target and scope. A shared in-flight operation (Backlinks overview, AI brand lookup, Keyword Research) runs on a context detached from its first caller, capped at three minutes, so one caller leaving never cancels paid work another caller is still waiting for. Redis holds successful responses for six hours (Backlinks: 24 hours, tables bought in 1,000-row blocks); concurrent requests on different server instances can still duplicate paid work. Other Backlinks tabs and Domain have cache hits but no in-flight coalescing; investigate distributed locking or provider idempotency before promising exactly-once spend.
+Paid POSTs use `Client.Do(..., false)` and must not be automatically retried on network or 5xx errors: a timeout does not prove the provider did not bill. Paid browser queries disable retries, focus and reconnect refetch; explicit user Retry remains available. Equivalent Backlinks overview/table, Domain report, AI brand/prompt and Keyword Research/SERP cold misses share bounded work within one service process. Keys include organization and all result-changing inputs; project/market/depth apply where relevant. Shared work survives its first caller leaving, while each caller can cancel its own wait. Domain report work is bounded at 90 seconds; the other shared operations use three minutes. Successful caches have feature-specific lifetimes: Backlinks 24 hours, Domain and keyword SERP 12 hours; see the feature docs. Different server instances can still buy identical cold work, and direct Domain MCP paths are outside report coalescing. Do not promise exactly-once spend.
 
 A domain overview may use one Labs operation; a Backlinks domain overview legitimately calls both summary and history. The initial Backlinks screen also loads a selected table. Assert provider operations separately in tests, rather than assuming one click equals one request. Validate tenant, scope, market, filters and pagination before reaching the provider. Recheck authorization on every HTTP request, even on cache hits. No test should consume live provider credits.
 
 Brand Lookup can issue six provider tasks (eight with competitor comparisons).
-Equivalent cold misses within one Go process now share that fan-out under an
-organization/project scoped key. Separate instances and Prompt Explorer can
-still buy identical work concurrently. Scheduled Rank Tracking task-post uses
+Equivalent cold misses within one Go process share that fan-out under an
+organization/project scoped key. Prompt Explorer also shares equivalent model
+sets, while keeping caller order and brand highlighting separate. Separate
+instances and nonidentical overlapping model sets can still repeat purchases. Scheduled Rank Tracking task-post uses
 a stable run/chunk spend key; if its response is ambiguous, the worker records
 an error without live fallback for that chunk. Earlier accepted tasks are
 still collected. Explicitly rejected/failed/timed-out known tasks retain their
@@ -17,8 +18,9 @@ documented fallback behavior.
 
 Keyword Research also shares equivalent cold misses per server instance; its
 key includes organization, project, market, location, mode, limits and options.
-Different tenants remain separate. SERP snapshots and Domain Research are
-still only cache-backed and can duplicate work on concurrent cold misses.
+Different tenants remain separate. SERP snapshot coalescing also includes depth.
+Domain overview, keyword and page reports share their full cache identities;
+Domain MCP direct-provider paths retain their separate behavior.
 
 Reported provider spend and customer credits are distinct. To validate plan economics, compare actual usage exports with `backend/internal/plans/catalog.go`, spend ceilings and billing policy. Do not infer customer margin from the credit face value alone; live plan profitability requires the provider cost CSV, representative usage, currency conversion and time window.
 
@@ -66,3 +68,12 @@ refusal, a replay or a customer who left still fails the request.
 
 The HTTP server's write timeout (150s) outlasts two provider calls (60s each),
 and a budgeted operation stops starting calls after 120s.
+
+## Field-delivery audit
+
+The [dated field audit](../audits/2026-10-21-dataforseo-field-delivery.md) maps
+actual endpoint options through Go, API/schema, UI and export. A documented
+optional field is not proof it was populated on a live task. Preserve useful
+already-bought data without silently enabling paid options or deeper retrieval.
+The audit separates source findings, synthetic regressions and outstanding
+live raw-response/ledger reconciliation.

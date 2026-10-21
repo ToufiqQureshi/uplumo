@@ -13,6 +13,7 @@ Code and tests are the source of truth. Feature docs are colocated with their so
 - [Local setup](LOCAL_DEVELOPMENT.md), [deployment](DEPLOY.md), [product](PRODUCT.md)
 
 - [Feature wiring review](audits/2026-10-20-feature-wiring-review.md)
+- [DataForSEO field-delivery audit](audits/2026-10-21-dataforseo-field-delivery.md)
 
 ## Repo-wide guidance and references
 

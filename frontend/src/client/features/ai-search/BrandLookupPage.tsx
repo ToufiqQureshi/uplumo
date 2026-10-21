@@ -132,6 +132,8 @@ export function BrandLookupPage({
     enabled: hasActiveQuery && planStatus === "paid",
     staleTime: 5 * 60 * 1000,
     retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
   const visibilityHistoryQuery = useQuery({
     queryKey: [

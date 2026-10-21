@@ -107,6 +107,18 @@ type pagesFilters struct {
 	MaxRank             *float64 `json:"maxRank,omitempty"`
 }
 
+// These identities are shared by speculative whole-list buys and paged
+// requests, so an undercounted list can reuse the same unfiltered block.
+type rowsQuery struct {
+	Target   Target
+	Filters  rowsFilters
+	HideSpam bool
+}
+type domainsQuery struct {
+	Target  Target
+	Filters domainsFilters
+}
+
 // Overview returns summary and history reports for a target.
 func (s *Service) Overview(ctx context.Context, org string, in lookupInput) (Overview, error) {
 	target, err := normalizeTarget(in.Target, in.Scope)
@@ -237,7 +249,7 @@ func (s *Service) Rows(ctx context.Context, org string, in lookupInput, page pag
 	if countFilters(expr)+countFilters(scope)+boolInt(hideSpam)*2 > maxFilterConditions {
 		return Page[BacklinkRow]{}, inputError("Too many filter conditions (maximum 8).")
 	}
-	buy := func(block pageInput, expr []any, hideSpam bool) ([]BacklinkRow, *int, error) {
+	buy := func(ctx context.Context, block pageInput, expr []any, hideSpam bool) ([]BacklinkRow, *int, error) {
 		items, total, err := s.provider.rows(ctx, org, target, block, expr, hideSpam)
 		if err != nil {
 			return nil, nil, err
@@ -248,8 +260,16 @@ func (s *Service) Rows(ctx context.Context, org string, in lookupInput, page pag
 		}
 		return rows, total, nil
 	}
+	unfilteredQuery := rowsQuery{Target: target}
 	all, fetchedAt, ok, err := ensureWhole(ctx, s, "rows", org, target, func(v Summary) *float64 { return v.Backlinks }, "rank,desc",
-		func(block pageInput) ([]BacklinkRow, *int, error) { return buy(block, nil, false) })
+		func(block pageInput) ([]BacklinkRow, *int, error) {
+			// Store the speculative whole-list purchase as a normal block too.
+			// A stale overview can undercount, but the paid rows remain reusable.
+			got, err := loadPage(ctx, s, "rows", org, unfilteredQuery, block, func(ctx context.Context, block pageInput) ([]BacklinkRow, *int, error) {
+				return buy(ctx, block, nil, false)
+			})
+			return got.Rows, got.TotalCount, err
+		})
 	if err != nil {
 		return Page[BacklinkRow]{}, err
 	}
@@ -258,13 +278,9 @@ func (s *Service) Rows(ctx context.Context, org string, in lookupInput, page pag
 	}
 	expr = joinWithAnd(scope, expr)
 	unfiltered := len(expr) == 0 && !hideSpam && page.Mode == "as_is"
-	query := struct {
-		Target   Target
-		Filters  rowsFilters
-		HideSpam bool
-	}{target, filters, hideSpam}
-	return loadPage(ctx, s, "rows", org, query, page, func(block pageInput) ([]BacklinkRow, *int, error) {
-		rows, total, err := buy(block, expr, hideSpam)
+	query := rowsQuery{target, filters, hideSpam}
+	return loadPage(ctx, s, "rows", org, query, page, func(ctx context.Context, block pageInput) ([]BacklinkRow, *int, error) {
+		rows, total, err := buy(ctx, block, expr, hideSpam)
 		if err == nil && unfiltered {
 			keepIfWhole(ctx, s, "rows", org, target, block, rows, total)
 		}
@@ -285,7 +301,7 @@ func (s *Service) Domains(ctx context.Context, org string, in lookupInput, page 
 	if countFilters(expr) > maxFilterConditions {
 		return Page[ReferringDomainRow]{}, inputError("Too many filter conditions (maximum 8).")
 	}
-	buy := func(block pageInput, expr []any) ([]ReferringDomainRow, *int, error) {
+	buy := func(ctx context.Context, block pageInput, expr []any) ([]ReferringDomainRow, *int, error) {
 		items, total, err := s.provider.domains(ctx, org, target, block, expr)
 		if err != nil {
 			return nil, nil, err
@@ -296,20 +312,23 @@ func (s *Service) Domains(ctx context.Context, org string, in lookupInput, page 
 		}
 		return rows, total, nil
 	}
+	unfilteredQuery := domainsQuery{Target: target}
 	all, fetchedAt, ok, err := ensureWhole(ctx, s, "domains", org, target, func(v Summary) *float64 { return v.ReferringDomains }, "backlinks,desc",
-		func(block pageInput) ([]ReferringDomainRow, *int, error) { return buy(block, nil) })
+		func(block pageInput) ([]ReferringDomainRow, *int, error) {
+			got, err := loadPage(ctx, s, "domains", org, unfilteredQuery, block, func(ctx context.Context, block pageInput) ([]ReferringDomainRow, *int, error) {
+				return buy(ctx, block, nil)
+			})
+			return got.Rows, got.TotalCount, err
+		})
 	if err != nil {
 		return Page[ReferringDomainRow]{}, err
 	}
 	if ok {
 		return cut(all, domainsView(filters), page.Sort, page, fetchedAt), nil
 	}
-	query := struct {
-		Target  Target
-		Filters domainsFilters
-	}{target, filters}
-	return loadPage(ctx, s, "domains", org, query, page, func(block pageInput) ([]ReferringDomainRow, *int, error) {
-		rows, total, err := buy(block, expr)
+	query := domainsQuery{target, filters}
+	return loadPage(ctx, s, "domains", org, query, page, func(ctx context.Context, block pageInput) ([]ReferringDomainRow, *int, error) {
+		rows, total, err := buy(ctx, block, expr)
 		if err == nil && len(expr) == 0 {
 			keepIfWhole(ctx, s, "domains", org, target, block, rows, total)
 		}
@@ -338,7 +357,7 @@ func (s *Service) Pages(ctx context.Context, org string, in lookupInput, page pa
 		Target  Target
 		Filters pagesFilters
 	}{target, filters}
-	return loadPage(ctx, s, "pages", org, query, page, func(block pageInput) ([]TopPageRow, *int, error) {
+	return loadPage(ctx, s, "pages", org, query, page, func(ctx context.Context, block pageInput) ([]TopPageRow, *int, error) {
 		items, total, err := s.provider.pages(ctx, org, target, block, expr)
 		if err != nil {
 			return nil, nil, err
@@ -382,7 +401,7 @@ type rowBlock[T any] struct {
 
 // loadPage answers one page from the cached block that holds it, buying that
 // block once when it is not cached. query holds everything but the paging.
-func loadPage[T any](ctx context.Context, s *Service, kind, org string, query any, page pageInput, buy func(pageInput) ([]T, *int, error)) (Page[T], error) {
+func loadPage[T any](ctx context.Context, s *Service, kind, org string, query any, page pageInput, buy func(context.Context, pageInput) ([]T, *int, error)) (Page[T], error) {
 	offset := (page.Page - 1) * page.PageSize
 	block := page
 	block.Page, block.PageSize = offset/blockSize+1, blockSize
@@ -395,12 +414,33 @@ func loadPage[T any](ctx context.Context, s *Service, kind, org string, query an
 	}
 	var got rowBlock[T]
 	if !s.readCache(ctx, key, &got) {
-		rows, total, err := buy(block)
-		if err != nil {
+		if err := ctx.Err(); err != nil {
 			return Page[T]{}, err
 		}
-		got = rowBlock[T]{Rows: rows, Total: total, FetchedAt: timestamp(s.now())}
-		s.writeCache(ctx, key, got)
+		flight := s.flights.DoChan(key, func() (any, error) {
+			sharedCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), flightTimeout)
+			defer cancel()
+			var recent rowBlock[T]
+			if s.readCache(sharedCtx, key, &recent) {
+				return recent, nil
+			}
+			rows, total, err := buy(sharedCtx, block)
+			if err != nil {
+				return rowBlock[T]{}, err
+			}
+			recent = rowBlock[T]{Rows: rows, Total: total, FetchedAt: timestamp(s.now())}
+			s.writeCache(sharedCtx, key, recent)
+			return recent, nil
+		})
+		select {
+		case <-ctx.Done():
+			return Page[T]{}, ctx.Err()
+		case finished := <-flight:
+			if finished.Err != nil {
+				return Page[T]{}, finished.Err
+			}
+			got = finished.Val.(rowBlock[T])
+		}
 	}
 	if got.Rows == nil {
 		got.Rows = []T{}

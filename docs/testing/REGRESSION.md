@@ -20,3 +20,16 @@ spend. The provider guard suite
 checks billed failed tasks remain visible in spend telemetry but refund the
 customer. Use actual provider usage exports to reconcile production costs;
 these deterministic fixtures cannot establish plan profitability.
+
+Paid-call regressions also cover Backlinks table blocks (`table_purchase_test.go`),
+Domain report misses (`domain/concurrency_test.go`) and Prompt Explorer model
+sets (`aisearch/prompt_concurrency_test.go`). Same-organization calls share work;
+different organizations remain separate; cancelled preparation starts no new buy.
+`aisearch/citation_source_test.go` verifies safe Gemini original-source URLs.
+Mounted frontend tests cover Domain cache reuse, AI focus/reconnect, Local SEO
+nested hours and keyword SERP description/export delivery.
+
+Billing `service_test.go` replays the same signed charge with changed delivery
+headers, concurrently and after spending, including a charge first received at
+the rollover cap. These require real disposable Postgres; compilation or a skipped
+local test is not transaction verification. Prices, grants and markup are unchanged.

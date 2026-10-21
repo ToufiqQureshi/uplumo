@@ -30,6 +30,8 @@ After a successful paid Brand Lookup on a paid plan, `BrandLookupPage.tsx` reque
 
 - These lookups can incur paid provider cost: keep the server plan/cost gate and input validation before provider calls.
 - Do not add automatic client retries for a paid POST; an explicit user retry is a new lookup.
+- Both paid queries explicitly disable refetch on window focus and reconnect,
+  including failed queries whose results cannot be served from the backend cache.
 - Citations are untrusted URLs; render/link only URLs that the backend has made safe.
 - Provider coverage and mention counts are estimates; the UI must not promise guaranteed ranking or AI inclusion.
 

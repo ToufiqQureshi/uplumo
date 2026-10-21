@@ -9,7 +9,7 @@
 
 ## Request or job flow
 
-Handlers read the single plan catalog; user checkout creates a Razorpay subscription; webhooks verify signatures and deduplicate event IDs; provider calls reserve credits, settle actual usage or refund safe failures.
+Handlers read the single plan catalog; user checkout creates a Razorpay subscription; webhooks verify signatures and deduplicate event IDs plus signed charge body fingerprints atomically with monthly grants; provider calls reserve credits, settle actual usage or refund safe failures.
 
 ## Dependencies and cost boundary
 

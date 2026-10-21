@@ -392,6 +392,54 @@ func (s *Service) fetchCross(ctx context.Context, organizationID string, detecte
 // one provider outage does not hide the other answers; only an account-level
 // failure fails the request.
 func (s *Service) ExplorePrompt(ctx context.Context, organizationID, projectID string, in PromptExplorerInput) (PromptExplorerResult, error) {
+	result, missing, _ := s.preparePrompt(ctx, organizationID, projectID, in)
+	if len(missing) == 0 {
+		return result, nil
+	}
+	if err := ctx.Err(); err != nil {
+		return PromptExplorerResult{}, err
+	}
+	models := slices.Clone(in.Models)
+	slices.Sort(models)
+	country := ""
+	if in.WebSearch {
+		country = in.WebSearchCountryCode
+	}
+	key := cacheKey("prompt-flight", organizationID, projectID,
+		strings.Join(strings.Fields(in.Prompt), " "), strings.Join(models, "|"),
+		strconv.FormatBool(in.WebSearch), country)
+	flight := s.flights.DoChan(key, func() (any, error) {
+		sharedCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), flightTimeout)
+		defer cancel()
+		return s.loadPrompt(sharedCtx, organizationID, projectID, in)
+	})
+	select {
+	case <-ctx.Done():
+		return PromptExplorerResult{}, ctx.Err()
+	case finished := <-flight:
+		if finished.Err != nil {
+			return PromptExplorerResult{}, finished.Err
+		}
+		shared := finished.Val.(PromptExplorerResult)
+		byModel := make(map[string]ModelResult, len(shared.Results))
+		for _, answer := range shared.Results {
+			switch value := answer.(type) {
+			case ModelSuccess:
+				byModel[value.Model] = value.withHighlightBrand(in.HighlightBrand)
+			case ModelError:
+				byModel[value.Model] = value
+			}
+		}
+		// Sharing paid answers must not share one caller's display order or brand.
+		result.FetchedAt = shared.FetchedAt
+		for i, model := range in.Models {
+			result.Results[i] = byModel[model]
+		}
+		return result, nil
+	}
+}
+
+func (s *Service) preparePrompt(ctx context.Context, organizationID, projectID string, in PromptExplorerInput) (PromptExplorerResult, []string, []int) {
 	result := PromptExplorerResult{
 		Prompt: in.Prompt, FetchedAt: formatTime(s.now()), Results: make([]ModelResult, len(in.Models)),
 	}
@@ -417,6 +465,12 @@ func (s *Service) ExplorePrompt(ctx context.Context, organizationID, projectID s
 		uncachedModels = append(uncachedModels, model)
 		uncachedIndices = append(uncachedIndices, i)
 	}
+	return result, uncachedModels, uncachedIndices
+}
+
+func (s *Service) loadPrompt(ctx context.Context, organizationID, projectID string, in PromptExplorerInput) (PromptExplorerResult, error) {
+	// Recheck inside the flight: another completed lookup may have filled Redis.
+	result, uncachedModels, uncachedIndices := s.preparePrompt(ctx, organizationID, projectID, in)
 	if len(uncachedModels) == 0 {
 		return result, nil
 	}
@@ -450,7 +504,12 @@ func promptResponseCacheKey(organizationID, projectID, model string, in PromptEx
 		country = in.WebSearchCountryCode
 	}
 	// The one-week cache intentionally survives provider model-name changes.
-	return cacheKey("prompt-response", organizationID, projectID, model,
+	kind := "prompt-response"
+	if model == modelGemini {
+		// Old Gemini answers lost the original publisher URL during decode.
+		kind = "prompt-response-v2"
+	}
+	return cacheKey(kind, organizationID, projectID, model,
 		strings.Join(strings.Fields(in.Prompt), " "), strconv.FormatBool(in.WebSearch), country)
 }
 

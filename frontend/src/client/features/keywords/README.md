@@ -23,6 +23,8 @@ actions. All data comes from the Go keywords API.
   including Auto. Exact matching trims whitespace and ignores case.
 - Research CSV/Sheets exports include both top bids, referring domains,
   quarterly change and monthly-search history alongside the core metrics.
+- SERP rows and exports retain the description already present in the API.
+  No additional lookup is bought for this field.
 - Saved keywords: filtered/sorted/paged list (page sizes 50/100/250), bulk
   remove (max 2000 ids), tag assign (append/replace), tag rename/recolor, and
   a delete that fails with `tag_in_use` while any keyword still carries the

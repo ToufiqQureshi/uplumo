@@ -24,6 +24,10 @@ Researches seed terms and SERP results for a project market, with location selec
   missing-exact-match notice in Auto too, and normalize whitespace consistently
   when selecting overview metrics. Export bid bounds, referring domains,
   quarterly change and monthly history through the existing CSV/Sheets flow.
+  SERP rows and exports retain the descriptions already decoded from live organic
+  results, without another paid lookup. Live organic output does not document
+  the traffic/backlink enrichment fields used by Labs, so no extra paid
+  enrichment or synthetic metrics are added.
 - **Why:** Revisiting a keyword caused another request immediately; cached
   shallow snapshots also disappeared after the default five-minute retention.
   Missing seed data silently selected a related row, and exports dropped useful
@@ -35,3 +39,5 @@ Researches seed terms and SERP results for a project market, with location selec
   `state/keywordControllerActions.ts`, `state/keyword-delivery.test.ts` and
   `hooks/keyword-serp-cache.test.ts`. Backend seed preservation and same-depth
   coalescing are recorded in the backend keyword decision document.
+  `components/SerpAnalysisCard.test.ts` checks description display and export,
+  using the description already present in the API response.

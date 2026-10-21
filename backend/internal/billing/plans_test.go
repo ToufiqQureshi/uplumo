@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/toufiqqureshi/uplumo/backend/internal/plans"
 )
@@ -21,6 +22,11 @@ func (f *fixture) sellTiers() {
 // eventOnPlan is f.event for a subscription to plan.
 func (f *fixture) eventOnPlan(plan, name, subID, status string) []byte {
 	return bytes.Replace(f.event(name, subID, status, t1), []byte(testPlanID), []byte(tierPlanIDs[plan]), 1)
+}
+
+// Distinct monthly charges have distinct signed event timestamps.
+func (f *fixture) chargeOnPlan(plan string, at time.Time) []byte {
+	return bytes.Replace(f.event("subscription.charged", "sub_1", "active", at), []byte(testPlanID), []byte(tierPlanIDs[plan]), 1)
 }
 
 func TestPlanDecidesFeaturesAndLimits(t *testing.T) {
@@ -281,7 +287,11 @@ func TestUnusedCreditsRollOverUpToTwoMonths(t *testing.T) {
 		}
 		return got
 	}
-	charge := func() { f.deliver(ctx, t, f.eventOnPlan(PlanPro, "subscription.charged", "sub_1", "active")) }
+	chargeAt := t1
+	charge := func() {
+		f.deliver(ctx, t, f.chargeOnPlan(PlanPro, chargeAt))
+		chargeAt = chargeAt.Add(time.Second)
+	}
 
 	charge()
 	charge()

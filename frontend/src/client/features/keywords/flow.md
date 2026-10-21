@@ -28,6 +28,8 @@ Go package: `backend/internal/keywords`; market normalization is shared with `ba
   or remounting its panel makes no request while that snapshot is fresh.
 - Keep all research table metrics and monthly history in CSV/Sheets exports;
   preserve zero versus null. Approximate seed metrics always carry a notice.
+- The SERP card renders and exports the description already present in the API;
+  this display change makes no provider request or enrichment purchase.
 - Cache keys must include every option that changes results, project and organization scope.
 - Show absent/null provider metrics as unavailable, not as zero.
 - Location results must use canonical provider locations; do not silently fall back to a different geography.

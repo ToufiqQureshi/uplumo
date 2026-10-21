@@ -197,7 +197,7 @@ const (
 // The state is stored when it is at least as new as the stored state, and
 // is either the same subscription or replaces one that is not in
 // liveStatuses. An organization that no longer exists gets no row.
-func (r repository) applyEvent(ctx context.Context, eventID string, s subscription, liveStatuses []string, grantCredits int64) (eventOutcome, error) {
+func (r repository) applyEvent(ctx context.Context, eventID string, s subscription, liveStatuses []string, grantCredits int64, grantIdentity string) (eventOutcome, error) {
 	outcome := eventApplied
 	err := pgdb.InTx(ctx, r.db, func(tx pgx.Tx) error {
 		var seen bool
@@ -231,6 +231,17 @@ func (r repository) applyEvent(ctx context.Context, eventID string, s subscripti
 		if tag.RowsAffected() == 0 {
 			outcome = eventDuplicateDelivery
 			return nil
+		}
+		if grantCredits > 0 {
+			tag, err := tx.Exec(ctx, `
+			INSERT INTO go_billing_webhook_events (event_id) VALUES ($1) ON CONFLICT DO NOTHING`, grantIdentity)
+			if err != nil {
+				return fmt.Errorf("record signed grant: %w", err)
+			}
+			if tag.RowsAffected() == 0 {
+				outcome = eventDuplicateDelivery
+				return nil
+			}
 		}
 
 		_, err = tx.Exec(ctx, `

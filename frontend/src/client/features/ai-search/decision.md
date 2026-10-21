@@ -19,3 +19,16 @@ Brand Lookup compares brand mentions and cited pages across supported answer eng
 ## Verification pointers
 
 - `aiSearchApi.test.ts`
+- `paid-refetch.test.ts`
+
+## No focus or reconnect purchases
+
+- **Decision:** Disable `refetchOnWindowFocus` and `refetchOnReconnect` for the
+  Brand Lookup and Prompt Explorer paid query hooks alongside `retry: false`.
+- **Why:** A failed paid query ran three API requests after one lookup followed
+  by a focus and reconnect event. A provider may already have billed a failure;
+  a cache miss or partial answer can therefore turn these refetches into spend.
+- **Preserve:** Keep explicit Retry, free history/active-run polling and the
+  server's plan gate. Do not change pricing or the provider's model selection.
+- **Trace:** `BrandLookupPage.tsx`, `PromptExplorerPage.tsx` and mounted React
+  Query regressions in `paid-refetch.test.ts` (failure/focus/reconnect).

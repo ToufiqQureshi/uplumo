@@ -15,6 +15,18 @@ Paid calls per click: a new target buys the overview (summary + history, 2 tasks
 
 Whole list (`whole_list.go`): when the cached overview says the target has at most 1,000 backlinks (Backlinks tab) or referring domains (Referring Domains tab), the tab buys that whole list once, unfiltered and `as_is`, and cuts every view from it: sort, Best links, one per domain, filters, pages, domain expansion. Top pages become a whole list when their unfiltered first block holds everything. A longer profile asks the provider for the exact view, one task per 1,000-row block. Subfolder scope always asks the provider (its scope is a URL filter).
 
+The speculative Rows/Domains whole-list lookup goes through the normal
+unfiltered first-block cache. If its returned total exceeds the overview's
+estimate (or is unavailable), it is not considered complete, but its bought
+block is still reusable. An identical unfiltered first-page request buys one
+task, not a speculative task plus the same block again. Other filtered views
+can still require a distinct task when the full profile does not fit.
+
+Concurrent cold table-block requests on one server share one bounded purchase
+per organization and complete query/block identity. A cancelled caller returns
+without cancelling a purchase another waiter needs. Cancellation before flight
+registration holds no credits and sends no task.
+
 ## Dependencies and cost boundary
 
 DataForSEO paid endpoints and usage metering; project plan/credit checks.

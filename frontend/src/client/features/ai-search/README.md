@@ -2,6 +2,10 @@
 
 Brand Lookup compares brand mentions and cited pages across supported answer engines; Prompt Explorer runs a prompt against selected models.
 
+Paid Brand Lookup and Prompt Explorer queries disable automatic retries,
+window-focus refetch and reconnect refetch. Explicit Retry remains a new lookup;
+returning to a browser window must not repeat a failed paid action.
+
 Read [flow.md](flow.md) for the request path and [decision.md](decision.md) for the rules that protect user data, provider spend and customer trust.
 
 ## Code map
