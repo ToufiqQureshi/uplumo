@@ -17,3 +17,21 @@ Researches seed terms and SERP results for a project market, with location selec
 
 - `hooks/useKeywordResearchData.test.ts`
 - `groupSharedVolumeRows.test.ts`
+
+## Paid-result delivery and repeat requests
+
+- **Decision:** Keep successful SERPs fresh and retained for 12 hours, show the
+  missing-exact-match notice in Auto too, and normalize whitespace consistently
+  when selecting overview metrics. Export bid bounds, referring domains,
+  quarterly change and monthly history through the existing CSV/Sheets flow.
+- **Why:** Revisiting a keyword caused another request immediately; cached
+  shallow snapshots also disappeared after the default five-minute retention.
+  Missing seed data silently selected a related row, and exports dropped useful
+  data that was already present in the response.
+- **Preserve:** No paid retries on failure, focus or reconnect; project/market/
+  depth query identity; selected/filtered export scope; zero versus unavailable;
+  and explicit user selection of a different overview keyword. No price changes.
+- **Trace:** `hooks/useKeywordSerpAnalysis.ts`, `state/useKeywordOverviewState.ts`,
+  `state/keywordControllerActions.ts`, `state/keyword-delivery.test.ts` and
+  `hooks/keyword-serp-cache.test.ts`. Backend seed preservation and same-depth
+  coalescing are recorded in the backend keyword decision document.

@@ -77,6 +77,48 @@ func okTask(result ...any) map[string]any {
 	return map[string]any{"status_code": 20000, "status_message": "Ok.", "result": result}
 }
 
+func TestSuggestionsPreserveSeparateSeedDataWithoutAnotherPaidCall(t *testing.T) {
+	ps, provider := newProviderServer(t, func(_ string) map[string]any {
+		return okTask(map[string]any{
+			"seed_keyword_data": map[string]any{
+				"keyword": "hotel in lonavala",
+				"keyword_info": map[string]any{"search_volume": 0, "cpc": 0.26, "competition": 0.98,
+					"low_top_of_page_bid": 0.05, "high_top_of_page_bid": 0.32,
+					"monthly_searches":    []any{map[string]any{"year": 2026, "month": 9, "search_volume": 0}},
+					"search_volume_trend": map[string]any{"quarterly": -33}},
+				"keyword_properties": map[string]any{"keyword_difficulty": 0},
+				"search_intent_info": map[string]any{"main_intent": "commercial"},
+				"avg_backlinks_info": map[string]any{"referring_main_domains": 5},
+			},
+			"items": []any{map[string]any{"keyword": "hotel in lonavala maharashtra", "keyword_info": map[string]any{"search_volume": 18100}}},
+		})
+	})
+	items, err := provider.LabsKeywords(t.Context(), "org", LabsRequest{Source: SourceSuggestions, Seed: "hotel in lonavala", LocationCode: 2356, LanguageCode: "en", Limit: 150})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := labsRows(items)
+	if len(rows) != 2 || rows[0].Keyword != "hotel in lonavala" || rows[0].SearchVolume == nil || *rows[0].SearchVolume != 0 {
+		t.Fatalf("paid seed data was dropped or replaced with suggestion metrics: %+v", rows)
+	}
+	seed := rows[0]
+	if seed.CPC == nil || *seed.CPC != 0.26 || seed.KeywordDifficulty == nil || *seed.KeywordDifficulty != 0 ||
+		seed.TopOfPageBidHigh == nil || *seed.TopOfPageBidHigh != 0.32 || seed.ReferringDomains == nil || *seed.ReferringDomains != 5 ||
+		seed.QuarterlyChange == nil || *seed.QuarterlyChange != -33 || len(seed.Trend) != 1 || seed.Intent != "commercial" {
+		t.Fatalf("seed metrics did not reach the API row: %+v", seed)
+	}
+	if len(ps.paths) != 1 {
+		t.Fatalf("seed delivery bought %d tasks; want the original suggestions task only", len(ps.paths))
+	}
+}
+
+func TestPaidClickstreamZeroDoesNotFallBackToNationalVolume(t *testing.T) {
+	rows := labsRows([]LabsItem{{Keyword: "hotel", Info: Info{SearchVolume: intp(100)}, Clickstream: &Info{SearchVolume: intp(0)}}})
+	if len(rows) != 1 || rows[0].SearchVolume == nil || *rows[0].SearchVolume != 0 {
+		t.Fatalf("measured clickstream zero replaced by national volume: %+v", rows)
+	}
+}
+
 func TestLabsKeywordsRequestsAndParsing(t *testing.T) {
 	item := func(keyword string, volume int) map[string]any {
 		return map[string]any{"keyword": keyword,

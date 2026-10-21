@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import type { KeywordMode } from "@/client/features/keywords/keywordResearchTypes";
 import type { KeywordResearchRow } from "@/types/keywords";
 
 export function useKeywordOverviewState({
@@ -9,7 +8,6 @@ export function useKeywordOverviewState({
   hasSearched,
   isLoading,
   lastSearchError,
-  keywordMode,
 }: {
   rows: KeywordResearchRow[];
   searchedKeyword: string;
@@ -17,7 +15,6 @@ export function useKeywordOverviewState({
   hasSearched: boolean;
   isLoading: boolean;
   lastSearchError: boolean;
-  keywordMode: KeywordMode;
 }) {
   const hasExactMatchInResults = useMemo(() => {
     const normalizedSeed = searchedKeyword.trim().toLowerCase();
@@ -33,14 +30,15 @@ export function useKeywordOverviewState({
     !lastSearchError &&
     rows.length > 0 &&
     searchedKeyword.trim() !== "" &&
-    !hasExactMatchInResults &&
-    keywordMode !== "auto";
+    !hasExactMatchInResults;
 
   const overviewKeyword: KeywordResearchRow | null = useMemo(() => {
     if (selectedKeyword) return selectedKeyword;
     if (searchedKeyword && rows.length > 0) {
       const seed = rows.find(
-        (row) => row.keyword.toLowerCase() === searchedKeyword.toLowerCase(),
+        (row) =>
+          row.keyword.trim().toLowerCase() ===
+          searchedKeyword.trim().toLowerCase(),
       );
       if (seed) return seed;
     }

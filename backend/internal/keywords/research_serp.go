@@ -76,23 +76,48 @@ func (s *ResearchService) SerpAnalysis(ctx context.Context, in SerpAnalysisInput
 		return cached, nil
 	}
 
-	raw, err := s.Data.SerpLive(ctx, in.OrganizationID, SerpRequest{Keyword: keyword, LocationCode: in.LocationCode, LanguageCode: in.LanguageCode, LocationName: in.LocationName, Depth: in.Depth})
-	if err != nil {
+	if err := ctx.Err(); err != nil {
 		return SerpAnalysis{}, err
 	}
-	result := SerpAnalysis{RequestedKeyword: keyword, Items: organicResults(raw), Depth: in.Depth}
-	if len(result.Items) == 0 {
-		result.Reason = "no_organic_results"
-		// The provider reports "no results" transiently, and a deeper crawl
-		// overwrites the same key. One empty re-crawl must not evict a good
-		// snapshot, and being the deeper entry, answer every shallower request
-		// with nothing for the rest of the TTL.
-		if hit && len(cached.Items) > 0 {
-			return result, nil
+	// Equivalent cache misses share one purchase inside this server. Include
+	// depth in the flight identity so a shallow answer cannot satisfy a deep
+	// request. The cache key already separates organizations and markets.
+	flight := s.flights.DoChan(fmt.Sprintf("%s:%d", key, in.Depth), func() (any, error) {
+		sharedCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), flightTimeout)
+		defer cancel()
+		// A previous flight may have filled the cache after the first read.
+		var recent SerpAnalysis
+		recentHit := s.cached(sharedCtx, key, &recent)
+		if recentHit && recent.Depth == 0 {
+			recent.Depth = SerpShallowDepth
 		}
+		if recentHit && recent.Depth >= in.Depth {
+			return recent, nil
+		}
+		raw, err := s.Data.SerpLive(sharedCtx, in.OrganizationID, SerpRequest{Keyword: keyword, LocationCode: in.LocationCode, LanguageCode: in.LanguageCode, LocationName: in.LocationName, Depth: in.Depth})
+		if err != nil {
+			return SerpAnalysis{}, err
+		}
+		result := SerpAnalysis{RequestedKeyword: keyword, Items: organicResults(raw), Depth: in.Depth}
+		if len(result.Items) == 0 {
+			result.Reason = "no_organic_results"
+			// A transient empty deeper crawl must not evict a useful snapshot.
+			if recentHit && len(recent.Items) > 0 || hit && len(cached.Items) > 0 {
+				return result, nil
+			}
+		}
+		s.store(sharedCtx, key, result, serpCacheTTL)
+		return result, nil
+	})
+	select {
+	case <-ctx.Done():
+		return SerpAnalysis{}, ctx.Err()
+	case finished := <-flight:
+		if finished.Err != nil {
+			return SerpAnalysis{}, finished.Err
+		}
+		return finished.Val.(SerpAnalysis), nil
 	}
-	s.store(ctx, key, result, serpCacheTTL)
-	return result, nil
 }
 
 func organicResults(items []SerpItem) []SerpResult {

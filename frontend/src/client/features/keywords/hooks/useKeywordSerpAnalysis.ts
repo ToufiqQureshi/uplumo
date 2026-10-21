@@ -59,6 +59,10 @@ export function useKeywordSerpAnalysis(
     // metering nothing. Never replay or re-issue one without the user asking;
     // the card offers an explicit retry.
     retry: false,
+    // Match the server's snapshot lifetime: returning to a loaded keyword
+    // must not repeat a paid endpoint or discard a useful shallow snapshot.
+    staleTime: 12 * 60 * 60 * 1000,
+    gcTime: 12 * 60 * 60 * 1000,
     refetchOnReconnect: false,
     refetchOnWindowFocus: false,
     enabled: !!serpKeyword,

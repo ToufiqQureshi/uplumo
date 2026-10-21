@@ -19,3 +19,15 @@ DataForSEO API, platform spend guard, Postgres usage ledger, Redis worker/cache 
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.
+
+## Clickstream price ceilings
+
+- **Decision:** Double the complete Labs estimate only when the task explicitly
+  enables `include_clickstream_data`, including each task of a mixed batch.
+- **Why:** DataForSEO charges double for this option, but the guard previously
+  reserved the ordinary price. A 75-row task held $0.021 for up to $0.042 of work.
+- **Preserve:** No plan/grant/markup change, unchanged ordinary task estimates,
+  no extra provider calls, and actual task-reported settlement. Requests without
+  sufficient credits are refused before purchasing the more expensive option.
+- **Trace:** `pricing.go`, `pricing_test.go` (enabled/disabled/mixed batch), and
+  https://docs.dataforseo.com/v3/dataforseo_labs-google-keyword_suggestions-live/.

@@ -97,7 +97,11 @@ func taskCeiling(path string, task map[string]any) float64 {
 	case strings.HasPrefix(path, "/v3/serp/"):
 		return serpCeiling(path, task)
 	case strings.HasPrefix(path, "/v3/dataforseo_labs/"):
-		return labsTaskUSD + labsRowUSD*rows(task, labsDefaultRows)
+		price := labsTaskUSD + labsRowUSD*rows(task, labsDefaultRows)
+		if clickstream, _ := task["include_clickstream_data"].(bool); clickstream {
+			price *= 2
+		}
+		return price
 	case strings.HasPrefix(path, "/v3/backlinks/"):
 		return backlinksTaskUSD + backlinksRowUSD*rows(task, backlinksDefaultRows)
 	case strings.HasPrefix(path, "/v3/keywords_data/"):

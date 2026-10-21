@@ -30,6 +30,8 @@ Rules that must never break:
   priority rates, the 5x price for search operators, July 2026 Labs and
   Backlinks rates, and endpoint-specific Business Data rates. Labs and
   Backlinks requests without a `limit` are held as 1,000 rows.
+  Labs tasks with `include_clickstream_data: true` hold twice the complete
+  ordinary task price, including task and result-row charges.
   `pricing_test.go` pins them.
 - Never send a request the provider would reject. If it still fails, refund
   that task's customer credits while retaining the actual provider cost.
