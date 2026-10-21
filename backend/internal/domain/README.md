@@ -78,3 +78,7 @@ Rank Tracking action. `suggestions.go` shares identical organization/project/
 target/scope/market work for up to 90 seconds, rechecks the 12-hour nonempty
 cache and buys one task on a miss. See `decision.md` for failure/cancellation
 and one-replica constraints.
+
+Cancellation during cache/project preparation is rechecked before detaching
+paid work. Active callers retain cache-outage fallback; existing shared work
+can finish for other waiters. See the cancellation decision and regressions.

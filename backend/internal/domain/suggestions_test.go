@@ -6,6 +6,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/toufiqqureshi/uplumo/backend/internal/platform/spend/spendtest"
 )
 
 func TestConcurrentSuggestionsBuyOneTaskAndKeepOrganizationsSeparate(t *testing.T) {
@@ -145,5 +147,21 @@ func TestSuggestionsKeepSharedPurchaseWhenFirstWaiterLeaves(t *testing.T) {
 	}
 	if provider.calls.Load() != 1 {
 		t.Fatalf("waiter cancellation bought another task: %d", provider.calls.Load())
+	}
+}
+
+func TestSuggestionsCancelledDuringCacheReadDoNotBuyTasks(t *testing.T) {
+	provider := &fakeProvider{result: rankedKeywordsResult(0)}
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	cache := &spendtest.CancelOnReadCache{Cancel: cancel}
+	svc := newTestService(t, provider, cache)
+	_, err := svc.KeywordSuggestions(ctx, "org", "project", "example.com", ScopeDomain, 2840, "en")
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("cancelled suggestions=%v", err)
+	}
+	_, _, _ = svc.suggestions.Do(cache.Key, func() (any, error) { return nil, nil })
+	if provider.calls.Load() != 0 {
+		t.Fatalf("cache cancellation bought %d tasks", provider.calls.Load())
 	}
 }

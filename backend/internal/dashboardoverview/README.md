@@ -34,3 +34,7 @@ replacement. The current project domain participates in coalescing and snapshot
 lookup: a previous domain finishing later cannot hide the current domain's data.
 The domain-switch regression uses real Postgres and a blocked provider; malformed
 and legacy request tests assert zero provider calls without an earlier plan gate.
+
+Cancellation during cache/project preparation is rechecked before detaching
+paid work. Active callers retain cache-outage fallback; existing shared work
+can finish for other waiters. See the cancellation decision and regressions.

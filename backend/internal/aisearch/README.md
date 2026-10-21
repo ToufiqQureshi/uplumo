@@ -156,3 +156,7 @@ at the transport's 60-second deadline, DataForSEO's standard queue of up to
 45 minutes, and 15 minutes for submission/collection. This is a bounded job
 window, not a promised completion time. Accepted task reads remain resumable
 after process shutdown without buying another task.
+
+Cancellation during cache/project preparation is rechecked before detaching
+paid work. Active callers retain cache-outage fallback; existing shared work
+can finish for other waiters. See the cancellation decision and regressions.

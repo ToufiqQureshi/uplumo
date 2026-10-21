@@ -112,6 +112,9 @@ func (s *Service) BrandLookup(ctx context.Context, organizationID, projectID str
 		return cached, nil
 	}
 
+	if err := ctx.Err(); err != nil {
+		return BrandLookupResult{}, err
+	}
 	flight := s.flights.DoChan(key, func() (any, error) {
 		// The shared purchase outlives any one waiter: another caller may still
 		// need it, and a cancelled paid call may already have been billed.

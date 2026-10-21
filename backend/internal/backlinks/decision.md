@@ -19,3 +19,10 @@ DataForSEO paid endpoints and usage metering; project plan/credit checks.
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.
+
+## Cancellation before a new paid operation
+
+- **Decision:** `Overview` rechecks cancellation after `readCache` and before `flights.DoChan`.
+- **Why:** Preparation could return a cache miss/project result after the caller left, and `context.WithoutCancel` then revived it into paid work.
+- **Preserve:** Active callers keep existing cache-outage fallback and tenant/cost checks. Already-registered bounded shared work can finish for other waiters; this does not add a retry, limit or pricing change.
+- **Trace:** `cancellation_test.go` reproduced both summary/history tasks after cancellation; it now requires zero. Tests synchronize existing work before counting calls; see the shared [fixture decision](../platform/spend/spendtest/decision.md).

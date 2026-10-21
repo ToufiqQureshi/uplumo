@@ -26,3 +26,6 @@ DataForSEO; Google Ads for selected markets; Postgres saved rows; Redis caches; 
 - Keep saved keyword rows and tags project-scoped; guard batches/caps and null metrics.
 - Auto research never discards a billed leg: one failed leg yields the other's
   rows as a short-lived partial answer, not an error and not a day-long cache.
+
+Preparation boundary: `Research` rechecks cancellation after `cached` and before `flights.DoChan`. A cancelled request returns its context error
+without starting a new provider operation. Existing shared work is unaffected.

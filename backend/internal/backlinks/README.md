@@ -43,3 +43,7 @@ The overview is two sequential provider tasks, summary then history. A credit
 refusal, provider billing problem or departed customer stops after the first;
 any other history failure keeps the already-billed summary (empty trend,
 `partialCacheTTL` of ten minutes) instead of discarding it.
+
+Cancellation during cache/project preparation is rechecked before detaching
+paid work. Active callers retain cache-outage fallback; existing shared work
+can finish for other waiters. See the cancellation decision and regressions.

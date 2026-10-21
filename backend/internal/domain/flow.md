@@ -26,3 +26,6 @@ Rank Tracking action. `suggestions.go` shares identical organization/project/
 target/scope/market work for up to 90 seconds, rechecks the 12-hour nonempty
 cache and buys one task on a miss. See `decision.md` for failure/cancellation
 and one-replica constraints.
+
+Preparation boundary: `KeywordSuggestions` rechecks cancellation after `readCache` and before `suggestions.DoChan`. A cancelled request returns its context error
+without starting a new provider operation. Existing shared work is unaffected.

@@ -30,3 +30,10 @@ Use the package tests next to the source files in `README.md`. For changes cross
 - **Why:** The wrapper duplicated language functionality.
 - **Preserve:** Keep identical limits (1–1000, 1–20, 1–10 and 256–4096), provider call counts, billing guards, retries and cache behavior.
 - **Trace:** `provider.go` and existing AI search provider tests; no live paid calls.
+
+## Cancellation before a new paid operation
+
+- **Decision:** `BrandLookup` rechecks cancellation after `cacheGet` and before `flights.DoChan`.
+- **Why:** Preparation could return a cache miss/project result after the caller left, and `context.WithoutCancel` then revived it into paid work.
+- **Preserve:** Active callers keep existing cache-outage fallback and tenant/cost checks. Already-registered bounded shared work can finish for other waiters; this does not add a retry, limit or pricing change.
+- **Trace:** `cancellation_test.go` interrupts the first Redis GET with a hook and drains the flight; the former six AI tasks must remain at zero. Tests synchronize existing work before counting calls; see the shared [fixture decision](../platform/spend/spendtest/decision.md).

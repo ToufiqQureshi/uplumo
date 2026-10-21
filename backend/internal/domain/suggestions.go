@@ -30,6 +30,9 @@ func (s *Service) KeywordSuggestions(ctx context.Context, organizationID, projec
 	if s.readCache(ctx, key, &cached) && len(cached) > 0 {
 		return cached, nil
 	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	result := s.suggestions.DoChan(key, func() (any, error) {
 		shared, cancel := context.WithTimeout(context.WithoutCancel(ctx), 90*time.Second)
 		defer cancel()

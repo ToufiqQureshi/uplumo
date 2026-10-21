@@ -27,3 +27,10 @@ Use the package tests next to the source files in `README.md`. For changes cross
 - **Preserve:** Keyword selection starts empty and adding selected keywords remains separate from running rank checks. Supported-country checks, existing plan/credit/spend guards and tenant cache keys remain authoritative. An explicit request uses one ranked-keywords task, not a report fan-out. Backend requires `userInitiated: true` to reject older automatic clients; this marker is compatibility protection, not proof of human action or a replacement for authorization.
 - **Decision:** Coalesce identical organization/project/target/scope/market suggestions requests using the full existing cache key, recheck cache inside a bounded 90-second shared operation and respect each caller's cancellation independently. Existing nonempty results retain their 12-hour Redis cache; empty/error results are not persisted as success. Coalescing is instance-local and requires the existing single replica.
 - **Trace:** `KeywordSuggestionStep.tsx`, `domainApi.ts`, Go `domain/handler.go`, `suggestions.go`; browser setup/Skip/double-click regressions, payload unit contract, legacy-request test and concurrent provider-count tests. Before the fixes, a legacy paid request bought one task and eight concurrent identical requests bought eight. No live paid provider was called.
+
+## Cancellation before a new paid operation
+
+- **Decision:** `KeywordSuggestions` rechecks cancellation after `readCache` and before `suggestions.DoChan`.
+- **Why:** Preparation could return a cache miss/project result after the caller left, and `context.WithoutCancel` then revived it into paid work.
+- **Preserve:** Active callers keep existing cache-outage fallback and tenant/cost checks. Already-registered bounded shared work can finish for other waiters; this does not add a retry, limit or pricing change.
+- **Trace:** `suggestions_test.go` reproduced one paid task after cancellation; it now requires zero. Tests synchronize existing work before counting calls; see the shared [fixture decision](../platform/spend/spendtest/decision.md).

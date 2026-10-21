@@ -119,6 +119,9 @@ func (s *Service) Overview(ctx context.Context, org string, in lookupInput) (Ove
 	if s.readCache(ctx, key, &cached) {
 		return cached, nil
 	}
+	if err := ctx.Err(); err != nil {
+		return Overview{}, err
+	}
 	// A cold cache must not let simultaneous requests purchase the same
 	// summary and history twice. The key includes organization and scope.
 	result := s.flights.DoChan(key, func() (any, error) {
