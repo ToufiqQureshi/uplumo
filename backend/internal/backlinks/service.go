@@ -319,13 +319,13 @@ func (s *Service) Pages(ctx context.Context, org string, in lookupInput, page pa
 	})
 }
 
-// blockSize is how many rows one provider call buys. Every page size the
-// screen offers (50, 100, 200) divides it, so a page never spans two blocks:
-// changing the page size, or paging inside a block, is served from the cache
-// instead of buying the same rows again. A provider task costs about $0.024
-// whatever its size and each extra row a fraction of a cent, so the bigger
-// block is the cheaper choice as soon as the customer looks at a second page.
-const blockSize = 200
+// blockSize is how many rows one provider call buys: the provider's maximum.
+// Every page size the screen offers (50, 100, 200) divides it, so a page never
+// spans two blocks, and changing the page size or paging through the first
+// 1,000 rows is served from the cache. A task is $0.024 plus $0.000036 a row
+// (measured live), so a block is about $0.06; most targets have fewer than
+// 1,000 links, which makes the first table the only one the customer buys.
+const blockSize = 1000
 
 type rowBlock[T any] struct {
 	Rows      []T    `json:"rows"`

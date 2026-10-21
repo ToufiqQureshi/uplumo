@@ -38,7 +38,8 @@ var typicalUSD = []struct {
 	{spend.KeywordResearch, "", "keyword search", 0.047},
 	{spend.LocalSEO, "", "3×3 map grid (9 searches)", 0.021},
 	{spend.DomainResearch, "", "domain report tab", 0.031},
-	{spend.Backlinks, "", "backlink report", 0.05},
+	// Summary $0.024 + history $0.024 + the first 1,000 table rows $0.06.
+	{spend.Backlinks, "", "backlink report", 0.108},
 	{spend.AIVisibility, ActionPromptExplorer, "prompt on 4 AI models", 0.1},
 	{spend.AIVisibility, ActionBrandLookup, "brand lookup (more with competitors)", 0.71},
 	{spend.AIAssistant, "", "AI assistant reply", 0.03},

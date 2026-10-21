@@ -268,10 +268,10 @@ func TestRowsBuyOneBlockForEveryPageSizeInsideIt(t *testing.T) {
 		mu.Unlock()
 		offset := int(tasks[0]["offset"].(float64))
 		items := []any{}
-		for i := range min(int(tasks[0]["limit"].(float64)), 450-offset) {
+		for i := range min(int(tasks[0]["limit"].(float64)), 2077-offset) {
 			items = append(items, map[string]any{"url_from": fmt.Sprintf("https://s%d.example/", offset+i)})
 		}
-		providerOK(w, r.URL.Path, map[string]any{"items": items, "total_count": 450})
+		providerOK(w, r.URL.Path, map[string]any{"items": items, "total_count": 2077})
 	})
 	svc := newService(testClient(t, server, &usageRecorder{}), &memoryCache{}, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Now)
 	get := func(page, size int) Page[BacklinkRow] {
@@ -294,17 +294,18 @@ func TestRowsBuyOneBlockForEveryPageSizeInsideIt(t *testing.T) {
 	}
 	mu.Lock()
 	if len(bodies) != 1 || bodies[0]["limit"] != float64(blockSize) || bodies[0]["offset"] != float64(0) {
-		t.Fatalf("provider requests = %v, want one block of %d at offset 0", bodies, blockSize)
+		t.Fatalf("provider requests = %d, want one block of %d at offset 0", len(bodies), blockSize)
 	}
 	mu.Unlock()
-	last := get(3, 200)
-	if len(last.Rows) != 50 || last.HasMore || *last.Rows[0].URLFrom != "https://s400.example/" {
+	get(5, 200)
+	last := get(11, 200)
+	if len(last.Rows) != 77 || last.HasMore || *last.Rows[0].URLFrom != "https://s2000.example/" {
 		t.Fatalf("last page = %d rows, hasMore %v", len(last.Rows), last.HasMore)
 	}
 	mu.Lock()
 	defer mu.Unlock()
-	if len(bodies) != 2 || bodies[1]["offset"] != float64(400) {
-		t.Fatalf("provider requests = %v, want a second block at offset 400", bodies)
+	if len(bodies) != 2 || bodies[1]["offset"] != float64(2000) {
+		t.Fatalf("provider requests = %d, want one more block at offset 2000", len(bodies))
 	}
 }
 
