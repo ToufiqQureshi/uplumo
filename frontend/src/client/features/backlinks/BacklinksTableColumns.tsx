@@ -50,11 +50,42 @@ function BacklinksSourceLink({
   );
 }
 
+// A crawler refused by the linked site (403, 401, 429) is not a broken link.
+const CRAWLER_BLOCKED = new Set([401, 403, 429]);
+
 function BacklinkFlags({ row }: { row: BacklinksRow }) {
+  const blocked =
+    row.isBroken &&
+    row.targetStatus != null &&
+    CRAWLER_BLOCKED.has(row.targetStatus);
   return (
     <div className="flex flex-wrap gap-1">
       {row.isLost ? <Badge variant="destructive">Lost</Badge> : null}
-      {row.isBroken ? <Badge variant="warning">Broken</Badge> : null}
+      {row.isNew ? <Badge variant="success">New</Badge> : null}
+      {blocked ? (
+        <Badge
+          variant="outline"
+          title={`The linked page answered ${row.targetStatus} to the crawler. It is probably blocked, not broken: open it to check.`}
+        >
+          Crawler blocked ({row.targetStatus})
+        </Badge>
+      ) : row.isBroken ? (
+        <Badge
+          variant="warning"
+          title={
+            row.targetStatus
+              ? `The linked page answered ${row.targetStatus}.`
+              : undefined
+          }
+        >
+          Broken{row.targetStatus ? ` (${row.targetStatus})` : ""}
+        </Badge>
+      ) : null}
+      {row.placement ? (
+        <Badge variant="outline" title="Where the link sits on the page">
+          {row.placement}
+        </Badge>
+      ) : null}
       {row.isDofollow === false ? (
         <Badge variant="outline">Nofollow</Badge>
       ) : null}
@@ -63,6 +94,29 @@ function BacklinkFlags({ row }: { row: BacklinksRow }) {
       ) : null}
     </div>
   );
+}
+
+/** The words around the link on the linking page, so the customer can judge it. */
+function AnchorContext({ row }: { row: BacklinksRow }) {
+  if (!row.textBefore && !row.textAfter) return null;
+  const before = row.textBefore ? truncateStart(row.textBefore, 80) : "";
+  const after = row.textAfter ? truncateEnd(row.textAfter, 80) : "";
+  return (
+    <div className="text-xs text-muted-foreground" title="Text around the link">
+      {before}{" "}
+      <mark className="bg-transparent font-medium text-foreground">
+        {row.anchor || "link"}
+      </mark>{" "}
+      {after}
+    </div>
+  );
+}
+
+function truncateStart(value: string, max: number) {
+  return value.length > max ? `…${value.slice(-max)}` : value;
+}
+function truncateEnd(value: string, max: number) {
+  return value.length > max ? `${value.slice(0, max)}…` : value;
 }
 
 function StatusCell({ status }: { status: "loading" | "error" | "empty" }) {
@@ -125,7 +179,17 @@ function SourceCell({
         </Button>
       ) : null}
       <div>
-        <div className="font-semibold">{domainLabel}</div>
+        <div className="font-semibold">
+          {domainLabel}
+          {row.sourceCountry ? (
+            <span className="ml-1 text-xs font-normal text-muted-foreground">
+              {row.sourceCountry}
+            </span>
+          ) : null}
+        </div>
+        {row.sourceTitle ? (
+          <div className="text-xs">{row.sourceTitle}</div>
+        ) : null}
         {row.urlFrom ? (
           <BacklinksSourceLink url={row.urlFrom} maxLength={48} muted />
         ) : null}
@@ -188,6 +252,7 @@ function buildBaseColumns(
           {row.itemType ? (
             <div className="text-xs text-muted-foreground">{row.itemType}</div>
           ) : null}
+          <AnchorContext row={row} />
         </div>
       )),
     },

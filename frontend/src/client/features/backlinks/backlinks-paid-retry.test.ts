@@ -30,6 +30,34 @@ function PaidQueries() {
   return null;
 }
 
+const failure = () =>
+  Response.json(
+    { error: { code: "internal", message: "Temporary failure" } },
+    { status: 503 },
+  );
+const overview = (backlinks: number) =>
+  Response.json({
+    target: "example.com",
+    displayTarget: "example.com",
+    scope: "domain",
+    summary: {
+      rank: null,
+      backlinks,
+      referringPages: null,
+      referringDomains: null,
+      brokenBacklinks: null,
+      brokenPages: null,
+      backlinksSpamScore: null,
+      targetSpamScore: null,
+      newBacklinks: null,
+      lostBacklinks: null,
+      newReferringDomains: null,
+      lostReferringDomains: null,
+    },
+    trends: [],
+    newLostTrends: [],
+    fetchedAt: "2026-10-21T00:00:00.000Z",
+  });
 describe("backlinks paid query failures", () => {
   let host: HTMLDivElement;
   let root: Root;
@@ -54,15 +82,7 @@ describe("backlinks paid query failures", () => {
     onlineManager.setOnline(true);
   });
 
-  it("does not automatically resubmit either paid POST after an ambiguous server failure", async () => {
-    const fetchMock = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValue(
-        Response.json(
-          { error: { code: "internal", message: "Temporary failure" } },
-          { status: 503 },
-        ),
-      );
+  const render = () =>
     act(() =>
       root.render(
         createElement(
@@ -72,16 +92,50 @@ describe("backlinks paid query failures", () => {
         ),
       ),
     );
+  const overviewStatus = () =>
+    client.getQueryState(["backlinksOverview", "p1", "domain", "example.com"])
+      ?.status;
+
+  it("buys no table when the overview found no links", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(() => Promise.resolve(overview(0)));
+    render();
+    await act(async () => {
+      await vi.waitFor(() => expect(overviewStatus()).toBe("success"));
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("buys no table after a failed overview", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(() => Promise.resolve(failure()));
+    render();
+    await act(async () => {
+      await vi.waitFor(() => expect(overviewStatus()).toBe("error"));
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not automatically resubmit either paid POST after an ambiguous server failure", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation((input) =>
+        Promise.resolve(
+          String(input instanceof Request ? input.url : input).endsWith(
+            "/overview",
+          )
+            ? overview(5)
+            : failure(),
+        ),
+      );
+    render();
     await act(async () => {
       await vi.waitFor(() => {
-        expect(
-          client.getQueryState([
-            "backlinksOverview",
-            "p1",
-            "domain",
-            "example.com",
-          ])?.status,
-        ).toBe("error");
+        expect(overviewStatus()).toBe("success");
         expect(fetchMock).toHaveBeenCalledTimes(2);
       });
     });

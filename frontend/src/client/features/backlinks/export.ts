@@ -41,6 +41,13 @@ export function buildBacklinksTabExport(args: {
         "Lost",
         "Broken",
         "Links Count",
+        "New",
+        "Source Page Title",
+        "Text Before Link",
+        "Text After Link",
+        "Placement",
+        "Target Status Code",
+        "Source Country",
       ],
       rows: rows.backlinks.map((row) => [
         row.domainFrom,
@@ -60,6 +67,13 @@ export function buildBacklinksTabExport(args: {
         row.isLost,
         row.isBroken,
         row.linksCount,
+        row.isNew,
+        row.sourceTitle ?? null,
+        row.textBefore ?? null,
+        row.textAfter ?? null,
+        row.placement ?? null,
+        row.targetStatus ?? null,
+        row.sourceCountry ?? null,
       ]),
     };
   }

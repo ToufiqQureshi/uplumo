@@ -28,7 +28,32 @@ const backlinkRowSchema = z.object({
   lastSeen: z.string().nullable(),
   isLost: z.boolean(),
   isBroken: z.boolean(),
+  // Rows cached before these fields existed have none of them.
+  isNew: z.boolean().default(false),
   linksCount: nullableNumber,
+  textBefore: z.string().nullish(),
+  textAfter: z.string().nullish(),
+  sourceTitle: z.string().nullish(),
+  placement: z.string().nullish(),
+  targetStatus: z.number().nullish(),
+  sourceCountry: z.string().nullish(),
+});
+const linkCounts = z
+  .record(z.string(), z.number())
+  .nullish()
+  .transform((value) => value ?? {});
+const profileSchema = z.object({
+  firstSeen: z.string().nullish(),
+  crawledPages: nullableNumber.optional(),
+  referringDomainsNofollow: nullableNumber.optional(),
+  referringIps: nullableNumber.optional(),
+  referringSubnets: nullableNumber.optional(),
+  tlds: linkCounts,
+  linkTypes: linkCounts,
+  linkAttributes: linkCounts,
+  platformTypes: linkCounts,
+  placements: linkCounts,
+  countries: linkCounts,
 });
 const referringDomainSchema = z.object({
   domain: z.string().nullable(),
@@ -73,6 +98,8 @@ export const backlinksOverviewSchema = z.object({
     lostBacklinks: nullableNumber,
     newReferringDomains: nullableNumber,
     lostReferringDomains: nullableNumber,
+    // An overview cached before the profile existed has none.
+    profile: profileSchema.nullish(),
   }),
   trends: z.array(
     z.object({

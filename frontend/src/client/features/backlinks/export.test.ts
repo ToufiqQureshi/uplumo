@@ -20,6 +20,7 @@ function makeBacklinkRow(overrides: Partial<BacklinksRow> = {}): BacklinksRow {
     lastSeen: "2025-01-15",
     isLost: false,
     isBroken: false,
+    isNew: false,
     linksCount: 2,
     ...overrides,
   };

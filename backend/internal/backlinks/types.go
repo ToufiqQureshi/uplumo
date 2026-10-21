@@ -46,6 +46,23 @@ type Summary struct {
 	LostBacklinks        *float64 `json:"lostBacklinks"`
 	NewReferringDomains  *float64 `json:"newReferringDomains"`
 	LostReferringDomains *float64 `json:"lostReferringDomains"`
+	Profile              Profile  `json:"profile"`
+}
+
+// Profile is the breakdown the summary task returns with its totals: where
+// the links come from and what kind they are. Each map counts links per value.
+type Profile struct {
+	FirstSeen                *string            `json:"firstSeen"`
+	CrawledPages             *float64           `json:"crawledPages"`
+	ReferringDomainsNofollow *float64           `json:"referringDomainsNofollow"`
+	ReferringIPs             *float64           `json:"referringIps"`
+	ReferringSubnets         *float64           `json:"referringSubnets"`
+	TLDs                     map[string]float64 `json:"tlds"`
+	LinkTypes                map[string]float64 `json:"linkTypes"`
+	LinkAttributes           map[string]float64 `json:"linkAttributes"`
+	PlatformTypes            map[string]float64 `json:"platformTypes"`
+	Placements               map[string]float64 `json:"placements"`
+	Countries                map[string]float64 `json:"countries"`
 }
 
 // Trend contains historical backlink metrics for one date.
@@ -93,7 +110,14 @@ type BacklinkRow struct {
 	LastSeen       *string  `json:"lastSeen"`
 	IsLost         bool     `json:"isLost"`
 	IsBroken       bool     `json:"isBroken"`
+	IsNew          bool     `json:"isNew"`
 	LinksCount     *float64 `json:"linksCount"`
+	TextBefore     *string  `json:"textBefore"`
+	TextAfter      *string  `json:"textAfter"`
+	SourceTitle    *string  `json:"sourceTitle"`
+	Placement      *string  `json:"placement"`
+	TargetStatus   *int     `json:"targetStatus"`
+	SourceCountry  *string  `json:"sourceCountry"`
 }
 
 // ReferringDomainRow represents a referring domain and its metrics.

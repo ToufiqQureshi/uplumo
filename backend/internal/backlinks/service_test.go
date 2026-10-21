@@ -226,6 +226,88 @@ func TestEmptyProviderListReturnsEmptyArray(t *testing.T) {
 	}
 }
 
+// Everything the paid tasks return that the screen shows must survive the
+// mapping: the link's context, page title, placement, status and dates.
+func TestPaidFieldsReachTheResponse(t *testing.T) {
+	t.Parallel()
+	var row providerBacklink
+	if err := json.Unmarshal([]byte(`{"text_pre":"Developed by","anchor":"revmerito","text_post":"in 2024","page_from_title":"LeVivanta","semantic_location":"footer","url_to_status_code":403,"domain_from_country":"IN","is_new":true,"is_broken":true,"last_seen":"2026-02-18 14:25:13 +00:00"}`), &row); err != nil {
+		t.Fatal(err)
+	}
+	got := mapBacklink(row)
+	if *got.TextBefore != "Developed by" || *got.TextAfter != "in 2024" || *got.SourceTitle != "LeVivanta" || *got.Placement != "footer" || *got.TargetStatus != 403 || *got.SourceCountry != "IN" || !got.IsNew || !got.IsBroken {
+		t.Fatalf("row = %+v", got)
+	}
+	if got.LastSeen == nil || *got.LastSeen != "2026-02-18 14:25:13 +00:00" {
+		t.Fatalf("lastSeen = %v, want the provider's last_seen", got.LastSeen)
+	}
+	var summary providerSummary
+	if err := json.Unmarshal([]byte(`{"first_seen":"2023-08-31","referring_ips":2004,"referring_subnets":220,"referring_domains_nofollow":18,"referring_links_tld":{"store":349,"com":89},"referring_links_countries":{"":2154,"IN":22}}`), &summary); err != nil {
+		t.Fatal(err)
+	}
+	profile := mapSummary(summary).Profile
+	if *profile.ReferringIPs != 2004 || *profile.ReferringSubnets != 220 || *profile.ReferringDomainsNofollow != 18 || profile.TLDs["store"] != 349 || *profile.FirstSeen != "2023-08-31" {
+		t.Fatalf("profile = %+v", profile)
+	}
+	if _, blank := profile.Countries[""]; blank || profile.Countries["IN"] != 22 || profile.PlatformTypes == nil {
+		t.Fatalf("countries = %v, platforms = %v: want the blank key dropped and empty maps, not nil", profile.Countries, profile.PlatformTypes)
+	}
+}
+
+// Changing the page size or moving to the next page inside the bought block
+// must not buy the same rows again; the next block is one more call.
+func TestRowsBuyOneBlockForEveryPageSizeInsideIt(t *testing.T) {
+	t.Parallel()
+	var mu sync.Mutex
+	var bodies []map[string]any
+	server := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var tasks []map[string]any
+		_ = json.NewDecoder(r.Body).Decode(&tasks)
+		mu.Lock()
+		bodies = append(bodies, tasks[0])
+		mu.Unlock()
+		offset := int(tasks[0]["offset"].(float64))
+		items := []any{}
+		for i := range min(int(tasks[0]["limit"].(float64)), 450-offset) {
+			items = append(items, map[string]any{"url_from": fmt.Sprintf("https://s%d.example/", offset+i)})
+		}
+		providerOK(w, r.URL.Path, map[string]any{"items": items, "total_count": 450})
+	})
+	svc := newService(testClient(t, server, &usageRecorder{}), &memoryCache{}, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Now)
+	get := func(page, size int) Page[BacklinkRow] {
+		t.Helper()
+		got, err := svc.Rows(context.Background(), "org", lookupInput{Target: "example.com"}, pageInput{Page: page, PageSize: size, Sort: "rank,desc", Mode: "as_is"}, rowsFilters{}, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return got
+	}
+	first := get(1, 50)
+	get(1, 100)
+	get(1, 200)
+	second := get(2, 50)
+	if len(first.Rows) != 50 || *first.Rows[0].URLFrom != "https://s0.example/" || !first.HasMore {
+		t.Fatalf("page 1 of 50 = %d rows, first %v, hasMore %v", len(first.Rows), *first.Rows[0].URLFrom, first.HasMore)
+	}
+	if *second.Rows[0].URLFrom != "https://s50.example/" || second.Page != 2 || second.PageSize != 50 {
+		t.Fatalf("page 2 starts at %v (page %d size %d), want s50", *second.Rows[0].URLFrom, second.Page, second.PageSize)
+	}
+	mu.Lock()
+	if len(bodies) != 1 || bodies[0]["limit"] != float64(blockSize) || bodies[0]["offset"] != float64(0) {
+		t.Fatalf("provider requests = %v, want one block of %d at offset 0", bodies, blockSize)
+	}
+	mu.Unlock()
+	last := get(3, 200)
+	if len(last.Rows) != 50 || last.HasMore || *last.Rows[0].URLFrom != "https://s400.example/" {
+		t.Fatalf("last page = %d rows, hasMore %v", len(last.Rows), last.HasMore)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if len(bodies) != 2 || bodies[1]["offset"] != float64(400) {
+		t.Fatalf("provider requests = %v, want a second block at offset 400", bodies)
+	}
+}
+
 func TestProviderTimeoutIsReturnedToCaller(t *testing.T) {
 	t.Parallel()
 	var calls atomic.Int32

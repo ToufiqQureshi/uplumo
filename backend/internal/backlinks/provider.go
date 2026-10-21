@@ -21,19 +21,30 @@ const (
 type provider struct{ client *dataforseo.Client }
 
 type providerSummary struct {
-	Rank                       *float64 `json:"rank"`
-	Backlinks                  *float64 `json:"backlinks"`
-	ReferringPages             *float64 `json:"referring_pages"`
-	ReferringDomains           *float64 `json:"referring_domains"`
-	BrokenBacklinks            *float64 `json:"broken_backlinks"`
-	BrokenPages                *float64 `json:"broken_pages"`
-	BacklinksSpamScore         *float64 `json:"backlinks_spam_score"`
-	NewBacklinks               *float64 `json:"new_backlinks"`
-	LostBacklinks              *float64 `json:"lost_backlinks"`
-	NewReferringDomains        *float64 `json:"new_referring_domains"`
-	NewReferringDomainsLegacy  *float64 `json:"new_reffering_domains"`
-	LostReferringDomains       *float64 `json:"lost_referring_domains"`
-	LostReferringDomainsLegacy *float64 `json:"lost_reffering_domains"`
+	Rank                       *float64           `json:"rank"`
+	Backlinks                  *float64           `json:"backlinks"`
+	ReferringPages             *float64           `json:"referring_pages"`
+	ReferringDomains           *float64           `json:"referring_domains"`
+	BrokenBacklinks            *float64           `json:"broken_backlinks"`
+	BrokenPages                *float64           `json:"broken_pages"`
+	BacklinksSpamScore         *float64           `json:"backlinks_spam_score"`
+	NewBacklinks               *float64           `json:"new_backlinks"`
+	LostBacklinks              *float64           `json:"lost_backlinks"`
+	NewReferringDomains        *float64           `json:"new_referring_domains"`
+	NewReferringDomainsLegacy  *float64           `json:"new_reffering_domains"`
+	LostReferringDomains       *float64           `json:"lost_referring_domains"`
+	LostReferringDomainsLegacy *float64           `json:"lost_reffering_domains"`
+	FirstSeen                  *string            `json:"first_seen"`
+	CrawledPages               *float64           `json:"crawled_pages"`
+	ReferringDomainsNofollow   *float64           `json:"referring_domains_nofollow"`
+	ReferringIPs               *float64           `json:"referring_ips"`
+	ReferringSubnets           *float64           `json:"referring_subnets"`
+	TLDs                       map[string]float64 `json:"referring_links_tld"`
+	LinkTypes                  map[string]float64 `json:"referring_links_types"`
+	LinkAttributes             map[string]float64 `json:"referring_links_attributes"`
+	PlatformTypes              map[string]float64 `json:"referring_links_platform_types"`
+	Placements                 map[string]float64 `json:"referring_links_semantic_locations"`
+	Countries                  map[string]float64 `json:"referring_links_countries"`
 	Info                       struct {
 		TargetSpamScore *float64 `json:"target_spam_score"`
 	} `json:"info"`
@@ -54,10 +65,17 @@ type providerBacklink struct {
 	SpamScoreLegacy *float64 `json:"backlinks_spam_score"`
 	FirstSeen       *string  `json:"first_seen"`
 	LostDate        *string  `json:"lost_date"`
-	LastVisited     *string  `json:"last_visited"`
+	LastSeen        *string  `json:"last_seen"`
 	IsLost          *bool    `json:"is_lost"`
 	IsBroken        *bool    `json:"is_broken"`
+	IsNew           *bool    `json:"is_new"`
 	LinksCount      *float64 `json:"links_count"`
+	TextPre         *string  `json:"text_pre"`
+	TextPost        *string  `json:"text_post"`
+	PageFromTitle   *string  `json:"page_from_title"`
+	Placement       *string  `json:"semantic_location"`
+	TargetStatus    *int     `json:"url_to_status_code"`
+	Country         *string  `json:"domain_from_country"`
 }
 type providerDomain struct {
 	Domain          *string  `json:"domain"`
@@ -107,7 +125,9 @@ func (p provider) post(ctx context.Context, org, endpoint string, body any) ([]j
 }
 
 func commonTarget(target Target) map[string]any {
-	return map[string]any{"target": target.APITarget, "include_subdomains": target.IncludeSubdomains, "exclude_internal_backlinks": true, "backlinks_status_type": "live"}
+	// rank_scale matches the history task and the 0-100 scale the screen and
+	// the rank filters describe; the provider's default is 0-1000.
+	return map[string]any{"target": target.APITarget, "include_subdomains": target.IncludeSubdomains, "exclude_internal_backlinks": true, "backlinks_status_type": "live", "rank_scale": "one_hundred"}
 }
 func (p provider) summary(ctx context.Context, org string, target Target) (providerSummary, error) {
 	results, err := p.post(ctx, org, pathSummary, []map[string]any{commonTarget(target)})
