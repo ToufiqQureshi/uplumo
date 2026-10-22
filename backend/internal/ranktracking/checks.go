@@ -474,8 +474,14 @@ func liveCheckIdempotencyKey(runID, keywordID, device string) string {
 }
 
 // runErrorText is the reason a run shows: the customer's credit message for a
-// refusal, else the provider's own message.
+// refusal, else the provider's own message. A replayed pair (a retried job
+// asking for work the first attempt already paid for) is not a failure and must
+// not show the browser's "already submitted" wording; it is "not checked, no
+// charge".
 func runErrorText(err error) string {
+	if errors.Is(err, spend.ErrIdempotentReplay) {
+		return "not checked (already paid in an earlier attempt), no charge"
+	}
 	if message := spend.Message(err); message != "" {
 		return message
 	}

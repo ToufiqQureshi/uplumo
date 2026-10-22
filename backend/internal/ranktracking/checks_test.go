@@ -18,19 +18,26 @@ import (
 
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/dataforseo"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/jobs"
+	"github.com/toufiqqureshi/uplumo/backend/internal/platform/spend"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/spend/spendtest"
 )
 
 type fakeSerp struct {
 	mu    sync.Mutex
 	calls []CheckRequest
+	// keys records the idempotency key passed for each keyword|device pair.
+	keys map[string]string
 	// fn decides each answer; nil returns position 7 for every lookup.
 	fn func(n int, req CheckRequest) (CheckResult, error)
 }
 
-func (f *fakeSerp) CheckLive(_ context.Context, _ string, req CheckRequest) (CheckResult, error) {
+func (f *fakeSerp) CheckLive(ctx context.Context, _ string, req CheckRequest) (CheckResult, error) {
 	f.mu.Lock()
 	f.calls = append(f.calls, req)
+	if f.keys == nil {
+		f.keys = map[string]string{}
+	}
+	f.keys[req.Keyword+"|"+req.Device] = spend.IdempotencyKeyFromContext(ctx)
 	n := len(f.calls)
 	f.mu.Unlock()
 	if f.fn != nil {
@@ -57,6 +64,47 @@ func (f *fakeScheduler) EnqueueRun(_ context.Context, job RunJob) error {
 	}
 	f.jobs = append(f.jobs, job)
 	return nil
+}
+
+// TestLookupAllUsesAStablePerPairKeyAcrossARetry simulates a crash after the
+// provider billed but before the snapshot was saved: the retried job must pass
+// the same idempotency key per keyword/device, so the spend guard refuses the
+// replay instead of billing the pair again.
+func TestLookupAllUsesAStablePerPairKeyAcrossARetry(t *testing.T) {
+	serp := &fakeSerp{}
+	c := &Checks{Serp: serp, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	e := &execution{run: Run{ID: "run-1"}, cfg: Config{LocationCode: 2840, LanguageCode: "en", Domain: "example.com", SerpDepth: 20}, org: "org"}
+	pairs := []pair{
+		{keyword: Keyword{ID: "k1", Keyword: "alpha"}, device: "desktop"},
+		{keyword: Keyword{ID: "k1", Keyword: "alpha"}, device: "mobile"},
+	}
+	c.lookupAll(context.Background(), e, pairs)
+	first := map[string]string{}
+	for k, v := range serp.keys {
+		first[k] = v
+	}
+	if first["alpha|desktop"] == first["alpha|mobile"] {
+		t.Fatal("desktop and mobile of one keyword reused the same key")
+	}
+	c.lookupAll(context.Background(), e, pairs) // retry of the crashed job
+	for pair, key := range first {
+		if got := serp.keys[pair]; got != key {
+			t.Fatalf("retry changed the key for %s: %q -> %q", pair, key, got)
+		}
+	}
+	if len(serp.keys) != 2 {
+		t.Fatalf("keys for %d pairs, want 2", len(serp.keys))
+	}
+}
+
+// TestRunErrorTextHidesTheBrowserReplayMessage checks what the customer sees for
+// a pair a retried job could not re-check: not the browser's "already submitted"
+// wording, but a clear "not checked, no charge".
+func TestRunErrorTextHidesTheBrowserReplayMessage(t *testing.T) {
+	got := runErrorText(fmt.Errorf("%w: %w", dataforseo.ErrBillingIssue, spend.ErrIdempotentReplay))
+	if got != "not checked (already paid in an earlier attempt), no charge" {
+		t.Fatalf("run error text = %q", got)
+	}
 }
 
 type fakePlans struct{ paid bool }
