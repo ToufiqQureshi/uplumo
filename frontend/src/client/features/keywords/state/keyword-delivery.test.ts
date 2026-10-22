@@ -36,6 +36,7 @@ const row: KeywordResearchRow = {
   topOfPageBidHigh: 0.32,
   referringDomains: 5,
   quarterlyChange: -33,
+  serpFeatures: ["organic", "ai_overview", "hotels_pack"],
   trend: [{ year: 2026, month: 9, searchVolume: 18100 }],
 };
 
@@ -124,6 +125,7 @@ describe("keyword export delivery", () => {
             "Top bid high (USD)",
             "Ref. domains",
             "3-mo trend (%)",
+            "Google shows",
             "Monthly searches",
           ],
           rows: [
@@ -138,6 +140,7 @@ describe("keyword export delivery", () => {
               0.32,
               5,
               -33,
+              "Map or hotel listings, AI Overview",
               JSON.stringify(row.trend),
             ],
           ],

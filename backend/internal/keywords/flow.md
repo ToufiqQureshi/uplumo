@@ -23,6 +23,11 @@ A normal cold national Auto search buys two Labs tasks (suggestions + ideas),
 then the UI requests one shallow SERP task. Thin Auto results can add one
 related-keywords fallback task. The exact seed row comes from the existing
 suggestions response, with no new task. Clickstream doubles Labs task pricing.
+A seed that names a place (`place.go`) adds a `filters` clause to the ideas
+and related tasks; it changes which rows are returned, never the number of
+tasks, and only returned rows are billed. The location registry it reads is
+free and Redis-cached; if it fails, research runs unfiltered. SERP features per
+row come from `include_serp_info` in the same task.
 Research and SERP cache hits buy zero tasks; equivalent cold SERPs at the same
 depth share one task per server instance and organization.
 

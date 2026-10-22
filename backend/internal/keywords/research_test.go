@@ -93,9 +93,10 @@ func (f *fakeData) labsCalls(source LabsSource) []LabsRequest {
 }
 
 type fakeRegistry struct {
-	names []string
-	err   error
-	calls int
+	names     []string
+	locations []SerpLocation // typed rows; names carry no type
+	err       error
+	calls     int
 }
 
 func (r *fakeRegistry) Locations(_ context.Context, _, _ string) ([]SerpLocation, error) {
@@ -103,9 +104,9 @@ func (r *fakeRegistry) Locations(_ context.Context, _, _ string) ([]SerpLocation
 	if r.err != nil {
 		return nil, r.err
 	}
-	out := make([]SerpLocation, len(r.names))
-	for i, n := range r.names {
-		out[i] = SerpLocation{LocationName: n}
+	out := slices.Clone(r.locations)
+	for _, n := range r.names {
+		out = append(out, SerpLocation{LocationName: n})
 	}
 	return out, nil
 }

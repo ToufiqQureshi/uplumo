@@ -13,6 +13,7 @@ import {
 } from "@/client/components/table/DataTable";
 import {
   IntentBadge,
+  SerpFeatureBadges,
   type SortDir,
   type SortField,
 } from "@/client/features/keywords/components";
@@ -220,6 +221,18 @@ export function KeywordResearchTable({
           cellClassName:
             "whitespace-nowrap text-right tabular-nums text-muted-foreground",
         },
+      }),
+      keywordColumnHelper.display({
+        id: "serpFeatures",
+        header: () => (
+          <span title="What Google shows for this search besides websites. Hover a badge for what to do about it.">
+            Google shows
+          </span>
+        ),
+        cell: ({ row }) => (
+          <SerpFeatureBadges types={row.original.serpFeatures} />
+        ),
+        meta: { cellClassName: "whitespace-nowrap" },
       }),
       keywordColumnHelper.accessor("intent", {
         header: "Intent",

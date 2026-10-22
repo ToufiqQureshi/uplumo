@@ -16,6 +16,11 @@ an error without live fallback for that chunk. Earlier accepted tasks are
 still collected. Explicitly rejected/failed/timed-out known tasks retain their
 documented fallback behavior.
 
+Labs bills per returned row, so a `filters` clause that narrows rows to what the
+customer can use (Keyword Research's seed place) saves money rather than
+costing a call. `include_serp_info` is returned in the same Labs task at no
+extra cost (verified live 2026-10-22); clickstream doubles the task price.
+
 Keyword Research also shares equivalent cold misses per server instance; its
 key includes organization, project, market, location, mode, limits and options.
 Different tenants remain separate. SERP snapshot coalescing also includes depth.

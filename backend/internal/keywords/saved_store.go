@@ -94,6 +94,13 @@ func nonNilMonths(m []MonthlySearch) []MonthlySearch {
 	return m
 }
 
+func nonNilStrings(s []string) []string {
+	if s == nil {
+		return []string{}
+	}
+	return s
+}
+
 func (r SavedRepository) inTx(ctx context.Context, fn func(pgx.Tx) error) error {
 	tx, err := r.DB.Begin(ctx)
 	if err != nil {

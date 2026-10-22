@@ -18,6 +18,25 @@ Researches seed terms and SERP results for a project market, with location selec
 - `hooks/useKeywordResearchData.test.ts`
 - `groupSharedVolumeRows.test.ts`
 
+## Tell customers what Google shows and which place ideas cover
+
+- **Decision:** Add a "Google shows" column built from `serpFeatures`, with
+  plain-language badges and a what-to-do tooltip each, include it in CSV/Sheets
+  exports, and show an info notice when `placeFilter` is set.
+- **Why:** The table listed numbers without telling a small business what to do.
+  Whether Google shows a map/hotel pack, an AI Overview or questions decides
+  whether the answer is a Google Business Profile, a direct answer or an FAQ.
+  The backend now receives this data free with the research task; dropping it
+  would waste paid data.
+- **Preserve:** No new request, retry or refetch for these fields; results
+  cached before the change (no `serpFeatures`/`placeFilter`) still parse and
+  render "-" and no notice. Badge order: Maps, AI, Snippet, Q&A, Video, at most
+  three.
+- **Trace:** `components/SerpFeatureBadges.tsx` and its test,
+  `page/KeywordResearchTable.tsx`, `page/KeywordResearchResults.tsx`,
+  `state/keywordControllerActions.ts`, `state/keyword-delivery.test.ts`. Backend
+  decision: `backend/internal/keywords/decision.md`.
+
 ## Paid-result delivery and repeat requests
 
 - **Decision:** Keep successful SERPs fresh and retained for 12 hours, show the

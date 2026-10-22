@@ -4,6 +4,8 @@
 
 - Research accepts 1–200 seeds, modes `auto`, `related`, `suggestions`, `ideas`, result limits 150/300/500, optional clickstream and grouping. Auto blends suggestions and ideas, alternating rows and deduplicating keywords; it falls back when fewer than five non-seed rows appear.
 - Labs countries use Labs keyword data. Countries marked Google Ads-only use Google Ads, which lacks difficulty and search intent. Local research validates the canonical city/region before spending; local volume replaces national volume rather than silently falling back. National metrics remain available for saved keywords. Labs rows also carry the top-of-page bid range, the average referring domains of page-one results and the 3-month volume change (`ResearchRow`, shown as the Top bid, Ref. domains and 3-mo trend columns); they come in the same call, so a field the provider already returned is shown, not re-bought. Google Ads-only rows leave them empty.
+- When the seed names a place from the market's location registry (a city, state, district, region or county, such as "lonavala" in "best resort in lonavala"), the Labs `ideas` and `related` tasks send a DataForSEO `filters` clause (`keyword ilike %place%`), so every billed row mentions that place instead of drifting to the whole category. The result carries `placeFilter`; a customer who wants wider ideas searches without the place name. Suggestions are phrase matches and are never filtered. Google Ads markets are never filtered and skip the registry lookup.
+- Every Labs research row carries `serpFeatures`, the result types Google shows for the keyword (`ai_overview`, `local_pack`, `hotels_pack`, `people_also_ask`, ...), from `include_serp_info`, which DataForSEO returns in the same task at no extra cost.
 - Research and SERP cache keys include organization, project, market, area, seed, mode, depth, and options that change results. A deeper 100-result SERP snapshot answers a 20-result request; an empty deeper response must not evict a useful shallow snapshot.
 - Concurrent equivalent research and same-depth SERP cache misses share in-flight provider work
   inside one Go process, keyed by the same organization/project/market/input
@@ -21,7 +23,7 @@
 `research`, `serp`, `saved/refresh` (billed, paid-plan gated when billing is wired), `saved/save|list|export|remove`, `saved/tags/assign|update|delete`.
 
 - Tables: `go_saved_keywords`, `go_saved_keyword_tags`, `go_saved_keyword_tag_assignments`, `go_keyword_metrics` (migration 00011).
-- Env: needs `DATAFORSEO_*` for research/serp; Redis for caches (research v6 24h, SERP 12h).
+- Env: needs `DATAFORSEO_*` for research/serp; Redis for caches (research v7 24h, SERP 12h).
 - Never break: validate before any provider call (failed tasks are billed); tag delete locks the tag so a concurrent assign cannot orphan rows; metrics persist under the requested language even when Labs served another.
 - Deliberate differences from legacy: NULL metrics sort last in saved lists; research language is normalized to the one Labs serves.
 

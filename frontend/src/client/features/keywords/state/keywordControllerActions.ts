@@ -5,7 +5,11 @@ import { exportRows } from "@/client/lib/exportRows";
 import { captureClientEvent } from "@/client/lib/posthog";
 import type { KeywordResearchRow } from "@/types/keywords";
 import type { SaveKeywordsInput } from "@/types/schemas/keywords";
-import type { SortDir, SortField } from "@/client/features/keywords/components";
+import {
+  serpFeatureLabels,
+  type SortDir,
+  type SortField,
+} from "@/client/features/keywords/components";
 import type {
   KeywordMode,
   ResultLimit,
@@ -28,6 +32,7 @@ function keywordResearchHeaders(locationName?: string) {
     "Top bid high (USD)",
     "Ref. domains",
     "3-mo trend (%)",
+    "Google shows",
     "Monthly searches",
   ];
 }
@@ -46,6 +51,9 @@ function keywordResearchExportRow(row: KeywordResearchRow): CsvValue[] {
     row.topOfPageBidHigh ?? "",
     row.referringDomains ?? "",
     row.quarterlyChange ?? "",
+    serpFeatureLabels(row.serpFeatures)
+      .map((feature) => feature.title)
+      .join(", "),
     JSON.stringify(row.trend),
   ];
 }

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -265,5 +266,58 @@ func TestSerpLive(t *testing.T) {
 	}
 	if len(ps.paths) != before {
 		t.Error("an invalid depth reached the provider, where it would be billed")
+	}
+}
+
+func TestLabsPlaceFilterAndSerpFeaturesReachTheProvider(t *testing.T) {
+	ps, provider := newProviderServer(t, func(path string) map[string]any {
+		row := map[string]any{"keyword": "resorts in lonavala", "keyword_info": map[string]any{"search_volume": 5400},
+			"serp_info": map[string]any{"serp_item_types": []any{"ai_overview", "hotels_pack", "organic"}}}
+		if strings.Contains(path, "related_keywords") {
+			row = map[string]any{"keyword_data": row}
+		}
+		return okTask(map[string]any{"items": []any{row}})
+	})
+	for _, tt := range []struct {
+		source LabsSource
+		field  string // "" when the source must send no filter
+	}{
+		{SourceIdeas, "keyword"},
+		{SourceRelated, "keyword_data.keyword"},
+		{SourceSuggestions, ""},
+	} {
+		items, err := provider.LabsKeywords(t.Context(), "org", LabsRequest{Source: tt.source, Seed: "best resort in lonavala", LocationCode: 2356, LanguageCode: "en", Limit: 75, MustContain: "lonavala"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		body := ps.bodies[len(ps.bodies)-1]
+		if body["include_serp_info"] != true {
+			t.Errorf("%s: include_serp_info = %v, want true (free with the task)", tt.source, body["include_serp_info"])
+		}
+		filters, hasFilter := body["filters"].([]any)
+		switch {
+		case tt.field == "" && hasFilter:
+			t.Errorf("%s: filters = %v, want none", tt.source, filters)
+		case tt.field != "" && (len(filters) != 3 || filters[0] != tt.field || filters[1] != "ilike" || filters[2] != "%lonavala%"):
+			t.Errorf("%s: filters = %v, want [%s ilike %%lonavala%%]", tt.source, body["filters"], tt.field)
+		}
+		rows := labsRows(items)
+		if len(rows) != 1 || !slices.Equal(rows[0].SerpFeatures, []string{"ai_overview", "hotels_pack", "organic"}) {
+			t.Errorf("%s: rows = %+v, want the SERP features the task returned", tt.source, rows)
+		}
+	}
+	if len(ps.paths) != 3 {
+		t.Errorf("provider calls = %d, want exactly one per request", len(ps.paths))
+	}
+
+	// No place: no filter at all, and a row without serp_info still has a list.
+	if _, err := provider.LabsKeywords(t.Context(), "org", LabsRequest{Source: SourceIdeas, Seed: "seo tool", LocationCode: 2840, LanguageCode: "en", Limit: 75}); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := ps.bodies[len(ps.bodies)-1]["filters"]; ok {
+		t.Error("a seed without a place must send no filter")
+	}
+	if rows := labsRows([]LabsItem{{Keyword: "x"}}); rows[0].SerpFeatures == nil {
+		t.Error("SerpFeatures must be an empty list, not null, when Labs sent none")
 	}
 }

@@ -21,6 +21,13 @@ actions. All data comes from the Go keywords API.
   matching the server cache; revisiting the same keyword does not refetch it.
 - A missing exact seed shows an approximate-match notice in every mode,
   including Auto. Exact matching trims whitespace and ignores case.
+- When research limited ideas to a place named in the seed (`placeFilter`),
+  an info notice says so and tells the customer to search without the place
+  name for wider ideas. No extra request is made.
+- The "Google shows" column turns each row's `serpFeatures` into up to three
+  badges (Maps, AI, Snippet, Q&A, Video), each with a tooltip saying what to do
+  about it (`components/SerpFeatureBadges.tsx`). The data comes with the
+  research task; showing it buys nothing.
 - Research CSV/Sheets exports include both top bids, referring domains,
   quarterly change and monthly-search history alongside the core metrics.
 - SERP rows and exports retain the description already present in the API.
