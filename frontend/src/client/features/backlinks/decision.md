@@ -15,3 +15,11 @@ Shows domain/page backlink summaries, referring domains and top linked pages.
 ## Verification pointers
 
 - `backlinksFilterTypes.test.ts`
+
+
+## Show the complete paid link profile
+
+- **Decision:** Show every returned link-type and link-attribute bucket, including the provider's unclassified bucket as “Other”.
+- **Why:** The summary already paid for these categories; hiding entries beyond six drops customer data.
+- **Preserve:** Keep the existing sort and total; do not turn missing categories into zero.
+- **Trace:** `BacklinksProfilePanel.tsx` and backend summary normalization.
