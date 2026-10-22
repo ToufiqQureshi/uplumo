@@ -255,3 +255,18 @@ Owner-approved scope: one focused PR adds optional 180-day browser recognition a
   Redis, `pnpm ci:check` and `pnpm test` passed. The ChatGPT app listing
   (`deploy/chatgpt-app-submission.json`) no longer lists the eight tools; a
   resubmission to OpenAI is the owner's step.
+
+## Default frontend queries do not retry paid work
+
+- **Decision:** TanStack Query has `retry: false` by default. A free read
+  opts in explicitly when retrying is safe and useful; paid provider operations
+  keep retries disabled unless their server endpoint has an explicit,
+  idempotent retry contract.
+- **Why:** A network failure or 5xx can occur after a provider completed and
+  billed a task. Retrying automatically can charge the customer twice.
+- **Preserve:** Treat query retries as a cost decision, not a generic
+  availability setting. Review each explicit retry alongside its route and
+  billing behavior.
+- **Trace:** `frontend/src/client/tanstack-db/queryClient.ts` and the
+  feature query options (analytics, billing, branding, IndexNow, and site
+  publishing currently opt in to safe read retries).
