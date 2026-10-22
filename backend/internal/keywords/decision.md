@@ -70,19 +70,6 @@ DataForSEO; Google Ads for selected markets; Postgres saved rows; Redis caches; 
   three-letter guard each fail a test. Not yet verified on production (the
   production DataForSEO key returned 401 at the time of writing).
 
-## Coalesce metrics refresh lookups
-
-- **Decision:** `metricsForList` (RefreshSavedMetrics / RankTrackingMetrics)
-  shares equivalent concurrent fetches through the research singleflight group
-  keyed by organization, keyword set, market and location. The result is not
-  cached: a refresh is meant to buy fresh metrics.
-- **Why:** A double-clicked "refresh metrics" or concurrent rank-tracking
-  hydration bought the same Labs/Ads batch more than once with no coalescing.
-- **Preserve:** No automatic retry, no cache-lifetime change, tenant/market
-  separation unchanged; distinct keyword sets still buy distinct fetches.
-- **Trace:** `research_serp.go` (`metricsForList`, `metricsForListUncached`),
-  `research_test.go:TestMetricsForListCoalescesConcurrentRequests`.
-
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.
@@ -94,6 +81,31 @@ Use the package tests next to the source files in `README.md`. For changes cross
 - **Preserve:** Active callers keep existing cache-outage fallback and tenant/cost checks. Already-registered bounded shared work can finish for other waiters; this does not add a retry, limit or pricing change.
 - **Trace:** `research_cancellation_test.go` interrupts the cache read and uses real saved-keyword test Postgres; the former billed suggestions call must remain at zero. Tests synchronize existing work before counting calls; see the shared [fixture decision](../platform/spend/spendtest/decision.md).
 
+## Preserve paid benchmark, growth, language and freshness fields
+
+- **Decision:** Decode and deliver the `avg_backlinks_info` benchmarks
+  (backlinks, dofollow, referring pages), `search_volume_trend.monthly`/`.yearly`
+  growth, `competition_level`, `last_updated_time`, `detected_language`,
+  `words_count` and `search_intent_info.foreign_intent`, plus the Google Ads
+  top-of-page bid range. The research cache version advances to 8.
+- **Why:** The provider returns these in the same Labs/Ads task that is already
+  paid for; the decoder read only a small subset and silently dropped the rest.
+  `foreign_intent` arrives as a string or a list, and the Ads bid columns already
+  existed in the API/UI but were never filled for Ads rows.
+- **Preserve:** No new provider call, no automatic retry and no change to the
+  saved-keyword contract (saving keeps its smaller metric set). New row fields
+  are optional in the frontend schema so results cached before this change still
+  parse. Cache version 8 invalidates older snapshots, so a repeat search may buy
+  once more to recover the newly retained fields. The UI shows the 3-mo and
+  12-mo trend in one "Trend" cell and the backlinks/referring-pages benchmarks
+  in the Ref. domains tooltip; the rest stay export-only so the table is not
+  crowded.
+- **Trace:** `research_provider.go`, `research.go`,
+  `research_provider_test.go` (`TestLabsItemPreservesPaidBenchmarkAndContextFields`,
+  `TestForeignIntentsReadsStringAndList`, `TestAdsRowsPreserveTopBidsAndCompetitionLevel`),
+  `frontend/src/client/features/keywords/{keywordsApi.ts,state/keywordControllerActions.ts,
+  page/KeywordResearchTable.tsx,state/keyword-delivery.test.ts}` and
+  `frontend/src/types/keywords.ts`.
 
 ## Coalesce equivalent metrics refreshes safely
 
