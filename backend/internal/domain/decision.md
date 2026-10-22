@@ -94,11 +94,15 @@ comparison and implementation of this supplemental field delivery remain open.
   search — a correctness gap in a headline report, fixed with no extra call.
 - **Preserve:** No new provider call; `type`/`intent` stay nullable in the
   schema so cached rows before this change still parse; intent is the raw
-  provider label (not normalized) so it is not silently mislabelled.
+  provider label (not normalized) so it is not silently mislabelled. Known
+  result types (organic, paid, featured_snippet, local_pack, people_also_ask,
+  ai_overview, video, images, twitter, knowledge_graph, related_searches) get a
+  short label + a theme-aware `Badge` variant; unknown types show the raw type,
+  never a guessed "Organic". No hard-coded colours (dark mode must work).
 - **Trace:** `provider.go`, `service.go` (`mapKeyword`),
   `service_test.go:TestKeywordsPageKeepsTypeAndIntent`,
   `frontend/src/client/features/domain/{domainApi.ts,types.ts,
-  components/DomainKeywordsTable.tsx}`.
+  components/DomainKeywordsTable.tsx,components/ResultTypeBadge.tsx}`.
 
 ## Verification
 

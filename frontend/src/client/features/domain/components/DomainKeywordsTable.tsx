@@ -24,6 +24,7 @@ import type {
   KeywordRow,
   SortOrder,
 } from "@/client/features/domain/types";
+import { ResultTypeBadge } from "@/client/features/domain/components/ResultTypeBadge";
 
 type Props = DataTableFrameProps & {
   domain: string;
@@ -82,22 +83,7 @@ export function DomainKeywordsTable({
       keywordColumnHelper.display({
         id: "type",
         header: () => "Type",
-        cell: ({ row }) => {
-          const type = row.original.type;
-          if (!type) return "-";
-          const isPaid = type === "paid";
-          return (
-            <span
-              className={`inline-flex rounded px-1.5 py-0.5 text-[11px] font-medium ${
-                isPaid
-                  ? "bg-amber-100 text-amber-800"
-                  : "bg-emerald-100 text-emerald-800"
-              }`}
-            >
-              {isPaid ? "Paid" : "Organic"}
-            </span>
-          );
-        },
+        cell: ({ row }) => <ResultTypeBadge type={row.original.type} />,
       }),
       keywordColumnHelper.accessor("searchVolume", {
         header: () => (
