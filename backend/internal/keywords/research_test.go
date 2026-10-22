@@ -179,6 +179,29 @@ func TestConcurrentKeywordResearchKeepsOrganizationsSeparate(t *testing.T) {
 	}
 }
 
+func TestMetricsForListCoalescesConcurrentRequests(t *testing.T) {
+	f := newResearchFixture(t)
+	f.data.overviewFn = func(keywords []string) ([]LabsItem, error) {
+		time.Sleep(30 * time.Millisecond)
+		return []LabsItem{{Keyword: keywords[0], Info: Info{SearchVolume: intp(10)}}}, nil
+	}
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	for range 2 {
+		wg.Go(func() {
+			<-start
+			if _, err := f.svc.metricsForList(context.Background(), "org", []string{"alpha"}, 2840, "en", nil); err != nil {
+				t.Errorf("metricsForList: %v", err)
+			}
+		})
+	}
+	close(start)
+	wg.Wait()
+	if got := len(f.data.overviews); got != 1 {
+		t.Fatalf("provider overview calls = %d, want one shared fetch", got)
+	}
+}
+
 func (f researchFixture) research(t *testing.T, mutate func(*ResearchInput)) (ResearchResult, error) {
 	t.Helper()
 	in := ResearchInput{OrganizationID: "org", ProjectID: f.project, Keywords: []string{"Seed"}, LocationCode: 2840, LanguageCode: "en", ResultLimit: 150, Mode: "auto"}

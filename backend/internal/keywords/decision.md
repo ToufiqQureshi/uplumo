@@ -70,6 +70,14 @@ DataForSEO; Google Ads for selected markets; Postgres saved rows; Redis caches; 
   three-letter guard each fail a test. Not yet verified on production (the
   production DataForSEO key returned 401 at the time of writing).
 
+
+## Coalesce equivalent metrics refreshes safely
+
+- **Decision:** Share concurrent metric refreshes only when organization, market, location and a canonical sorted keyword set match; do not start detached paid work for a caller already canceled before flight registration or execution.
+- **Why:** Saved-keyword and rank-tracking refreshes can present the same set in different orders, and a canceled request must not begin a paid Labs/Ads call after its caller has left.
+- **Preserve:** The provider sees the original keyword slice, the result is not cached, and active shared work keeps its bounded timeout.
+- **Trace:** `metricsForList` and the existing shared-refresh regression.
+
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.
