@@ -321,3 +321,62 @@ func TestLabsPlaceFilterAndSerpFeaturesReachTheProvider(t *testing.T) {
 		t.Error("SerpFeatures must be an empty list, not null, when Labs sent none")
 	}
 }
+
+func TestLabsItemPreservesPaidBenchmarkAndContextFields(t *testing.T) {
+	ps, provider := newProviderServer(t, func(_ string) map[string]any {
+		return okTask(map[string]any{
+			"items": []any{map[string]any{
+				"keyword": "best resort in lonavala",
+				"keyword_info": map[string]any{
+					"search_volume": 18100, "cpc": 0.26, "competition": 0.98, "competition_level": "LOW",
+					"low_top_of_page_bid": 0.05, "high_top_of_page_bid": 0.32,
+					"search_volume_trend": map[string]any{"monthly": -33, "quarterly": -33, "yearly": 22},
+					"last_updated_time":   "2026-10-17 20:42:27 +00:00",
+				},
+				"keyword_properties": map[string]any{"keyword_difficulty": 51, "detected_language": "en", "words_count": 3},
+				"search_intent_info": map[string]any{"main_intent": "transactional", "foreign_intent": []any{"informational", "commercial"}},
+				"avg_backlinks_info": map[string]any{
+					"referring_main_domains": 159.4, "backlinks": 641.4, "dofollow": 448.3, "referring_pages": 561.3,
+				},
+			}},
+		})
+	})
+	items, err := provider.LabsKeywords(t.Context(), "org", LabsRequest{Source: SourceIdeas, Seed: "resort", LocationCode: 2840, LanguageCode: "en", Limit: 150})
+	if err != nil || len(items) != 1 {
+		t.Fatalf("LabsKeywords = %+v, %v", items, err)
+	}
+	row := labsRows(items)[0]
+	if row.Backlinks == nil || *row.Backlinks != 641 || row.DofollowBacklinks == nil || *row.DofollowBacklinks != 448 ||
+		row.ReferringPages == nil || *row.ReferringPages != 561 || row.MonthlyChange == nil || *row.MonthlyChange != -33 ||
+		row.YearlyChange == nil || *row.YearlyChange != 22 || row.CompetitionLevel == nil || *row.CompetitionLevel != "LOW" ||
+		row.LastUpdatedTime == nil || *row.LastUpdatedTime != "2026-10-17 20:42:27 +00:00" ||
+		row.DetectedLanguage == nil || *row.DetectedLanguage != "en" || row.WordsCount == nil || *row.WordsCount != 3 ||
+		len(row.SecondaryIntents) != 2 || row.SecondaryIntents[0] != "informational" || row.SecondaryIntents[1] != "commercial" {
+		t.Fatalf("paid benchmark/context fields dropped or misread: %+v", row)
+	}
+	if len(ps.paths) != 1 {
+		t.Fatalf("bought %d tasks; want one", len(ps.paths))
+	}
+}
+
+func TestForeignIntentsReadsStringAndList(t *testing.T) {
+	if got := foreignIntents(json.RawMessage(`"commercial"`)); len(got) != 1 || got[0] != "commercial" {
+		t.Fatalf("single foreign intent = %v", got)
+	}
+	if got := foreignIntents(json.RawMessage(`["informational","commercial"]`)); len(got) != 2 || got[1] != "commercial" {
+		t.Fatalf("list foreign intent = %v", got)
+	}
+	if got := foreignIntents(json.RawMessage(`null`)); got != nil {
+		t.Fatalf("null foreign intent = %v", got)
+	}
+}
+
+func TestAdsRowsPreserveTopBidsAndCompetitionLevel(t *testing.T) {
+	rows := adsRows([]AdsItem{{Keyword: "hotel", SearchVolume: intp(100), Competition: strp("LOW"),
+		TopBidLow: floatp(0.1), TopBidHigh: floatp(0.9), CompetitionIndex: floatp(40)}})
+	if len(rows) != 1 || rows[0].TopOfPageBidLow == nil || *rows[0].TopOfPageBidLow != 0.1 ||
+		rows[0].TopOfPageBidHigh == nil || *rows[0].TopOfPageBidHigh != 0.9 ||
+		rows[0].CompetitionLevel == nil || *rows[0].CompetitionLevel != "LOW" {
+		t.Fatalf("Ads bids or competition level dropped: %+v", rows[0])
+	}
+}

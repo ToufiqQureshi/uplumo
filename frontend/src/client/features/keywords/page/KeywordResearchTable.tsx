@@ -149,7 +149,18 @@ export function KeywordResearchTable({
         cell: ({ row, getValue }) => {
           if (row.original.parentKeyword) return null;
           const value = getValue();
-          return value == null ? "-" : value.toFixed(2);
+          const level = row.original.competitionLevel;
+          if (value == null && level == null) return "-";
+          return (
+            <span className="flex flex-col items-end leading-tight">
+              <span>{value == null ? "-" : value.toFixed(2)}</span>
+              {level ? (
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  {level}
+                </span>
+              ) : null}
+            </span>
+          );
         },
         meta: {
           headerClassName: "text-right",

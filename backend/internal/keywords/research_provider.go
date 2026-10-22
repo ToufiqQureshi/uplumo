@@ -21,10 +21,14 @@ type Info struct {
 	CompetitionLevel *string
 	Monthly          []MonthlySearch
 	// TopBidLow and TopBidHigh are the range advertisers pay for a top-of-page
-	// ad (USD); QuarterlyChange is the volume change over the last three months,
-	// in percent.
+	// ad (USD); MonthlyChange, QuarterlyChange and YearlyChange are the volume
+	// change over one month, three months and one year, in percent.
 	TopBidLow, TopBidHigh *float64
+	MonthlyChange         *float64
 	QuarterlyChange       *float64
+	YearlyChange          *float64
+	// LastUpdatedTime is the provider's dataset timestamp for this metric block.
+	LastUpdatedTime *string
 }
 
 // LabsItem is a keyword from DataForSEO Labs. Clickstream is set only when the
@@ -36,8 +40,17 @@ type LabsItem struct {
 	Difficulty  *int
 	MainIntent  *string
 	// ReferringDomains is the average number of domains linking to the pages
-	// that rank on page one for the keyword.
-	ReferringDomains *float64
+	// that rank on page one for the keyword; Backlinks, DofollowBacklinks and
+	// ReferringPages come from the same avg_backlinks_info block.
+	ReferringDomains  *float64
+	Backlinks         *float64
+	DofollowBacklinks *float64
+	ReferringPages    *float64
+	// DetectedLanguage and WordsCount describe the keyword itself.
+	DetectedLanguage *string
+	WordsCount       *int
+	// ForeignIntent lists the search intents that are secondary to MainIntent.
+	ForeignIntent []string
 	// SerpFeatures are the result types Google shows for the keyword
 	// (ai_overview, local_pack, people_also_ask...). They come with the same
 	// Labs task at no extra cost.
@@ -52,7 +65,9 @@ type AdsItem struct {
 	CPC              *float64
 	Competition      *string
 	CompetitionIndex *float64
-	Monthly          []MonthlySearch
+	// TopBidLow and TopBidHigh mirror the Labs top-of-page bid range.
+	TopBidLow, TopBidHigh *float64
+	Monthly               []MonthlySearch
 }
 
 // LabsSource is one Labs keyword endpoint.
@@ -163,8 +178,11 @@ type wireInfo struct {
 	Monthly          []wireMonthly `json:"monthly_searches"`
 	LowTopOfPageBid  *float64      `json:"low_top_of_page_bid"`
 	HighTopOfPageBid *float64      `json:"high_top_of_page_bid"`
+	LastUpdatedTime  *string       `json:"last_updated_time"`
 	Trend            *struct {
+		Monthly   *float64 `json:"monthly"`
 		Quarterly *float64 `json:"quarterly"`
+		Yearly    *float64 `json:"yearly"`
 	} `json:"search_volume_trend"`
 }
 
@@ -174,10 +192,12 @@ func (w *wireInfo) info() Info {
 	}
 	out := Info{
 		SearchVolume: w.SearchVolume, CPC: w.CPC, Competition: w.Competition, CompetitionLevel: w.CompetitionLevel, Monthly: monthly(w.Monthly),
-		TopBidLow: w.LowTopOfPageBid, TopBidHigh: w.HighTopOfPageBid,
+		TopBidLow: w.LowTopOfPageBid, TopBidHigh: w.HighTopOfPageBid, LastUpdatedTime: w.LastUpdatedTime,
 	}
 	if w.Trend != nil {
+		out.MonthlyChange = w.Trend.Monthly
 		out.QuarterlyChange = w.Trend.Quarterly
+		out.YearlyChange = w.Trend.Yearly
 	}
 	return out
 }
@@ -187,19 +207,42 @@ type wireLabsItem struct {
 	KeywordInfo       *wireInfo `json:"keyword_info"`
 	ClickstreamInfo   *wireInfo `json:"keyword_info_normalized_with_clickstream"`
 	KeywordProperties *struct {
-		KeywordDifficulty *int `json:"keyword_difficulty"`
+		KeywordDifficulty *int    `json:"keyword_difficulty"`
+		DetectedLanguage  *string `json:"detected_language"`
+		WordsCount        *int    `json:"words_count"`
 	} `json:"keyword_properties"`
 	SearchIntentInfo *struct {
-		MainIntent *string `json:"main_intent"`
+		MainIntent    *string         `json:"main_intent"`
+		ForeignIntent json.RawMessage `json:"foreign_intent"`
 	} `json:"search_intent_info"`
 	AvgBacklinksInfo *struct {
 		ReferringMainDomains *float64 `json:"referring_main_domains"`
+		Backlinks            *float64 `json:"backlinks"`
+		Dofollow             *float64 `json:"dofollow"`
+		ReferringPages       *float64 `json:"referring_pages"`
 	} `json:"avg_backlinks_info"`
 	SerpInfo *struct {
 		ItemTypes []string `json:"serp_item_types"`
 	} `json:"serp_info"`
 	// Related keywords wrap the payload one level deeper.
 	KeywordData *wireLabsItem `json:"keyword_data"`
+}
+
+// foreignIntents reads search_intent_info.foreign_intent, which the provider
+// returns as a single string or a list of strings.
+func foreignIntents(raw json.RawMessage) []string {
+	if len(raw) == 0 || string(raw) == "null" {
+		return nil
+	}
+	var one string
+	if err := json.Unmarshal(raw, &one); err == nil {
+		return []string{one}
+	}
+	var many []string
+	if err := json.Unmarshal(raw, &many); err == nil {
+		return many
+	}
+	return nil
 }
 
 func (w wireLabsItem) item() (LabsItem, bool) {
@@ -213,12 +256,18 @@ func (w wireLabsItem) item() (LabsItem, bool) {
 	}
 	if w.KeywordProperties != nil {
 		out.Difficulty = w.KeywordProperties.KeywordDifficulty
+		out.DetectedLanguage = w.KeywordProperties.DetectedLanguage
+		out.WordsCount = w.KeywordProperties.WordsCount
 	}
 	if w.SearchIntentInfo != nil {
 		out.MainIntent = w.SearchIntentInfo.MainIntent
+		out.ForeignIntent = foreignIntents(w.SearchIntentInfo.ForeignIntent)
 	}
 	if w.AvgBacklinksInfo != nil {
 		out.ReferringDomains = w.AvgBacklinksInfo.ReferringMainDomains
+		out.Backlinks = w.AvgBacklinksInfo.Backlinks
+		out.DofollowBacklinks = w.AvgBacklinksInfo.Dofollow
+		out.ReferringPages = w.AvgBacklinksInfo.ReferringPages
 	}
 	if w.SerpInfo != nil {
 		out.SerpFeatures = w.SerpInfo.ItemTypes
@@ -341,6 +390,8 @@ type wireAdsItem struct {
 	CPC              *float64      `json:"cpc"`
 	Competition      *string       `json:"competition"`
 	CompetitionIndex *float64      `json:"competition_index"`
+	LowTopOfPageBid  *float64      `json:"low_top_of_page_bid"`
+	HighTopOfPageBid *float64      `json:"high_top_of_page_bid"`
 	Monthly          []wireMonthly `json:"monthly_searches"`
 }
 
@@ -355,7 +406,7 @@ func adsItems(results []json.RawMessage) ([]AdsItem, error) {
 			continue
 		}
 		out = append(out, AdsItem{Keyword: *w.Keyword, SearchVolume: w.SearchVolume, CPC: w.CPC, Competition: w.Competition,
-			CompetitionIndex: w.CompetitionIndex, Monthly: monthly(w.Monthly)})
+			CompetitionIndex: w.CompetitionIndex, TopBidLow: w.LowTopOfPageBid, TopBidHigh: w.HighTopOfPageBid, Monthly: monthly(w.Monthly)})
 	}
 	return out, nil
 }

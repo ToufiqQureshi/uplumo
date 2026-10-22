@@ -70,6 +70,29 @@ DataForSEO; Google Ads for selected markets; Postgres saved rows; Redis caches; 
   three-letter guard each fail a test. Not yet verified on production (the
   production DataForSEO key returned 401 at the time of writing).
 
+## Preserve paid benchmark, growth, language and freshness fields
+
+- **Decision:** Decode and deliver the `avg_backlinks_info` benchmarks
+  (backlinks, dofollow, referring pages), `search_volume_trend.monthly`/`.yearly`
+  growth, `competition_level`, `last_updated_time`, `detected_language`,
+  `words_count` and `search_intent_info.foreign_intent`, plus the Google Ads
+  top-of-page bid range. The research cache version advances to 8.
+- **Why:** The provider returns these in the same Labs/Ads task that is already
+  paid for; the decoder read only a small subset and silently dropped the rest.
+  `foreign_intent` arrives as a string or a list, and the Ads bid columns already
+  existed in the API/UI but were never filled for Ads rows.
+- **Preserve:** No new provider call, no automatic retry and no change to the
+  saved-keyword contract (saving keeps its smaller metric set). New row fields
+  are optional in the frontend schema so results cached before this change still
+  parse. Cache version 8 invalidates older snapshots, so a repeat search may buy
+  once more to recover the newly retained fields.
+- **Trace:** `research_provider.go`, `research.go`,
+  `research_provider_test.go` (`TestLabsItemPreservesPaidBenchmarkAndContextFields`,
+  `TestForeignIntentsReadsStringAndList`, `TestAdsRowsPreserveTopBidsAndCompetitionLevel`),
+  `frontend/src/client/features/keywords/{keywordsApi.ts,state/keywordControllerActions.ts,
+  page/KeywordResearchTable.tsx,state/keyword-delivery.test.ts}` and
+  `frontend/src/types/keywords.ts`.
+
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.
