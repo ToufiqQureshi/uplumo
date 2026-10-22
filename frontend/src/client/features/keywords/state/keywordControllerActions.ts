@@ -34,6 +34,16 @@ function keywordResearchHeaders(locationName?: string) {
     "3-mo trend (%)",
     "Google shows",
     "Monthly searches",
+    "Backlinks",
+    "Dofollow backlinks",
+    "Referring pages",
+    "1-mo trend (%)",
+    "12-mo trend (%)",
+    "Competition level",
+    "Last updated",
+    "Detected language",
+    "Words count",
+    "Secondary intents",
   ];
 }
 
@@ -55,6 +65,16 @@ function keywordResearchExportRow(row: KeywordResearchRow): CsvValue[] {
       .map((feature) => feature.title)
       .join(", "),
     JSON.stringify(row.trend),
+    row.backlinks ?? "",
+    row.dofollowBacklinks ?? "",
+    row.referringPages ?? "",
+    row.monthlyChange ?? "",
+    row.yearlyChange ?? "",
+    row.competitionLevel ?? "",
+    row.lastUpdatedTime ?? "",
+    row.detectedLanguage ?? "",
+    row.wordsCount ?? "",
+    row.secondaryIntents?.join(", ") ?? "",
   ];
 }
 

@@ -60,3 +60,11 @@ Researches seed terms and SERP results for a project market, with location selec
   coalescing are recorded in the backend keyword decision document.
   `components/SerpAnalysisCard.test.ts` checks description display and export,
   using the description already present in the API response.
+
+
+## Deliver paid research fields consistently
+
+- **Decision:** Omit absent secondary intents from JSON and replace both local competition value and label with the Google Ads city-level values.
+- **Why:** Ads rows have no secondary-intent list, and local competition must not be paired with the national LOW/MEDIUM/HIGH label.
+- **Preserve:** Missing data stays unavailable; the schema accepts older cached rows with no secondary intents.
+- **Trace:** Keyword research response schema, local result mapping, and table/export delivery.

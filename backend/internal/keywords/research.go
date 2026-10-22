@@ -28,7 +28,7 @@ const (
 	// not for a day, so the full blend is bought again once the provider recovers.
 	partialResearchCacheTTL = 10 * time.Minute
 	serpCacheTTL            = 12 * time.Hour
-	researchCacheVer        = 7 // v7: SERP features per row and the place filter
+	researchCacheVer        = 8 // v8: preserve growth, backlink, language and freshness fields
 	metricsBatchSize        = 700
 	SerpShallowDepth        = 20
 	SerpDeepDepth           = 100
@@ -57,9 +57,26 @@ type ResearchRow struct {
 	TopOfPageBidLow  *float64 `json:"topOfPageBidLow"`
 	TopOfPageBidHigh *float64 `json:"topOfPageBidHigh"`
 	// ReferringDomains is the average links-from-domains of the page-one
-	// results; QuarterlyChange is the volume change over three months, percent.
-	ReferringDomains *int `json:"referringDomains"`
-	QuarterlyChange  *int `json:"quarterlyChange"`
+	// results; Backlinks, DofollowBacklinks and ReferringPages complete the
+	// same avg_backlinks_info benchmark block.
+	ReferringDomains  *int `json:"referringDomains"`
+	Backlinks         *int `json:"backlinks"`
+	DofollowBacklinks *int `json:"dofollowBacklinks"`
+	ReferringPages    *int `json:"referringPages"`
+	// MonthlyChange, QuarterlyChange and YearlyChange are volume change over
+	// one month, three months and one year, in percent.
+	MonthlyChange   *int `json:"monthlyChange"`
+	QuarterlyChange *int `json:"quarterlyChange"`
+	YearlyChange    *int `json:"yearlyChange"`
+	// CompetitionLevel is the provider's LOW/MEDIUM/HIGH label for Competition.
+	CompetitionLevel *string `json:"competitionLevel"`
+	// LastUpdatedTime is the provider's dataset timestamp for the metrics.
+	LastUpdatedTime *string `json:"lastUpdatedTime"`
+	// DetectedLanguage and WordsCount describe the keyword itself.
+	DetectedLanguage *string `json:"detectedLanguage"`
+	WordsCount       *int    `json:"wordsCount"`
+	// SecondaryIntents are the intents secondary to the main one.
+	SecondaryIntents []string `json:"secondaryIntents,omitempty"`
 	// SerpFeatures are the result types Google shows for the keyword, such as
 	// ai_overview or local_pack: they tell the customer whether an article, a
 	// Google Business Profile or an AI answer is the way to win it.
@@ -169,7 +186,12 @@ func labsRows(items []LabsItem) []ResearchRow {
 			Keyword: k, SearchVolume: volume.SearchVolume, Trend: nonNilMonths(volume.Monthly), KeywordDifficulty: it.Difficulty,
 			CPC: it.Info.CPC, Competition: it.Info.Competition, Intent: normalizeIntent(it.MainIntent),
 			TopOfPageBidLow: it.Info.TopBidLow, TopOfPageBidHigh: it.Info.TopBidHigh,
-			ReferringDomains: roundedInt(it.ReferringDomains), QuarterlyChange: roundedInt(it.Info.QuarterlyChange),
+			ReferringDomains: roundedInt(it.ReferringDomains), Backlinks: roundedInt(it.Backlinks),
+			DofollowBacklinks: roundedInt(it.DofollowBacklinks), ReferringPages: roundedInt(it.ReferringPages),
+			MonthlyChange: roundedInt(it.Info.MonthlyChange), QuarterlyChange: roundedInt(it.Info.QuarterlyChange),
+			YearlyChange:     roundedInt(it.Info.YearlyChange),
+			CompetitionLevel: it.Info.CompetitionLevel, LastUpdatedTime: it.Info.LastUpdatedTime,
+			DetectedLanguage: it.DetectedLanguage, WordsCount: it.WordsCount, SecondaryIntents: it.ForeignIntent,
 			SerpFeatures: nonNilStrings(it.SerpFeatures),
 		})
 	}
@@ -193,7 +215,9 @@ func adsRows(items []AdsItem) []ResearchRow {
 			competition = &c
 		}
 		rows = append(rows, ResearchRow{Keyword: k, SearchVolume: it.SearchVolume, Trend: nonNilMonths(it.Monthly), CPC: it.CPC,
-			Competition: competition, Intent: "unknown", SerpFeatures: []string{}})
+			Competition: competition, Intent: "unknown",
+			TopOfPageBidLow: it.TopBidLow, TopOfPageBidHigh: it.TopBidHigh, CompetitionLevel: it.Competition,
+			SerpFeatures: []string{}})
 	}
 	return rows
 }
@@ -487,7 +511,7 @@ func (s *ResearchService) researchLocal(ctx context.Context, in ResearchInput) (
 	rows := make([]ResearchRow, len(result.Rows))
 	for i, r := range result.Rows {
 		l := local[r.Keyword]
-		r.SearchVolume, r.Trend, r.CPC, r.Competition = l.SearchVolume, nonNilMonths(l.Trend), l.CPC, l.Competition
+		r.SearchVolume, r.Trend, r.CPC, r.Competition, r.CompetitionLevel = l.SearchVolume, nonNilMonths(l.Trend), l.CPC, l.Competition, l.CompetitionLevel
 		rows[i] = r
 	}
 	result.Rows = rows

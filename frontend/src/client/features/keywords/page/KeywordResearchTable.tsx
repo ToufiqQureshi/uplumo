@@ -40,6 +40,11 @@ type Props = {
 
 const keywordColumnHelper = createColumnHelper<KeywordResearchDisplayRow>();
 
+/** A volume change in percent, signed, or "-" when unknown. */
+function formatChange(value: number | null | undefined): string {
+  return value == null ? "-" : `${value > 0 ? "+" : ""}${value}%`;
+}
+
 export function KeywordResearchTable({
   filteredRows,
   overviewKeyword,
@@ -149,7 +154,18 @@ export function KeywordResearchTable({
         cell: ({ row, getValue }) => {
           if (row.original.parentKeyword) return null;
           const value = getValue();
-          return value == null ? "-" : value.toFixed(2);
+          const level = row.original.competitionLevel;
+          if (value == null && level == null) return "-";
+          return (
+            <span className="flex flex-col items-end leading-tight">
+              <span>{value == null ? "-" : value.toFixed(2)}</span>
+              {level ? (
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  {level}
+                </span>
+              ) : null}
+            </span>
+          );
         },
         meta: {
           headerClassName: "text-right",
@@ -190,13 +206,29 @@ export function KeywordResearchTable({
       }),
       keywordColumnHelper.accessor("referringDomains", {
         header: () => (
-          <span title="Average number of domains linking to the pages ranking on Google's first page. More links usually means harder to outrank.">
+          <span title="Average number of domains linking to the pages ranking on Google's first page. Hover a row for backlinks and referring pages.">
             Ref. domains
           </span>
         ),
-        cell: ({ row, getValue }) => {
+        cell: ({ row }) => {
           if (row.original.parentKeyword) return null;
-          return formatNumber(getValue());
+          const { referringDomains, backlinks, referringPages } = row.original;
+          const details = [
+            referringDomains != null
+              ? `Ref. domains: ${referringDomains}`
+              : null,
+            backlinks != null ? `Backlinks: ${backlinks}` : null,
+            referringPages != null
+              ? `Referring pages: ${referringPages}`
+              : null,
+          ]
+            .filter(Boolean)
+            .join(" · ");
+          return (
+            <span title={details || "No backlink benchmarks reported"}>
+              {formatNumber(referringDomains)}
+            </span>
+          );
         },
         meta: {
           headerClassName: "text-right",
@@ -204,17 +236,28 @@ export function KeywordResearchTable({
             "whitespace-nowrap text-right tabular-nums text-muted-foreground",
         },
       }),
-      keywordColumnHelper.accessor("quarterlyChange", {
+      keywordColumnHelper.display({
+        id: "trend",
         header: () => (
-          <span title="How search volume changed over the last 3 months.">
-            3-mo trend
+          <span title="How search volume changed over the last 3 months and 12 months.">
+            Trend
           </span>
         ),
-        cell: ({ row, getValue }) => {
+        cell: ({ row }) => {
           if (row.original.parentKeyword) return null;
-          const value = getValue();
-          if (value == null) return "-";
-          return `${value > 0 ? "+" : ""}${value}%`;
+          const { quarterlyChange, yearlyChange } = row.original;
+          if (quarterlyChange == null && yearlyChange == null) return "-";
+          return (
+            <span
+              title={`3-mo ${formatChange(quarterlyChange)} · 12-mo ${formatChange(yearlyChange)}`}
+            >
+              {formatChange(quarterlyChange)}
+              <span className="text-muted-foreground/60">
+                {" "}
+                / {formatChange(yearlyChange)}
+              </span>
+            </span>
+          );
         },
         meta: {
           headerClassName: "text-right",

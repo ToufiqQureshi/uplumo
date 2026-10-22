@@ -22,7 +22,17 @@ export type KeywordResearchRow = {
   topOfPageBidLow?: number | null;
   topOfPageBidHigh?: number | null;
   referringDomains?: number | null;
+  backlinks?: number | null;
+  dofollowBacklinks?: number | null;
+  referringPages?: number | null;
+  monthlyChange?: number | null;
   quarterlyChange?: number | null;
+  yearlyChange?: number | null;
+  competitionLevel?: string | null;
+  lastUpdatedTime?: string | null;
+  detectedLanguage?: string | null;
+  wordsCount?: number | null;
+  secondaryIntents?: string[];
   /** Result types Google shows for the keyword (ai_overview, local_pack...). */
   serpFeatures?: string[];
 };

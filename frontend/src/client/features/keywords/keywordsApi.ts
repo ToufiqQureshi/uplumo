@@ -104,7 +104,17 @@ const researchRowSchema = z.object({
   topOfPageBidLow: z.number().nullable().optional(),
   topOfPageBidHigh: z.number().nullable().optional(),
   referringDomains: z.number().nullable().optional(),
+  backlinks: z.number().nullable().optional(),
+  dofollowBacklinks: z.number().nullable().optional(),
+  referringPages: z.number().nullable().optional(),
+  monthlyChange: z.number().nullable().optional(),
   quarterlyChange: z.number().nullable().optional(),
+  yearlyChange: z.number().nullable().optional(),
+  competitionLevel: z.string().nullable().optional(),
+  lastUpdatedTime: z.string().nullable().optional(),
+  detectedLanguage: z.string().nullable().optional(),
+  wordsCount: z.number().nullable().optional(),
+  secondaryIntents: z.array(z.string()).optional(),
   serpFeatures: z.array(z.string()).optional(),
 });
 
