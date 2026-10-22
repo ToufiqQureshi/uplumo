@@ -23,11 +23,23 @@ type CheckRequest struct {
 	Depth        int
 }
 
+// CompetitorResult is one organic result in the SERP, kept so the customer can
+// see who ranks above them, not just their own position.
+type CompetitorResult struct {
+	Rank   int    `json:"rank"`
+	URL    string `json:"url"`
+	Domain string `json:"domain"`
+	Title  string `json:"title"`
+}
+
 // CheckResult is the organic position of the target, nil when it is not in the depth.
 type CheckResult struct {
 	Position     *int
 	URL          *string
 	SerpFeatures []string
+	// Competitors are the top organic results (including the target) the crawl
+	// returned, so a rank check keeps the whole SERP it already paid for.
+	Competitors []CompetitorResult
 }
 
 // SerpProvider runs live SERP lookups for an organization.
@@ -88,6 +100,13 @@ func (p DataForSEOSerp) CheckLive(ctx context.Context, organizationID string, re
 	return parseSerp(results, req.TargetDomain)
 }
 
+func derefStr(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
 func parseSerp(results []json.RawMessage, targetDomain string) (CheckResult, error) {
 	out := CheckResult{SerpFeatures: []string{}}
 	if len(results) == 0 {
@@ -100,6 +119,7 @@ func parseSerp(results []json.RawMessage, targetDomain string) (CheckResult, err
 			RankAbsolute *int    `json:"rank_absolute"`
 			Domain       *string `json:"domain"`
 			URL          *string `json:"url"`
+			Title        *string `json:"title"`
 		} `json:"items"`
 	}
 	if err := json.Unmarshal(results[0], &result); err != nil {
@@ -111,6 +131,19 @@ func parseSerp(results []json.RawMessage, targetDomain string) (CheckResult, err
 		if item.Type != "" && !seen[item.Type] {
 			seen[item.Type] = true
 			out.SerpFeatures = append(out.SerpFeatures, item.Type)
+		}
+		// Keep the top organic results (including the target) so the paid crawl
+		// is not thrown away; capped at 20.
+		if item.Type == "organic" && len(out.Competitors) < 20 {
+			rank := 0
+			if item.RankGroup != nil {
+				rank = *item.RankGroup
+			} else if item.RankAbsolute != nil {
+				rank = *item.RankAbsolute
+			}
+			out.Competitors = append(out.Competitors, CompetitorResult{
+				Rank: rank, URL: derefStr(item.URL), Domain: derefStr(item.Domain), Title: derefStr(item.Title),
+			})
 		}
 		if matched || item.Type != "organic" || item.Domain == nil {
 			continue

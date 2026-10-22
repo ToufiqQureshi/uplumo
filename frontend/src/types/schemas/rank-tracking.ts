@@ -25,11 +25,20 @@ export type RankTrackingConfig = {
 // API / UI types
 // ---------------------------------------------------------------------------
 
+export interface RankTrackingCompetitor {
+  rank: number;
+  url: string;
+  domain: string;
+  title: string;
+}
+
 export interface RankTrackingDeviceResult {
   position: number | null;
   previousPosition: number | null;
   rankingUrl: string | null;
   serpFeatures: string[];
+  /** Missing in results cached before competitors were retained. */
+  competitors?: RankTrackingCompetitor[];
 }
 
 export interface RankTrackingRow {

@@ -23,6 +23,7 @@ type SnapshotInput struct {
 	Position          *int
 	URL               *string
 	SerpFeatures      []string
+	Competitors       []CompetitorResult
 }
 
 // InsertRun stores a new pending run. The partial unique index allows one
@@ -86,10 +87,14 @@ func (s Store) InsertSnapshots(ctx context.Context, snaps []SnapshotInput) error
 		if features == nil {
 			features = []string{}
 		}
-		batch.Queue(`INSERT INTO go_rank_snapshots (run_id, tracking_keyword_id, keyword, device, position, url, serp_features)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
+		competitors := snap.Competitors
+		if competitors == nil {
+			competitors = []CompetitorResult{}
+		}
+		batch.Queue(`INSERT INTO go_rank_snapshots (run_id, tracking_keyword_id, keyword, device, position, url, serp_features, competitors)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 			ON CONFLICT (run_id, tracking_keyword_id, device) DO NOTHING`,
-			snap.RunID, snap.TrackingKeywordID, snap.Keyword, snap.Device, snap.Position, snap.URL, features)
+			snap.RunID, snap.TrackingKeywordID, snap.Keyword, snap.Device, snap.Position, snap.URL, features, competitors)
 	}
 	results := s.DB.SendBatch(ctx, batch)
 	for range snaps {

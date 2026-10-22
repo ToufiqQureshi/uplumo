@@ -669,6 +669,20 @@ func TestParseSerp(t *testing.T) {
 	}
 }
 
+func TestParseSerpKeepsCompetitors(t *testing.T) {
+	raw := []json.RawMessage{json.RawMessage(`{"items":[{"type":"organic","rank_group":1,"domain":"a.com","url":"https://a.com","title":"A"},{"type":"organic","rank_group":3,"domain":"example.com","url":"https://example.com/x","title":"Me"}]}`)}
+	got, err := parseSerp(raw, "example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Competitors) != 2 || got.Competitors[0].Domain != "a.com" || got.Competitors[0].Title != "A" ||
+		got.Competitors[0].Rank != 1 || got.Competitors[1].Domain != "example.com" {
+		t.Fatalf("competitors = %+v, want the two organic results the crawl paid for", got.Competitors)
+	}
+}
+
+type noopRecorder struct{}
+
 type noopRecorder struct{}
 
 func (noopRecorder) RecordDataForSEO(context.Context, string, dataforseo.Cost) error { return nil }
