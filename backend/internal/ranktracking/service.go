@@ -452,7 +452,8 @@ func (s *Service) AddKeywords(ctx context.Context, projectID, configID string, r
 	}
 	// As with the per-domain cap, what fits is added and the rest is left.
 	rows = rows[:min(len(rows), room)]
-	if cfg.ScheduleInterval == Daily {
+	// Without usage and limit sources (as in planRoom) there is no budget to check.
+	if cfg.ScheduleInterval == Daily && s.Usage != nil && s.Limits != nil {
 		all := append(slices.Clone(stored), fresh[:len(rows)]...)
 		organizationID, _, err := s.Usage.OrganizationKeywords(ctx, projectID)
 		if err != nil {
