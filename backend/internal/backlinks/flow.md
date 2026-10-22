@@ -27,6 +27,16 @@ per organization and complete query/block identity. A cancelled caller returns
 without cancelling a purchase another waiter needs. Cancellation before flight
 registration holds no credits and sends no task.
 
+## Serve complete overviews from durable cache
+
+After the Redis cache and singleflight recheck both miss, the shared lookup reads
+the organization/target/scope snapshot from PostgreSQL. A fresh complete
+snapshot refills Redis; a miss or database error falls through to provider work.
+Writes happen after the paid result and are best-effort. Subfolder totals count
+as complete. Summary-only responses after history failure use the short Redis
+TTL and do not overwrite the durable complete snapshot. Rows and detail pages
+remain provider-backed and unchanged.
+
 ## Dependencies and cost boundary
 
 DataForSEO paid endpoints and usage metering; project plan/credit checks.
