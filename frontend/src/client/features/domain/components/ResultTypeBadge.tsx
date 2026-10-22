@@ -7,7 +7,10 @@ import { Badge } from "@/client/components/ui/badge";
  */
 const RESULT_TYPES: Record<
   string,
-  { label: string; variant: "success" | "warning" | "info" | "soft" | "secondary" }
+  {
+    label: string;
+    variant: "success" | "warning" | "info" | "soft" | "secondary";
+  }
 > = {
   organic: { label: "Organic", variant: "success" },
   paid: { label: "Paid", variant: "warning" },
