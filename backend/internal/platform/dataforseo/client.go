@@ -285,11 +285,21 @@ func responseSuccessfulCost(payload []byte) float64 {
 	}
 	var total float64
 	for _, task := range envelope.Tasks {
-		if (task.StatusCode == 0 || task.StatusCode >= 20000 && task.StatusCode < 30000) && task.Cost != nil && *task.Cost > 0 {
+		if billableTask(task.StatusCode) && task.Cost != nil && *task.Cost > 0 {
 			total += *task.Cost
 		}
 	}
 	return total
+}
+
+// billableTask reports whether a task's reported cost is charged to the
+// customer. Successful tasks, and 40102 ("No Search Results") which DataForSEO
+// still bills because the search was processed, are billable. Other task
+// errors — notably 40501 ("Invalid POST field", our own bad request) — refund
+// the customer and are absorbed by Uplumo.
+// Source: https://dataforseo.com/help-center/what-does-the-40102-error-mean
+func billableTask(status int) bool {
+	return status == 0 || status >= 20000 && status < 30000 || status == 40102
 }
 
 // DoBudgetedRequest sends one request under its operation's existing hold.

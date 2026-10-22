@@ -725,9 +725,14 @@ func TestDataForSEOSerp(t *testing.T) {
 		t.Errorf("national request = %v", task)
 	}
 
-	status.Store(40501)
+	status.Store(40102)
 	if got, err := p.CheckLive(ctx, "org", CheckRequest{Keyword: "obscure", Device: "desktop", LocationCode: 2356, LanguageCode: "en", TargetDomain: "example.com", Depth: 10}); err != nil || got.Position != nil {
 		t.Errorf("no-results SERP = %+v, %v; want not ranking, not an error", got, err)
+	}
+	// 40501 is "Invalid Field", not an empty SERP: it must surface as an error.
+	status.Store(40501)
+	if _, err := p.CheckLive(ctx, "org", CheckRequest{Keyword: "x", Device: "desktop", LocationCode: 2356, LanguageCode: "en", TargetDomain: "example.com", Depth: 10}); err == nil {
+		t.Error("an invalid-field response was accepted as an empty SERP")
 	}
 	status.Store(40200)
 	if _, err := p.CheckLive(ctx, "org", CheckRequest{Keyword: "x", Device: "desktop", LocationCode: 2356, LanguageCode: "en", TargetDomain: "example.com", Depth: 10}); !errors.Is(err, dataforseo.ErrBillingIssue) {

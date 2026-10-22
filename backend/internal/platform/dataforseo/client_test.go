@@ -9,6 +9,7 @@ import (
 	"math"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -186,10 +187,38 @@ func TestDoBudgetedChargesNothingWhenNothingWasDelivered(t *testing.T) {
 	}
 }
 
-func TestResponseSuccessfulCostSettlesOnlySuccessfulTasks(t *testing.T) {
-	payload := []byte(`{"tasks":[{"cost":0.002,"status_code":20000},{"cost":0.004,"status_code":20100},{"cost":0.01,"status_code":40501},{"cost":0.003,"status_code":0}]}`)
-	if got := math.Round(responseSuccessfulCost(payload)*1e6) / 1e6; got != 0.009 {
-		t.Fatalf("responseSuccessfulCost() = %v, want 0.009 including accepted queued task", got)
+func TestResponseSuccessfulCostChargesSuccessfulAndNoResultTasks(t *testing.T) {
+	payload := []byte(`{"tasks":[{"cost":0.002,"status_code":20000},{"cost":0.004,"status_code":20100},{"cost":0.01,"status_code":40102},{"cost":0.02,"status_code":40501},{"cost":0.003,"status_code":0}]} `)
+	// 40102 ("No Search Results") is billed by DataForSEO (the search was
+	// processed), so it is charged. 40501 ("Invalid POST field") is our own bug
+	// and is not.
+	if got := math.Round(responseSuccessfulCost(payload)*1e6) / 1e6; got != 0.019 {
+		t.Fatalf("responseSuccessfulCost() = %v, want 0.019 (successful + 40102, not 40501)", got)
+	}
+}
+
+func TestDoChargesForNoSearchResultsAndNotForInvalidField(t *testing.T) {
+	for _, tc := range []struct {
+		status       int
+		wantCustomer float64
+	}{
+		{40102, 0.002}, // "No Search Results" is billed
+		{40501, 0},     // "Invalid POST field" is our bug, refunded
+	} {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = io.WriteString(w, `{"tasks":[{"path":["v3","serp"],"cost":0.002,"status_code":`+strconv.Itoa(tc.status)+`}]}`)
+		}))
+		guard := &costAwareGuard{}
+		client := guardedClient(t, server, &testRecorder{}, guard, 0)
+		if _, err := client.Do(context.Background(), "org-a", spend.RankTracking, http.MethodPost, "/v3/serp/live", []byte(`[]`), false); err != nil {
+			server.Close()
+			t.Fatal(err)
+		}
+		if guard.providerCost != 0.002 || guard.customerCost != tc.wantCustomer {
+			server.Close()
+			t.Fatalf("status %d: provider/customer = $%v/$%v, want $0.002/$%v", tc.status, guard.providerCost, guard.customerCost, tc.wantCustomer)
+		}
+		server.Close()
 	}
 }
 

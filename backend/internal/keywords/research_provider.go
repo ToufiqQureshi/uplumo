@@ -147,6 +147,9 @@ const (
 	adsIdeasPath        = "/v3/keywords_data/google_ads/keywords_for_keywords/live"
 	adsVolumePath       = "/v3/keywords_data/google_ads/search_volume/live"
 	serpLiveAdvanced    = "/v3/serp/google/organic/live/advanced"
+	// noSearchResultsStatus is DataForSEO's "No Search Results" (40102), a billed
+	// but valid empty SERP. 40501 is "Invalid Field", not an empty result.
+	noSearchResultsStatus = 40102
 )
 
 type wireMonthly struct {
@@ -477,8 +480,9 @@ func (p DataForSEOProvider) SerpLive(ctx context.Context, org string, req SerpRe
 		body["location_code"] = req.LocationCode
 	}
 	results, err := p.post(ctx, org, serpLiveAdvanced, body)
-	// A valid empty SERP comes back as a billed task error.
-	if taskErr, ok := errors.AsType[*dataforseo.TaskError](err); ok && taskErr.StatusCode == 40501 {
+	// "No Search Results" (40102) is a billed, valid empty SERP; "Invalid Field"
+	// (40501) is our own bad request and must surface as an error, not as empty.
+	if taskErr, ok := errors.AsType[*dataforseo.TaskError](err); ok && taskErr.StatusCode == noSearchResultsStatus {
 		return nil, nil
 	}
 	if err != nil {

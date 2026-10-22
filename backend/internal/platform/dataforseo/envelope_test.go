@@ -25,7 +25,7 @@ func TestResults(t *testing.T) {
 		{name: "provider timeout", payload: `{"status_code":50401,"status_message":"Internal Error - Timeout."}`, wantErr: ErrUpstreamUnavailable},
 		{name: "not implemented is our bug, not an outage", payload: `{"status_code":20000,"tasks":[{"status_code":50100,"status_message":"Not Implemented."}]}`, wantTaskErr: &TaskError{StatusCode: 50100, Message: "Not Implemented."}},
 		{name: "invalid field is flagged", payload: `{"status_code":20000,"tasks":[{"status_code":40501,"status_message":"Invalid Field: 'target'."}]}`, wantTaskErr: &TaskError{StatusCode: 40501, Message: "Invalid Field: 'target'.", InvalidField: true}},
-		{name: "no search results is a failure like any other", payload: `{"status_code":20000,"tasks":[{"status_code":40501,"status_message":"No Search Results."}]}`, wantTaskErr: &TaskError{StatusCode: 40501, Message: "No Search Results."}},
+		{name: "no search results is a failure like any other", payload: `{"status_code":20000,"tasks":[{"status_code":40102,"status_message":"No Search Results."}]}`, wantTaskErr: &TaskError{StatusCode: 40102, Message: "No Search Results."}},
 		{name: "no task", payload: `{"status_code":20000,"tasks":[]}`, wantAny: true},
 		{name: "empty body", payload: ``, wantAny: true},
 		{name: "not JSON", payload: `<html>`, wantAny: true},

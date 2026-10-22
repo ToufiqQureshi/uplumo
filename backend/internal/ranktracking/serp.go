@@ -49,9 +49,11 @@ type SerpProvider interface {
 
 const (
 	serpLivePath = "/v3/serp/google/organic/live/advanced"
-	// noResultsStatus is a billed, valid empty SERP, common for new or obscure
-	// keywords. It means "not ranking", not a failure.
-	noResultsStatus = 40501
+	// noResultsStatus is "No Search Results" (40102): a billed, valid empty SERP,
+	// common for new or obscure keywords. It means "not ranking", not a failure.
+	// 40501 is "Invalid Field" (our own bad request) and must not be treated as
+	// an empty result.
+	noResultsStatus = 40102
 )
 
 // DataForSEOSerp implements SerpProvider on the shared DataForSEO client, which
