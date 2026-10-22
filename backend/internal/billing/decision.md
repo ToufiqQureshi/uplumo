@@ -53,3 +53,11 @@ Use the package tests next to the source files in `README.md`. For changes cross
   (`costs_test.go`); holds still use per-task ceilings, so the hint is not a
   spending limit.
 - **Trace:** `costs.go`, `costs_test.go`.
+
+
+## Reconcile only abandoned credit holds
+
+- **Decision:** Refresh `updated_at` while a provider request is active; stale cleanup uses that heartbeat and grants a fresh usable bucket when refunding a pre-expiry legacy hold with no allocation rows.
+- **Why:** A one-hour age check alone can refund a long-running stream that is still consuming provider resources, and a legacy balance-only refund is not consumable by the grant-based ledger.
+- **Preserve:** Heartbeats stop when the request context ends or the hold settles; a crashed process stops refreshing and is still refunded. Refund and settlement remain locked and idempotent.
+- **Trace:** `SpendGuard.Hold`, `creditHold`, `RefundStaleReservations`, and `restoreReservationCreditsTx`.
