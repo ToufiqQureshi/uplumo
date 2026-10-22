@@ -4,6 +4,33 @@ import type { BrandLookupResult } from "@/types/schemas/ai-search";
 
 type TopQuery = BrandLookupResult["topQueries"][number];
 
+function safeExternalHref(raw: string): string | null {
+  try {
+    const url = new URL(raw);
+    return url.protocol === "http:" || url.protocol === "https:"
+      ? url.toString()
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function SourceLink({ url, title }: { url: string; title: string }) {
+  const href = safeExternalHref(url);
+  const label = title || (href ? formatUrlForDisplay(href) : url);
+  if (!href) return <span className="break-words font-medium">{label}</span>;
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer noopener"
+      className="break-words font-medium underline underline-offset-2"
+    >
+      {label}
+    </a>
+  );
+}
+
 /**
  * What the AI said for one prompt, the pages it looked at and the searches it
  * ran. DataForSEO returns all of it with the mention that is already paid for,
@@ -51,14 +78,7 @@ export function QueryAnswerDetails({ query }: { query: TopQuery }) {
             <ol className="mt-1 list-decimal space-y-1 pl-5 text-xs">
               {cited.map((source) => (
                 <li key={source.url}>
-                  <a
-                    href={source.url}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className="break-words font-medium underline underline-offset-2"
-                  >
-                    {source.title || formatUrlForDisplay(source.url)}
-                  </a>
+                  <SourceLink url={source.url} title={source.title} />
                   <span className="block text-muted-foreground">
                     {source.domain}
                   </span>
@@ -85,14 +105,7 @@ export function QueryAnswerDetails({ query }: { query: TopQuery }) {
             <ol className="mt-1 list-decimal space-y-1.5 pl-5 text-xs">
               {pages.map((page) => (
                 <li key={page.url}>
-                  <a
-                    href={page.url}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className="break-words font-medium underline underline-offset-2"
-                  >
-                    {page.title || formatUrlForDisplay(page.url)}
-                  </a>
+                  <SourceLink url={page.url} title={page.title} />
                   <span className="block text-muted-foreground">
                     {page.domain}
                     {page.description ? ` · ${page.description}` : ""}
