@@ -281,7 +281,7 @@ func TestVisibilityHistoryUsesPaidPlanGateWithoutProviderSpend(t *testing.T) {
 
 func TestProviderBillingIssueIsHiddenFromTheUser(t *testing.T) {
 	api := newFakeAPI(t)
-	api.on(aggregatedPath, func(int, string) taskReply { return failReply(40200, "Payment Required. Balance is $0.00") })
+	api.on(targetMetricsPath, func(int, string) taskReply { return failReply(40200, "Payment Required. Balance is $0.00") })
 	h, _ := route(t, newTestService(t, api), nil)
 
 	rec := post(h, "brand-lookup", `{"query":"acme.com"}`)

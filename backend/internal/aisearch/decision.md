@@ -20,6 +20,44 @@ Runs Brand Lookup and Prompt Explorer, shapes answer-engine data, and caches suc
 
 Redis cache; DataForSEO AI endpoints; plans/billing.
 
+## Brand Lookup: one totals task first, keep what it returns
+
+- **Decision:** Replace the per-platform `aggregated_metrics` and the always-bought
+  `top_pages` with one `target_metrics` task for every platform. Stop when no
+  platform has a mention. Buy a prompt sample (up to 100, `order_by
+  ai_search_volume,desc`) only for platforms with mentions and, for ChatGPT,
+  only in its US English market; buy `top_pages` only when the sample holds
+  fewer answers than the platform's mention total, otherwise count cited pages
+  from the sample. Return the totals task's `sourceSites`, `retrievedSites` and
+  `brandsAlongside`, flag each prompt `branded`, count branded/unbranded
+  prompts, and cap branded and unbranded prompts separately (25 each per
+  platform). Typical cost hint 0.29 USD (about 372 credits).
+- **Why:** Live comparison 22 Oct 2026, India: the old six tasks billed $0.693
+  for dellaresorts.com, $0.31 of it for ChatGPT data the result drops outside
+  the US, and about $0.60 for revmerito.com, which AI never mentions. The new
+  flow billed $0.283 (2 tasks) and $0.101 (1 task). The old code read only the
+  `platform` group of the totals call it paid for and dropped the cited sites
+  (Instagram 31, TripAdvisor 30, MakeMyTrip 22, Agoda 16 answers), retrieved
+  sites and co-mentioned brands. 39 of 82 prompts only named the brand; the
+  43 unbranded ones ("best resort in lonavala", 2,900 searches) are where AI
+  recommends the business to new customers and were crowded out by the cap.
+- **Preserve:** No call before validation; one hold for the largest fan-out;
+  zero-mention lookups buy one task and are not cached; a failed sample or
+  pages call keeps the platform's other data and is not cached; billing issues
+  and cancellation still stop at the first failing call; cache and history
+  keys are unchanged (old cached results lack the new fields for up to 24 h);
+  the branded split is a heuristic (a domain-label prefix word of 4+ letters,
+  or the keyword phrase) and is never billed or used for totals.
+- **Trace:** `provider.go` (`targetMetrics`, `mentionsSearch`), `service.go`
+  (`loadBrandLookup`, `fetchPlatform`, `fetchCross`), `brand_terms.go`,
+  `shape.go`, `service_test.go`, `brand_terms_test.go`,
+  `../billing/costs.go`, `../httpapi/aisearch_test.go`. Mutation-checked (9
+  mutations, each failed a test). Run once against the live API with the Go
+  code (dellaresorts.com: 2 tasks, sites/brands/branded split as above); the
+  revmerito.com live run hit the DataForSEO account's $2/day limit, so its
+  one-task path is covered by tests and the earlier raw replay only. Not yet
+  verified on production (its DataForSEO key returned 401 on 22 Oct).
+
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.

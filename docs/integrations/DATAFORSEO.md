@@ -6,7 +6,10 @@ Paid POSTs use `Client.Do(..., false)` and must not be automatically retried on 
 
 A domain overview may use one Labs operation; a Backlinks domain overview legitimately calls both summary and history. The initial Backlinks screen also loads a selected table. Assert provider operations separately in tests, rather than assuming one click equals one request. Validate tenant, scope, market, filters and pagination before reaching the provider. Recheck authorization on every HTTP request, even on cache hits. No test should consume live provider credits.
 
-Brand Lookup can issue six provider tasks (eight with competitor comparisons).
+Brand Lookup buys one `target_metrics` task and stops when AI never mentions
+the target; otherwise one prompt sample per bought platform (ChatGPT only in
+its US English market), `top_pages` only when the sample is incomplete, and one
+comparison per platform with competitors (1 to 7 tasks).
 Equivalent cold misses within one Go process share that fan-out under an
 organization/project scoped key. Prompt Explorer also shares equivalent model
 sets, while keeping caller order and brand highlighting separate. Separate

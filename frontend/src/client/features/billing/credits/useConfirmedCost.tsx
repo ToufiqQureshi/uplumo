@@ -12,7 +12,7 @@ const CONFIRM_FROM_CREDITS = 300;
 
 /**
  * Asks the customer before an action that is expensive in credits (a brand
- * lookup is about 910). Cheaper actions, and servers where credits are not
+ * lookup is about 370). Cheaper actions, and servers where credits are not
  * charged, run at once. Call \`request(run)\` instead of running the action,
  * and render \`dialog\` anywhere on the page.
  */

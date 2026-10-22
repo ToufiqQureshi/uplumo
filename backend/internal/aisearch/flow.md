@@ -25,7 +25,7 @@ Redis cache; DataForSEO AI endpoints; plans/billing.
 - Keep all billed calls attributed to the project organization; never blindly retry paid POSTs.
 - Cache only successful complete results; preserve per-platform partial failures and safe citation URLs.
 - On one server, an organization-scoped in-flight key coalesces concurrent
-  identical Brand Lookups before the six/eight paid tasks are reserved.
+  identical Brand Lookups before their paid tasks (1 to 7) are reserved.
 - Identical Prompt Explorer requests share a bounded three-minute flight keyed
   by organization, project, normalized prompt, sorted models, web search and
   country. The winner rechecks each model cache before reserving up to one

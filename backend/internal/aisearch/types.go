@@ -76,6 +76,17 @@ type aggregatedTotal struct {
 	Platform []groupElement `json:"platform"`
 }
 
+// targetMetricsResult is the target_metrics task: mentions per platform, the
+// sites AI answers cite (sources), the sites they retrieved (search results),
+// and the brands named with the target. Location groups are not read: their
+// keys are numbers.
+type targetMetricsResult struct {
+	Platform            []groupElement `json:"platform"`
+	SourcesDomain       []groupElement `json:"sources_domain"`
+	SearchResultsDomain []groupElement `json:"search_results_domain"`
+	BrandEntitiesTitle  []groupElement `json:"brand_entities_title"`
+}
+
 // topPagesItem is a page the platforms cite, keyed by its URL.
 type topPagesItem struct {
 	Key      *string        `json:"key"`
@@ -194,6 +205,24 @@ type TopQuery struct {
 	Answer         *string         `json:"answer"`
 	RetrievedPages []RetrievedPage `json:"retrievedPages"`
 	FanOutQueries  []string        `json:"fanOutQueries"`
+	// Branded is true when the question names the brand itself ("della
+	// resorts lonavala"). Unbranded questions are where AI recommends the
+	// brand to people who did not already know it.
+	Branded bool `json:"branded"`
+}
+
+// SiteMentions is a site AI answers about the target cite or retrieve, with
+// how many of those answers it appears in.
+type SiteMentions struct {
+	Domain         string `json:"domain"`
+	Mentions       *int   `json:"mentions"`
+	AISearchVolume *int   `json:"aiSearchVolume"`
+}
+
+// BrandMention is another brand AI names in answers that mention the target.
+type BrandMention struct {
+	Name     string `json:"name"`
+	Mentions *int   `json:"mentions"`
 }
 
 // MonthlyVolume is the summed AI search volume of one month.
@@ -224,6 +253,17 @@ type BrandLookupResult struct {
 	TopPages                 []TopPage           `json:"topPages"`
 	TopQueries               []TopQuery          `json:"topQueries"`
 	MonthlyVolume            []MonthlyVolume     `json:"monthlyVolume"`
+	// SourceSites are the sites AI answers about the target cite most: where a
+	// business should be listed and reviewed. RetrievedSites are the pages AI
+	// looked at while answering (ChatGPT only). BrandsAlongside are the other
+	// brands named in the same answers. All come with the totals call.
+	SourceSites     []SiteMentions `json:"sourceSites"`
+	RetrievedSites  []SiteMentions `json:"retrievedSites"`
+	BrandsAlongside []BrandMention `json:"brandsAlongside"`
+	// BrandedQuestions and UnbrandedQuestions count the sampled prompts that
+	// do and do not name the brand.
+	BrandedQuestions   int `json:"brandedQuestions"`
+	UnbrandedQuestions int `json:"unbrandedQuestions"`
 }
 
 // VisibilitySnapshot is one monthly, user-triggered Brand Lookup observation.

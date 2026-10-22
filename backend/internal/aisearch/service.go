@@ -145,16 +145,37 @@ func (s *Service) BrandLookup(ctx context.Context, organizationID, projectID str
 }
 
 func (s *Service) loadBrandLookup(ctx context.Context, organizationID, key string, detected Target, research *ResearchTarget, groups []competitorGroup, includeSubdomains bool, in BrandLookupInput) (BrandLookupResult, error) {
-	var result BrandLookupResult
-	callCount := len(brandPlatforms) * 3
-	if len(groups) > 0 {
-		callCount += len(brandPlatforms)
+	// ChatGPT's mentions data is US English only and is left out of every
+	// other market's result, so it is only bought for that market.
+	fetched := []string{platformGoogle}
+	if isChatGPTLocale(in.LocationCode, in.LanguageCode) {
+		fetched = []string{platformChatGPT, platformGoogle}
 	}
+	// The hold covers the most this lookup can buy: the totals call, then per
+	// platform a mentions sample and, for a brand with more answers than the
+	// sample holds, its cited pages, then one comparison per platform.
+	callCount := 1 + 2*len(fetched)
+	if len(groups) > 0 {
+		callCount += len(fetched)
+	}
+	var result BrandLookupResult
 	err := s.provider.client.DoBudgeted(ctx, organizationID, spend.AIVisibility, float64(callCount)*dataforseo.AIMentionsCeilingUSD, func(request dataforseo.DoBudgetedRequest) error {
 		budgetCtx := context.WithValue(ctx, budgetRequestContextKey{}, request)
+		// One call answers for every platform. When it finds no mention, the
+		// lookup stops here instead of buying empty samples.
+		metrics, err := s.provider.targetMetrics(budgetCtx, organizationID, buildLLMTarget(detected, includeSubdomains), in.LocationCode, in.LanguageCode)
+		if err != nil {
+			return err
+		}
+		totals := aggregatedTotal{Platform: metrics.Platform}
 		platforms := make([]platformOutcome, len(brandPlatforms))
 		for i, platform := range brandPlatforms {
-			bundle, fetchErr := s.fetchPlatform(budgetCtx, organizationID, platform, detected, includeSubdomains, in)
+			count := platformMentions(metrics.Platform, platform)
+			if count == 0 || !slices.Contains(fetched, platform) {
+				platforms[i] = platformOutcome{platform: platform, ok: true, bundle: platformBundle{aggregated: totals, complete: true}}
+				continue
+			}
+			bundle, fetchErr := s.fetchPlatform(budgetCtx, organizationID, platform, detected, includeSubdomains, in, count)
 			if blocking(budgetCtx, fetchErr) {
 				return fetchErr
 			}
@@ -163,13 +184,14 @@ func (s *Service) loadBrandLookup(ctx context.Context, organizationID, key strin
 				platforms[i] = platformOutcome{platform: platform}
 				continue
 			}
+			bundle.aggregated = totals
 			platforms[i] = platformOutcome{platform: platform, ok: true, bundle: bundle}
 		}
 
 		var cross []crossOutcome
 		if len(groups) > 0 {
 			var fetchErr error
-			cross, fetchErr = s.fetchCross(budgetCtx, organizationID, detected, groups, includeSubdomains, in)
+			cross, fetchErr = s.fetchCross(budgetCtx, organizationID, detected, groups, includeSubdomains, in, fetched)
 			if fetchErr != nil {
 				return fetchErr
 			}
@@ -179,7 +201,7 @@ func (s *Service) loadBrandLookup(ctx context.Context, organizationID, key strin
 			competitorKeys[i] = g.label
 		}
 		result = shapeResult(shapeArgs{
-			query: in.Query, detected: detected, research: research, platforms: platforms,
+			query: in.Query, detected: detected, research: research, platforms: platforms, metrics: metrics,
 			cross: cross, competitorKeys: competitorKeys, locationCode: in.LocationCode,
 			languageCode: in.LanguageCode, now: s.now(),
 		})
@@ -320,10 +342,11 @@ func blocking(ctx context.Context, err error) bool {
 	return err != nil && (ctx.Err() != nil || errors.Is(err, dataforseo.ErrBillingIssue))
 }
 
-// fetchPlatform gathers one platform's totals, cited pages and prompt sample.
-// The three calls are independent, so one failing does not discard the others
-// that were already paid for.
-func (s *Service) fetchPlatform(ctx context.Context, organizationID, platform string, detected Target, includeSubdomains bool, in BrandLookupInput) (platformBundle, error) {
+// fetchPlatform buys one platform's prompt sample and, only when the sample
+// cannot hold every answer (count is the platform's mention total), its cited
+// pages. A complete sample gives the cited pages itself. The calls are
+// independent, so one failing does not discard the other already paid for.
+func (s *Service) fetchPlatform(ctx context.Context, organizationID, platform string, detected Target, includeSubdomains bool, in BrandLookupInput, count int) (platformBundle, error) {
 	q := platformQuery{
 		organizationID: organizationID,
 		target:         buildLLMTarget(detected, includeSubdomains),
@@ -335,40 +358,39 @@ func (s *Service) fetchPlatform(ctx context.Context, organizationID, platform st
 		q.locationCode, q.languageCode = chatGPTLocationCode, chatGPTLanguageCode
 	}
 
-	aggregated, aggErr := s.provider.aggregatedMetrics(ctx, q, 20)
-	if blocking(ctx, aggErr) {
-		return platformBundle{}, aggErr
+	mentions, mentionsErr := s.provider.mentionsSearch(ctx, q, mentionsPerPlatform)
+	if blocking(ctx, mentionsErr) {
+		return platformBundle{}, mentionsErr
+	}
+	if mentionsErr == nil && len(mentions) >= count {
+		return platformBundle{topPages: pagesFromMentions(platform, mentions), mentions: mentions, complete: true}, nil
 	}
 	topPages, pagesErr := s.provider.topPages(ctx, q, topSourcesPerPlatform)
 	if blocking(ctx, pagesErr) {
 		return platformBundle{}, pagesErr
 	}
-	mentions, mentionsErr := s.provider.mentionsSearch(ctx, q, mentionsPerPlatform)
-	if blocking(ctx, mentionsErr) {
+	if mentionsErr != nil && pagesErr != nil {
 		return platformBundle{}, mentionsErr
 	}
-	if aggErr != nil && pagesErr != nil && mentionsErr != nil {
-		return platformBundle{}, aggErr
-	}
-	failures := errors.Join(aggErr, pagesErr, mentionsErr)
+	failures := errors.Join(mentionsErr, pagesErr)
 	if failures != nil {
 		s.logger.ErrorContext(ctx, "brand lookup sub-call failed", "platform", platform, "err", failures)
 	}
-	return platformBundle{aggregated: aggregated, topPages: topPages, mentions: mentions, complete: failures == nil}, nil
+	return platformBundle{topPages: topPages, mentions: mentions, complete: failures == nil}, nil
 }
 
 // fetchCross runs one cross-aggregated call per platform, each comparing the
 // target with the competitors. Share of voice always compares domain with
 // domain, because the provider has no URL-level targeting, so every group uses
 // the same subdomain rule.
-func (s *Service) fetchCross(ctx context.Context, organizationID string, detected Target, competitors []competitorGroup, includeSubdomains bool, in BrandLookupInput) ([]crossOutcome, error) {
+func (s *Service) fetchCross(ctx context.Context, organizationID string, detected Target, competitors []competitorGroup, includeSubdomains bool, in BrandLookupInput, platforms []string) ([]crossOutcome, error) {
 	groups := []crossGroup{{key: detected.Value, target: buildLLMTarget(detected, includeSubdomains)}}
 	for _, c := range competitors {
 		groups = append(groups, crossGroup{key: c.label, target: buildLLMTarget(c.detected, includeSubdomains)})
 	}
 
-	outcomes := make([]crossOutcome, len(brandPlatforms))
-	for i, platform := range brandPlatforms {
+	outcomes := make([]crossOutcome, len(platforms))
+	for i, platform := range platforms {
 		location, lang := in.LocationCode, in.LanguageCode
 		if platform == platformChatGPT {
 			location, lang = chatGPTLocationCode, chatGPTLanguageCode

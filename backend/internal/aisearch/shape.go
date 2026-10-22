@@ -352,6 +352,7 @@ type shapeArgs struct {
 	detected       Target
 	research       *ResearchTarget
 	platforms      []platformOutcome
+	metrics        targetMetricsResult
 	cross          []crossOutcome
 	competitorKeys []string
 	locationCode   int
@@ -372,8 +373,8 @@ func shapeResult(args shapeArgs) BrandLookupResult {
 		}
 	}
 
-	language, _, _ := strings.Cut(strings.ToLower(strings.ReplaceAll(args.languageCode, "_", "-")), "-")
-	chatGPTLocale := args.locationCode == chatGPTLocationCode && language == chatGPTLanguageCode
+	chatGPTLocale := isChatGPTLocale(args.locationCode, args.languageCode)
+	brand := newBrandMatcher(args.detected)
 
 	perPlatform := make([]PlatformBreakdown, len(args.platforms))
 	var mentions, volumes []*int
@@ -398,7 +399,7 @@ func shapeResult(args shapeArgs) BrandLookupResult {
 	totalMentions := sumNullable(mentions...)
 
 	topPages := deriveCitedSources(successful, pageFilter)
-	topQueries := shapeTopQueries(successful, pageFilter)
+	topQueries, branded, unbranded := shapeTopQueries(successful, pageFilter, brand)
 	trend := successful
 	cross := args.cross
 	if !chatGPTLocale {
@@ -425,6 +426,11 @@ func shapeResult(args shapeArgs) BrandLookupResult {
 		TopPages:                 topPages,
 		TopQueries:               topQueries,
 		MonthlyVolume:            monthly,
+		SourceSites:              shapeSites(args.metrics.SourcesDomain),
+		RetrievedSites:           shapeSites(args.metrics.SearchResultsDomain),
+		BrandsAlongside:          shapeBrandsAlongside(args.metrics.BrandEntitiesTitle, brand),
+		BrandedQuestions:         branded,
+		UnbrandedQuestions:       unbranded,
 	}
 	if args.research != nil {
 		result.ResolvedTarget = args.research.Display
@@ -434,13 +440,24 @@ func shapeResult(args shapeArgs) BrandLookupResult {
 	return result
 }
 
+// isChatGPTLocale reports whether a market is the one ChatGPT's mentions data
+// covers (US English).
+func isChatGPTLocale(locationCode int, languageCode string) bool {
+	language, _, _ := strings.Cut(strings.ToLower(strings.ReplaceAll(languageCode, "_", "-")), "-")
+	return locationCode == chatGPTLocationCode && language == chatGPTLanguageCode
+}
+
 // shapeTopQueries lists the prompts that mentioned the target, most searched
-// first, capped per platform.
-func shapeTopQueries(bundles []successBundle, pageFilter *ResearchTarget) []TopQuery {
+// first. Branded and unbranded prompts are capped separately per platform, so
+// a brand's own name searches, which are usually the most searched, cannot
+// crowd out the prompts where AI recommends it to new people. It also counts
+// the branded and unbranded prompts of the sample.
+func shapeTopQueries(bundles []successBundle, pageFilter *ResearchTarget, brand brandMatcher) ([]TopQuery, int, int) {
 	byVolume := func(x, y TopQuery) int {
 		return cmp.Compare(valueOr(y.AISearchVolume, 0), valueOr(x.AISearchVolume, 0))
 	}
 	all := []TopQuery{}
+	brandedCount, unbrandedCount := 0, 0
 	for _, b := range bundles {
 		var queries []TopQuery
 		for _, item := range b.bundle.mentions {
@@ -468,13 +485,22 @@ func shapeTopQueries(bundles []successBundle, pageFilter *ResearchTarget) []TopQ
 				Answer:          truncatedPtr(item.Answer, maxAnswerLength),
 				RetrievedPages:  shapeRetrievedPages(item),
 				FanOutQueries:   shapeFanOutQueries(item),
+				Branded:         brand.branded(*item.Question),
 			})
 		}
 		slices.SortStableFunc(queries, byVolume)
-		all = append(all, queries[:min(len(queries), topQueriesPerPlatform)]...)
+		for _, isBranded := range []bool{true, false} {
+			group := slices.DeleteFunc(slices.Clone(queries), func(q TopQuery) bool { return q.Branded != isBranded })
+			if isBranded {
+				brandedCount += len(group)
+			} else {
+				unbrandedCount += len(group)
+			}
+			all = append(all, group[:min(len(group), topQueriesPerPlatform)]...)
+		}
 	}
 	slices.SortStableFunc(all, byVolume)
-	return all
+	return all, brandedCount, unbrandedCount
 }
 
 func shapeQuerySources(item mentionItem) []CitedSource {
