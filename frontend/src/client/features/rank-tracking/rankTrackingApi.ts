@@ -37,6 +37,18 @@ const deviceResultSchema = z.object({
   previousPosition: z.number().nullable(),
   rankingUrl: z.string().nullable(),
   serpFeatures: z.array(z.string()),
+  // Missing in results cached before competitors were retained.
+  competitors: z
+    .array(
+      z.object({
+        rank: z.number(),
+        url: z.string(),
+        domain: z.string(),
+        title: z.string(),
+      }),
+    )
+    .optional()
+    .default([]),
 });
 const latestResultsSchema = z.object({
   rows: z.array(

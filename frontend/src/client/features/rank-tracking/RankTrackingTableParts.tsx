@@ -60,6 +60,7 @@ export function DeviceRankCell({
   result: RankTrackingDeviceResult;
 }) {
   const { position, previousPosition } = result;
+  const above = competitorsAbove(result, position);
 
   // Nothing at all
   if (position === null && previousPosition === null) {
@@ -83,7 +84,11 @@ export function DeviceRankCell({
 
   // First check — no previous data
   if (previousPosition === null) {
-    return <span className="font-mono">{position}</span>;
+    return (
+      <span className="font-mono" title={above}>
+        {position}
+      </span>
+    );
   }
 
   // Both exist — show old → new with colored badge
@@ -100,11 +105,27 @@ export function DeviceRankCell({
       <span className="text-muted-foreground/60">→</span>
       <span
         className={`font-mono rounded px-1.5 py-0.5 text-xs font-semibold ${badgeClass}`}
+        title={above}
       >
         {position}
       </span>
     </span>
   );
+}
+
+// competitorsAbove lists the results that rank above the target, so hovering a
+// position shows who the customer must outrank. Empty string when none.
+function competitorsAbove(
+  result: RankTrackingDeviceResult,
+  position: number | null,
+): string {
+  const above = (result.competitors ?? [])
+    .filter((c) => position === null || c.rank < position)
+    .slice(0, 5);
+  if (above.length === 0) return "";
+  return above
+    .map((c) => `${c.rank}. ${c.domain}${c.title ? ` — ${c.title}` : ""}`)
+    .join("\n");
 }
 
 export function DeviceUrlCell({

@@ -46,7 +46,7 @@ func (s Store) Snapshots(ctx context.Context, q SnapshotQuery) ([]Snapshot, erro
 		direction = "ASC"
 	}
 	rows, err := s.DB.Query(ctx, `SELECT DISTINCT ON (s.tracking_keyword_id, s.device)
-			s.id, s.run_id, s.tracking_keyword_id, s.keyword, s.device, s.position, s.url, s.serp_features, s.checked_at
+			s.id, s.run_id, s.tracking_keyword_id, s.keyword, s.device, s.position, s.url, s.serp_features, s.competitors, s.checked_at
 		FROM go_rank_snapshots s JOIN go_rank_check_runs r ON r.id = s.run_id
 		WHERE r.config_id = $1 AND r.status = 'completed'
 			AND ($2::timestamptz IS NULL OR s.checked_at <= $2)
@@ -59,7 +59,7 @@ func (s Store) Snapshots(ctx context.Context, q SnapshotQuery) ([]Snapshot, erro
 	snapshots, err := pgx.CollectRows(rows, func(r pgx.CollectableRow) (Snapshot, error) {
 		var snap Snapshot
 		err := r.Scan(&snap.ID, &snap.RunID, &snap.TrackingKeywordID, &snap.Keyword, &snap.Device, &snap.Position,
-			&snap.URL, &snap.SerpFeatures, &snap.CheckedAt)
+			&snap.URL, &snap.SerpFeatures, &snap.Competitors, &snap.CheckedAt)
 		return snap, err
 	})
 	if err != nil {

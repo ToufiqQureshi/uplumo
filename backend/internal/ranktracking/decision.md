@@ -38,6 +38,23 @@ DataForSEO SERP; Postgres configs/runs/tasks/snapshots; Redis jobs/locks; billin
   message is "not checked, no charge"), plus the key-format test in
   `queued_test.go:TestLiveCheckIdempotencyKeyIsStablePerPair`.
 
+
+## Retain the whole SERP a rank check paid for
+
+- **Decision:** `parseSerp` now keeps the top 20 organic results
+  (rank, url, domain, title) as `CheckResult.Competitors`, persisted in a new
+  `go_rank_snapshots.competitors` jsonb column and exposed on `Snapshot` and
+  `DeviceResult`, so the customer can see who ranks above them, not just their
+  own position.
+- **Why:** The crawl already paid for the whole SERP; keeping only the target's
+  position/URL threw away the competitor evidence that is the point of the call.
+- **Preserve:** No new provider call; `competitors` defaults to `[]` (never
+  null); the target's own rank/URL logic and SERP-feature list are unchanged.
+- **Trace:** `serp.go` (`CompetitorResult`, `parseSerp`), `results.go`,
+  `store_runs.go`, `store_results.go`, `checks.go` (`snapshotOf`), migration
+  `00038_rank_snapshot_competitors.sql`,
+  `checks_test.go:TestParseSerpKeepsCompetitors`.
+
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.

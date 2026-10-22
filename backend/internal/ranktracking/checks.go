@@ -429,6 +429,7 @@ func snapshotOf(runID string, r pairResult) SnapshotInput {
 	return SnapshotInput{
 		RunID: runID, TrackingKeywordID: r.keyword.ID, Keyword: r.keyword.Keyword, Device: r.device,
 		Position: r.result.Position, URL: r.result.URL, SerpFeatures: r.result.SerpFeatures,
+		Competitors: r.result.Competitors,
 	}
 }
 

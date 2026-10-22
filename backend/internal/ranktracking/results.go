@@ -23,23 +23,25 @@ type Run struct {
 // Snapshot is the position of one keyword on one device in one run.
 // A nil Position means the keyword was checked and not found within the depth.
 type Snapshot struct {
-	ID                int64     `json:"id"`
-	RunID             string    `json:"runId"`
-	TrackingKeywordID string    `json:"trackingKeywordId"`
-	Keyword           string    `json:"keyword"`
-	Device            string    `json:"device"`
-	Position          *int      `json:"position"`
-	URL               *string   `json:"url"`
-	SerpFeatures      []string  `json:"serpFeatures"`
-	CheckedAt         time.Time `json:"checkedAt"`
+	ID                int64              `json:"id"`
+	RunID             string             `json:"runId"`
+	TrackingKeywordID string             `json:"trackingKeywordId"`
+	Keyword           string             `json:"keyword"`
+	Device            string             `json:"device"`
+	Position          *int               `json:"position"`
+	URL               *string            `json:"url"`
+	SerpFeatures      []string           `json:"serpFeatures"`
+	Competitors       []CompetitorResult `json:"competitors"`
+	CheckedAt         time.Time          `json:"checkedAt"`
 }
 
 // DeviceResult is the latest position on one device and the one it is compared with.
 type DeviceResult struct {
-	Position         *int     `json:"position"`
-	PreviousPosition *int     `json:"previousPosition"`
-	RankingURL       *string  `json:"rankingUrl"`
-	SerpFeatures     []string `json:"serpFeatures"`
+	Position         *int               `json:"position"`
+	PreviousPosition *int               `json:"previousPosition"`
+	RankingURL       *string            `json:"rankingUrl"`
+	SerpFeatures     []string           `json:"serpFeatures"`
+	Competitors      []CompetitorResult `json:"competitors"`
 }
 
 // ResultRow is one tracked keyword with its latest positions.
@@ -192,8 +194,8 @@ func (s *Service) LatestResults(ctx context.Context, projectID, configID, period
 		rows[i] = ResultRow{
 			TrackingKeywordID: k.ID, Keyword: k.Keyword, MatchCase: k.MatchCase, SearchVolume: k.SearchVolume,
 			KeywordDifficulty: k.KeywordDifficulty, CPC: k.CPC,
-			Desktop: DeviceResult{PreviousPosition: previous[k.ID+":desktop"], SerpFeatures: []string{}},
-			Mobile:  DeviceResult{PreviousPosition: previous[k.ID+":mobile"], SerpFeatures: []string{}},
+			Desktop: DeviceResult{PreviousPosition: previous[k.ID+":desktop"], SerpFeatures: []string{}, Competitors: []CompetitorResult{}},
+			Mobile:  DeviceResult{PreviousPosition: previous[k.ID+":mobile"], SerpFeatures: []string{}, Competitors: []CompetitorResult{}},
 		}
 	}
 	var newest *time.Time
@@ -204,10 +206,13 @@ func (s *Service) LatestResults(ctx context.Context, projectID, configID, period
 		}
 		result := DeviceResult{
 			Position: snap.Position, PreviousPosition: previous[snap.TrackingKeywordID+":"+snap.Device],
-			RankingURL: snap.URL, SerpFeatures: snap.SerpFeatures,
+			RankingURL: snap.URL, SerpFeatures: snap.SerpFeatures, Competitors: snap.Competitors,
 		}
 		if result.SerpFeatures == nil {
 			result.SerpFeatures = []string{}
+		}
+		if result.Competitors == nil {
+			result.Competitors = []CompetitorResult{}
 		}
 		if snap.Device == "mobile" {
 			rows[i].Mobile = result
