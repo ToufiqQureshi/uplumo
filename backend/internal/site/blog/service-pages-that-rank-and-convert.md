@@ -54,7 +54,7 @@ Link from your homepage, relevant guides and related services. If you have a gen
 - Descriptive page title and links from relevant pages.
 - A way to measure calls and completed forms.
 
-See [local SEO for small businesses](/blog/local-seo-checklist-for-small-businesses), [how to improve a site with traffic but no leads](/blog/seo-website-traffic-no-leads) and [on-page SEO basics](/blog/on-page-seo-checklist-for-service-pages).
+See [how to improve a site with traffic but no leads](/blog/seo-website-traffic-no-leads) and [on-page SEO basics](/blog/on-page-seo-checklist-for-service-pages).
 
 ## Show the process from first contact to finished work
 

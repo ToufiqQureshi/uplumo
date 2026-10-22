@@ -36,7 +36,6 @@ Deliver through the `seo-report` skill, saving with `skill: "link-prospecting"`.
 - `get_backlinks_overview`: inspect competitor domain or page backlink/referring-domain patterns.
 - `get_domain_overview`: qualify important prospect domains.
 - `get_ranked_keywords`: understand what a prospect or competitor ranks for when topical fit matters.
-- `search_local_businesses` and `get_local_serp_results`: use for local SEO link prospecting when nearby businesses, local competitors, or Maps/category signals can reveal partnership targets.
 - `research_keywords`: expand prospecting queries.
 
 ## Contact discovery tools
@@ -78,19 +77,18 @@ Use `get_serp_results` in batches for the most relevant patterns. Send at most 1
 2. Build 5-10 prospecting queries by default.
 3. Call `get_serp_results` for those queries.
 4. If competitors are provided, call `get_backlinks_overview` for the strongest competitor domains or pages first. Continue without backlink evidence if it is unavailable.
-5. For local SEO, use `search_local_businesses` and `get_local_serp_results` around priority locations to identify nearby competitors, categories, and local SERP evidence before searching for local chambers, associations, campus resources, community pages, and directories.
-6. Filter prospects:
+5. Filter prospects:
    - Keep topical relevance and editorial pages.
    - Prioritize articles, directories, resource pages, comparisons, statistics pages, templates, and curated lists.
    - Deprioritize homepages, login pages, thin affiliate pages, spam, unrelated forums, and direct competitors unless a comparison angle is valid.
-7. For each good prospect, define the outreach angle:
+6. For each good prospect, define the outreach angle:
    - Broken/missing resource
    - Better current data
    - Useful tool/template
    - Alternative or comparison inclusion
    - Expert quote or supporting reference
-8. For the strongest prospects, visit or search the prospect site to find the best contact path.
-9. Draft outreach messages. If contact details were found, include the source. If not, list the next best contact-discovery path.
+7. For the strongest prospects, visit or search the prospect site to find the best contact path.
+8. Draft outreach messages. If contact details were found, include the source. If not, list the next best contact-discovery path.
 
 ## Output format
 

@@ -306,7 +306,7 @@ func providerFixture(t *testing.T, pool *pgxpool.Pool, guard *SpendGuard) (*data
 }
 
 // One user action often buys several different results: a backlink summary and
-// then its history, two keyword legs in parallel, or nine map points. They all
+// then its history, two keyword legs in parallel, or nine keyword rank checks. They all
 // carry the action's single Idempotency-Key, so each distinct provider call
 // must be its own purchase, not a replay of the first.
 func TestOneRequestCanBuyManyDifferentProviderCalls(t *testing.T) {
@@ -324,7 +324,7 @@ func TestOneRequestCanBuyManyDifferentProviderCalls(t *testing.T) {
 	}
 	var grid []call
 	for i := range 9 {
-		grid = append(grid, call{"/v3/serp/google/maps/live/advanced", fmt.Sprintf(`[{"keyword":"dentist","location_coordinate":"28.6,77.%d"}]`, i)})
+		grid = append(grid, call{"/v3/serp/google/organic/live/advanced", fmt.Sprintf(`[{"keyword":"dentist %d","location_code":2356}]`, i)})
 	}
 	for _, c := range sequential {
 		if _, err := client.Do(ctx, org, spend.Backlinks, http.MethodPost, c.path, []byte(c.body), false); err != nil {
@@ -335,13 +335,13 @@ func TestOneRequestCanBuyManyDifferentProviderCalls(t *testing.T) {
 	errs := make([]error, len(grid))
 	for i, c := range grid {
 		wg.Go(func() {
-			_, errs[i] = client.Do(ctx, org, spend.LocalSEO, http.MethodPost, c.path, []byte(c.body), false)
+			_, errs[i] = client.Do(ctx, org, spend.RankTracking, http.MethodPost, c.path, []byte(c.body), false)
 		})
 	}
 	wg.Wait()
 	for i, err := range errs {
 		if err != nil {
-			t.Fatalf("map point %d: %v", i, err)
+			t.Fatalf("rank check %d: %v", i, err)
 		}
 	}
 	if got := providerCalls.Load(); got != 11 {

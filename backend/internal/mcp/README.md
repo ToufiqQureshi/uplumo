@@ -79,28 +79,12 @@ The Go MCP registry also owns `inspect_urls`. It checks project authorization, u
 The Go MCP registry also owns `find_serp_competitors`, using the Go domain provider's Labs lookup with market validation, domain exclusions, and the legacy sort choices.
 
 
-The Go MCP registry also owns `get_local_serp_results`. It queries the Go Maps or Local Finder provider near the supplied coordinate and returns a bounded, trimmed row shape.
 
 
-The Go MCP registry also owns `get_google_business_questions`. It validates one business identifier and a coordinate scope, then returns trimmed questions and answers from the Go DataForSEO provider.
 
 
-The Go MCP registry also owns `list_business_categories`. It reads and caches the free provider category index, then applies substring filtering and bounded pagination in memory.
 
 
-The Go MCP registry also owns `search_local_businesses`. It validates coordinate scope and provider filters, then returns the legacy compact business identity/contact rows.
-
-
-The Go MCP registry also owns `get_business_profile`, returning the provider profile for exactly one business identifier and the requested project market or coordinate.
-
-
-The Go MCP registry also owns `get_business_reviews`. It posts Google/extended review tasks once, polls within the request budget, and returns resumable IDs for still-running tasks without repeat charges.
-
-
-The Go MCP registry also owns `get_business_updates`; it uses the Go task queue path and supports free resume polling with the returned task ID.
-
-
-The Go MCP registry also owns `get_local_rank_grid`. It uses the Go local SERP provider for bounded Google Maps grids, preserves per-point failures and rank summaries, and computes a market-aware zoom when one is omitted. Contract tests remain deferred to the final test phase.
 
 `get_search_growth_report` authorizes the active project and calls GA4's shared
 GSC/Google-organic growth analysis. Classified as `GoogleData`, it uses no paid

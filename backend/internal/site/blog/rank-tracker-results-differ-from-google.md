@@ -57,8 +57,6 @@ They answer different questions. A tracker is a configured sample; your search r
 
 ## Related Uplumo guides
 
-- [Local seo checklist for small businesses](/blog/local-rank-tracking-multiple-locations-grid)
-- [Keyword research for local businesses](/blog/rank-tracker-results-differ-from-google)
 - [Seo client report template that proves progress](/blog/seo-client-report-template-that-proves-progress)
 
 ## Sources

@@ -32,19 +32,11 @@ const (
 	// bill (live, Oct 2026: a ChatGPT answer with web search $0.03, the dearest
 	// answer seen $0.05; a mentions search $0.151, aggregated and top pages
 	// $0.101, the dearest seen $0.173). The ceilings below sit above those.
-	AIResponseCeilingUSD            = 0.10
-	AIMentionsCeilingUSD            = 0.25
-	lighthouseTaskUSD               = 0.005
-	googleBusinessInfoUSD           = 0.0054
-	googleBusinessReviewPerTenUSD   = 0.0015
-	googleBusinessExtendedReviewUSD = 0.0045
-	googleBusinessQuestionPerTwenty = 0.0025
-	googleBusinessUpdatesTaskUSD    = 0.003
-	googleBusinessUpdatePerTenUSD   = 0.0015
-	businessListingsTaskUSD         = 0.012
-	businessListingsItemUSD         = 0.00036
-	unknownTaskUSD                  = 1.0
-	defaultSerpDepth                = 10
+	AIResponseCeilingUSD = 0.10
+	AIMentionsCeilingUSD = 0.25
+	lighthouseTaskUSD    = 0.005
+	unknownTaskUSD       = 1.0
+	defaultSerpDepth     = 10
 )
 
 // serpOperator matches advanced search operators, which Google SERP endpoints
@@ -52,7 +44,7 @@ const (
 var serpOperator = regexp.MustCompile(`(?i)(allinanchor|allintext|allintitle|allinurl|cache|define|definition|filetype|id|inanchor|info|intext|intitle|inurl|link|site):`)
 
 // freePaths are lookups DataForSEO does not charge for.
-var freePaths = []string{"/v3/appendix/", "/v3/serp/google/locations", "/v3/business_data/business_listings/categories"}
+var freePaths = []string{"/v3/appendix/", "/v3/serp/google/locations"}
 
 // EstimateUSD returns the most a request to path with body can cost.
 func EstimateUSD(path string, body []byte) float64 {
@@ -114,28 +106,8 @@ func taskCeiling(path string, task map[string]any) float64 {
 		return contentParsePageUSD
 	case strings.HasPrefix(path, "/v3/on_page/lighthouse"):
 		return lighthouseTaskUSD
-	case strings.HasPrefix(path, "/v3/business_data/google/my_business_info/live"):
-		return googleBusinessInfoUSD
-	case strings.HasPrefix(path, "/v3/business_data/google/reviews/task_post"):
-		return businessReviewPrice(task)
-	case strings.HasPrefix(path, "/v3/business_data/google/extended_reviews/task_post"):
-		return googleBusinessExtendedReviewUSD * math.Ceil(number(task, "depth", 20)/20)
-	case strings.HasPrefix(path, "/v3/business_data/google/questions_and_answers/live"):
-		return googleBusinessQuestionPerTwenty * math.Ceil(number(task, "depth", 20)/20)
-	case strings.HasPrefix(path, "/v3/business_data/google/my_business_updates/task_post"):
-		return googleBusinessUpdatesTaskUSD + googleBusinessUpdatePerTenUSD*math.Ceil(number(task, "depth", 10)/10)
-	case strings.HasPrefix(path, "/v3/business_data/business_listings/search/live"), strings.HasPrefix(path, "/v3/business_data/business_listings/categories_aggregation/live"):
-		return businessListingsTaskUSD + businessListingsItemUSD*rows(task, 1000)
 	}
 	return unknownTaskUSD
-}
-
-func businessReviewPrice(task map[string]any) float64 {
-	perTen := googleBusinessReviewPerTenUSD
-	if number(task, "priority", 1) < 2 {
-		perTen /= 2
-	}
-	return perTen * math.Ceil(number(task, "depth", 10)/10)
 }
 
 func serpCeiling(path string, task map[string]any) float64 {

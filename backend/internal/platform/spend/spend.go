@@ -42,7 +42,6 @@ type Feature string
 const (
 	RankTracking    Feature = "rank_tracking"
 	KeywordResearch Feature = "keyword_research"
-	LocalSEO        Feature = "local_seo"
 	DomainResearch  Feature = "domain_research"
 	Backlinks       Feature = "backlinks"
 	AIVisibility    Feature = "ai_visibility"
@@ -57,7 +56,7 @@ const (
 // Features lists every feature that can spend credits, in the order the
 // Billing screen shows them.
 func Features() []Feature {
-	return []Feature{RankTracking, KeywordResearch, LocalSEO, DomainResearch, Backlinks, AIVisibility, SiteAudit, AIAssistant, AIWriting}
+	return []Feature{RankTracking, KeywordResearch, DomainResearch, Backlinks, AIVisibility, SiteAudit, AIAssistant, AIWriting}
 }
 
 // Request is one billed piece of provider work about to be sent.

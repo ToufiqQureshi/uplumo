@@ -58,7 +58,7 @@ Suppose the Queries report shows impressions for “electrician for inverter rep
 - Submitting a sitemap repeatedly instead of fixing the page.
 - Measuring clicks but never connecting them to leads or sales.
 
-For practical follow-up, read [why a website may not show on Google](/blog/website-not-showing-on-google), [how to research keywords](/blog/keyword-research-for-local-businesses) and [how to diagnose traffic without leads](/blog/seo-website-traffic-no-leads).
+For practical follow-up, read [why a website may not show on Google](/blog/website-not-showing-on-google) and [how to diagnose traffic without leads](/blog/seo-website-traffic-no-leads).
 
 ## Use comparisons that answer a business question
 

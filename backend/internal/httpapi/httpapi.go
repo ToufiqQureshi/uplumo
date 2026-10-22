@@ -35,7 +35,6 @@ import (
 	"github.com/toufiqqureshi/uplumo/backend/internal/indexnow"
 	"github.com/toufiqqureshi/uplumo/backend/internal/keywords"
 	"github.com/toufiqqureshi/uplumo/backend/internal/linksuggest"
-	"github.com/toufiqqureshi/uplumo/backend/internal/localseo"
 	"github.com/toufiqqureshi/uplumo/backend/internal/mcp"
 	"github.com/toufiqqureshi/uplumo/backend/internal/onboarding"
 	planCatalog "github.com/toufiqqureshi/uplumo/backend/internal/plans"
@@ -112,7 +111,6 @@ type Deps struct {
 	// KeywordResearch is nil when no DataForSEO key is configured; research,
 	// SERP and refresh routes then answer 503.
 	KeywordResearch *keywords.ResearchService
-	LocalSEO        *localseo.Service
 	// SavedKeywords serves saved keywords, their metrics and tags.
 	SavedKeywords  *keywords.SavedService
 	ProjectContext *projectcontext.Service
@@ -352,7 +350,6 @@ func NewHandler(d Deps) http.Handler {
 		WithProjectAccess: func(next http.Handler) http.Handler { return requireProjectAccess(d.Logger, d.Auth, next) },
 	})
 	keywords.MountLocations(mux, keywords.LocationDeps{Logger: d.Logger, Service: d.Locations, WithSession: withSession})
-	localseo.Mount(mux, d.LocalSEO, withSession, func(next http.Handler) http.Handler { return requireProjectAccess(d.Logger, d.Auth, next) })
 	ranktracking.Mount(mux, ranktracking.Deps{
 		Logger: d.Logger, Service: d.RankTracking, Checks: d.RankChecks, ProjectMarkets: d.ProjectMarkets, WithSession: withSession,
 		WithProjectAccess: func(next http.Handler) http.Handler { return requireProjectAccess(d.Logger, d.Auth, next) },

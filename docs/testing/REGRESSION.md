@@ -26,8 +26,7 @@ Domain report misses (`domain/concurrency_test.go`) and Prompt Explorer model
 sets (`aisearch/prompt_concurrency_test.go`). Same-organization calls share work;
 different organizations remain separate; cancelled preparation starts no new buy.
 `aisearch/citation_source_test.go` verifies safe Gemini original-source URLs.
-Mounted frontend tests cover Domain cache reuse, AI focus/reconnect, Local SEO
-nested hours and keyword SERP description/export delivery.
+Mounted frontend tests cover Domain cache reuse, AI focus/reconnect and keyword SERP description/export delivery.
 
 Billing `service_test.go` replays the same signed charge with changed delivery
 headers, concurrently and after spending, including a charge first received at

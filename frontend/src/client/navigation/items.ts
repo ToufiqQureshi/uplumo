@@ -10,14 +10,18 @@ import {
   Globe,
   LayoutDashboard,
   Link2,
-  MapPin,
   MessageSquare,
+  MessagesSquare,
   PenLine,
   Search,
   Sparkles,
   TrendingUp,
 } from "lucide-react";
-import { linkOptions, type LinkOptions } from "@tanstack/react-router";
+import {
+  linkOptions,
+  type LinkOptions,
+  type useMatchRoute,
+} from "@tanstack/react-router";
 import type { ComponentType } from "react";
 import { GoogleGlyphMuted } from "@/client/features/gsc/GoogleGlyph";
 
@@ -45,10 +49,15 @@ const projectNavItems = [
     activeOptions: { exact: true, includeSearch: false },
   },
   {
+    to: "/p/$projectId/sam" as const,
+    label: "SAM assistant",
+    icon: MessagesSquare,
+    badge: "Beta",
+  },
+  {
     to: "/p/$projectId/analytics" as const,
     label: "Analytics",
     icon: ChartNoAxesCombined,
-    badge: "New",
   },
   {
     to: "/p/$projectId/search-performance" as const,
@@ -71,12 +80,6 @@ const projectNavItems = [
     icon: TrendingUp,
   },
   {
-    to: "/p/$projectId/local-seo" as const,
-    label: "Local SEO",
-    icon: MapPin,
-    badge: "New",
-  },
-  {
     to: "/p/$projectId/audit" as const,
     label: "Site Audit",
     icon: ClipboardCheck,
@@ -85,7 +88,6 @@ const projectNavItems = [
     to: "/p/$projectId/content-editor" as const,
     label: "Content Editor",
     icon: PenLine,
-    badge: "New",
   },
   {
     to: "/p/$projectId/saved" as const,
@@ -127,11 +129,13 @@ export type NavItem = {
   /** A short tag after the label, such as "New". */
   badge?: string;
   link: LinkOptions;
+  /** Sibling pages shown as tabs above the page; the item opens the first. */
+  tabs?: NavItem[];
 };
 
 type NavGroup = { label: string; items: NavItem[] };
 
-// Project-independent. Rendered inside the project "Reports & AI" group when a
+// Project-independent. Rendered inside the project "Reports & setup" group when a
 // project is selected, and on its own (connectNavGroup) when none is.
 const aiNavItem: NavItem = {
   label: "Agent setup",
@@ -140,11 +144,33 @@ const aiNavItem: NavItem = {
 };
 
 // Shown only when no project is selected; with a project, Agent setup lives in
-// the "Reports & AI" group below.
+// the "Reports & setup" group below.
 export const connectNavGroup: NavGroup = {
   label: "AI",
   items: [aiNavItem],
 };
+
+// One sidebar row for several related pages. The pages keep their own routes,
+// so old links and each page's paid-query settings are untouched; switching a
+// tab is the same navigation the sidebar used to do.
+function tabbedItem(
+  label: string,
+  icon: NavItem["icon"],
+  tabs: NavItem[],
+  badge?: string,
+): NavItem {
+  return { label, icon, badge, link: tabs[0].link, tabs };
+}
+
+/** The page of `item` (itself or one of its tabs) the current URL is on. */
+export function findActivePage(
+  matchRoute: ReturnType<typeof useMatchRoute>,
+  item: NavItem,
+): NavItem | undefined {
+  return (item.tabs ?? [item]).find((page) =>
+    matchRoute({ ...page.link, fuzzy: !page.link.activeOptions?.exact }),
+  );
+}
 
 // Pinned to the sidebar footer, above the account menu.
 export const accountNavGroup: NavGroup = {
@@ -180,52 +206,64 @@ export function getProjectNavItem(
   };
 }
 
-// Grouped by the job the user came to do: traffic and AI presence first (the
-// product's focus), then looking after their own site, then researching
-// anything, then sharing and automating.
+// Grouped by the job the user came to do, in plain words for owners who are
+// not SEO experts. Related pages share one row and switch with tabs, so the
+// sidebar fits one screen. Only the two lead features carry "New", so the
+// badge still draws the eye.
 export function getProjectNavGroups(projectId: string): NavGroup[] {
   const item = (path: ProjectNavPath) => getProjectNavItem(projectId, path);
 
   return [
     {
       label: "Home",
-      items: [item("/p/$projectId")],
+      items: [item("/p/$projectId"), item("/p/$projectId/sam")],
     },
     {
-      label: "Traffic & AI visibility",
+      label: "Customers & traffic",
       items: [
-        item("/p/$projectId/analytics"),
         item("/p/$projectId/enquiries"),
-        item("/p/$projectId/search-performance"),
-        item("/p/$projectId/brand-lookup"),
-        item("/p/$projectId/prompt-tracking"),
-        item("/p/$projectId/prompt-explorer"),
+        tabbedItem("Traffic", ChartNoAxesCombined, [
+          item("/p/$projectId/analytics"),
+          item("/p/$projectId/search-performance"),
+        ]),
+        tabbedItem(
+          "AI Visibility",
+          Sparkles,
+          [
+            item("/p/$projectId/prompt-tracking"),
+            item("/p/$projectId/brand-lookup"),
+            item("/p/$projectId/prompt-explorer"),
+          ],
+          "New",
+        ),
       ],
     },
     {
-      label: "Your site",
+      label: "Your website",
       items: [
-        item("/p/$projectId/content-editor"),
-        item("/p/$projectId/rank-tracking"),
-        item("/p/$projectId/local-seo"),
         item("/p/$projectId/audit"),
-        item("/p/$projectId/saved"),
+        item("/p/$projectId/rank-tracking"),
+        item("/p/$projectId/content-editor"),
       ],
     },
     {
       label: "Research",
       items: [
-        item("/p/$projectId/keywords"),
-        item("/p/$projectId/domain"),
-        item("/p/$projectId/backlinks"),
+        tabbedItem("Keywords", Search, [
+          item("/p/$projectId/keywords"),
+          item("/p/$projectId/saved"),
+        ]),
+        tabbedItem("Competitors", Globe, [
+          item("/p/$projectId/domain"),
+          item("/p/$projectId/backlinks"),
+        ]),
       ],
     },
     {
-      label: "Reports & AI",
+      label: "Reports & setup",
       items: [
         item("/p/$projectId/reports"),
-        item("/p/$projectId/context"),
-        aiNavItem,
+        tabbedItem("Setup", Brain, [item("/p/$projectId/context"), aiNavItem]),
       ],
     },
   ];

@@ -19,7 +19,7 @@ Write down:
 - The page that should earn that enquiry.
 - Your current monthly enquiries from that page, if known.
 
-If you are unsure which search terms matter, use our guide to [research local keywords by customer intent](/blog/keyword-research-for-local-businesses). Choose a realistic page to improve; a new blog post is not always the best answer.
+If you are unsure which search terms matter, list the words customers use when they call or message you. Choose a realistic page to improve; a new blog post is not always the best answer.
 
 ## Week 1: remove blockers and get a baseline
 
@@ -54,8 +54,6 @@ If you serve customers in person or at their locations, check that your Google B
 Ask recent customers for honest reviews without offering rewards or scripting their ratings. Reply helpfully and never disclose private customer information. Google explains its [local ranking factors](https://support.google.com/business/answer/7091?hl=en) and [review policies](https://support.google.com/business/answer/7400114?hl=en).
 
 On your site, link to the improved service page from relevant pages using descriptive words. Link between related services only when it helps a reader take the next step. If you have multiple locations, each page should have real, distinct information; changing only the town name creates a poor experience.
-
-Our [small-business local SEO checklist](/blog/local-seo-checklist-for-small-businesses) covers profile, website and measurement checks in more detail.
 
 ## Week 4: measure, learn and pick the next task
 

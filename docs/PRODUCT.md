@@ -58,8 +58,8 @@ Full list and status: `ROADMAP.md`.
 4. **White-label client reports**: done. Every client-facing surface is
    agency-branded.
 5. Rank tracking with city-level India locations, a site audit with AI
-   fix steps (English + Hinglish), and Local SEO with a Google Maps rank
-   grid.
+   fix steps (English + Hinglish). Local SEO was removed on the
+   owner's decision (see `DECISIONS.md`).
 
 The bar for any feature: a solo owner gets value in under 5 minutes, and
 an agency can show it to a client.

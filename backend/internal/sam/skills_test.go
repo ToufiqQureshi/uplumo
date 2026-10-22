@@ -12,8 +12,8 @@ func TestEmbeddedSkillsParse(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(skills) != 9 {
-		t.Fatalf("skills = %d, want the 9 public in-app skills", len(skills))
+	if len(skills) != 8 {
+		t.Fatalf("skills = %d, want the 8 public in-app skills", len(skills))
 	}
 	seen := map[string]bool{}
 	for i, s := range skills {

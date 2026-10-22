@@ -90,7 +90,6 @@ Want to go deeper?
 - `keyword-clustering`: groups keywords by intent and maps clusters to existing or proposed pages.
 - `competitive-landscape`: identifies who wins across a market and what content/backlink patterns are working.
 - `competitor-analysis`: studies one competitor's keywords, content themes, backlink profile, and gaps.
-- `local-seo`: audits a Google Business Profile against local competitors and maps Maps visibility around a location.
 - `link-prospecting`: finds likely link opportunities, discovers contact paths, and drafts outreach.
 - `seo-report`: the report-writing skill the workflows above deliver through. It carries the starter template and the save rules; users do not run it on its own.
 
@@ -98,7 +97,7 @@ Want to go deeper?
 
 Explain the difference between data sources:
 
-- Uplumo MCP tools provide SEO data such as keyword research, exact ranked keywords, search volume, SERPs, SERP competitors, local business and Maps data, domain overviews, backlinks, saved keywords, projects, and rank trackers.
+- Uplumo MCP tools provide SEO data such as keyword research, exact ranked keywords, search volume, SERPs, SERP competitors, domain overviews, backlinks, saved keywords, projects, and rank trackers.
 - Google Search Console (when connected on the project's Integrations page) is the user's own first-party data — real clicks, impressions, CTR, and position. Read it live with `get_search_console_performance` instead of asking for CSV exports. It's free (no credits) and the best starting point for "what already ranks" and near-ranking opportunities.
 - Web search can find current market context, recent pages, reviews, docs, social profiles, and contact paths outside Uplumo.
 - Browser/page scraping can extract page copy, headings, author names, contact links, schema, and content structure.
@@ -131,7 +130,6 @@ When the user asks for strategy:
 - Separate SEO competitors from business competitors.
 - Prioritize pages and topics that can plausibly create business value.
 - Use SERPs to understand intent instead of guessing.
-- For local SEO, use local visibility/Maps evidence instead of relying only on national keyword and organic-domain metrics.
 
 When the user asks for execution:
 
