@@ -93,3 +93,11 @@ Use the package tests next to the source files in `README.md`. For changes cross
 - **Why:** Preparation could return a cache miss/project result after the caller left, and `context.WithoutCancel` then revived it into paid work.
 - **Preserve:** Active callers keep existing cache-outage fallback and tenant/cost checks. Already-registered bounded shared work can finish for other waiters; this does not add a retry, limit or pricing change.
 - **Trace:** `research_cancellation_test.go` interrupts the cache read and uses real saved-keyword test Postgres; the former billed suggestions call must remain at zero. Tests synchronize existing work before counting calls; see the shared [fixture decision](../platform/spend/spendtest/decision.md).
+
+
+## Coalesce equivalent metrics refreshes safely
+
+- **Decision:** Share concurrent metric refreshes only when organization, market, location and a canonical sorted keyword set match; do not start detached paid work for a caller already canceled before flight registration or execution.
+- **Why:** Saved-keyword and rank-tracking refreshes can present the same set in different orders, and a canceled request must not begin a paid Labs/Ads call after its caller has left.
+- **Preserve:** The provider sees the original keyword slice, the result is not cached, and active shared work keeps its bounded timeout.
+- **Trace:** `metricsForList` and the existing shared-refresh regression.
