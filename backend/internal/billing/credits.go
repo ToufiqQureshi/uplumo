@@ -23,6 +23,8 @@ var (
 	ErrReservationNotFound = errors.New("credit reservation not found")
 	// ErrReservationAlreadyClosed means the reservation is already settled or refunded.
 	ErrReservationAlreadyClosed = errors.New("credit reservation already settled or refunded")
+	// ErrReservationNotStale means a heartbeat refreshed the hold before cleanup acquired its lock.
+	ErrReservationNotStale = errors.New("credit reservation is still active")
 	// ErrIdempotentReplay means this idempotency key already has a reservation.
 	ErrIdempotentReplay = errors.New("request with this idempotency key was already reserved")
 )
@@ -696,6 +698,14 @@ func (s *CreditLedgerService) settle(ctx context.Context, reservationID string, 
 
 // Refund refunds a reservation in full.
 func (s *CreditLedgerService) Refund(ctx context.Context, reservationID string, reason string) error {
+	return s.refundReservation(ctx, reservationID, reason, nil)
+}
+
+func (s *CreditLedgerService) refundStaleReservation(ctx context.Context, reservationID, reason string, cutoff time.Time) error {
+	return s.refundReservation(ctx, reservationID, reason, &cutoff)
+}
+
+func (s *CreditLedgerService) refundReservation(ctx context.Context, reservationID string, reason string, staleBefore *time.Time) error {
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
@@ -704,11 +714,12 @@ func (s *CreditLedgerService) Refund(ctx context.Context, reservationID string, 
 
 	var orgID, status, feature, endpoint, userID string
 	var reservedAmount int64
+	var updatedAt time.Time
 	err = tx.QueryRow(ctx, `
-		SELECT organization_id, amount_credits, status, feature, endpoint, COALESCE(user_id, '')
+		SELECT organization_id, amount_credits, status, feature, endpoint, COALESCE(user_id, ''), updated_at
 		FROM go_billing_credit_reservations
 		WHERE id = $1 FOR UPDATE
-	`, reservationID).Scan(&orgID, &reservedAmount, &status, &feature, &endpoint, &userID)
+	`, reservationID).Scan(&orgID, &reservedAmount, &status, &feature, &endpoint, &userID, &updatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ErrReservationNotFound
 	}
@@ -718,6 +729,9 @@ func (s *CreditLedgerService) Refund(ctx context.Context, reservationID string, 
 
 	if status != "reserved" {
 		return ErrReservationAlreadyClosed
+	}
+	if staleBefore != nil && !updatedAt.Before(*staleBefore) {
+		return ErrReservationNotStale
 	}
 
 	if err := lockBalanceTx(ctx, tx, orgID); err != nil {
@@ -782,9 +796,9 @@ func (s *CreditLedgerService) RefundStaleReservations(ctx context.Context) (int6
 
 	var refunded int64
 	for _, id := range ids {
-		if err := s.Refund(ctx, id, "stale reservation reconciliation"); err != nil {
-			if errors.Is(err, ErrReservationAlreadyClosed) {
-				continue // another worker already closed it
+		if err := s.refundStaleReservation(ctx, id, "stale reservation reconciliation", cutoff); err != nil {
+			if errors.Is(err, ErrReservationAlreadyClosed) || errors.Is(err, ErrReservationNotStale) {
+				continue // another worker closed it or an active heartbeat renewed it
 			}
 			return refunded, fmt.Errorf("refund stale reservation %s: %w", id, err)
 		}
