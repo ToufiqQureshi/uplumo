@@ -44,6 +44,9 @@ const keywordsPageSchema = z.object({
       url: z.string().nullable(),
       relativeUrl: z.string().nullable(),
       keywordDifficulty: nullableNumber,
+      // Present only when the provider reports them.
+      intent: z.string().nullable().optional(),
+      type: z.string().nullable().optional(),
     }),
   ),
   fetchedAt: z.string(),

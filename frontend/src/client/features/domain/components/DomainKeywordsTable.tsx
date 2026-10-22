@@ -24,6 +24,7 @@ import type {
   KeywordRow,
   SortOrder,
 } from "@/client/features/domain/types";
+import { ResultTypeBadge } from "@/client/features/domain/components/ResultTypeBadge";
 
 type Props = DataTableFrameProps & {
   domain: string;
@@ -78,6 +79,11 @@ export function DomainKeywordsTable({
           />
         ),
         cell: ({ getValue }) => getValue() ?? "-",
+      }),
+      keywordColumnHelper.display({
+        id: "type",
+        header: () => "Type",
+        cell: ({ row }) => <ResultTypeBadge type={row.original.type} />,
       }),
       keywordColumnHelper.accessor("searchVolume", {
         header: () => (
@@ -147,6 +153,16 @@ export function DomainKeywordsTable({
           />
         ),
         cell: ({ getValue }) => <ScoreBadge value={getValue()} />,
+      }),
+      keywordColumnHelper.display({
+        id: "intent",
+        header: () => "Intent",
+        cell: ({ row }) => {
+          const intent = row.original.intent;
+          if (!intent) return "-";
+          return <span className="capitalize">{intent}</span>;
+        },
+        meta: { cellClassName: "whitespace-nowrap" },
       }),
     ],
     [currentSortOrder, domain, onSortClick, selectAnchorRef, sortMode],

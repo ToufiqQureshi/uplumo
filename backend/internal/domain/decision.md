@@ -49,7 +49,7 @@ separately from the concurrency fixes above; the delivery gaps below remain.
 | Overview organic ranking buckets (`pos_1`, `pos_2_3`, `pos_4_10`, then `pos_11_20` through `pos_91_100`), `estimated_paid_traffic_cost`, `is_new`, `is_up`, `is_down`, `is_lost` | Discarded during Go JSON decoding | Missing from API, UI and exports |
 | Overview `metrics.paid` | All documented non-clickstream metrics discarded | No paid search summary; `hasData` checks only organic count |
 | Ranked keywords / optional suggestions: keyword, search volume, CPC, difficulty, absolute rank, ETV, URL | Kept; difficulty prefers `keyword_properties`; URL path can be derived | Keyword table and CSV/Sheets have seven columns; optional suggestions keep six fields and omit URL |
-| Ranked keyword supplemental data | Competition/level, bid bounds, monthly volumes/trends, categories, intent, keyword language/core term, SERP features/freshness, top-ten backlink averages, rank-group/type/change, title/snippet, traffic value and page backlinks/rank data are not decoded | Missing from API, UI and export; conditional rich snippets/sitelinks are also not decoded |
+| Ranked keyword supplemental data | This change retains the provider result type and search intent with each ranked keyword. Other fields in the supplemental list remain undecoded. | The table shows an Organic/Paid badge and Intent column; CSV/Sheets export includes both; conditional rich snippets/sitelinks and the remaining supplemental metrics are still omitted |
 | Relevant pages: address, `metrics.organic.etv`, `count` | Kept, traffic/count rounded | Page/traffic/keywords table and three-column export; relative path is derived |
 | Relevant pages ranking distribution/change/traffic value and `metrics.paid` | Same narrow `providerMetrics` decoder as overview | Missing from API, UI and export |
 | Transport identifiers/status/cost, echoed target/market, counts | Status/cost handled at shared transport; page `total_count` retained | Operational metadata is not a missing customer metric; `fetchedAt` is our retrieval time, not provider dataset freshness |
@@ -59,9 +59,9 @@ metric leaf fields across the organic and paid objects. That describes schema
 coverage, not the proportion of useful populated data in any live response.
 
 **Options and scope:** UI ranked-keyword/pages requests omit `item_types`, so
-the documented default includes organic and paid. A future delivery fix must
-retain the result type or deliberately select and label the intended view;
-do not silently describe every returned row as organic. Clickstream is omitted
+the documented default includes organic and paid. Ranked keywords now retain
+their provider result type and intent, show both in the table, and include them
+in export; do not silently describe every returned row as organic. Clickstream is omitted
 (default false): its conditional normalized volumes, traffic and demographic
 fields are not purchased by these requests. Do not enable the documented double
 price to fill this audit. `load_rank_absolute` controls aggregate
@@ -80,6 +80,29 @@ zero is retained, result-type/market/scope labels remain truthful, cache version
 change when old responses lack newly delivered metrics, and provider-shaped
 fixtures must reach API/schema/render/export tests. Full live raw-to-screen
 comparison and implementation of this supplemental field delivery remain open.
+
+## Label ranked-keyword rows by result type and intent
+
+- **Decision:** Decode `ranked_serp_element.serp_item.type` (organic vs paid)
+  and `keyword_data.search_intent_info.main_intent`, expose them on each
+  keyword row (`type`, `intent`), and render an Organic/Paid badge plus an
+  Intent column in the keyword table. The browser cache key is unchanged
+  because the payload fields are additive and old cached rows simply omit them.
+- **Why:** The UI request omits `item_types`, so the provider default returns
+  both organic and paid rows, but the app dropped the discriminator and intent.
+  Customers could not tell which rank came from ads and which from organic
+  search — a correctness gap in a headline report, fixed with no extra call.
+- **Preserve:** No new provider call; `type`/`intent` stay nullable in the
+  schema so cached rows before this change still parse; intent is the raw
+  provider label (not normalized) so it is not silently mislabelled. Known
+  result types (organic, paid, featured_snippet, local_pack, people_also_ask,
+  ai_overview, video, images, twitter, knowledge_graph, related_searches) get a
+  short label + a theme-aware `Badge` variant; unknown types show the raw type,
+  never a guessed "Organic". No hard-coded colours (dark mode must work).
+- **Trace:** `provider.go`, `service.go` (`mapKeyword`),
+  `service_test.go:TestKeywordsPageKeepsTypeAndIntent`,
+  `frontend/src/client/features/domain/{domainApi.ts,types.ts,
+  components/DomainKeywordsTable.tsx,components/ResultTypeBadge.tsx}`.
 
 ## Verification
 

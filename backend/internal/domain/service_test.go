@@ -301,6 +301,32 @@ func TestKeywordsPageSendsPagingSortAndFilters(t *testing.T) {
 	}
 }
 
+func TestKeywordsPageKeepsTypeAndIntent(t *testing.T) {
+	t.Parallel()
+	item := rankedItem("alpha", 1, 10, 100, 0.5, 20, "https://example.com/a", "")
+	item["keyword_data"].(map[string]any)["search_intent_info"] = map[string]any{"main_intent": "commercial"}
+	item["ranked_serp_element"].(map[string]any)["serp_item"].(map[string]any)["type"] = "paid"
+	provider := &fakeProvider{result: rankedKeywordsResult(1, item)}
+	svc := newTestService(t, provider, &memoryCache{})
+	got, err := svc.KeywordsPage(context.Background(), "org", KeywordsPageInput{
+		ProjectID: "proj", Domain: "example.com", Scope: ScopeDomain, LocationCode: 2840, LanguageCode: "en",
+		Page: 1, PageSize: 50, SortMode: "volume",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Keywords) != 1 {
+		t.Fatalf("keywords = %+v", got.Keywords)
+	}
+	row := got.Keywords[0]
+	if row.Type == nil || *row.Type != "paid" {
+		t.Fatalf("type = %v, want paid", row.Type)
+	}
+	if row.Intent == nil || *row.Intent != "commercial" {
+		t.Fatalf("intent = %v, want commercial", row.Intent)
+	}
+}
+
 func withPath(in KeywordsPageInput) KeywordsPageInput {
 	in.Domain = "example.com/blog"
 	return in

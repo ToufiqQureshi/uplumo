@@ -9,6 +9,8 @@ export type KeywordRow = {
   url: string | null;
   relativeUrl: string | null;
   keywordDifficulty: number | null;
+  intent?: string | null;
+  type?: string | null;
 };
 
 export type PageRow = {

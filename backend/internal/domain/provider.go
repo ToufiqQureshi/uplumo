@@ -40,15 +40,20 @@ type rankedKeywordItem struct {
 		KeywordProperties *struct {
 			KeywordDifficulty *float64 `json:"keyword_difficulty"`
 		} `json:"keyword_properties"`
+		SearchIntentInfo *struct {
+			MainIntent *string `json:"main_intent"`
+		} `json:"search_intent_info"`
 	} `json:"keyword_data"`
 	Keyword           *string `json:"keyword"`
 	RankedSERPElement *struct {
 		SERPItem *struct {
+			Type         *string  `json:"type"`
 			URL          *string  `json:"url"`
 			RelativeURL  *string  `json:"relative_url"`
 			RankAbsolute *float64 `json:"rank_absolute"`
 			ETV          *float64 `json:"etv"`
 		} `json:"serp_item"`
+		Type         *string  `json:"type"`
 		URL          *string  `json:"url"`
 		RelativeURL  *string  `json:"relative_url"`
 		RankAbsolute *float64 `json:"rank_absolute"`
