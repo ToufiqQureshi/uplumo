@@ -70,6 +70,19 @@ DataForSEO; Google Ads for selected markets; Postgres saved rows; Redis caches; 
   three-letter guard each fail a test. Not yet verified on production (the
   production DataForSEO key returned 401 at the time of writing).
 
+## Coalesce metrics refresh lookups
+
+- **Decision:** `metricsForList` (RefreshSavedMetrics / RankTrackingMetrics)
+  shares equivalent concurrent fetches through the research singleflight group
+  keyed by organization, keyword set, market and location. The result is not
+  cached: a refresh is meant to buy fresh metrics.
+- **Why:** A double-clicked "refresh metrics" or concurrent rank-tracking
+  hydration bought the same Labs/Ads batch more than once with no coalescing.
+- **Preserve:** No automatic retry, no cache-lifetime change, tenant/market
+  separation unchanged; distinct keyword sets still buy distinct fetches.
+- **Trace:** `research_serp.go` (`metricsForList`, `metricsForListUncached`),
+  `research_test.go:TestMetricsForListCoalescesConcurrentRequests`.
+
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.

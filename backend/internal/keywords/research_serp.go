@@ -178,7 +178,33 @@ func adsMetricRow(it AdsItem) metricRow {
 // city it merges both: local volume from Ads, national difficulty and intent
 // from Labs. National volume is never shown for a local request; a keyword Ads
 // does not return keeps difficulty and intent but gets no volume or CPC.
+// Concurrent equivalent requests (a double-clicked refresh) share one paid
+// fetch through the research singleflight group; the result is not cached
+// because a refresh is meant to buy fresh metrics.
 func (s *ResearchService) metricsForList(ctx context.Context, org string, keywords []string, locationCode int, languageCode string, locationName *string) ([]metricRow, error) {
+	key, err := s.cacheKey("kw:metrics:", map[string]any{
+		"org": org, "keywords": keywords, "location": locationCode, "language": languageCode, "locationName": locationName,
+	})
+	if err != nil {
+		return nil, err
+	}
+	flight := s.flights.DoChan(key, func() (any, error) {
+		flightCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), flightTimeout)
+		defer cancel()
+		return s.metricsForListUncached(flightCtx, org, keywords, locationCode, languageCode, locationName)
+	})
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case finished := <-flight:
+		if finished.Err != nil {
+			return nil, finished.Err
+		}
+		return finished.Val.([]metricRow), nil
+	}
+}
+
+func (s *ResearchService) metricsForListUncached(ctx context.Context, org string, keywords []string, locationCode int, languageCode string, locationName *string) ([]metricRow, error) {
 	adsCountry := market.KeywordDataProvider(locationCode) == "google_ads"
 	dataLanguage := languageCode
 	if !adsCountry {
