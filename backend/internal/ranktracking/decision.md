@@ -16,6 +16,21 @@ Schedules and executes bounded rank checks, stores runs/results and settles prov
 
 DataForSEO SERP; Postgres configs/runs/tasks/snapshots; Redis jobs/locks; billing/spend guards.
 
+## Idempotent live rank checks
+
+- **Decision:** The live check path (`lookupAll`) now attaches a stable
+  `spend.WithIdempotencyKey("rank-live:<run>:<keywordID>:<device>")` to each
+  lookup before calling `CheckLive`, mirroring the queued path's per-run/chunk
+  post key.
+- **Why:** A crash between provider billing and snapshot persistence could make a
+  job retry re-buy the same live SERP pairs. The spend guard refuses a replay of
+  the same key, so a retried job buys nothing for pairs already billed.
+- **Preserve:** Each keyword/device within a run has a distinct key (no false
+  dedup across devices or runs); no retry is added, and the key stays under the
+  guard's 128-character limit.
+- **Trace:** `checks.go` (`lookupAll`, `liveCheckIdempotencyKey`),
+  `queued_test.go:TestLiveCheckIdempotencyKeyIsStablePerPair`.
+
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.

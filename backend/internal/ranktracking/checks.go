@@ -454,7 +454,10 @@ func (c *Checks) lookupAll(ctx context.Context, e *execution, pairs []pair) []pa
 	for i, p := range pairs {
 		results[i].pair = p
 		wg.Go(func() {
-			results[i].result, results[i].err = c.Serp.CheckLive(ctx, e.org, CheckRequest{
+			// A stable per-pair key means a crash between provider billing and
+			// snapshot persistence does not re-bill the pair when the job retries.
+			liveCtx := spend.WithIdempotencyKey(ctx, liveCheckIdempotencyKey(e.run.ID, p.keyword.ID, p.device))
+			results[i].result, results[i].err = c.Serp.CheckLive(liveCtx, e.org, CheckRequest{
 				Keyword: p.keyword.Keyword, Device: p.device, LocationCode: e.cfg.LocationCode,
 				LanguageCode: e.cfg.LanguageCode, LocationName: e.cfg.LocationName, TargetDomain: e.cfg.Domain, Depth: e.cfg.SerpDepth,
 			})
@@ -462,6 +465,12 @@ func (c *Checks) lookupAll(ctx context.Context, e *execution, pairs []pair) []pa
 	}
 	wg.Wait()
 	return results
+}
+
+// liveCheckIdempotencyKey identifies one keyword/device lookup within a run so a
+// retried job cannot buy the same live SERP twice.
+func liveCheckIdempotencyKey(runID, keywordID, device string) string {
+	return "rank-live:" + runID + ":" + keywordID + ":" + device
 }
 
 // runErrorText is the reason a run shows: the customer's credit message for a

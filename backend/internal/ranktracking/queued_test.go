@@ -57,6 +57,22 @@ func TestQueuedPostIdempotencyKeyIsStablePerRunAndTaskSet(t *testing.T) {
 	}
 }
 
+func TestLiveCheckIdempotencyKeyIsStablePerPair(t *testing.T) {
+	key := liveCheckIdempotencyKey("run-1", "kw-a", "desktop")
+	if got := liveCheckIdempotencyKey("run-1", "kw-a", "desktop"); got != key {
+		t.Fatalf("same pair produced different keys: %q vs %q", got, key)
+	}
+	if got := liveCheckIdempotencyKey("run-1", "kw-a", "mobile"); got == key {
+		t.Fatal("different devices reused a live-check key")
+	}
+	if got := liveCheckIdempotencyKey("run-2", "kw-a", "desktop"); got == key {
+		t.Fatal("different runs reused a live-check key")
+	}
+	if len(key) > 128 {
+		t.Fatalf("idempotency key length = %d, exceeds spend guard limit", len(key))
+	}
+}
+
 func TestQueuedRunSetsProviderTaskPostIdempotencyKey(t *testing.T) {
 	f := newQueuedFixture(t, "one")
 	_, job := f.startScheduled(t)
