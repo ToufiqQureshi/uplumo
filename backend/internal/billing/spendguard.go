@@ -234,7 +234,7 @@ func (h *creditHold) startHeartbeat(ctx context.Context) {
 					WHERE id = $1 AND status = 'reserved'`, h.reservationID)
 				cancel()
 				if err != nil {
-					h.guard.logger.WarnContext(writeCtx, "refresh credit reservation heartbeat", "err", err)
+					h.guard.logger.WarnContext(ctx, "refresh credit reservation heartbeat", "err", err)
 				}
 			}
 		}
