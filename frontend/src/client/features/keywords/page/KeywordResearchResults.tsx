@@ -87,7 +87,12 @@ function MobileTabs({ controller }: Props) {
 }
 
 function KeywordPanel({ controller }: Props) {
-  const { mobileTab, searchedKeyword, showApproximateMatchNotice } = controller;
+  const {
+    mobileTab,
+    placeFilter,
+    searchedKeyword,
+    showApproximateMatchNotice,
+  } = controller;
 
   return (
     <div
@@ -99,6 +104,16 @@ function KeywordPanel({ controller }: Props) {
             No exact match for{" "}
             <span className="font-medium">"{searchedKeyword}"</span>. Showing
             closest related keywords instead.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+      {placeFilter ? (
+        <Alert role="status">
+          <AlertDescription className="text-foreground">
+            Showing ideas that mention{" "}
+            <span className="font-medium capitalize">{placeFilter}</span>, so
+            every keyword is about your area. For wider ideas, search again
+            without the place name.
           </AlertDescription>
         </Alert>
       ) : null}

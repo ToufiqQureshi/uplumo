@@ -37,6 +37,39 @@ DataForSEO; Google Ads for selected markets; Postgres saved rows; Redis caches; 
   falls back to the national figure. This corrects the old opposite assertion
   that failed the merged PR's Go CI; it does not relax the missing-data case.
 
+## Limit ideas to the place the seed names; show SERP features per keyword
+
+- **Decision:** `seedPlace` finds the longest city, state, union territory,
+  district, region, county or municipality name from the market's location
+  registry inside the seed. When found, Labs `keyword_ideas` and
+  `related_keywords` send `filters: [keyword|keyword_data.keyword, "ilike",
+  "%place%"]`; suggestions are never filtered. The place is in the research cache
+  key (version 7) and returned as `placeFilter`. All Labs research tasks send
+  `include_serp_info: true` and rows carry `serpFeatures`.
+- **Why:** Live comparison on 2026-10-22 for "best resort in lonavala" (India):
+  unfiltered ideas returned resorts in Goa, Jaipur, Jim Corbett and the US, so
+  ~17 of 92 billed rows were about the customer's town. The same ideas task with
+  the filter cost the same $0.021 for 75 rows, all about Lonavala (743
+  available). `include_serp_info` cost $0.021 vs $0.021 (ideas) and $0.01404 vs
+  $0.01404 (suggestions) with and without it, and showed AI Overviews on 27 and
+  hotel packs on 31 of 75 keywords. The related-keywords filter field
+  `keyword_data.keyword` was verified live (5 rows, $0.0126). A "broader ideas"
+  request option was rejected: searching without the place name gives the same
+  result with no new parameter.
+- **Preserve:** Same number of paid tasks per search as before (asserted in
+  `place_test.go`); a registry failure must never fail or block research; names
+  shorter than three letters, three-letter cities and districts, postal codes,
+  neighbourhoods, sub-districts and names containing `%`, `_` or `\` are never
+  used as filters; Google Ads markets are not filtered and do not read the
+  registry; `serpFeatures` is an empty list, never null.
+- **Trace:** `place.go`, `research.go` (`Research`, `labsRows`),
+  `research_provider.go` (`LabsKeywords`), `place_test.go`,
+  `research_provider_test.go:TestLabsPlaceFilterAndSerpFeaturesReachTheProvider`.
+  Mutation-checked: dropping the place from the cache key, turning SERP info
+  off, filtering suggestions, the wrong related field, shortest-match and the
+  three-letter guard each fail a test. Not yet verified on production (the
+  production DataForSEO key returned 401 at the time of writing).
+
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.

@@ -105,12 +105,15 @@ const researchRowSchema = z.object({
   topOfPageBidHigh: z.number().nullable().optional(),
   referringDomains: z.number().nullable().optional(),
   quarterlyChange: z.number().nullable().optional(),
+  serpFeatures: z.array(z.string()).optional(),
 });
 
 const researchResultSchema = z.object({
   rows: z.array(researchRowSchema),
   source: z.string(),
   usedFallback: z.boolean(),
+  // The place named in the seed that ideas were limited to.
+  placeFilter: z.string().nullable().optional(),
 });
 
 export function researchKeywords(input: {

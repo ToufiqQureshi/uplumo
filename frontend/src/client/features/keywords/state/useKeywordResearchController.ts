@@ -108,6 +108,7 @@ export function useKeywordResearchController(
 
   const {
     rows,
+    placeFilter,
     hasSearched,
     lastSearchError,
     lastSearchKeyword,
@@ -278,6 +279,7 @@ export function useKeywordResearchController(
     locationName: input.locationName,
     mobileTab: uiState.mobileTab,
     overviewKeyword,
+    placeFilter,
     removeHistoryItem,
     researchError,
     researchMutationError,

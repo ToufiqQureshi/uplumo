@@ -23,6 +23,8 @@ export type KeywordResearchRow = {
   topOfPageBidHigh?: number | null;
   referringDomains?: number | null;
   quarterlyChange?: number | null;
+  /** Result types Google shows for the keyword (ai_overview, local_pack...). */
+  serpFeatures?: string[];
 };
 
 export type SavedKeywordRow = {

@@ -38,6 +38,10 @@ type LabsItem struct {
 	// ReferringDomains is the average number of domains linking to the pages
 	// that rank on page one for the keyword.
 	ReferringDomains *float64
+	// SerpFeatures are the result types Google shows for the keyword
+	// (ai_overview, local_pack, people_also_ask...). They come with the same
+	// Labs task at no extra cost.
+	SerpFeatures []string
 }
 
 // AdsItem is a keyword from Google Ads: volume, CPC and a 0-100 competition
@@ -70,6 +74,11 @@ type LabsRequest struct {
 	Limit          int
 	Clickstream    bool
 	IgnoreSynonyms bool
+	// MustContain, when set, makes DataForSEO return only keywords containing
+	// it (a place named in the seed), so the rows bought are on-topic instead of
+	// drifting to the wider category. Suggestions always contain the seed and
+	// ignore it.
+	MustContain string
 }
 
 // AdsVolumeRequest asks Google Ads for the volume of known keywords.
@@ -186,6 +195,9 @@ type wireLabsItem struct {
 	AvgBacklinksInfo *struct {
 		ReferringMainDomains *float64 `json:"referring_main_domains"`
 	} `json:"avg_backlinks_info"`
+	SerpInfo *struct {
+		ItemTypes []string `json:"serp_item_types"`
+	} `json:"serp_info"`
 	// Related keywords wrap the payload one level deeper.
 	KeywordData *wireLabsItem `json:"keyword_data"`
 }
@@ -207,6 +219,9 @@ func (w wireLabsItem) item() (LabsItem, bool) {
 	}
 	if w.AvgBacklinksInfo != nil {
 		out.ReferringDomains = w.AvgBacklinksInfo.ReferringMainDomains
+	}
+	if w.SerpInfo != nil {
+		out.SerpFeatures = w.SerpInfo.ItemTypes
 	}
 	return out, true
 }
@@ -252,18 +267,27 @@ func (p DataForSEOProvider) LabsKeywords(ctx context.Context, org string, req La
 	body := map[string]any{
 		"location_code": req.LocationCode, "language_code": req.LanguageCode, "limit": req.Limit,
 		// Clickstream-refined volumes double the request cost, so they are opt-in.
-		"include_clickstream_data": req.Clickstream, "include_serp_info": false, "ignore_synonyms": req.IgnoreSynonyms,
+		// SERP info (which result types Google shows) is free with the task.
+		"include_clickstream_data": req.Clickstream, "include_serp_info": true, "ignore_synonyms": req.IgnoreSynonyms,
+	}
+	// Only rows that pass the filter are returned and billed.
+	mustContain := func(field string) {
+		if req.MustContain != "" {
+			body["filters"] = []any{field, "ilike", "%" + req.MustContain + "%"}
+		}
 	}
 	switch req.Source {
 	case SourceRelated:
 		path = labsRelatedPath
 		body["keyword"], body["depth"] = req.Seed, 3
+		mustContain("keyword_data.keyword")
 	case SourceSuggestions:
 		path = labsSuggestionsPath
 		body["keyword"], body["include_seed_keyword"], body["exact_match"] = req.Seed, true, false
 	case SourceIdeas:
 		path = labsIdeasPath
 		body["keywords"], body["closely_variants"] = []string{req.Seed}, false
+		mustContain("keyword")
 	default:
 		return nil, fmt.Errorf("unknown Labs source %q", req.Source)
 	}

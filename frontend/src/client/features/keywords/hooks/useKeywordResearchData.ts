@@ -201,6 +201,7 @@ export function useKeywordResearchData(
 
   return {
     rows,
+    placeFilter: hasSearched ? (researchQuery.data?.placeFilter ?? null) : null,
     hasSearched,
     lastSearchError: hasSearched && researchQuery.isError,
     lastSearchKeyword: request?.seedKeyword ?? "",

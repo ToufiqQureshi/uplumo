@@ -28,7 +28,7 @@ const (
 	// not for a day, so the full blend is bought again once the provider recovers.
 	partialResearchCacheTTL = 10 * time.Minute
 	serpCacheTTL            = 12 * time.Hour
-	researchCacheVer        = 6 // v6: preserve the separately returned seed metrics
+	researchCacheVer        = 7 // v7: SERP features per row and the place filter
 	metricsBatchSize        = 700
 	SerpShallowDepth        = 20
 	SerpDeepDepth           = 100
@@ -60,6 +60,10 @@ type ResearchRow struct {
 	// results; QuarterlyChange is the volume change over three months, percent.
 	ReferringDomains *int `json:"referringDomains"`
 	QuarterlyChange  *int `json:"quarterlyChange"`
+	// SerpFeatures are the result types Google shows for the keyword, such as
+	// ai_overview or local_pack: they tell the customer whether an article, a
+	// Google Business Profile or an AI answer is the way to win it.
+	SerpFeatures []string `json:"serpFeatures"`
 }
 
 // roundedInt rounds a provider average to a whole number, or nil when absent.
@@ -78,6 +82,9 @@ type ResearchResult struct {
 	Rows         []ResearchRow `json:"rows"`
 	Source       string        `json:"source"`
 	UsedFallback bool          `json:"usedFallback"`
+	// PlaceFilter is the place named in the seed that ideas were limited to,
+	// or nil when no filter was applied.
+	PlaceFilter *string `json:"placeFilter"`
 	// partial marks an auto result built from one leg because the other failed.
 	partial bool
 }
@@ -96,6 +103,7 @@ type ResearchInput struct {
 	GroupKeywords  bool
 
 	dataLanguage string // the language sent to Labs, which serves only some per country
+	place        string // the place ideas must contain; "" for no filter
 }
 
 // Registry lists the canonical city and region names of a country.
@@ -162,6 +170,7 @@ func labsRows(items []LabsItem) []ResearchRow {
 			CPC: it.Info.CPC, Competition: it.Info.Competition, Intent: normalizeIntent(it.MainIntent),
 			TopOfPageBidLow: it.Info.TopBidLow, TopOfPageBidHigh: it.Info.TopBidHigh,
 			ReferringDomains: roundedInt(it.ReferringDomains), QuarterlyChange: roundedInt(it.Info.QuarterlyChange),
+			SerpFeatures: nonNilStrings(it.SerpFeatures),
 		})
 	}
 	return rows
@@ -184,7 +193,7 @@ func adsRows(items []AdsItem) []ResearchRow {
 			competition = &c
 		}
 		rows = append(rows, ResearchRow{Keyword: k, SearchVolume: it.SearchVolume, Trend: nonNilMonths(it.Monthly), CPC: it.CPC,
-			Competition: competition, Intent: "unknown"})
+			Competition: competition, Intent: "unknown", SerpFeatures: []string{}})
 	}
 	return rows
 }
@@ -283,10 +292,15 @@ func (s *ResearchService) Research(ctx context.Context, in ResearchInput) (Resea
 	if in.Mode == "" {
 		in.Mode = "auto"
 	}
+	// Google Ads takes no filter, so the place applies to Labs only. A customer
+	// who wants wider ideas searches without the place name.
+	if !ads {
+		in.place = s.seedPlace(ctx, in.OrganizationID, in.LocationCode, seeds[0])
+	}
 	key, err := s.cacheKey("kw:research:", map[string]any{
 		"v": researchCacheVer, "org": in.OrganizationID, "project": in.ProjectID, "keywords": seeds, "location": in.LocationCode,
 		"language": in.LanguageCode, "limit": in.ResultLimit, "mode": in.Mode, "depth": labsRelatedDepth,
-		"clickstream": in.Clickstream, "group": in.GroupKeywords, "locationName": in.LocationName,
+		"clickstream": in.Clickstream, "group": in.GroupKeywords, "locationName": in.LocationName, "place": in.place,
 	})
 	if err != nil {
 		return ResearchResult{}, err
@@ -343,6 +357,9 @@ func (s *ResearchService) researchUncached(ctx context.Context, in ResearchInput
 	if result.Rows == nil {
 		result.Rows = []ResearchRow{}
 	}
+	if in.place != "" && result.PlaceFilter == nil {
+		result.PlaceFilter = &in.place
+	}
 	ttl := researchCacheTTL
 	if result.partial {
 		ttl = partialResearchCacheTTL
@@ -364,9 +381,14 @@ func validSource(source string) bool {
 }
 
 func (s *ResearchService) labsRows(ctx context.Context, in ResearchInput, source LabsSource, seed string, limit int) ([]ResearchRow, error) {
+	// Suggestions are phrase matches of the seed, so they already contain the place.
+	mustContain := in.place
+	if source == SourceSuggestions {
+		mustContain = ""
+	}
 	items, err := s.Data.LabsKeywords(ctx, in.OrganizationID, LabsRequest{
 		Source: source, Seed: seed, LocationCode: in.LocationCode, LanguageCode: in.dataLanguage, Limit: limit,
-		Clickstream: in.Clickstream, IgnoreSynonyms: !in.GroupKeywords,
+		Clickstream: in.Clickstream, IgnoreSynonyms: !in.GroupKeywords, MustContain: mustContain,
 	})
 	if err != nil {
 		return nil, err
