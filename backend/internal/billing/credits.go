@@ -525,6 +525,20 @@ func restoreReservationCreditsTx(ctx context.Context, tx pgx.Tx, reservationID s
 	}
 	rows.Close()
 	if len(allocations) == 0 {
+		if amount <= 0 {
+			return 0, nil
+		}
+		// Reservations created before credit-grant allocation existed have no
+		// source bucket. Recreate the refund as a usable grant instead of only
+		// incrementing the legacy balance counter.
+		var organizationID string
+		if err := tx.QueryRow(ctx, `SELECT organization_id FROM go_billing_credit_reservations WHERE id = $1`, reservationID).Scan(&organizationID); err != nil {
+			return 0, fmt.Errorf("read legacy reservation owner: %w", err)
+		}
+		if _, err := tx.Exec(ctx, `INSERT INTO go_billing_credit_grants (id, organization_id, granted_credits, remaining_credits, expires_at)
+			VALUES ($1, $2, $3, $3, $4)`, "refund-"+reservationID, organizationID, amount, time.Now().UTC().AddDate(0, 2, 0)); err != nil {
+			return 0, fmt.Errorf("create grant for legacy reservation refund: %w", err)
+		}
 		return amount, nil
 	}
 	remaining, restored := amount, int64(0)
@@ -737,9 +751,9 @@ func (s *CreditLedgerService) Refund(ctx context.Context, reservationID string, 
 	return tx.Commit(ctx)
 }
 
-// staleReservationAge is how long a hold may stay reserved before it is treated
-// as abandoned — the request crashed between Hold and Settle/Refund — and the
-// customer's credits are restored.
+// staleReservationAge is the no-heartbeat window after which a reservation is
+// treated as abandoned — the request crashed between Hold and Settle/Refund —
+// and the customer's credits are restored.
 const staleReservationAge = time.Hour
 
 // RefundStaleReservations refunds holds left reserved by a crash so the
@@ -747,7 +761,7 @@ const staleReservationAge = time.Hour
 // returns the number of reservations refunded.
 func (s *CreditLedgerService) RefundStaleReservations(ctx context.Context) (int64, error) {
 	cutoff := time.Now().UTC().Add(-staleReservationAge)
-	rows, err := s.db.Query(ctx, `SELECT id FROM go_billing_credit_reservations WHERE status = 'reserved' AND created_at < $1 ORDER BY created_at`, cutoff)
+	rows, err := s.db.Query(ctx, `SELECT id FROM go_billing_credit_reservations WHERE status = 'reserved' AND updated_at < $1 ORDER BY updated_at`, cutoff)
 	if err != nil {
 		return 0, fmt.Errorf("list stale reservations: %w", err)
 	}
