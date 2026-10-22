@@ -157,7 +157,7 @@ function CountList({
   const entries = sortBy(Object.entries(counts), [
     ([, count]) => count,
     "desc",
-  ]).slice(0, 6);
+  ]);
   const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
   return (
     <div className="space-y-1.5">
