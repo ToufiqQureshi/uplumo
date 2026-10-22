@@ -217,6 +217,7 @@ func run(logger *slog.Logger) (err error) {
 		aiSearchSvc = aisearch.NewService(client, rdb, logger)
 		backlinksSvc = backlinks.NewService(client, rdb, logger)
 		domainSvc = domain.NewService(client, rdb, logger)
+		domainSvc.DB = db // persist the overview so a cache miss does not re-buy
 		locationSvc = keywords.NewLocationService(client, rdb, logger)
 		rankLocationChecker = ranktracking.RegistryChecker{Registry: locationSvc}
 		keywordResearch = keywords.NewResearchService(keywords.DataForSEOProvider{Client: client}, rdb, locationSvc, keywords.SavedRepository{DB: db}, logger)

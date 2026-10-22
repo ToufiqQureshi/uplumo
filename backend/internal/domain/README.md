@@ -22,7 +22,7 @@ provider failure.
 
 ## Flow
 
-`session -> project access -> plan gate -> decode + validate -> service -> cache -> DataForSEO Labs`
+`session -> project access -> plan gate -> decode + validate -> service -> Redis -> Postgres snapshot -> DataForSEO Labs`
 
 The plan gate runs before the body is read, so a free plan never costs a task.
 Validation runs before the provider: failed provider tasks are billed.
@@ -39,9 +39,10 @@ Validation runs before the provider: failed provider tasks are billed.
   Counting is done by `countConditions`, not hard-coded.
 - **Cache keys carry organization and project**, plus every input that changes
   the answer (scope, path, market, page, size, sort, filters, search).
-- Empty overviews and empty suggestions are never cached (a later lookup must
-  retry); a cached entry without data is ignored.
-- Redis down is soft: log and call the provider.
+- Empty overviews and empty suggestions are never served from cache or the
+  persisted snapshot (a later lookup must retry); a cached entry without data
+  is ignored. PostgreSQL is consulted only after both Redis checks miss.
+- Redis down is soft: log, try a fresh persisted snapshot, then call the provider.
 - Concurrent equivalent overview/keyword-page/page-page misses share one
   provider task per server process. Organization, project, market and every
   result-changing request input remain in the identity; overview scope labels
@@ -64,7 +65,9 @@ Validation runs before the provider: failed provider tasks are billed.
 ## Tables, env
 
 Reads the legacy `projects` table, filtered by both project and organization.
-No new tables. Needs `DATAFORSEO_API_KEY`; Redis is optional.
+Persists non-empty paid overviews in `go_domain_overviews` for 30 days so a
+Redis cache miss can reuse already-paid data. The table is server-only, tenant
+scoped and cascades with project deletion. Needs `DATAFORSEO_API_KEY`; Redis is optional.
 
 ## Edge cases covered by tests
 
