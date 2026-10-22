@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -130,6 +131,7 @@ func (g *SpendGuard) Hold(ctx context.Context, req spend.Request) (spend.Hold, e
 		return nil, fmt.Errorf("commit spend hold: %w", err)
 	}
 	h.reservationID, h.reserved = reservation.ID, reservation.AmountCredits
+	h.startHeartbeat(ctx)
 	return h, nil
 }
 
@@ -201,8 +203,48 @@ type creditHold struct {
 	reservationID string
 	reserved      int64
 
-	mu      sync.Mutex
-	settled bool
+	mu             sync.Mutex
+	settled        bool
+	heartbeatStop  chan struct{}
+	heartbeatClose sync.Once
+}
+
+const reservationHeartbeatInterval = 10 * time.Minute
+
+// startHeartbeat marks a reservation active while its provider operation is
+// still running. If the process crashes, the request context and heartbeat stop
+// so stale reconciliation can refund the abandoned hold.
+func (h *creditHold) startHeartbeat(ctx context.Context) {
+	if h.reservationID == "" {
+		return
+	}
+	h.heartbeatStop = make(chan struct{})
+	go func() {
+		ticker := time.NewTicker(reservationHeartbeatInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-h.heartbeatStop:
+				return
+			case <-ticker.C:
+				writeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+				_, err := h.guard.db.Exec(writeCtx, `UPDATE go_billing_credit_reservations SET updated_at = now()
+					WHERE id = $1 AND status = 'reserved'`, h.reservationID)
+				cancel()
+				if err != nil {
+					h.guard.logger.WarnContext(writeCtx, "refresh credit reservation heartbeat", "err", err)
+				}
+			}
+		}
+	}()
+}
+
+func (h *creditHold) stopHeartbeat() {
+	if h.heartbeatStop != nil {
+		h.heartbeatClose.Do(func() { close(h.heartbeatStop) })
+	}
 }
 
 // Settle charges the real cost, releases the rest of the hold and logs the
@@ -218,6 +260,7 @@ func (h *creditHold) SettleProviderCost(ctx context.Context, providerCostUSD, cu
 		return errors.New("spend hold already settled")
 	}
 	h.settled = true
+	h.stopHeartbeat()
 	if providerCostUSD < 0 || math.IsNaN(providerCostUSD) || math.IsInf(providerCostUSD, 0) || customerCostUSD < 0 || math.IsNaN(customerCostUSD) || math.IsInf(customerCostUSD, 0) {
 		// The cost is unknown, so keep the whole hold rather than give it back.
 		if h.reservationID != "" {
