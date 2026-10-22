@@ -254,9 +254,15 @@ func TestSerpLive(t *testing.T) {
 	if b := ps.bodies[0]; b["location_name"] != city || b["location_code"] != nil || b["depth"] != float64(20) || b["device"] != "desktop" {
 		t.Errorf("request = %v", b)
 	}
-	status = 40501
+	status = 40102
 	if items, err := p.SerpLive(ctx, "org", SerpRequest{Keyword: "seo", LocationCode: 2840, LanguageCode: "en", Depth: 20}); err != nil || len(items) != 0 {
 		t.Errorf("no-results SERP = %+v, %v; want an empty list, not an error", items, err)
+	}
+	// "Invalid Field" (40501) is our own bad request: it must surface as an error,
+	// never be treated as an empty SERP.
+	status = 40501
+	if _, err := p.SerpLive(ctx, "org", SerpRequest{Keyword: "seo", LocationCode: 2840, LanguageCode: "en", Depth: 20}); err == nil {
+		t.Error("an invalid-field response was accepted as an empty SERP")
 	}
 	before := len(ps.paths)
 	for _, depth := range []int{0, 15, 110} {

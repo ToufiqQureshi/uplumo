@@ -16,6 +16,30 @@ Sends validated paid task requests, parses provider responses and records usage 
 
 DataForSEO API, platform spend guard, Postgres usage ledger, Redis worker/cache as caller requires.
 
+## "No Search Results" is 40102, not 40501 — and 40102 is billable
+
+- **Decision:** Treat 40102 ("No Search Results") as the valid empty-result
+  status AND charge it to the customer (it is a billed task). Treat 40501
+  ("Invalid POST field") as our own bad request: it must surface as an error and
+  must not be charged.
+- **Why:** The code previously labelled 40501 as "No Search Results" and
+  planned to bill it. Per the official error appendix
+  (https://docs.dataforseo.com/v3/appendix/errors/), 40501 is "invalid POST
+  field" — a request WE malformed. The real empty-result code is 40102, and the
+  official help center
+  (https://dataforseo.com/help-center/what-does-the-40102-error-mean) states a
+  40102 task IS billable because the search was processed even though it
+  returned no items (its example shows `cost: 0.002` on the task). Charging
+  40501 would bill the customer for our bug; not charging 40102 would make
+  Uplumo absorb a real provider cost.
+- **Preserve:** No customer charge for non-success task errors other than 40102;
+  provider cost is still recorded; a 40102 is delivered as "not ranking", not as
+  an error, and its provider cost is passed on.
+- **Trace:** `client.go` (`billableTask`, `responseSuccessfulCost`),
+  `client_test.go` (`TestResponseSuccessfulCostChargesSuccessfulAndNoResultTasks`,
+  `TestDoChargesForNoSearchResultsAndNotForInvalidField`), `envelope_test.go`,
+  plus `ranktracking/serp.go` and `keywords/research_provider.go` callers.
+
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.
