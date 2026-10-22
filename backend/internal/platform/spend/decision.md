@@ -19,3 +19,11 @@ Postgres provider spend/credit holds; Redis/Postgres queue; billing.
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.
+
+
+## Stable request identity for retried rank checks
+
+- **Decision:** Rank Tracking may attach a stable idempotency key for one run/keyword/device. The spend scope includes the provider method and path but ignores a mutable request body for that operation.
+- **Why:** A retried run can reload changed config; hashing the changed body would otherwise create a second hold and a second provider purchase for the same run/pair.
+- **Preserve:** Ordinary user actions still scope idempotency by method, path and body and may contain multiple distinct paid requests.
+- **Trace:** `spend.WithStableIdempotencyKey`, `ScopedKey`, and rank tracking `lookupAll`.
