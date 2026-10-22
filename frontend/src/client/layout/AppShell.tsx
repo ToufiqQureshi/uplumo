@@ -8,6 +8,7 @@ import { getLastProjectId } from "@/client/lib/active-project";
 import {
   accountNavGroup,
   connectNavGroup,
+  findActivePage,
   getProjectNavGroups,
 } from "@/client/navigation/items";
 import {
@@ -88,37 +89,57 @@ function AppHeader({ projectId }: { projectId: string | null }) {
     accountNavGroup,
   ];
   const current = groups
-    .flatMap((group) => group.items.map((item) => ({ group, item })))
-    .find(({ item }) =>
-      matchRoute({
-        ...item.link,
-        fuzzy: !item.link.activeOptions?.exact,
-      }),
-    );
+    .flatMap((group) =>
+      group.items.map((item) => ({
+        group,
+        item,
+        page: findActivePage(matchRoute, item),
+      })),
+    )
+    .find(({ page }) => page);
 
   return (
-    <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border bg-background px-3 md:px-4">
-      <SidebarTrigger aria-label="Toggle sidebar" />
-      <Link
-        to="/"
-        className="flex items-center gap-2 font-serif text-2xl leading-none text-foreground md:hidden"
-      >
-        <img src="/logo.svg" alt="" className="size-6" />
-        Uplumo
-      </Link>
-      {current ? (
-        <nav aria-label="Breadcrumb" className="hidden min-w-0 md:block">
-          <ol className="flex items-center gap-2 font-mono text-[13px] lowercase">
-            <li className="text-muted-foreground">{current.group.label}</li>
-            <li aria-hidden className="text-muted-foreground/70">
-              /
-            </li>
-            <li aria-current="page" className="truncate text-foreground">
-              {current.item.label}
-            </li>
-          </ol>
+    <>
+      <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border bg-background px-3 md:px-4">
+        <SidebarTrigger aria-label="Toggle sidebar" />
+        <Link
+          to="/"
+          className="flex items-center gap-2 font-serif text-2xl leading-none text-foreground md:hidden"
+        >
+          <img src="/logo.svg" alt="" className="size-6" />
+          Uplumo
+        </Link>
+        {current ? (
+          <nav aria-label="Breadcrumb" className="hidden min-w-0 md:block">
+            <ol className="flex items-center gap-2 font-mono text-[13px] lowercase">
+              <li className="text-muted-foreground">{current.group.label}</li>
+              <li aria-hidden className="text-muted-foreground/70">
+                /
+              </li>
+              <li aria-current="page" className="truncate text-foreground">
+                {current.page?.label}
+              </li>
+            </ol>
+          </nav>
+        ) : null}
+      </header>
+      {current?.item.tabs ? (
+        <nav
+          aria-label={current.item.label}
+          className="flex shrink-0 gap-1 overflow-x-auto border-b border-border bg-background px-3 md:px-4"
+        >
+          {current.item.tabs.map((tab) => (
+            <Link
+              key={tab.label}
+              {...tab.link}
+              aria-current={tab === current.page ? "page" : undefined}
+              className="whitespace-nowrap border-b-2 border-transparent px-3 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground aria-[current=page]:border-[var(--highlight)] aria-[current=page]:text-foreground"
+            >
+              {tab.label}
+            </Link>
+          ))}
         </nav>
       ) : null}
-    </header>
+    </>
   );
 }

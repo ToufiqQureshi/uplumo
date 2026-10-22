@@ -43,7 +43,7 @@ Last updated: 20 Oct 2026
 
 ## 2. Waiting for the owner
 
-- [ ] **DataForSEO:** verify the account and top up (at least $50). Until then these return 40104 "verify your account": keyword research, domain, backlinks, brand lookup, prompt explorer, rank tracking and local SEO. No money is charged meanwhile.
+- [ ] **DataForSEO:** verify the account and top up (at least $50). Until then these return 40104 "verify your account": keyword research, domain, backlinks, brand lookup, prompt explorer and rank tracking. No money is charged meanwhile.
 - [ ] **Google OAuth data-access verification:** add the scope justification, upload the demo video (YouTube, unlisted), then submit in the Verification Center. Branding is already verified.
 - [ ] **GA4 connect:** use "Advanced → Go to uplumo" until Google verifies the app. The user cap is 100, and 1 is used.
 - [ ] **WordPress (revmerito.com):** add the 2 `.htaccess` lines on Hostinger (the host drops the Authorization header), then connect with a real application password (24 characters).
@@ -207,3 +207,51 @@ Owner-approved scope: one focused PR adds optional 180-day browser recognition a
   decision files and regression tests; shared provider and regression guides.
   Business five-run-month affordability and semantic payment replay remain
   explicit limitations, not silently changed product policy.
+
+## Sidebar grouping for non-technical owners
+
+- **Decision:** the project sidebar (`frontend/src/client/navigation/items.ts`,
+  `getProjectNavGroups`) has 12 rows in plain-language groups: Home
+  (Dashboard, SAM assistant with a "Beta" badge),
+  Customers & traffic, Your website, Research, Reports & setup. Related pages
+  share one row and switch with a tab strip under the header
+  (`AppShell.tsx`): Traffic (Analytics, Search Performance), AI Visibility
+  (Tracker, Brand Lookup, Prompt Explorer), Keywords (Research, Saved),
+  Competitors (Domain Overview, Backlinks), Setup (Context, Agent setup).
+  "New" stays only on AI Visibility and Missed Enquiries Finder.
+- **Why:** owner feedback that 17 rows with five "New" badges felt crowded
+  and jargon-heavy for small-business users. Tabs link to the existing routes
+  instead of rebuilding pages, which needs no redirects and no page rewrite.
+- **Preserve:** every page stays reachable exactly once (sidebar row or tab,
+  asserted in `navigation/items.test.ts`). Tabs are plain navigation between
+  routes: they must never start a paid DataForSEO or OpenRouter call; each
+  page keeps its own `retry: false`, no-refetch-on-focus and cache settings.
+  Tab and breadcrumb labels match each page's title.
+- **Trace:** `navigation/items.ts`, `layout/AppShell.tsx`,
+  `components/Sidebar.tsx`; checked with `pnpm ci:check` and `pnpm test`. No
+  browser screenshot was taken.
+
+## Local SEO removed (owner decision, 21 Oct 2026)
+
+- **Decision:** the owner (Toufiq) chose to remove Local SEO entirely. Gone:
+  the Local SEO page and `/api/v1/.../local-seo` routes
+  (`backend/internal/localseo`), the DataForSEO Business Data, Maps and Local
+  Finder provider code in `backend/internal/keywords`, the eight agent/SAM
+  tools (`search_local_businesses`, `get_local_serp_results`,
+  `get_google_business_questions`, `get_business_profile`,
+  `get_business_reviews`, `get_business_updates`, `list_business_categories`,
+  `get_local_rank_grid`), the `local-seo` SAM/agent skill, the `local_seo`
+  spend feature and its cost hint, the "Local SEO and Google Business
+  research" line on every plan and the pricing page, and five Local SEO blog
+  posts (their URLs now return 404, by the owner's choice).
+- **Why:** owner's product call to narrow Uplumo. No database tables
+  belonged to Local SEO, so no migration was needed.
+- **Preserve:** do not re-add Business Data, Maps or Local Finder calls, or
+  promise local/Maps features on public pages, without a new owner decision.
+  Past `local_seo` credit charges stay in `go_billing_credit_ledger`; the
+  Billing screen now groups them under "Other"
+  (`CreditLedgerService.SpendByFeature`), so no history is lost.
+- **Trace:** this PR's diff; `go test -race ./...` against local Postgres and
+  Redis, `pnpm ci:check` and `pnpm test` passed. The ChatGPT app listing
+  (`deploy/chatgpt-app-submission.json`) no longer lists the eight tools; a
+  resubmission to OpenAI is the owner's step.

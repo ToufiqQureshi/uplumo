@@ -377,7 +377,7 @@ func TestPricingPageShowsWhatThePlanCatalogEnforces(t *testing.T) {
 		"<th scope=\"row\">SAM SEO assistant</th><td>—</td><td>Included</td><td>Included</td><td>Included</td><td>Included</td>",
 		"<th scope=\"row\">Rank tracking</th><td>—</td><td>100 keywords, weekly checks</td><td>500 keywords, weekly checks</td><td>1,000 keywords, weekly checks</td><td>1,500 keywords, weekly checks</td>",
 		"<th scope=\"row\">Rank check depth</th><td>—</td><td>Top 30</td><td>Top 40</td><td>Top 40</td><td>Top 40</td>",
-		"<th scope=\"row\">Keyword research, SERP analysis, Local SEO and Google Business research</th><td>—</td><td>Included</td><td>Included</td><td>Included</td><td>Included</td>",
+		"<th scope=\"row\">Keyword research and SERP analysis</th><td>—</td><td>Included</td><td>Included</td><td>Included</td><td>Included</td>",
 		"<th scope=\"row\">AI Visibility</th><td>—</td><td>—</td><td>Included</td><td>Included</td><td>Included</td>",
 		"<th scope=\"row\">White-label reports</th><td>—</td><td>—</td><td>—</td><td>—</td><td>Included</td>",
 		"<th scope=\"row\">Monthly price</th><td>Free</td><td>₹999</td><td>₹2,499</td><td>₹4,999</td><td>₹9,999</td>",
@@ -390,7 +390,7 @@ func TestPricingPageShowsWhatThePlanCatalogEnforces(t *testing.T) {
 		plan string
 		want []string
 	}{
-		{"Solo", []string{"4,000 credits / month", "1 website", "1 team member", "100 tracked keywords, checked weekly", "Rank checks cover the top 30 results", "Uplumo Analytics with AI traffic detection", "SAM SEO assistant", "Keyword research, SERP analysis, Local SEO and Google Business research", "Publish articles to WordPress"}},
+		{"Solo", []string{"4,000 credits / month", "1 website", "1 team member", "100 tracked keywords, checked weekly", "Rank checks cover the top 30 results", "Uplumo Analytics with AI traffic detection", "SAM SEO assistant", "Keyword research and SERP analysis", "Publish articles to WordPress"}},
 		{"Growth", []string{"10,000 credits / month", "2 websites", "3 team members", "500 tracked keywords, checked weekly", "Rank checks cover the top 40 results", "Publish articles to WordPress", "Backlink research", "AI Visibility"}},
 		{"Business", []string{"15,000 credits / month", "5 websites", "5 team members", "1,000 tracked keywords, checked weekly", "AI Visibility", "Backlink research"}},
 		{"Agency", []string{"25,000 credits / month", "10 websites", "10 team members", "1,500 tracked keywords, checked weekly", "AI writing assistant", "White-label reports"}},

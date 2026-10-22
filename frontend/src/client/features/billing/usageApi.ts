@@ -5,7 +5,6 @@ import { apiRequest, shouldRetryApiError } from "@/client/lib/uplumoApi";
 const featureSchema = z.enum([
   "rank_tracking",
   "keyword_research",
-  "local_seo",
   "domain_research",
   "backlinks",
   "ai_visibility",
@@ -49,7 +48,6 @@ export type BillingUsage = z.infer<typeof usageSchema>;
 const FEATURE_LABELS: Record<CreditFeature | "other", string> = {
   rank_tracking: "Rank tracking",
   keyword_research: "Keyword research",
-  local_seo: "Local SEO",
   domain_research: "Domain research",
   backlinks: "Backlinks",
   ai_visibility: "AI Visibility",

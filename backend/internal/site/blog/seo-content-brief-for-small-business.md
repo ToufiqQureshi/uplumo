@@ -66,7 +66,7 @@ An AI tool can help with structure, examples and editing. A person still needs t
 - Service connection and limitations:
 - Reviewer and metric:
 
-For the writing itself, see [service page structure](/blog/service-pages-that-rank-and-convert), [how to research local keywords](/blog/keyword-research-for-local-businesses) and [when to improve an old post](/blog/refresh-old-blog-posts-that-lost-traffic).
+For the writing itself, see [service page structure](/blog/service-pages-that-rank-and-convert) and [when to improve an old post](/blog/refresh-old-blog-posts-that-lost-traffic).
 
 ## Example outline: a useful local service guide
 

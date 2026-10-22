@@ -26,7 +26,7 @@ type ActionCost struct {
 // click), not taken from a price list, because one click buys several tasks:
 // a keyword search is suggestions, ideas and a SERP; a domain report is a rank
 // overview and its keyword rows; a backlink report is a summary and its rows;
-// a 3x3 map grid is nine searches of $0.002; a brand lookup is six AI-mentions
+// a brand lookup is six AI-mentions
 // tasks (two platforms of search $0.151, aggregated $0.101, top pages $0.101).
 var typicalUSD = []struct {
 	feature spend.Feature
@@ -36,7 +36,6 @@ var typicalUSD = []struct {
 }{
 	{spend.RankTracking, "", "keyword check (top 30, scheduled)", dataforseo.SerpCostUSD(30, true)},
 	{spend.KeywordResearch, "", "keyword search", 0.047},
-	{spend.LocalSEO, "", "3×3 map grid (9 searches)", 0.021},
 	{spend.DomainResearch, "", "domain report tab", 0.031},
 	// Summary $0.024 + history $0.024 + the first 1,000 table rows $0.06.
 	{spend.Backlinks, "", "backlink report", 0.108},

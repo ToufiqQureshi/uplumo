@@ -141,8 +141,8 @@ func TestFeaturesListsEveryPaidFeatureOnce(t *testing.T) {
 		}
 		seen[f] = true
 	}
-	if len(seen) != 9 {
-		t.Fatalf("Features() has %d features, want 9", len(seen))
+	if len(seen) != 8 {
+		t.Fatalf("Features() has %d features, want 8", len(seen))
 	}
 }
 

@@ -17,7 +17,6 @@ func TestTypicalCostHintsAreNotBelowWhatALiveClickBilled(t *testing.T) {
 		// 21 Oct: summary 0.024036 + history 0.024432 + a 1,000-row table at the
 		// measured $0.024 + $0.000036 a row (200 rows billed 0.0312).
 		string(spend.Backlinks): 0.024036 + 0.024432 + 0.024 + 1000*0.000036,
-		string(spend.LocalSEO):  9 * 0.002, // nine maps searches
 		// Brand lookup, 16 Oct: mentions search 2 x 0.151, aggregated 2 x 0.101, top pages 2 x 0.101.
 		string(spend.AIVisibility) + ":" + ActionBrandLookup: 2*0.151 + 2*0.101 + 2*0.101,
 	}

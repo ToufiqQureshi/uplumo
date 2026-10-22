@@ -10,7 +10,7 @@ export const project = {
 };
 
 export const paidEndpoints =
-  /content\/brief|assistant\/generate|keywords\/research|domain|backlinks|brand|prompt|rank|local-seo/u;
+  /content\/brief|assistant\/generate|keywords\/research|domain|backlinks|brand|prompt|rank/u;
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);

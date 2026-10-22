@@ -11,7 +11,7 @@ func toolFeature(name string) (plans.Feature, bool) {
 		"get_audit_issues", "delete_site_audit", "run_site_audit", "list_saved_keywords",
 		"save_keywords", "remove_saved_keywords", "save_report", "list_reports", "get_report",
 		"delete_report", "set_report_sharing", "list_report_templates", "save_report_template",
-		"delete_report_template", "list_business_categories":
+		"delete_report_template":
 		return "", true
 	case "get_backlinks_overview", "get_backlinks_profile":
 		return plans.Backlinks, true
@@ -27,9 +27,7 @@ func toolFeature(name string) (plans.Feature, bool) {
 	case "create_rank_tracker", "estimate_rank_tracker_cost", "run_rank_tracker", "get_rank_tracker",
 		"add_rank_tracking_keywords", "remove_rank_tracking_keywords":
 		return plans.RankTracking, true
-	case "research_keywords", "get_keyword_metrics", "get_serp_results", "get_local_serp_results",
-		"get_google_business_questions", "search_local_businesses", "get_business_profile",
-		"get_business_reviews", "get_business_updates", "get_local_rank_grid":
+	case "research_keywords", "get_keyword_metrics", "get_serp_results":
 		return plans.Keywords, true
 	default:
 		return "", false

@@ -8,6 +8,7 @@ Streams project-aware AI answers and tool actions with persisted sessions and cr
 
 ## Decisions to preserve
 
+- SAM is listed in the project sidebar under Home as "SAM assistant" with a "Beta" badge (`navigation/items.ts`), on the owner's decision; it was URL-only before while every plan already promised it. Opening the page still shows `SamBetaGate` first and buys nothing; credits are spent only when the user sends a message. _Why:_ a feature sold on the pricing page must be findable by non-technical owners.
 - Model/tool usage can incur variable cost; enforce per-turn/daily limits, reserve/settle credits and stop at the ceiling. _Why:_ This work consumes paid quota or shared capacity, so authorization and bounds must be checked before dispatch.
 - Tool arguments cannot choose another project or bypass project membership. _Why:_ Callers can tamper with IDs and UI state, so server-verified ownership must prevent cross-customer access.
 - Provider errors must preserve already-produced partial output while charging actual usage only. _Why:_ Unavailable or partial data is not a measured zero; keeping status visible prevents false customer decisions.

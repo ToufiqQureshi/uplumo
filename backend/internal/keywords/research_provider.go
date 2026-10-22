@@ -217,7 +217,7 @@ func (p DataForSEOProvider) post(ctx context.Context, org, path string, body any
 		return nil, fmt.Errorf("encode %s request: %w", path, err)
 	}
 	// Not retry-safe: a repeated billed call would be charged twice.
-	response, err := p.Client.Do(ctx, org, providerFeature(path), http.MethodPost, path, raw, false)
+	response, err := p.Client.Do(ctx, org, spend.KeywordResearch, http.MethodPost, path, raw, false)
 	if err != nil {
 		return nil, fmt.Errorf("DataForSEO %s: %w", path, err)
 	}
@@ -449,13 +449,4 @@ func str(s *string) string {
 		return ""
 	}
 	return *s
-}
-
-// providerFeature is what a shared provider call is spent on: the local
-// business and map endpoints are Local SEO, everything else keyword research.
-func providerFeature(path string) spend.Feature {
-	if strings.HasPrefix(path, "/v3/business_data/") || strings.Contains(path, "/maps/") || strings.Contains(path, "/local_finder/") {
-		return spend.LocalSEO
-	}
-	return spend.KeywordResearch
 }

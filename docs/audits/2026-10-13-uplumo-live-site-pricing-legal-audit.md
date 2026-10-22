@@ -13,17 +13,17 @@
 
 ## Tested flows
 
-| Area | Result |
-|---|---|
-| Public home/pricing | Main destinations inspected; five FAQ disclosures on each page opened and showed answers. Home “Start free” reached sign-up. |
-| Sign-up | Email form opened; empty and malformed email, short password, and mismatched passwords produced visible inline errors. Back to signup worked. |
-| Sign-in/reset | Email sign-in form opened; empty submission showed errors. Forgot-password page opened; empty reset submission showed email validation. |
-| Public pages | About, Contact, Terms, Privacy, Refunds, and Delivery loaded. |
-| Mobile pricing | At 390 px width, no horizontal overflow; login/start links remained visible. |
-| Signed-in navigation | Dashboard, Analytics, Search Performance, Brand Lookup, Prompt Explorer, Content Editor, Rank Tracking, Local SEO, Site Audit, Saved Keywords, Keyword Research, Domain Overview, Backlinks, Reports, and Context opened. |
-| AI paid gate | Brand Lookup and Prompt Explorer eventually displayed a paid-plan upgrade screen in the current workspace. |
-| Billing | Billing and upgrade screens failed with repeated 503 responses. |
-| Project/Local SEO forms | New project dialog opened without submitting it. Local SEO controls enabled after test fields were filled; no provider request was run. |
+| Area                    | Result                                                                                                                                                                                                                    |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Public home/pricing     | Main destinations inspected; five FAQ disclosures on each page opened and showed answers. Home “Start free” reached sign-up.                                                                                              |
+| Sign-up                 | Email form opened; empty and malformed email, short password, and mismatched passwords produced visible inline errors. Back to signup worked.                                                                             |
+| Sign-in/reset           | Email sign-in form opened; empty submission showed errors. Forgot-password page opened; empty reset submission showed email validation.                                                                                   |
+| Public pages            | About, Contact, Terms, Privacy, Refunds, and Delivery loaded.                                                                                                                                                             |
+| Mobile pricing          | At 390 px width, no horizontal overflow; login/start links remained visible.                                                                                                                                              |
+| Signed-in navigation    | Dashboard, Analytics, Search Performance, Brand Lookup, Prompt Explorer, Content Editor, Rank Tracking, Local SEO, Site Audit, Saved Keywords, Keyword Research, Domain Overview, Backlinks, Reports, and Context opened. |
+| AI paid gate            | Brand Lookup and Prompt Explorer eventually displayed a paid-plan upgrade screen in the current workspace.                                                                                                                |
+| Billing                 | Billing and upgrade screens failed with repeated 503 responses.                                                                                                                                                           |
+| Project/Local SEO forms | New project dialog opened without submitting it. Local SEO controls enabled after test fields were filled; no provider request was run.                                                                                   |
 
 **Coverage limit:** I did not verify Google OAuth, account/email creation, real reset email, actual payment/refund/cancellation, paid AI answers, paid SEO and Maps data, audit jobs, tracker installation, exports with data, invitations, or account deletion. Those need a safe test account, a payment sandbox, and a controlled provider budget. This review does not establish that every button works. Brief loading/blank states on some app routes resolved after waiting and are not recorded as defects.
 
@@ -48,20 +48,20 @@ The current workspace can open a New project form. The Local SEO screen has pote
 
 Charge per **workspace per month**. An active site means a verified root domain/property. Prevent repeated domain replacement from bypassing the allowance. These numbers are initial product limits; validate provider invoices and margins before publishing them.
 
-| Capability | Basic ₹899 | Pro ₹1,899 | Agency ₹4,999 |
-|---|---:|---:|---:|
-| Active sites | **1** | **3** | **10** |
-| Team seats | 1 | 2 | 5 |
-| First-party website analytics | Included | Included | Included |
-| Connected Google Search Console performance | Included | Included | Included |
-| Technical site audit | 1 run/week, 100 URLs | Weekly, 500 URLs/site | Weekly, 1,000 URLs/site |
-| Search/analytics history | 90 days | 12 months | 24 months |
-| Paid rank checks | None | 50 tracked keywords/week/workspace | 250 tracked keywords/week/workspace |
-| Paid keyword/domain/backlink lookups | None | Small monthly shared allowance based on actual unit cost | Larger shared allowance based on actual unit cost |
-| AI visibility, Brand Lookup, Prompt Explorer | None | 60 prompt-provider checks/month/workspace | 300 checks/month/workspace |
-| AI writing/assistant actions | None | 20/month/workspace | 100/month/workspace |
-| Reports | Standard report | Scheduled report | White-label client reports |
-| Paid Local SEO/Maps requests | None | Add only after measured unit economics | Explicit capped pool after measured unit economics |
+| Capability                                   |           Basic ₹899 |                                               Pro ₹1,899 |                                      Agency ₹4,999 |
+| -------------------------------------------- | -------------------: | -------------------------------------------------------: | -------------------------------------------------: |
+| Active sites                                 |                **1** |                                                    **3** |                                             **10** |
+| Team seats                                   |                    1 |                                                        2 |                                                  5 |
+| First-party website analytics                |             Included |                                                 Included |                                           Included |
+| Connected Google Search Console performance  |             Included |                                                 Included |                                           Included |
+| Technical site audit                         | 1 run/week, 100 URLs |                                    Weekly, 500 URLs/site |                            Weekly, 1,000 URLs/site |
+| Search/analytics history                     |              90 days |                                                12 months |                                          24 months |
+| Paid rank checks                             |                 None |                       50 tracked keywords/week/workspace |                250 tracked keywords/week/workspace |
+| Paid keyword/domain/backlink lookups         |                 None | Small monthly shared allowance based on actual unit cost |  Larger shared allowance based on actual unit cost |
+| AI visibility, Brand Lookup, Prompt Explorer |                 None |                60 prompt-provider checks/month/workspace |                         300 checks/month/workspace |
+| AI writing/assistant actions                 |                 None |                                       20/month/workspace |                                100/month/workspace |
+| Reports                                      |      Standard report |                                         Scheduled report |                         White-label client reports |
+| Paid Local SEO/Maps requests                 |                 None |                   Add only after measured unit economics | Explicit capped pool after measured unit economics |
 
 **Basic must still be useful:** traffic, Search Console queries/pages, and a limited but actionable site audit let a single-site owner do real SEO work without third-party SEO-data or LLM spend. Search Console still has per-site/user/project API quotas, so schedule/cache reads and monitor them ([official limits](https://developers.google.com/webmaster-tools/limits)).
 

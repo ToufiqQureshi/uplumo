@@ -12,37 +12,37 @@ Client folders below are under `frontend/src/client/features`; Go packages are
 under `backend/internal`. PG means Postgres. Each row identifies the actual
 implementation, including composed screens that need no separate backend.
 
-| Client feature | Go implementation / API family | Persistence and dependencies | Finding |
-| --- | --- | --- | --- |
-| ai-mcp | `mcp`, OAuth, settings API keys | PG grants/tokens/API keys; tools delegate to services | Setup UI, not a duplicate data backend |
-| ai-search | `aisearch`, keyword provider | PG tracked prompts/jobs; Redis lookup/history; paid providers | Wired; keep explicit paid actions |
-| analytics | `analytics` | PG sites/pageviews/events/browser registry; Redis salts/rates | Wired including audience/clicks on the parent branch; not deployed by this review |
-| audit | `audit` | PG crawls/pages/issues; jobs; Redis progress/quota | Fixed false JavaScript-rendering capability |
-| auth | `emailauth`, `auth`, `apikeys` | PG sessions/users/orgs; email integration | BetterAuth client talks to Go; no TS server to delete |
-| backlinks | `backlinks`, `ahrefs` | Redis/provider cache; DataForSEO | Wired; provider/config gated |
-| billing | `billing`, `plans`, `razorpay` | PG subscriptions/credits/ledger/provider spend | Wired; live payment validation outside this review |
-| branding | `branding` | PG workspace settings | Wired; plan gated |
-| content-editor | `contenteditor`, `contentauthors`, `linksuggest` | PG drafts/authors/briefs; optional storage; paid AI/SERP | Wired; local score does not require paid AI |
-| crawler-access | `crawleraccess` | PG encrypted crawler credentials | Wired; secrets stay server-side |
-| dashboard | `dashboardoverview`, `activation`, `ga4` | Saved PG state; explicit provider refresh | Runtime review caught automatic paid refresh and missing plan gate; corrected with regression tests |
-| domain | `domain` | Redis cache; DataForSEO | Wired; explicit paid lookup |
-| gsc | `gsc`, `google` and search-performance | PG Google connections/property selection | Composed connection/re-engagement UI |
-| indexnow | `indexnow` | PG keys/submission history; Redis rate limit | Wired; submission is not proof of indexing |
-| integrations | `google`, `gsc`, `ga4` | PG OAuth grants/property mapping | Wired; requires authorized external accounts |
-| keywords | `keywords` | Redis/provider caches; DataForSEO; PG usage | Wired; paid research/SERP gates remain |
-| lighthouse | `audit` Lighthouse endpoints | PG saved payloads; PSI/CrUX; Redis quota/cache | Shares audit backend; no separate paid Lighthouse engine |
-| local-seo | `localseo`, keyword local provider | Provider/usage and credit boundaries; bounded grid | Wired; no new durable report store added by this review |
-| onboarding | `onboarding` | PG onboarding answers/state | Wired; optional connection steps |
-| projects | `projects`, `projectcontext` | PG projects/context | Wired; scoped to organization |
-| rank-tracking | `ranktracking` | PG configs/runs/results/tasks; jobs/scheduler | Wired; approved scheduled paid work |
-| reports | `reports` | PG templates/reports/shares; Go public rendering | Wired; public sharing is intentional |
-| sam | `sam`, registered MCP tools | PG sessions/messages; OpenRouter spend guard | Wired; per-turn lock currently assumes one server instance |
-| saved-keywords | `savedkeywords` | PG lists/keywords | Wired; distinct from paid keyword research |
-| search-performance | `gsc`, `ga4` growth | PG connections/baselines/report cache; Google APIs | Wired; not every native Google report is available via API/UI |
-| search-tabs | client navigation to feature queries | Uses underlying feature storage | Client controller; no independent server expected |
-| settings | `apikeys`, `branding`, `crawleraccess`, integrations | Underlying PG feature stores | Composed settings screen |
-| site-publishing | `sitepublish` | PG WordPress connections/publications | Wired; customer credentials/provider needed for live validation |
-| team | `team`, `auth` | PG org/membership/invitations; email | Wired; invitation delivery depends on configuration |
+| Client feature     | Go implementation / API family                       | Persistence and dependencies                                  | Finding                                                                                             |
+| ------------------ | ---------------------------------------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| ai-mcp             | `mcp`, OAuth, settings API keys                      | PG grants/tokens/API keys; tools delegate to services         | Setup UI, not a duplicate data backend                                                              |
+| ai-search          | `aisearch`, keyword provider                         | PG tracked prompts/jobs; Redis lookup/history; paid providers | Wired; keep explicit paid actions                                                                   |
+| analytics          | `analytics`                                          | PG sites/pageviews/events/browser registry; Redis salts/rates | Wired including audience/clicks on the parent branch; not deployed by this review                   |
+| audit              | `audit`                                              | PG crawls/pages/issues; jobs; Redis progress/quota            | Fixed false JavaScript-rendering capability                                                         |
+| auth               | `emailauth`, `auth`, `apikeys`                       | PG sessions/users/orgs; email integration                     | BetterAuth client talks to Go; no TS server to delete                                               |
+| backlinks          | `backlinks`, `ahrefs`                                | Redis/provider cache; DataForSEO                              | Wired; provider/config gated                                                                        |
+| billing            | `billing`, `plans`, `razorpay`                       | PG subscriptions/credits/ledger/provider spend                | Wired; live payment validation outside this review                                                  |
+| branding           | `branding`                                           | PG workspace settings                                         | Wired; plan gated                                                                                   |
+| content-editor     | `contenteditor`, `contentauthors`, `linksuggest`     | PG drafts/authors/briefs; optional storage; paid AI/SERP      | Wired; local score does not require paid AI                                                         |
+| crawler-access     | `crawleraccess`                                      | PG encrypted crawler credentials                              | Wired; secrets stay server-side                                                                     |
+| dashboard          | `dashboardoverview`, `activation`, `ga4`             | Saved PG state; explicit provider refresh                     | Runtime review caught automatic paid refresh and missing plan gate; corrected with regression tests |
+| domain             | `domain`                                             | Redis cache; DataForSEO                                       | Wired; explicit paid lookup                                                                         |
+| gsc                | `gsc`, `google` and search-performance               | PG Google connections/property selection                      | Composed connection/re-engagement UI                                                                |
+| indexnow           | `indexnow`                                           | PG keys/submission history; Redis rate limit                  | Wired; submission is not proof of indexing                                                          |
+| integrations       | `google`, `gsc`, `ga4`                               | PG OAuth grants/property mapping                              | Wired; requires authorized external accounts                                                        |
+| keywords           | `keywords`                                           | Redis/provider caches; DataForSEO; PG usage                   | Wired; paid research/SERP gates remain                                                              |
+| lighthouse         | `audit` Lighthouse endpoints                         | PG saved payloads; PSI/CrUX; Redis quota/cache                | Shares audit backend; no separate paid Lighthouse engine                                            |
+| local-seo          | `localseo`, keyword local provider                   | Provider/usage and credit boundaries; bounded grid            | Wired; no new durable report store added by this review                                             |
+| onboarding         | `onboarding`                                         | PG onboarding answers/state                                   | Wired; optional connection steps                                                                    |
+| projects           | `projects`, `projectcontext`                         | PG projects/context                                           | Wired; scoped to organization                                                                       |
+| rank-tracking      | `ranktracking`                                       | PG configs/runs/results/tasks; jobs/scheduler                 | Wired; approved scheduled paid work                                                                 |
+| reports            | `reports`                                            | PG templates/reports/shares; Go public rendering              | Wired; public sharing is intentional                                                                |
+| sam                | `sam`, registered MCP tools                          | PG sessions/messages; OpenRouter spend guard                  | Wired; per-turn lock currently assumes one server instance                                          |
+| saved-keywords     | `savedkeywords`                                      | PG lists/keywords                                             | Wired; distinct from paid keyword research                                                          |
+| search-performance | `gsc`, `ga4` growth                                  | PG connections/baselines/report cache; Google APIs            | Wired; not every native Google report is available via API/UI                                       |
+| search-tabs        | client navigation to feature queries                 | Uses underlying feature storage                               | Client controller; no independent server expected                                                   |
+| settings           | `apikeys`, `branding`, `crawleraccess`, integrations | Underlying PG feature stores                                  | Composed settings screen                                                                            |
+| site-publishing    | `sitepublish`                                        | PG WordPress connections/publications                         | Wired; customer credentials/provider needed for live validation                                     |
+| team               | `team`, `auth`                                       | PG org/membership/invitations; email                          | Wired; invitation delivery depends on configuration                                                 |
 
 Provider adapters, platform packages, jobs, privacy-erasure CLI and registered
 MCP tools need not have one matching sidebar page. Detailed GA4 reports exposed
