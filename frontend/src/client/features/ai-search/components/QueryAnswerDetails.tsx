@@ -14,7 +14,9 @@ export function QueryAnswerDetails({ query }: { query: TopQuery }) {
   const answer = query.answer?.trim();
   const pages = query.retrievedPages ?? [];
   const searches = query.fanOutQueries ?? [];
-  if (!answer && pages.length === 0 && searches.length === 0) return null;
+  const cited = query.citedSources ?? [];
+  const brands = query.brandsMentioned ?? [];
+  if (!answer && pages.length === 0 && searches.length === 0 && cited.length === 0 && brands.length === 0) return null;
 
   return (
     <details className="mt-2 rounded-md border bg-muted/30 p-2 text-sm">
@@ -22,9 +24,40 @@ export function QueryAnswerDetails({ query }: { query: TopQuery }) {
         See the AI answer
         {query.model ? ` (${query.model})` : ""}
         {pages.length > 0 ? ` · ${pages.length} pages it looked at` : ""}
+        {brands.length > 0 ? ` · ${brands.length} brands it named` : ""}
       </summary>
       <div className="mt-2 space-y-3">
         {answer ? <MarkdownAnswer text={answer} /> : null}
+        {brands.length > 0 ? (
+          <div>
+            <p className="text-xs font-medium">Brands the AI named alongside</p>
+            <ul className="mt-1 list-disc pl-5 text-xs text-muted-foreground">
+              {brands.slice(0, 10).map((brand) => (
+                <li key={brand}>{brand}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+        {cited.length > 0 ? (
+          <div>
+            <p className="text-xs font-medium">Sources the AI cited</p>
+            <ol className="mt-1 list-decimal space-y-1 pl-5 text-xs">
+              {cited.map((source) => (
+                <li key={source.url}>
+                  <a
+                    href={source.url}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="break-words font-medium underline underline-offset-2"
+                  >
+                    {source.title || formatUrlForDisplay(source.url)}
+                  </a>
+                  <span className="block text-muted-foreground">{source.domain}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        ) : null}
         {searches.length > 0 ? (
           <div>
             <p className="text-xs font-medium">Searches the AI ran</p>

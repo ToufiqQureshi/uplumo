@@ -37,6 +37,20 @@ Brand Lookup compares brand mentions and cited pages across supported answer eng
 - Keep history scoped by organization/project and every result-changing lookup option; show Analytics referrals as a separate measure from citations. _Why:_ Mixed scopes or metrics would produce misleading trends and could expose another project's data.
 - Treat the drop notice as an estimate and preserve the existing server-side plan gate. _Why:_ Provider estimates can change and a client-side paywall is not authorization.
 
+## Show the sources and brands each query cited
+
+- **Decision:** `QueryAnswerDetails` now renders `citedSources` (the pages the
+  AI cited) and `brandsMentioned` (brands named alongside) in the same
+  expandable detail that already shows the answer, retrieved pages and fan-out
+  queries.
+- **Why:** The backend returns these per query with the already-paid mention;
+  the UI hid them, so the customer lost the "who does the AI name instead of me"
+  evidence the lookup paid for.
+- **Preserve:** No paid call; old cached results (no citedSources/brandsMentioned)
+  still render; citation links use the same untrusted-URL handling as retrieved
+  pages (backend-safe URLs only).
+- **Trace:** `components/QueryAnswerDetails.tsx`, `types/schemas/ai-search.ts`.
+
 ## Verification pointers
 
 - `aiSearchApi.test.ts`
