@@ -41,3 +41,6 @@ DataForSEO SERP; Postgres configs/runs/tasks/snapshots; Redis jobs/locks; billin
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.
+
+
+- **Preserve retries across edits:** Live checks use a stable run/keyword/device hold identity, independent of the current config body. A retried pair cannot become a second billed lookup after a domain, location, language or depth edit.
