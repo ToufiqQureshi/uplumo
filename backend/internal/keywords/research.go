@@ -511,7 +511,7 @@ func (s *ResearchService) researchLocal(ctx context.Context, in ResearchInput) (
 	rows := make([]ResearchRow, len(result.Rows))
 	for i, r := range result.Rows {
 		l := local[r.Keyword]
-		r.SearchVolume, r.Trend, r.CPC, r.Competition = l.SearchVolume, nonNilMonths(l.Trend), l.CPC, l.Competition
+		r.SearchVolume, r.Trend, r.CPC, r.Competition, r.CompetitionLevel = l.SearchVolume, nonNilMonths(l.Trend), l.CPC, l.Competition, l.CompetitionLevel
 		rows[i] = r
 	}
 	result.Rows = rows
