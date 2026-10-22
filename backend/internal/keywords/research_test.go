@@ -202,6 +202,39 @@ func TestMetricsForListCoalescesConcurrentRequests(t *testing.T) {
 	}
 }
 
+func TestSerpSnapshotPersistsAndLoads(t *testing.T) {
+	f := newResearchFixture(t)
+	org := "org_serp_snapshot_" + f.project
+	if _, err := f.pool.Exec(t.Context(), `INSERT INTO organization (id, name, slug, created_at) VALUES ($1, 'SERP Snapshot Org', $1, now())`, org); err != nil {
+		t.Fatal(err)
+	}
+	// Deleting the organization cascades to the project and its snapshots.
+	t.Cleanup(func() {
+		_, _ = f.pool.Exec(context.WithoutCancel(context.Background()), `DELETE FROM organization WHERE id = $1`, org)
+	})
+	if _, err := f.pool.Exec(t.Context(), `INSERT INTO projects (id, organization_id, name) VALUES ($1, $2, 'Test')`, f.project, org); err != nil {
+		t.Fatal(err)
+	}
+	f.svc.DB = f.pool
+	snap := SerpAnalysis{RequestedKeyword: "seo", Items: []SerpResult{{Rank: 1, Domain: "a.com", Title: "A", URL: "https://a.com"}}, Depth: 20}
+	f.svc.saveSerpSnapshot(t.Context(), f.project, "seo", 2840, nil, "en", 20, snap)
+	got, ok := f.svc.loadSerpSnapshot(t.Context(), f.project, "seo", 2840, nil, "en", 20)
+	if !ok || got.Depth != 20 || len(got.Items) != 1 || got.Items[0].Domain != "a.com" {
+		t.Fatalf("loaded snapshot = %+v (ok=%v), want the persisted SERP", got, ok)
+	}
+	// A shallow request is answered by the deeper persisted snapshot.
+	if got, ok := f.svc.loadSerpSnapshot(t.Context(), f.project, "seo", 2840, nil, "en", 10); !ok || got.Depth != 20 {
+		t.Fatalf("shallow load = %+v (ok=%v), want the deeper snapshot", got, ok)
+	}
+	// A snapshot older than serpSnapshotMaxAge is not served.
+	if _, err := f.pool.Exec(t.Context(), `UPDATE go_keyword_serp_snapshots SET fetched_at = now() - interval '8 days' WHERE project_id = $1`, f.project); err != nil {
+		t.Fatal(err)
+	}
+	if got, ok := f.svc.loadSerpSnapshot(t.Context(), f.project, "seo", 2840, nil, "en", 20); ok {
+		t.Fatalf("expired snapshot was served: %+v", got)
+	}
+}
+
 func (f researchFixture) research(t *testing.T, mutate func(*ResearchInput)) (ResearchResult, error) {
 	t.Helper()
 	in := ResearchInput{OrganizationID: "org", ProjectID: f.project, Keywords: []string{"Seed"}, LocationCode: 2840, LanguageCode: "en", ResultLimit: 150, Mode: "auto"}

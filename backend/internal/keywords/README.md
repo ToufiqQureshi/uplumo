@@ -22,8 +22,12 @@
 
 `research`, `serp`, `saved/refresh` (billed, paid-plan gated when billing is wired), `saved/save|list|export|remove`, `saved/tags/assign|update|delete`.
 
-- Tables: `go_saved_keywords`, `go_saved_keyword_tags`, `go_saved_keyword_tag_assignments`, `go_keyword_metrics` (migration 00011).
-- Env: needs `DATAFORSEO_*` for research/serp; Redis for caches (research v7 24h, SERP 12h).
+- Tables: `go_saved_keywords`, `go_saved_keyword_tags`,
+  `go_saved_keyword_tag_assignments`, `go_keyword_metrics` (migration 00011)
+  and `go_keyword_serp_snapshots` (migration 00037).
+- Env: needs `DATAFORSEO_*` for research/serp; Redis for caches (research v7
+  24h, SERP 12h). On Redis SERP cache misses, Postgres can serve a non-empty
+  snapshot up to 7 days old without another provider charge.
 - Never break: validate before any provider call (failed tasks are billed); tag delete locks the tag so a concurrent assign cannot orphan rows; metrics persist under the requested language even when Labs served another.
 - Deliberate differences from legacy: NULL metrics sort last in saved lists; research language is normalized to the one Labs serves.
 

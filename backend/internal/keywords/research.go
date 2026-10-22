@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/market"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/spend"
@@ -141,6 +142,8 @@ type ResearchService struct {
 	Metrics  MetricStore
 	Logger   *slog.Logger
 	Now      func() time.Time
+	// DB persists SERP snapshots; nil skips persistence (tests without a DB).
+	DB *pgxpool.Pool
 	flights  singleflight.Group
 }
 

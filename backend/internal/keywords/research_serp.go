@@ -2,11 +2,15 @@ package keywords
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
 	"sync"
+	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/market"
 	"github.com/toufiqqureshi/uplumo/backend/internal/ranktracking"
 )
@@ -75,7 +79,6 @@ func (s *ResearchService) SerpAnalysis(ctx context.Context, in SerpAnalysisInput
 	if hit && cached.Depth >= in.Depth {
 		return cached, nil
 	}
-
 	if err := ctx.Err(); err != nil {
 		return SerpAnalysis{}, err
 	}
@@ -94,6 +97,10 @@ func (s *ResearchService) SerpAnalysis(ctx context.Context, in SerpAnalysisInput
 		if recentHit && recent.Depth >= in.Depth {
 			return recent, nil
 		}
+		if snap, ok := s.loadSerpSnapshot(sharedCtx, in.ProjectID, keyword, in.LocationCode, in.LocationName, in.LanguageCode, in.Depth); ok {
+			s.store(sharedCtx, key, snap, serpCacheTTL)
+			return snap, nil
+		}
 		raw, err := s.Data.SerpLive(sharedCtx, in.OrganizationID, SerpRequest{Keyword: keyword, LocationCode: in.LocationCode, LanguageCode: in.LanguageCode, LocationName: in.LocationName, Depth: in.Depth})
 		if err != nil {
 			return SerpAnalysis{}, err
@@ -105,8 +112,15 @@ func (s *ResearchService) SerpAnalysis(ctx context.Context, in SerpAnalysisInput
 			if recentHit && len(recent.Items) > 0 || hit && len(cached.Items) > 0 {
 				return result, nil
 			}
+			// Redis may be gone while Postgres still has a useful shallower crawl.
+			// Keep it available to future shallow requests instead of saving this
+			// transient empty deeper result as the best snapshot.
+			if persisted, ok := s.loadSerpSnapshot(sharedCtx, in.ProjectID, keyword, in.LocationCode, in.LocationName, in.LanguageCode, SerpShallowDepth); ok && len(persisted.Items) > 0 {
+				return result, nil
+			}
 		}
 		s.store(sharedCtx, key, result, serpCacheTTL)
+		s.saveSerpSnapshot(sharedCtx, in.ProjectID, keyword, in.LocationCode, in.LocationName, in.LanguageCode, in.Depth, result)
 		return result, nil
 	})
 	select {
@@ -117,6 +131,76 @@ func (s *ResearchService) SerpAnalysis(ctx context.Context, in SerpAnalysisInput
 			return SerpAnalysis{}, finished.Err
 		}
 		return finished.Val.(SerpAnalysis), nil
+	}
+}
+
+// serpSnapshotMaxAge is the longest a persisted SERP is served from Postgres.
+// Older rows are ignored on read and deleted on the next write, so a customer
+// cannot be shown months-old data with no way to refresh.
+const serpSnapshotMaxAge = 7 * 24 * time.Hour
+
+// snapshotLocationName separates city-level requests that share a country code.
+func snapshotLocationName(locationName *string) string {
+	if locationName == nil {
+		return ""
+	}
+	return strings.ToLower(strings.TrimSpace(*locationName))
+}
+
+// loadSerpSnapshot returns the deepest persisted snapshot at least as deep as
+// depth, or ok=false when none exists, it is older than serpSnapshotMaxAge, or
+// the DB is unavailable.
+func (s *ResearchService) loadSerpSnapshot(ctx context.Context, projectID, keyword string, locationCode int, locationName *string, languageCode string, depth int) (SerpAnalysis, bool) {
+	if s.DB == nil {
+		return SerpAnalysis{}, false
+	}
+	readCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	var itemsJSON []byte
+	var storedDepth int
+	err := s.DB.QueryRow(readCtx, `SELECT items, depth FROM go_keyword_serp_snapshots
+		WHERE project_id = $1 AND keyword = $2 AND location_code = $3 AND location_name = $4 AND language_code = $5 AND depth >= $6
+			AND fetched_at > $7
+		ORDER BY (jsonb_array_length(items) > 0) DESC, depth DESC LIMIT 1`, projectID, keyword, locationCode, snapshotLocationName(locationName), languageCode, depth,
+		time.Now().UTC().Add(-serpSnapshotMaxAge)).Scan(&itemsJSON, &storedDepth)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return SerpAnalysis{}, false
+	}
+	if err != nil {
+		s.Logger.WarnContext(readCtx, "read SERP snapshot", "err", err)
+		return SerpAnalysis{}, false
+	}
+	var items []SerpResult
+	if err := json.Unmarshal(itemsJSON, &items); err != nil {
+		s.Logger.WarnContext(readCtx, "decode SERP snapshot", "err", err)
+		return SerpAnalysis{}, false
+	}
+	return SerpAnalysis{RequestedKeyword: keyword, Items: items, Depth: storedDepth}, true
+}
+
+// saveSerpSnapshot persists a SERP snapshot best-effort: a DB failure must not
+// fail the answer the customer already paid for. It also deletes rows older than
+// serpSnapshotMaxAge so the table does not grow forever.
+func (s *ResearchService) saveSerpSnapshot(ctx context.Context, projectID, keyword string, locationCode int, locationName *string, languageCode string, depth int, snapshot SerpAnalysis) {
+	if s.DB == nil {
+		return
+	}
+	itemsJSON, err := json.Marshal(snapshot.Items)
+	if err != nil {
+		s.Logger.ErrorContext(ctx, "encode SERP snapshot", "err", err)
+		return
+	}
+	writeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 3*time.Second)
+	defer cancel()
+	if _, err := s.DB.Exec(writeCtx, `DELETE FROM go_keyword_serp_snapshots WHERE fetched_at < $1`,
+		time.Now().UTC().Add(-serpSnapshotMaxAge)); err != nil {
+		s.Logger.WarnContext(writeCtx, "delete expired SERP snapshots", "err", err)
+	}
+	if _, err := s.DB.Exec(writeCtx, `INSERT INTO go_keyword_serp_snapshots (project_id, keyword, location_code, location_name, language_code, depth, items)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		ON CONFLICT (project_id, keyword, location_code, location_name, language_code, depth) DO UPDATE SET items = EXCLUDED.items, fetched_at = now()`,
+		projectID, keyword, locationCode, snapshotLocationName(locationName), languageCode, depth, itemsJSON); err != nil {
+		s.Logger.WarnContext(writeCtx, "write SERP snapshot", "err", err)
 	}
 }
 
