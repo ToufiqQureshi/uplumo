@@ -7,7 +7,9 @@ type TopQuery = BrandLookupResult["topQueries"][number];
 function safeExternalHref(raw: string): string | null {
   try {
     const url = new URL(raw);
-    return url.protocol === "http:" || url.protocol === "https:"
+    return (url.protocol === "http:" || url.protocol === "https:") &&
+      !url.username &&
+      !url.password
       ? url.toString()
       : null;
   } catch {
