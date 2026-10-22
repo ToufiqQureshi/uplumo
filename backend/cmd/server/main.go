@@ -220,6 +220,7 @@ func run(logger *slog.Logger) (err error) {
 		locationSvc = keywords.NewLocationService(client, rdb, logger)
 		rankLocationChecker = ranktracking.RegistryChecker{Registry: locationSvc}
 		keywordResearch = keywords.NewResearchService(keywords.DataForSEOProvider{Client: client}, rdb, locationSvc, keywords.SavedRepository{DB: db}, logger)
+		keywordResearch.DB = db // persist SERP snapshots so a cache miss does not re-buy
 	} else {
 		logger.Warn("DATAFORSEO_API_KEY not set; AI search, backlinks and domain endpoints answer 503")
 	}

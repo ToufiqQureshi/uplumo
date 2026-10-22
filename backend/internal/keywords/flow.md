@@ -29,7 +29,11 @@ tasks, and only returned rows are billed. The location registry it reads is
 free and Redis-cached; if it fails, research runs unfiltered. SERP features per
 row come from `include_serp_info` in the same task.
 Research and SERP cache hits buy zero tasks; equivalent cold SERPs at the same
-depth share one task per server instance and organization.
+depth share one task per server instance and organization. After a SERP Redis
+miss, a fresh non-empty Postgres snapshot with sufficient depth can answer at
+zero provider cost. Hot Redis hits never query Postgres; empty deeper crawls do
+not replace useful shallower snapshots. Snapshot identity includes the local
+place as well as the country code.
 
 ## Failure, security and data invariants
 

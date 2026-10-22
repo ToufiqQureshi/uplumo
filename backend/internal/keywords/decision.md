@@ -78,6 +78,34 @@ DataForSEO; Google Ads for selected markets; Postgres saved rows; Redis caches; 
 - **Preserve:** The provider sees the original keyword slice, the result is not cached, and active shared work keeps its bounded timeout.
 - **Trace:** `metricsForList` and the existing shared-refresh regression.
 
+
+## Persist SERP snapshots so a cache miss does not re-buy
+
+- **Decision:** `SerpAnalysis` now persists each crawled SERP to
+  `go_keyword_serp_snapshots` (project/keyword/country/local-place/language/depth,
+  `items` jsonb, upsert) and, on a Redis cache miss, answers from the deepest
+  fresh, non-empty snapshot at least as deep as the request before buying again.
+  Local place is normalized into identity so cities sharing a country code never
+  share snapshots. Snapshots older
+  than `serpSnapshotMaxAge` (7 days) are ignored on read and deleted on the next
+  write, so a customer is never shown months-old data with no way to refresh.
+  Writes are best-effort with a short timeout; `DB` is nil-safe (tests without a
+  DB skip persistence).
+- **Why:** The SERP was Redis-only with a 12h TTL, so a user re-paid the full
+  depth crawl after it expired. Persisting the already-paid result removes that
+  repeat purchase.
+- **Preserve:** Tenant isolation by `project_id` (FK to `projects` with
+  `ON DELETE CASCADE`); RLS enabled with no policies and public/client grants
+  revoked; no new provider call, no billing/limit change; hot Redis hits do not
+  query Postgres; an empty deeper crawl never overwrites a useful shallower
+  persisted snapshot, even after Redis expiry.
+- **Indexing:** `fetched_at` is indexed because every write deletes expired
+  rows; the identity index serves reads.
+- **Trace:** `research_serp.go` (`loadSerpSnapshot`, `saveSerpSnapshot`),
+  `research.go` (new `DB` field), `cmd/server/main.go`, migration
+  `00037_keyword_serp_snapshots.sql`,
+  `research_test.go:TestSerpSnapshotPersistsAndLoads`.
+
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.
