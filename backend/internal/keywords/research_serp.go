@@ -182,13 +182,22 @@ func adsMetricRow(it AdsItem) metricRow {
 // fetch through the research singleflight group; the result is not cached
 // because a refresh is meant to buy fresh metrics.
 func (s *ResearchService) metricsForList(ctx context.Context, org string, keywords []string, locationCode int, languageCode string, locationName *string) ([]metricRow, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	canonicalKeywords := slices.Clone(keywords)
+	slices.Sort(canonicalKeywords)
+	canonicalKeywords = slices.Compact(canonicalKeywords)
 	key, err := s.cacheKey("kw:metrics:", map[string]any{
-		"org": org, "keywords": keywords, "location": locationCode, "language": languageCode, "locationName": locationName,
+		"org": org, "keywords": canonicalKeywords, "location": locationCode, "language": languageCode, "locationName": locationName,
 	})
 	if err != nil {
 		return nil, err
 	}
 	flight := s.flights.DoChan(key, func() (any, error) {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 		flightCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), flightTimeout)
 		defer cancel()
 		return s.metricsForListUncached(flightCtx, org, keywords, locationCode, languageCode, locationName)
