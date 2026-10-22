@@ -456,7 +456,7 @@ func (c *Checks) lookupAll(ctx context.Context, e *execution, pairs []pair) []pa
 		wg.Go(func() {
 			// A stable per-pair key means a crash between provider billing and
 			// snapshot persistence does not re-bill the pair when the job retries.
-			liveCtx := spend.WithIdempotencyKey(ctx, liveCheckIdempotencyKey(e.run.ID, p.keyword.ID, p.device))
+			liveCtx := spend.WithStableIdempotencyKey(ctx, liveCheckIdempotencyKey(e.run.ID, p.keyword.ID, p.device))
 			results[i].result, results[i].err = c.Serp.CheckLive(liveCtx, e.org, CheckRequest{
 				Keyword: p.keyword.Keyword, Device: p.device, LocationCode: e.cfg.LocationCode,
 				LanguageCode: e.cfg.LanguageCode, LocationName: e.cfg.LocationName, TargetDomain: e.cfg.Domain, Depth: e.cfg.SerpDepth,
