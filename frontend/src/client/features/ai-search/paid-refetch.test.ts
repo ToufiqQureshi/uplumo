@@ -70,6 +70,12 @@ vi.mock("@/client/hooks/usePromptExplorerSearchHistory", () => ({
     removeHistoryItem: vi.fn(),
   }),
 }));
+const projectMarket = vi.hoisted(() => ({
+  value: undefined as { locationCode: number } | undefined,
+}));
+vi.mock("@/client/features/projects/useProjectMarket", () => ({
+  useProjectMarket: () => projectMarket.value,
+}));
 vi.mock("@/client/hooks/useBrandLookupSearchHistory", () => ({
   useBrandLookupSearchHistory: () => ({
     history: [],
@@ -99,6 +105,7 @@ beforeEach(() => {
   });
   vi.mocked(lookupBrand).mockRejectedValue(new Error("provider unavailable"));
   vi.mocked(explorePrompt).mockRejectedValue(new Error("provider unavailable"));
+  projectMarket.value = undefined;
 });
 afterEach(() => {
   act(() => root.unmount());
@@ -119,6 +126,7 @@ it.each(["brand", "prompt"] as const)(
             initialQuery: "Acme",
             initialCompetitors: [],
             initialScope: undefined,
+            initialLocationCode: 2356,
             onSearchChange: vi.fn(),
           })
         : createElement(PromptExplorerPage, {
@@ -153,3 +161,49 @@ it.each(["brand", "prompt"] as const)(
     expect(request).toHaveBeenCalledTimes(1);
   },
 );
+
+function renderBrandLookup(initialLocationCode: number | undefined) {
+  act(() =>
+    root.render(
+      createElement(
+        QueryClientProvider,
+        { client },
+        createElement(BrandLookupPage, {
+          projectId: "p1",
+          initialQuery: "Acme",
+          initialCompetitors: [],
+          initialScope: undefined,
+          initialLocationCode,
+          onSearchChange: vi.fn(),
+        }),
+      ),
+    ),
+  );
+}
+
+it("buys a brand lookup for the chosen country in its language", async () => {
+  renderBrandLookup(2276);
+  await act(async () => {
+    await vi.waitFor(() => expect(lookupBrand).toHaveBeenCalledTimes(1));
+  });
+  expect(lookupBrand).toHaveBeenCalledWith(
+    expect.objectContaining({ locationCode: 2276, languageCode: "de" }),
+  );
+});
+
+it("never buys a lookup before it knows the country", async () => {
+  renderBrandLookup(undefined);
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  });
+  expect(lookupBrand).not.toHaveBeenCalled();
+
+  projectMarket.value = { locationCode: 2356 };
+  renderBrandLookup(undefined);
+  await act(async () => {
+    await vi.waitFor(() => expect(lookupBrand).toHaveBeenCalledTimes(1));
+  });
+  expect(lookupBrand).toHaveBeenCalledWith(
+    expect.objectContaining({ locationCode: 2356, languageCode: "en" }),
+  );
+});

@@ -26,8 +26,10 @@ type ActionCost struct {
 // click), not taken from a price list, because one click buys several tasks:
 // a keyword search is suggestions, ideas and a SERP; a domain report is a rank
 // overview and its keyword rows; a backlink report is a summary and its rows;
-// a brand lookup is six AI-mentions
-// tasks (two platforms of search $0.151, aggregated $0.101, top pages $0.101).
+// a brand lookup is the totals task
+// ($0.101) and one prompt sample ($0.10 + $0.001 a row; $0.143-0.182 measured
+// for an 80-mention brand). A brand AI never mentions stops after the totals
+// ($0.101); the US market adds ChatGPT's sample.
 var typicalUSD = []struct {
 	feature spend.Feature
 	action  string
@@ -40,7 +42,7 @@ var typicalUSD = []struct {
 	// Summary $0.024 + history $0.024 + the first 1,000 table rows $0.06.
 	{spend.Backlinks, "", "backlink report", 0.108},
 	{spend.AIVisibility, ActionPromptExplorer, "prompt on 4 AI models", 0.1},
-	{spend.AIVisibility, ActionBrandLookup, "brand lookup (more with competitors)", 0.71},
+	{spend.AIVisibility, ActionBrandLookup, "brand lookup (less when AI has no data, more with competitors)", 0.29},
 	{spend.AIAssistant, "", "AI assistant reply", 0.03},
 	{spend.AIWriting, "", "AI writing action", 0.01},
 }

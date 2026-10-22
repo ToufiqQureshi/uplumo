@@ -19,7 +19,7 @@ func lookupInput() BrandLookupInput {
 	return BrandLookupInput{Query: "acme.com", LocationCode: 2826, LanguageCode: "en"}
 }
 
-func TestBrandLookupFetchesBothPlatformsAndShapesTheResult(t *testing.T) {
+func TestBrandLookupBuysTotalsThenOnlyTheMarketsPlatform(t *testing.T) {
 	api := newFakeAPI(t)
 	svc := newTestService(t, api)
 
@@ -28,15 +28,22 @@ func TestBrandLookupFetchesBothPlatformsAndShapesTheResult(t *testing.T) {
 		t.Fatalf("BrandLookup() error = %v", err)
 	}
 
-	// 3 calls per platform, 2 platforms; no competitors means no cross call.
-	if got := api.total(); got != 6 {
-		t.Errorf("provider calls = %d, want 6", got)
+	// One totals call, then Google's sample and, as 5 mentions do not fit a
+	// 1-answer sample, its cited pages. ChatGPT is US-only and the market is
+	// the UK, so nothing is bought for it; no competitors, no comparison.
+	if got := api.total(); got != 3 {
+		t.Errorf("provider calls = %d, want 3", got)
 	}
-	if got := len(api.requestsTo(crossAggregatedPath)); got != 0 {
-		t.Errorf("cross-aggregated calls = %d, want 0 without competitors", got)
+	if got := len(api.requestsTo(targetMetricsPath)); got != 1 {
+		t.Errorf("totals calls = %d, want 1", got)
 	}
-	if got := api.recorder.count(); got != 6 {
-		t.Errorf("recorded costs = %d, want one per billed call (6)", got)
+	for _, r := range api.requests {
+		if strings.Contains(r.body, `"platform":"chat_gpt"`) {
+			t.Errorf("bought %s for ChatGPT outside its US market", r.path)
+		}
+	}
+	if got := api.recorder.count(); got != 3 {
+		t.Errorf("recorded costs = %d, want one per billed call (3)", got)
 	}
 	if !result.HasData || *result.TotalMentions != 5 || *result.TotalAISearchVolume != 50 {
 		// Location 2826 is not US, so ChatGPT's 10 mentions are left out.
@@ -45,8 +52,83 @@ func TestBrandLookupFetchesBothPlatformsAndShapesTheResult(t *testing.T) {
 	if result.ResolvedTarget != "acme.com" || *result.Scope != ScopeSubdomains || result.DetectedTargetType != "domain" {
 		t.Errorf("target = %q %v %q, want acme.com subdomains domain", result.ResolvedTarget, *result.Scope, result.DetectedTargetType)
 	}
-	if len(result.TopPages) != 2 || len(result.TopQueries) != 2 {
-		t.Errorf("topPages = %d, topQueries = %d, want 2 and 2 (one per platform)", len(result.TopPages), len(result.TopQueries))
+	if len(result.TopPages) != 1 || len(result.TopQueries) != 1 {
+		t.Errorf("topPages = %d, topQueries = %d, want 1 and 1 (Google only)", len(result.TopPages), len(result.TopQueries))
+	}
+	// The sites, search results and brands come with the totals call: shown, not re-bought.
+	if len(result.SourceSites) != 2 || result.SourceSites[0].Domain != "acme.com" || result.SourceSites[1].Domain != "tripadvisor.com" {
+		t.Errorf("SourceSites = %+v, want acme.com then tripadvisor.com without www.", result.SourceSites)
+	}
+	if len(result.RetrievedSites) != 1 || result.RetrievedSites[0].Domain != "g2.com" {
+		t.Errorf("RetrievedSites = %+v, want g2.com", result.RetrievedSites)
+	}
+	if len(result.BrandsAlongside) != 1 || result.BrandsAlongside[0].Name != "Rival" {
+		t.Errorf("BrandsAlongside = %+v, want Rival without the brand itself", result.BrandsAlongside)
+	}
+	if result.UnbrandedQuestions != 1 || result.BrandedQuestions != 0 || result.TopQueries[0].Branded {
+		t.Errorf("questions = %d branded, %d unbranded; want the one sample prompt unbranded", result.BrandedQuestions, result.UnbrandedQuestions)
+	}
+}
+
+func TestBrandLookupStopsAfterTheTotalsWhenAINeverMentionsTheBrand(t *testing.T) {
+	api := newFakeAPI(t)
+	api.on(targetMetricsPath, func(int, string) taskReply {
+		return okReply(map[string]any{"aggregated_metrics": map[string]any{"platform": []any{}, "total": map[string]any{"mentions": 0}}})
+	})
+	svc := newTestService(t, api)
+	in := lookupInput()
+	in.LocationCode = 2840
+
+	result, err := svc.BrandLookup(context.Background(), newOrg(), "p", in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if api.total() != 1 || result.HasData {
+		t.Fatalf("calls = %d, hasData = %v; want only the totals call and no data", api.total(), result.HasData)
+	}
+	if result.PerPlatform[0].Status != "success" || result.PerPlatform[1].Status != "success" {
+		t.Errorf("PerPlatform = %+v, want both platforms answered with no mentions", result.PerPlatform)
+	}
+}
+
+func TestBrandLookupBuildsCitedPagesFromACompleteSample(t *testing.T) {
+	api := newFakeAPI(t)
+	api.on(targetMetricsPath, func(int, string) taskReply {
+		return okReply(map[string]any{"aggregated_metrics": map[string]any{"platform": []any{
+			map[string]any{"key": platformGoogle, "mentions": 2, "ai_search_volume": 3000},
+		}}})
+	})
+	api.on(mentionsSearchPath, func(int, string) taskReply {
+		return okReply(map[string]any{"items": []any{
+			map[string]any{"question": "acme reviews", "ai_search_volume": 2000, "sources": []any{
+				map[string]any{"url": "https://acme.com/"}, map[string]any{"url": "https://acme.com/"},
+			}},
+			map[string]any{"question": "best seo tool", "ai_search_volume": 1000, "sources": []any{
+				map[string]any{"url": "https://acme.com/"}, map[string]any{"url": "https://review.site/acme"},
+			}},
+		}})
+	})
+	svc := newTestService(t, api)
+
+	result, err := svc.BrandLookup(context.Background(), newOrg(), "p", lookupInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := len(api.requestsTo(topPagesPath)); got != 0 || api.total() != 2 {
+		t.Fatalf("top_pages calls = %d, total = %d; want the 2-answer sample to replace the top_pages purchase", got, api.total())
+	}
+	if len(result.TopPages) != 2 || result.TopPages[0].URL != "https://acme.com/" || *result.TopPages[0].Mentions != 2 || *result.TopPages[0].CapturedVolume != 3000 {
+		t.Fatalf("TopPages = %+v, want acme.com/ cited by both answers (a page repeated in one answer counts once)", result.TopPages)
+	}
+	if result.BrandedQuestions != 1 || result.UnbrandedQuestions != 1 {
+		t.Errorf("questions = %d branded, %d unbranded; want 1 and 1", result.BrandedQuestions, result.UnbrandedQuestions)
+	}
+	var mentionBody []map[string]any
+	if err := json.Unmarshal([]byte(api.requestsTo(mentionsSearchPath)[0].body), &mentionBody); err != nil {
+		t.Fatal(err)
+	}
+	if order, _ := mentionBody[0]["order_by"].([]any); len(order) != 1 || order[0] != "ai_search_volume,desc" {
+		t.Errorf("mentions order_by = %v, want the most searched prompts first", mentionBody[0]["order_by"])
 	}
 }
 
@@ -59,23 +141,23 @@ func TestBrandLookupPreflightsWholeFanoutAndCacheHitHasNoHold(t *testing.T) {
 		t.Fatal(err)
 	}
 	held := guard.Held()
-	if want := 6 * dataforseo.AIMentionsCeilingUSD; len(held) != 1 || held[0].EstimateUSD != want {
-		t.Fatalf("holds = %+v; want one hold of six $0.25 mentions ceilings", held)
+	if want := 3 * dataforseo.AIMentionsCeilingUSD; len(held) != 1 || held[0].EstimateUSD != want {
+		t.Fatalf("holds = %+v; want one hold of three $0.25 mentions ceilings (totals, sample, pages)", held)
 	}
 	if _, err := svc.BrandLookup(context.Background(), org, "p", lookupInput()); err != nil {
 		t.Fatal(err)
 	}
 	settled := guard.Settled()
-	if len(guard.Held()) != 1 || api.total() != 6 || len(settled) != 1 {
+	if len(guard.Held()) != 1 || api.total() != 3 || len(settled) != 1 {
 		t.Fatalf("cache hit changed paid work: holds=%d settlements=%d calls=%d", len(guard.Held()), len(settled), api.total())
 	}
 }
 
 func TestConcurrentBrandLookupsSharePaidFanoutWithinOrganization(t *testing.T) {
 	api := newFakeAPI(t)
-	api.on(aggregatedPath, func(_ int, _ string) taskReply {
+	api.on(targetMetricsPath, func(_ int, _ string) taskReply {
 		time.Sleep(30 * time.Millisecond)
-		return defaultReply(aggregatedPath)
+		return defaultReply(targetMetricsPath)
 	})
 	svc := newTestService(t, api)
 	org := newOrg()
@@ -91,19 +173,19 @@ func TestConcurrentBrandLookupsSharePaidFanoutWithinOrganization(t *testing.T) {
 	}
 	close(start)
 	wg.Wait()
-	if got := api.total(); got != 6 {
-		t.Fatalf("provider calls = %d, want one six-call fanout", got)
+	if got := api.total(); got != 3 {
+		t.Fatalf("provider calls = %d, want one three-call fanout", got)
 	}
-	if got := api.recorder.count(); got != 6 {
-		t.Fatalf("recorded costs = %d, want six", got)
+	if got := api.recorder.count(); got != 3 {
+		t.Fatalf("recorded costs = %d, want three", got)
 	}
 }
 
 func TestConcurrentBrandLookupsDoNotShareAcrossOrganizations(t *testing.T) {
 	api := newFakeAPI(t)
-	api.on(aggregatedPath, func(_ int, _ string) taskReply {
+	api.on(targetMetricsPath, func(_ int, _ string) taskReply {
 		time.Sleep(30 * time.Millisecond)
-		return defaultReply(aggregatedPath)
+		return defaultReply(targetMetricsPath)
 	})
 	svc := newTestService(t, api)
 	start := make(chan struct{})
@@ -119,8 +201,8 @@ func TestConcurrentBrandLookupsDoNotShareAcrossOrganizations(t *testing.T) {
 	}
 	close(start)
 	wg.Wait()
-	if got := api.total(); got != 12 {
-		t.Fatalf("provider calls = %d, want a separate six-call fanout per organization", got)
+	if got := api.total(); got != 6 {
+		t.Fatalf("provider calls = %d, want a separate three-call fanout per organization", got)
 	}
 }
 
@@ -166,32 +248,44 @@ func TestBrandLookupRecordsMonthlyVisibilityHistoryWithoutExtraProviderCalls(t *
 }
 
 func TestBrandLookupAsksChatGPTForUSEnglishOnly(t *testing.T) {
+	bodies := func(api *fakeAPI, path string) []map[string]any {
+		var sent []map[string]any
+		for _, r := range api.requestsTo(path) {
+			var body []map[string]any
+			if err := json.Unmarshal([]byte(r.body), &body); err != nil {
+				t.Fatal(err)
+			}
+			sent = append(sent, body[0])
+		}
+		return sent
+	}
+
 	api := newFakeAPI(t)
 	svc := newTestService(t, api)
 	in := lookupInput()
 	in.LocationCode, in.LanguageCode = 2356, "hi"
-
 	if _, err := svc.BrandLookup(context.Background(), newOrg(), "p", in); err != nil {
 		t.Fatal(err)
 	}
+	totals := bodies(api, targetMetricsPath)
+	if len(totals) != 1 || totals[0]["location_code"] != 2356.0 || totals[0]["language_code"] != "hi" || totals[0]["platform"] != nil {
+		t.Fatalf("totals calls = %+v, want one for the market and every platform", totals)
+	}
+	for _, body := range bodies(api, mentionsSearchPath) {
+		if body["platform"] != platformGoogle || body["location_code"] != 2356.0 || body["language_code"] != "hi" {
+			t.Errorf("mentions call %v, want Google in the market only", body)
+		}
+	}
 
-	var sent []map[string]any
-	for _, r := range api.requestsTo(aggregatedPath) {
-		var body []map[string]any
-		if err := json.Unmarshal([]byte(r.body), &body); err != nil {
-			t.Fatal(err)
-		}
-		sent = append(sent, body[0])
+	us := newFakeAPI(t)
+	svc = newTestService(t, us)
+	in.LocationCode, in.LanguageCode = 2840, "en"
+	if _, err := svc.BrandLookup(context.Background(), newOrg(), "p", in); err != nil {
+		t.Fatal(err)
 	}
-	want := map[string][2]any{platformChatGPT: {2840.0, "en"}, platformGoogle: {2356.0, "hi"}}
-	for _, body := range sent {
-		platform := body["platform"].(string)
-		if body["location_code"] != want[platform][0] || body["language_code"] != want[platform][1] {
-			t.Errorf("%s asked for %v/%v, want %v", platform, body["location_code"], body["language_code"], want[platform])
-		}
-	}
-	if len(sent) != 2 {
-		t.Fatalf("aggregated calls = %d, want 2", len(sent))
+	sent := bodies(us, mentionsSearchPath)
+	if len(sent) != 2 || sent[0]["platform"] != platformChatGPT || sent[0]["location_code"] != 2840.0 || sent[0]["language_code"] != "en" {
+		t.Fatalf("US mentions calls = %+v, want ChatGPT then Google", sent)
 	}
 }
 
@@ -222,7 +316,7 @@ func TestBrandLookupScopesTheProviderTarget(t *testing.T) {
 			var body []struct {
 				Target []map[string]any `json:"target"`
 			}
-			if err := json.Unmarshal([]byte(api.requestsTo(aggregatedPath)[0].body), &body); err != nil {
+			if err := json.Unmarshal([]byte(api.requestsTo(targetMetricsPath)[0].body), &body); err != nil {
 				t.Fatal(err)
 			}
 			target := body[0].Target[0]
@@ -305,13 +399,6 @@ func TestBrandLookupDoesNotCachePartialResults(t *testing.T) {
 func TestBrandLookupReportsAFailedPlatformWithoutLosingTheOther(t *testing.T) {
 	api := newFakeAPI(t)
 	svc := newTestService(t, api)
-	failGoogle := func(_ int, body string) taskReply {
-		if strings.Contains(body, `"platform":"google"`) {
-			return failReply(50000, "Internal Error.")
-		}
-		return defaultReply(aggregatedPath)
-	}
-	api.on(aggregatedPath, failGoogle)
 	api.on(topPagesPath, func(_ int, body string) taskReply {
 		if strings.Contains(body, `"platform":"google"`) {
 			return failReply(50000, "Internal Error.")
@@ -340,7 +427,7 @@ func TestBrandLookupReportsAFailedPlatformWithoutLosingTheOther(t *testing.T) {
 
 func TestBrandLookupBillingIssueFailsTheLookup(t *testing.T) {
 	api := newFakeAPI(t)
-	api.on(aggregatedPath, func(int, string) taskReply { return failReply(40200, "Payment Required.") })
+	api.on(targetMetricsPath, func(int, string) taskReply { return failReply(40200, "Payment Required.") })
 	svc := newTestService(t, api)
 
 	_, err := svc.BrandLookup(context.Background(), newOrg(), "p", lookupInput())
@@ -365,8 +452,8 @@ func TestBrandLookupComparesCompetitors(t *testing.T) {
 	}
 
 	requests := api.requestsTo(crossAggregatedPath)
-	if len(requests) != 2 {
-		t.Fatalf("cross-aggregated calls = %d, want one per platform", len(requests))
+	if len(requests) != 1 {
+		t.Fatalf("cross-aggregated calls = %d, want one: Google only outside ChatGPT's US market", len(requests))
 	}
 	var body []struct {
 		Targets []struct {
@@ -414,19 +501,9 @@ func TestBrandLookupStopsWhenTheCallerGoesAway(t *testing.T) {
 
 func TestBrandLookupDoesNotCacheAnEmptyResult(t *testing.T) {
 	api := newFakeAPI(t)
-	empty := func(path string) func(int, string) taskReply {
-		return func(int, string) taskReply {
-			switch path {
-			case aggregatedPath:
-				return okReply(map[string]any{"total": map[string]any{"platform": []any{}}})
-			default:
-				return okReply(map[string]any{"items": []any{}})
-			}
-		}
-	}
-	for _, path := range []string{aggregatedPath, topPagesPath, mentionsSearchPath} {
-		api.on(path, empty(path))
-	}
+	api.on(targetMetricsPath, func(int, string) taskReply {
+		return okReply(map[string]any{"aggregated_metrics": map[string]any{"platform": []any{}}})
+	})
 	svc := newTestService(t, api)
 	org := newOrg()
 
@@ -580,7 +657,7 @@ func TestBrandLookupBillingIssueDuringShareOfVoiceFailsTheLookup(t *testing.T) {
 
 func TestBrandLookupAllSubCallsFailingMarksThePlatformFailed(t *testing.T) {
 	api := newFakeAPI(t)
-	for _, path := range []string{aggregatedPath, topPagesPath, mentionsSearchPath} {
+	for _, path := range []string{topPagesPath, mentionsSearchPath} {
 		api.on(path, func(_ int, body string) taskReply {
 			if strings.Contains(body, `"platform":"chat_gpt"`) {
 				return failReply(50000, "Internal Error.")

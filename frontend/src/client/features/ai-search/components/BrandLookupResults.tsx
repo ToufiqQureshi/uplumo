@@ -12,6 +12,10 @@ import { BrandLookupMentionTrendCard } from "@/client/features/ai-search/compone
 import { BrandLookupShareOfVoice } from "@/client/features/ai-search/components/BrandLookupShareOfVoice";
 import { CitationTabsCard } from "@/client/features/ai-search/components/BrandLookupCitationsCard";
 import {
+  BrandLookupInsights,
+  NoMentionsAdvice,
+} from "@/client/features/ai-search/components/BrandLookupInsights";
+import {
   formatCount,
   formatPlatformLabel,
   PLATFORM_DOT_CLASS,
@@ -22,6 +26,8 @@ import { RESEARCH_SCOPE_LABELS } from "@/shared/researchScope";
 type Props = {
   result: BrandLookupResult;
   projectId: string;
+  /** The country the lookup was for, e.g. "India". */
+  countryLabel: string;
 };
 
 type PlatformRow = BrandLookupResult["perPlatform"][number];
@@ -30,7 +36,7 @@ type MetricKey = "mentions" | "aiSearchVolume";
 const DOMAIN_LEVEL_TIP =
   "AI search providers report mentions per domain, not per page. This number covers the whole domain — the cited pages below are limited to your scope.";
 
-export function BrandLookupResults({ result, projectId }: Props) {
+export function BrandLookupResults({ result, projectId, countryLabel }: Props) {
   if (!result.hasData) {
     const erroredPlatforms = result.perPlatform.filter(
       (p) => p.status === "error",
@@ -58,6 +64,11 @@ export function BrandLookupResults({ result, projectId }: Props) {
             No AI mentions found for <strong>{result.resolvedTarget}</strong>.
           </AlertTitle>
         </Alert>
+        <NoMentionsAdvice
+          target={result.resolvedTarget}
+          countryLabel={countryLabel}
+          projectId={projectId}
+        />
         {erroredPlatforms.length > 0 ? (
           <p className="text-xs text-muted-foreground">
             Note:{" "}
@@ -100,6 +111,8 @@ export function BrandLookupResults({ result, projectId }: Props) {
           />
         ) : null}
       </div>
+
+      <BrandLookupInsights result={result} projectId={projectId} />
 
       <div className="px-4 pb-4">
         <CitationTabsCard result={result} projectId={projectId} />
@@ -203,7 +216,10 @@ function PlatformStatRow({
         />
         {formatPlatformLabel(row.platform)}
         {row.platform === "chat_gpt" ? (
-          <InfoTooltip text="DataForSEO indexes ChatGPT mentions for US English only — country selection is not available for this platform." />
+          <>
+            <span>(US)</span>
+            <InfoTooltip text="ChatGPT mention data covers US English answers only, whatever country you pick. Outside the US it is shown here but not added to the totals." />
+          </>
         ) : null}
         {row.status === "error" ? (
           <span className="text-destructive">unavailable</span>

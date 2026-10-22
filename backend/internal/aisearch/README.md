@@ -13,9 +13,17 @@ Analytics. Those site-wide visits are kept separate from citation counts and
 are not matched to specific cited URLs.
 Each top query keeps what the mentions call returns with it: the AI model, its
 full answer (6,000 characters), the pages it retrieved (20, with description)
-and the searches it ran (`TopQuery`, shown under "See the AI answer"). A real
-Brand Lookup is six tasks and bills about $0.71 (search $0.151 x2, aggregated
-$0.101 x2, top pages $0.101 x2); its hold is six AI-mentions ceilings of $0.25.
+and the searches it ran (`TopQuery`, shown under "See the AI answer"), plus
+`branded` (the question names the brand; `brand_terms.go`).
+Brand Lookup buys, in order: one `target_metrics` task (mentions per platform,
+`sourceSites`, `retrievedSites`, `brandsAlongside`); stop there when no
+platform has a mention; then per platform with mentions a prompt sample of up
+to 100 answers, most searched first; `top_pages` only when the sample cannot
+hold every answer (otherwise cited pages are counted from the sample). ChatGPT's
+data is US English only, so its sample and comparison are bought only for that
+market. Measured 22 Oct 2026 (India): dellaresorts.com 2 tasks, $0.283;
+revmerito.com (no mentions) 1 task, $0.101. Old flow: six tasks, about $0.71.
+The hold is one AI-mentions ceiling ($0.25) per possible task.
 A Prompt Explorer run holds $0.10 per model answer (twice that with web
 search, which may retry once); a real ChatGPT answer with web search bills $0.03.
 
@@ -53,8 +61,9 @@ not change shape.
   against the provider's free catalog, `web_search_country_iso_code` is dropped
   when web search is off, `force_web_search` goes to Claude only, and domains
   must end in a real public suffix.
-- Brand Lookup reserves the complete six-call fan-out before calling a
-  provider (eight when competitor comparisons are requested). Prompt Explorer
+- Brand Lookup reserves its largest possible fan-out before calling a
+  provider: 1 + 2 per bought platform, plus 1 per platform for competitor
+  comparisons (3-7 tasks). Prompt Explorer
   reserves every selected model and its bounded web-search retry up front.
   Successful paid results settle by the tasks' reported costs; failed tasks
   return their credits, and cache reads settle at zero.
@@ -67,8 +76,8 @@ not change shape.
   and it stops at the first failing call.
 - **Never cache a degraded result.** Brand lookups are cached 24 h only when
   every call succeeded and there is data; prompt answers 7 days, successes only.
-- Concurrent identical Brand Lookup cache misses share one six-call (or
-  competitor-expanded) fan-out within a server process. The key includes
+- Concurrent identical Brand Lookup cache misses share one fan-out within a
+  server process. The key includes
   organization and project; each caller keeps its own display query. This
   does not coordinate multiple server instances. Prompt Explorer similarly
   shares identical model-set requests before reserving paid answers; caller

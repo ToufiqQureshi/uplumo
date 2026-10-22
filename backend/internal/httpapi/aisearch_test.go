@@ -113,9 +113,10 @@ func TestAISearchEndToEnd(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("lookup status = %d, body %s", rec.Code, rec.Body)
 	}
-	// Three calls for each of the two platforms, all billed to the project's organization.
-	if got := usage(ownOrg); got != 6 {
-		t.Errorf("usage rows for the project's organization = %d, want 6", got)
+	// The fake provider has no mention of acme.com, so the lookup stops after
+	// its one totals task, billed to the project's organization.
+	if got := usage(ownOrg); got != 1 {
+		t.Errorf("usage rows for the project's organization = %d, want 1", got)
 	}
 	if got := usage(otherOrg); got != 0 {
 		t.Errorf("usage rows for another organization = %d, want 0", got)

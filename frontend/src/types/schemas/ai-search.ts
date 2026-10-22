@@ -125,6 +125,15 @@ const brandTopQuerySchema = z.object({
     .max(20)
     .optional(),
   fanOutQueries: z.array(z.string().max(500)).max(10).optional(),
+  // True when the question names the brand itself. Absent in results cached
+  // before the split existed.
+  branded: z.boolean().optional(),
+});
+
+const brandSiteSchema = z.object({
+  domain: z.string().max(253),
+  mentions: z.number().int().nonnegative().nullable(),
+  aiSearchVolume: z.number().int().nonnegative().nullable(),
 });
 
 const brandMonthlyVolumeSchema = z.object({
@@ -159,8 +168,25 @@ export const brandLookupResultSchema = z.object({
   // buildCacheKey comment in brandLookup.ts.
   shareOfVoice: brandShareOfVoiceSchema.nullable(),
   topPages: z.array(brandTopPageSchema).max(40),
-  topQueries: z.array(brandTopQuerySchema).max(50),
+  // Branded and unbranded prompts are capped separately (25 each per platform).
+  topQueries: z.array(brandTopQuerySchema).max(100),
   monthlyVolume: z.array(brandMonthlyVolumeSchema),
+  // Sites AI answers about the target cite, sites it retrieved, and brands it
+  // names alongside, from the same totals call. Defaulted for results cached
+  // before they were kept.
+  sourceSites: z.array(brandSiteSchema).max(10).default([]),
+  retrievedSites: z.array(brandSiteSchema).max(10).default([]),
+  brandsAlongside: z
+    .array(
+      z.object({
+        name: z.string().max(200),
+        mentions: z.number().int().nonnegative().nullable(),
+      }),
+    )
+    .max(10)
+    .default([]),
+  brandedQuestions: z.number().int().nonnegative().optional(),
+  unbrandedQuestions: z.number().int().nonnegative().optional(),
 });
 
 export type BrandLookupResult = z.infer<typeof brandLookupResultSchema>;
@@ -282,6 +308,8 @@ export type PromptExplorerResult = z.infer<typeof promptExplorerResultSchema>;
  */
 export const brandLookupSearchSchema = z.object({
   q: z.string().optional(),
+  // The country the lookup is for. Absent: the project's market.
+  loc: z.coerce.number().int().positive().optional().catch(undefined),
   scope: researchScopeSchema.optional().catch(undefined),
   c: z
     .union([z.string(), z.array(z.string())])

@@ -128,11 +128,24 @@ func defaultReply(path string) taskReply {
 				"brand_entities":   []any{map[string]any{"title": "Acme"}},
 			},
 		}})
-	case path == aggregatedPath:
-		return okReply(map[string]any{"total": map[string]any{"platform": []any{
-			map[string]any{"key": platformChatGPT, "mentions": 10, "ai_search_volume": 100},
-			map[string]any{"key": platformGoogle, "mentions": 5, "ai_search_volume": 50},
-		}}})
+	case path == targetMetricsPath:
+		return okReply(map[string]any{"aggregated_metrics": map[string]any{
+			"location": []any{map[string]any{"key": 2826, "mentions": 15}},
+			"platform": []any{
+				map[string]any{"key": platformChatGPT, "mentions": 10, "ai_search_volume": 100},
+				map[string]any{"key": platformGoogle, "mentions": 5, "ai_search_volume": 50},
+			},
+			"sources_domain": []any{
+				map[string]any{"key": "www.tripadvisor.com", "mentions": 3, "ai_search_volume": 30},
+				map[string]any{"key": "acme.com", "mentions": 4, "ai_search_volume": 40},
+			},
+			"search_results_domain": []any{map[string]any{"key": "www.g2.com", "mentions": 2, "ai_search_volume": 20}},
+			"brand_entities_title": []any{
+				map[string]any{"key": "Acme", "mentions": 5},
+				map[string]any{"key": "Rival", "mentions": 2},
+			},
+			"total": map[string]any{"mentions": 15, "ai_search_volume": 150},
+		}})
 	case path == topPagesPath:
 		return okReply(map[string]any{"items": []any{map[string]any{
 			"key": "https://acme.com/blog/post",

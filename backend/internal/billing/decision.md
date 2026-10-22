@@ -23,3 +23,16 @@ Postgres ledger/reservations/subscriptions; Razorpay adapter; plan catalog.
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.
+
+## Brand Lookup cost hint follows the leaner fan-out
+
+- **Decision:** The Brand Lookup typical cost is $0.29 (about 372 credits),
+  down from $0.71 (about 910).
+- **Why:** Brand Lookup now buys a `target_metrics` task and one prompt sample
+  instead of six tasks; measured 22 Oct 2026 at $0.283 for a brand with 82
+  mentions and $0.101 for one AI never mentions
+  (`../aisearch/decision.md`).
+- **Preserve:** The hint is never below a measured live click
+  (`costs_test.go`); holds still use per-task ceilings, so the hint is not a
+  spending limit.
+- **Trace:** `costs.go`, `costs_test.go`.

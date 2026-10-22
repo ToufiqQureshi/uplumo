@@ -14,7 +14,7 @@ import (
 
 const (
 	mentionsSearchPath  = "/v3/ai_optimization/llm_mentions/search/live"
-	aggregatedPath      = "/v3/ai_optimization/llm_mentions/aggregated_metrics/live"
+	targetMetricsPath   = "/v3/ai_optimization/llm_mentions/target_metrics/live"
 	topPagesPath        = "/v3/ai_optimization/llm_mentions/top_pages/live"
 	crossAggregatedPath = "/v3/ai_optimization/llm_mentions/cross_aggregated_metrics/live"
 
@@ -112,28 +112,39 @@ func items[T any](path string, results []json.RawMessage) ([]T, error) {
 	return first.Items, nil
 }
 
-// mentionsSearch returns the LLM answers that mention the target.
+// mentionsSearch returns the LLM answers that mention the target, most
+// searched first, so a capped sample keeps the prompts that matter.
 func (p *provider) mentionsSearch(ctx context.Context, q platformQuery, limit int) ([]mentionItem, error) {
-	results, err := p.post(ctx, q.organizationID, mentionsSearchPath, q.body(map[string]any{"limit": min(1000, max(1, limit))}))
+	results, err := p.post(ctx, q.organizationID, mentionsSearchPath, q.body(map[string]any{
+		"limit":    min(1000, max(1, limit)),
+		"order_by": []string{"ai_search_volume,desc"},
+	}))
 	if err != nil {
 		return nil, err
 	}
 	return items[mentionItem](mentionsSearchPath, results)
 }
 
-// aggregatedMetrics returns the target's totals per platform.
-func (p *provider) aggregatedMetrics(ctx context.Context, q platformQuery, listLimit int) (aggregatedTotal, error) {
-	results, err := p.post(ctx, q.organizationID, aggregatedPath, q.body(map[string]any{"internal_list_limit": min(20, max(1, listLimit))}))
+// targetMetrics returns, in one billed task, the target's mentions per
+// platform and the sites, search results and brands that come with them.
+// Without a platform the provider answers for every platform it has.
+func (p *provider) targetMetrics(ctx context.Context, organizationID string, target llmTarget, locationCode int, languageCode string) (targetMetricsResult, error) {
+	results, err := p.post(ctx, organizationID, targetMetricsPath, []map[string]any{{
+		"target":              []llmTarget{target},
+		"location_code":       locationCode,
+		"language_code":       languageCode,
+		"internal_list_limit": maxSitesPerList,
+	}})
 	if err != nil || len(results) == 0 {
-		return aggregatedTotal{}, err
+		return targetMetricsResult{}, err
 	}
 	var first struct {
-		Total aggregatedTotal `json:"total"`
+		Metrics targetMetricsResult `json:"aggregated_metrics"`
 	}
 	if err := json.Unmarshal(results[0], &first); err != nil {
-		return aggregatedTotal{}, fmt.Errorf("%s returned an invalid shape: %w", aggregatedPath, err)
+		return targetMetricsResult{}, fmt.Errorf("%s returned an invalid shape: %w", targetMetricsPath, err)
 	}
-	return first.Total, nil
+	return first.Metrics, nil
 }
 
 // topPages returns the pages the platform cites most for the target.
