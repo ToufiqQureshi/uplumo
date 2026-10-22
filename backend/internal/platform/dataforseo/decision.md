@@ -16,6 +16,24 @@ Sends validated paid task requests, parses provider responses and records usage 
 
 DataForSEO API, platform spend guard, Postgres usage ledger, Redis worker/cache as caller requires.
 
+## Charge billed "no search results" (40501) instead of refunding it
+
+- **Decision:** `responseSuccessfulCost` now treats a task with status 40501
+  ("No Search Results") as billable, alongside successful (2xxxx) tasks and
+  status 0. Other 4xxxx/5xxxx task errors still refund the customer and are
+  absorbed by Uplumo.
+- **Why:** 40501 is not a provider failure — it is a valid, billed empty answer
+  (a keyword that genuinely has no SERP, so the customer learns "not ranking").
+  Rank checks and keyword SERPs delivered that answer for free while Uplumo paid
+  the provider on every such lookup, a systematic undercharge on a common path.
+- **Preserve:** Genuine provider-billed failures keep refunding the customer;
+  provider cost is still recorded; the queued rank-check path (which charges at
+  post time) is unchanged; no new provider call or limit/price change.
+- **Trace:** `client.go` (`responseSuccessfulCost`, `billableTask`),
+  `client_test.go` (`TestResponseSuccessfulCostChargesSuccessfulAndNoResultTasks`,
+  `TestDoChargesForNoSearchResults`, and the two refund tests now use a real
+  failure code 40600 instead of 40501).
+
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.

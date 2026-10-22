@@ -90,7 +90,7 @@ func TestDoRefundsFailedTasksWhileRecordingProviderCost(t *testing.T) {
 		raw, _ := io.ReadAll(r.Body)
 		body = string(raw)
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = io.WriteString(w, `{"tasks":[{"path":["v3","serp","google","organic","live","advanced"],"cost":0.002,"status_code":40501}]}`)
+		_, _ = io.WriteString(w, `{"tasks":[{"path":["v3","serp","google","organic","live","advanced"],"cost":0.002,"status_code":40600}]}`)
 	}))
 	defer server.Close()
 	recorder := &testRecorder{}
@@ -117,7 +117,7 @@ func TestDoRefundsFailedTasksWhileRecordingProviderCost(t *testing.T) {
 
 func TestDoRecordsFailedTaskProviderCostAndRefundsCustomer(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = io.WriteString(w, `{"tasks":[{"path":["v3","serp"],"cost":0.002,"status_code":40501}]}`)
+		_, _ = io.WriteString(w, `{"tasks":[{"path":["v3","serp"],"cost":0.002,"status_code":40600}]}`)
 	}))
 	defer server.Close()
 	guard := &costAwareGuard{}
@@ -186,10 +186,25 @@ func TestDoBudgetedChargesNothingWhenNothingWasDelivered(t *testing.T) {
 	}
 }
 
-func TestResponseSuccessfulCostSettlesOnlySuccessfulTasks(t *testing.T) {
+func TestResponseSuccessfulCostChargesSuccessfulAndNoResultTasks(t *testing.T) {
 	payload := []byte(`{"tasks":[{"cost":0.002,"status_code":20000},{"cost":0.004,"status_code":20100},{"cost":0.01,"status_code":40501},{"cost":0.003,"status_code":0}]}`)
-	if got := math.Round(responseSuccessfulCost(payload)*1e6) / 1e6; got != 0.009 {
-		t.Fatalf("responseSuccessfulCost() = %v, want 0.009 including accepted queued task", got)
+	if got := math.Round(responseSuccessfulCost(payload)*1e6) / 1e6; got != 0.019 {
+		t.Fatalf("responseSuccessfulCost() = %v, want 0.019 including the billed 40501 no-search-results task", got)
+	}
+}
+
+func TestDoChargesForNoSearchResults(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = io.WriteString(w, `{"tasks":[{"path":["v3","serp"],"cost":0.002,"status_code":40501}]}`)
+	}))
+	defer server.Close()
+	guard := &costAwareGuard{}
+	client := guardedClient(t, server, &testRecorder{}, guard, 0)
+	if _, err := client.Do(context.Background(), "org-a", spend.RankTracking, http.MethodPost, "/v3/serp/live", []byte(`[]`), false); err != nil {
+		t.Fatal(err)
+	}
+	if guard.providerCost != 0.002 || guard.customerCost != 0.002 || guard.endpoint != "/v3/serp/live" {
+		t.Fatalf("provider/customer cost/endpoint = $%v/$%v/%q, want the billed 40501 charged", guard.providerCost, guard.customerCost, guard.endpoint)
 	}
 }
 

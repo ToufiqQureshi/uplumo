@@ -285,11 +285,20 @@ func responseSuccessfulCost(payload []byte) float64 {
 	}
 	var total float64
 	for _, task := range envelope.Tasks {
-		if (task.StatusCode == 0 || task.StatusCode >= 20000 && task.StatusCode < 30000) && task.Cost != nil && *task.Cost > 0 {
+		if billableTask(task.StatusCode) && task.Cost != nil && *task.Cost > 0 {
 			total += *task.Cost
 		}
 	}
 	return total
+}
+
+// billableTask reports whether a task's reported cost is charged to the
+// customer. Successful tasks and 40501 ("no search results", a valid empty
+// answer such as a keyword that genuinely has no SERP) are billable; other
+// 4xxxx/5xxxx task errors are provider-billed failures that refund the
+// customer and are absorbed by Uplumo.
+func billableTask(status int) bool {
+	return status == 0 || status >= 20000 && status < 30000 || status == 40501
 }
 
 // DoBudgetedRequest sends one request under its operation's existing hold.
