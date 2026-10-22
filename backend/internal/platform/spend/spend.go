@@ -79,9 +79,10 @@ type (
 // work has been held so far. It is shared by every context derived from the
 // one WithIdempotencyKey returned, so parallel legs of an action count together.
 type idempotencyScope struct {
-	key  string
-	mu   sync.Mutex
-	uses map[[sha256.Size]byte]int
+	key    string
+	stable bool
+	mu     sync.Mutex
+	uses   map[[sha256.Size]byte]int
 }
 
 // WithIdempotencyKey attaches the key of one user action (the browser's
@@ -90,6 +91,13 @@ type idempotencyScope struct {
 // one action can legitimately buy several different results.
 func WithIdempotencyKey(ctx context.Context, key string) context.Context {
 	return context.WithValue(ctx, idempotencyKeyContextKey{}, &idempotencyScope{key: key, uses: map[[sha256.Size]byte]int{}})
+}
+
+// WithStableIdempotencyKey attaches an immutable per-operation key. ScopedKey
+// derives one stable hold key from it and the provider method/path, intentionally
+// ignoring a mutable request body so a replay cannot buy changed work again.
+func WithStableIdempotencyKey(ctx context.Context, key string) context.Context {
+	return context.WithValue(ctx, idempotencyKeyContextKey{}, &idempotencyScope{key: key, stable: true})
 }
 
 // IdempotencyKeyFromContext reads the action key previously attached to ctx.
@@ -119,12 +127,21 @@ func ScopedKey(ctx context.Context, parts ...[]byte) string {
 	digest := sha256.New()
 	digest.Write([]byte(scope.key))
 	var length [binary.MaxVarintLen64]byte
-	for _, part := range parts {
+	partLimit := len(parts)
+	if scope.stable && partLimit > 2 {
+		// Stable operation IDs already identify one request in a run. Keep
+		// method and path in the key but omit mutable body fields.
+		partLimit = 2
+	}
+	for _, part := range parts[:partLimit] {
 		digest.Write(length[:binary.PutUvarint(length[:], uint64(len(part)))])
 		digest.Write(part)
 	}
 	var sum [sha256.Size]byte
 	digest.Sum(sum[:0])
+	if scope.stable {
+		return hex.EncodeToString(sum[:]) + ".0"
+	}
 	scope.mu.Lock()
 	occurrence := scope.uses[sum]
 	scope.uses[sum] = occurrence + 1
