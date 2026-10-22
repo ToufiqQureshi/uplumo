@@ -76,7 +76,7 @@ type ResearchRow struct {
 	DetectedLanguage *string `json:"detectedLanguage"`
 	WordsCount       *int    `json:"wordsCount"`
 	// SecondaryIntents are the intents secondary to the main one.
-	SecondaryIntents []string `json:"secondaryIntents"`
+	SecondaryIntents []string `json:"secondaryIntents,omitempty"`
 	// SerpFeatures are the result types Google shows for the keyword, such as
 	// ai_overview or local_pack: they tell the customer whether an article, a
 	// Google Business Profile or an AI answer is the way to win it.
