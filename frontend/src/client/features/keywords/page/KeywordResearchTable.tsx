@@ -201,13 +201,25 @@ export function KeywordResearchTable({
       }),
       keywordColumnHelper.accessor("referringDomains", {
         header: () => (
-          <span title="Average number of domains linking to the pages ranking on Google's first page. More links usually means harder to outrank.">
+          <span title="Average number of domains linking to the pages ranking on Google's first page. Hover a row for backlinks and referring pages.">
             Ref. domains
           </span>
         ),
-        cell: ({ row, getValue }) => {
+        cell: ({ row }) => {
           if (row.original.parentKeyword) return null;
-          return formatNumber(getValue());
+          const { referringDomains, backlinks, referringPages } = row.original;
+          const details = [
+            referringDomains != null ? `Ref. domains: ${referringDomains}` : null,
+            backlinks != null ? `Backlinks: ${backlinks}` : null,
+            referringPages != null ? `Referring pages: ${referringPages}` : null,
+          ]
+            .filter(Boolean)
+            .join(" · ");
+          return (
+            <span title={details || "No backlink benchmarks reported"}>
+              {formatNumber(referringDomains)}
+            </span>
+          );
         },
         meta: {
           headerClassName: "text-right",
@@ -215,17 +227,28 @@ export function KeywordResearchTable({
             "whitespace-nowrap text-right tabular-nums text-muted-foreground",
         },
       }),
-      keywordColumnHelper.accessor("quarterlyChange", {
+      keywordColumnHelper.display({
+        id: "trend",
         header: () => (
-          <span title="How search volume changed over the last 3 months.">
-            3-mo trend
+          <span title="How search volume changed over the last 3 months and 12 months.">
+            Trend
           </span>
         ),
-        cell: ({ row, getValue }) => {
+        cell: ({ row }) => {
           if (row.original.parentKeyword) return null;
-          const value = getValue();
-          if (value == null) return "-";
-          return `${value > 0 ? "+" : ""}${value}%`;
+          const fmt = (v: number | null | undefined) =>
+            v == null ? "-" : `${v > 0 ? "+" : ""}${v}%`;
+          const { quarterlyChange, yearlyChange } = row.original;
+          if (quarterlyChange == null && yearlyChange == null) return "-";
+          return (
+            <span title={`3-mo ${fmt(quarterlyChange)} · 12-mo ${fmt(yearlyChange)}`}>
+              {fmt(quarterlyChange)}
+              <span className="text-muted-foreground/60">
+                {" "}
+                / {fmt(yearlyChange)}
+              </span>
+            </span>
+          );
         },
         meta: {
           headerClassName: "text-right",

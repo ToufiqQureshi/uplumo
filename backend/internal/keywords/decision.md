@@ -70,6 +70,17 @@ DataForSEO; Google Ads for selected markets; Postgres saved rows; Redis caches; 
   three-letter guard each fail a test. Not yet verified on production (the
   production DataForSEO key returned 401 at the time of writing).
 
+## Verification
+
+Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.
+
+## Cancellation before a new paid operation
+
+- **Decision:** `Research` rechecks cancellation after `cached` and before `flights.DoChan`.
+- **Why:** Preparation could return a cache miss/project result after the caller left, and `context.WithoutCancel` then revived it into paid work.
+- **Preserve:** Active callers keep existing cache-outage fallback and tenant/cost checks. Already-registered bounded shared work can finish for other waiters; this does not add a retry, limit or pricing change.
+- **Trace:** `research_cancellation_test.go` interrupts the cache read and uses real saved-keyword test Postgres; the former billed suggestions call must remain at zero. Tests synchronize existing work before counting calls; see the shared [fixture decision](../platform/spend/spendtest/decision.md).
+
 ## Preserve paid benchmark, growth, language and freshness fields
 
 - **Decision:** Decode and deliver the `avg_backlinks_info` benchmarks
@@ -85,21 +96,13 @@ DataForSEO; Google Ads for selected markets; Postgres saved rows; Redis caches; 
   saved-keyword contract (saving keeps its smaller metric set). New row fields
   are optional in the frontend schema so results cached before this change still
   parse. Cache version 8 invalidates older snapshots, so a repeat search may buy
-  once more to recover the newly retained fields.
+  once more to recover the newly retained fields. The UI shows the 3-mo and
+  12-mo trend in one "Trend" cell and the backlinks/referring-pages benchmarks
+  in the Ref. domains tooltip; the rest stay export-only so the table is not
+  crowded.
 - **Trace:** `research_provider.go`, `research.go`,
   `research_provider_test.go` (`TestLabsItemPreservesPaidBenchmarkAndContextFields`,
   `TestForeignIntentsReadsStringAndList`, `TestAdsRowsPreserveTopBidsAndCompetitionLevel`),
   `frontend/src/client/features/keywords/{keywordsApi.ts,state/keywordControllerActions.ts,
   page/KeywordResearchTable.tsx,state/keyword-delivery.test.ts}` and
   `frontend/src/types/keywords.ts`.
-
-## Verification
-
-Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.
-
-## Cancellation before a new paid operation
-
-- **Decision:** `Research` rechecks cancellation after `cached` and before `flights.DoChan`.
-- **Why:** Preparation could return a cache miss/project result after the caller left, and `context.WithoutCancel` then revived it into paid work.
-- **Preserve:** Active callers keep existing cache-outage fallback and tenant/cost checks. Already-registered bounded shared work can finish for other waiters; this does not add a retry, limit or pricing change.
-- **Trace:** `research_cancellation_test.go` interrupts the cache read and uses real saved-keyword test Postgres; the former billed suggestions call must remain at zero. Tests synchronize existing work before counting calls; see the shared [fixture decision](../platform/spend/spendtest/decision.md).
