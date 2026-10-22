@@ -148,12 +148,20 @@ func run(logger *slog.Logger) (err error) {
 	}
 
 	credits := billing.NewCreditLedgerService(db)
-	go func() {
+	reconcileCredits := func() {
 		if expired, err := credits.ExpireCredits(ctx); err != nil {
 			logger.Error("expire billing credits", "err", err)
 		} else if expired > 0 {
 			logger.Info("expired billing credits", "credits", expired)
 		}
+		if refunded, err := credits.RefundStaleReservations(ctx); err != nil {
+			logger.Error("refund stale credit reservations", "err", err)
+		} else if refunded > 0 {
+			logger.Info("refunded stale credit reservations", "reservations", refunded)
+		}
+	}
+	go func() {
+		reconcileCredits()
 		timer := time.NewTicker(time.Hour)
 		defer timer.Stop()
 		for {
@@ -161,12 +169,7 @@ func run(logger *slog.Logger) (err error) {
 			case <-ctx.Done():
 				return
 			case <-timer.C:
-				expired, err := credits.ExpireCredits(ctx)
-				if err != nil {
-					logger.Error("expire billing credits", "err", err)
-				} else if expired > 0 {
-					logger.Info("expired billing credits", "credits", expired)
-				}
+				reconcileCredits()
 			}
 		}
 	}()

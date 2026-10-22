@@ -20,6 +20,23 @@ Owns plan access, credit ledger/reservations, subscriptions, usage and verified 
 
 Postgres ledger/reservations/subscriptions; Razorpay adapter; plan catalog.
 
+## Reconcile abandoned credit holds
+
+- **Decision:** The hourly credit worker now also calls
+  `RefundStaleReservations`, which refunds every `reserved` reservation older
+  than one hour (a crash between Hold and Settle/Refund) with reason "stale
+  reservation reconciliation".
+- **Why:** A hold deducts credits immediately and only Settle/Refund closes it.
+  A crash leaked the customer's credits forever and wedged the idempotency key
+  (a replay of the same key was refused), so the same work could never be
+  retried. Refunding stale holds restores the balance and re-enables the key.
+- **Preserve:** One-hour age is far longer than any legitimate hold (provider
+  timeout 60s, write timeout 150s); already-closed reservations are skipped;
+  the ledger keeps a `refund` row for audit; no pricing/limit change.
+- **Trace:** `credits.go` (`RefundStaleReservations`, `staleReservationAge`),
+  `cmd/server/main.go` (hourly `reconcileCredits`),
+  `credits_test.go:TestRefundStaleReservationsRestoresAbandonedHolds`.
+
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.

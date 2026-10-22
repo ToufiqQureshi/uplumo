@@ -737,6 +737,48 @@ func (s *CreditLedgerService) Refund(ctx context.Context, reservationID string, 
 	return tx.Commit(ctx)
 }
 
+// staleReservationAge is how long a hold may stay reserved before it is treated
+// as abandoned — the request crashed between Hold and Settle/Refund — and the
+// customer's credits are restored.
+const staleReservationAge = time.Hour
+
+// RefundStaleReservations refunds holds left reserved by a crash so the
+// customer's credits are restored and the idempotency key can be reused. It
+// returns the number of reservations refunded.
+func (s *CreditLedgerService) RefundStaleReservations(ctx context.Context) (int64, error) {
+	cutoff := time.Now().UTC().Add(-staleReservationAge)
+	rows, err := s.db.Query(ctx, `SELECT id FROM go_billing_credit_reservations WHERE status = 'reserved' AND created_at < $1 ORDER BY created_at`, cutoff)
+	if err != nil {
+		return 0, fmt.Errorf("list stale reservations: %w", err)
+	}
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return 0, fmt.Errorf("read stale reservation: %w", err)
+		}
+		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return 0, err
+	}
+	rows.Close()
+
+	var refunded int64
+	for _, id := range ids {
+		if err := s.Refund(ctx, id, "stale reservation reconciliation"); err != nil {
+			if errors.Is(err, ErrReservationAlreadyClosed) {
+				continue // another worker already closed it
+			}
+			return refunded, fmt.Errorf("refund stale reservation %s: %w", id, err)
+		}
+		refunded++
+	}
+	return refunded, nil
+}
+
 // FeatureSpend is the credits a workspace spent on one feature.
 type FeatureSpend struct {
 	Feature string `json:"feature"`

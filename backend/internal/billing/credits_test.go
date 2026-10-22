@@ -134,6 +134,37 @@ func TestRankQueuedRetryCanReserveAfterRefund(t *testing.T) {
 	}
 }
 
+func TestRefundStaleReservationsRestoresAbandonedHolds(t *testing.T) {
+	pool := setupTestDB(t)
+	ctx := t.Context()
+	svc := NewCreditLedgerService(pool)
+	orgID := "org_stale_hold_" + rand.Text()
+	if _, err := pool.Exec(ctx, `INSERT INTO organization (id, name, slug, created_at) VALUES ($1, 'Stale Hold Org', $1, now())`, orgID); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _, _ = pool.Exec(context.Background(), `DELETE FROM organization WHERE id = $1`, orgID) })
+	if err := svc.AddCredits(ctx, orgID, 100, "test grant"); err != nil {
+		t.Fatal(err)
+	}
+	res, err := svc.ReserveFor(ctx, orgID, 40, "stale-hold-key", "keyword_research")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `UPDATE go_billing_credit_reservations SET created_at = now() - interval '2 hours' WHERE id = $1`, res.ID); err != nil {
+		t.Fatal(err)
+	}
+	refunded, err := svc.RefundStaleReservations(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if refunded != 1 {
+		t.Fatalf("refunded = %d, want 1", refunded)
+	}
+	if balance, err := svc.GetBalance(ctx, orgID); err != nil || balance != 100 {
+		t.Fatalf("balance = %d, error = %v; want the hold restored", balance, err)
+	}
+}
+
 func TestSettleExpiresWorkspaceCreditsBeforeCharging(t *testing.T) {
 	pool := setupTestDB(t)
 	ctx := t.Context()
