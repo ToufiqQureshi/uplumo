@@ -2,6 +2,16 @@
 
 Brand Lookup compares brand mentions and cited pages across supported answer engines; Prompt Explorer runs a prompt against selected models.
 
+Brand Lookup runs for a chosen country (`loc` in the URL, default the
+project's market; the lookup waits for the market rather than buying the US).
+Its language is the country's default (`getLanguageCode`). ChatGPT data is US
+English only and is labelled "(US)". `components/BrandLookupInsights.tsx`
+turns the lookup into three answers: where AI recommends the business to people
+who did not search its name (unbranded prompts), the sites AI reads about it
+(`sourceSites`, the brand's own site left out) and the brands it names beside
+it, each with what to do; a lookup with no mentions shows three first steps and
+a link to the tracker. All of it comes with the lookup; nothing extra is bought.
+
 Paid Brand Lookup and Prompt Explorer queries disable automatic retries,
 window-focus refetch and reconnect refetch. Explicit Retry remains a new lookup;
 returning to a browser window must not repeat a failed paid action.

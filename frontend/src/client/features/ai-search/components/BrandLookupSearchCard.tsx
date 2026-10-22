@@ -6,6 +6,10 @@ import { Input } from "@/client/components/ui/input";
 import type { ResearchScope } from "@/shared/researchScope";
 import { BRAND_LOOKUP_MAX_INPUT_LENGTH } from "@/types/schemas/ai-search";
 import { CreditCostHint } from "@/client/features/billing/credits/CreditCostHint";
+import { LocationSelect } from "@/client/components/LocationSelect";
+
+/** ChatGPT's mentions data covers this market only (US). */
+const CHATGPT_LOCATION_CODE = 2840;
 
 type Props = {
   query: string;
@@ -13,6 +17,8 @@ type Props = {
   scope: ResearchScope;
   onScopeChange: (next: ResearchScope) => void;
   scopeDisabledReason: string | undefined;
+  locationCode: number;
+  onLocationChange: (next: number) => void;
   competitors: string;
   onCompetitorsChange: (next: string) => void;
   onSubmit: (event: FormEvent) => void;
@@ -21,12 +27,13 @@ type Props = {
 };
 
 /**
- * Adding competitors triggers 2 extra cross_aggregated_metrics calls (one per
- * platform), measured live at $0.101 each: about 260 credits (1 credit is
- * $1/1280 of provider cost). The base lookup's credits come from the usage
- * costs, as for every paid action, so the screen shows one number for it.
+ * Adding competitors adds one cross_aggregated_metrics call per platform
+ * bought, measured live at $0.101 each: about 130 credits (1 credit is
+ * $1/1280 of provider cost), 260 in the US, where ChatGPT is compared too.
+ * The base lookup's credits come from the usage costs, as for every paid
+ * action, so the screen shows one number for it.
  */
-const BRAND_LOOKUP_COMPETITOR_EXTRA_CREDITS = 260;
+const COMPETITOR_CREDITS_PER_PLATFORM = 130;
 
 export function BrandLookupSearchCard({
   query,
@@ -34,6 +41,8 @@ export function BrandLookupSearchCard({
   scope,
   onScopeChange,
   scopeDisabledReason,
+  locationCode,
+  onLocationChange,
   competitors,
   onCompetitorsChange,
   onSubmit,
@@ -74,7 +83,9 @@ export function BrandLookupSearchCard({
             {hasCompetitors ? (
               <p className="text-xs text-muted-foreground tabular-nums">
                 Comparing competitors adds about{" "}
-                {BRAND_LOOKUP_COMPETITOR_EXTRA_CREDITS} credits.
+                {COMPETITOR_CREDITS_PER_PLATFORM *
+                  (locationCode === CHATGPT_LOCATION_CODE ? 2 : 1)}{" "}
+                credits.
               </p>
             ) : null}
           </>
@@ -92,6 +103,11 @@ export function BrandLookupSearchCard({
           spellCheck={false}
         />
 
+        <LocationSelect
+          value={locationCode}
+          onChange={onLocationChange}
+          className="w-full lg:w-48"
+        />
         <ResearchScopeSelect
           value={scope}
           className="w-full lg:w-40"

@@ -9,6 +9,8 @@ const brandLookupSearchBodySchema = z.object({
   // Absent on entries saved before scopes existed, and on lookups that used
   // the query's default scope — both re-derive the default on restore.
   scope: researchScopeSchema.optional(),
+  // Absent on entries saved before the country could be chosen.
+  locationCode: z.number().int().positive().optional(),
 });
 
 export function useBrandLookupSearchHistory(projectId: string) {
@@ -20,6 +22,7 @@ export function useBrandLookupSearchHistory(projectId: string) {
     isSame: (a, b) =>
       a.query === b.query &&
       a.competitors.join(",") === b.competitors.join(",") &&
-      a.scope === b.scope,
+      a.scope === b.scope &&
+      a.locationCode === b.locationCode,
   });
 }

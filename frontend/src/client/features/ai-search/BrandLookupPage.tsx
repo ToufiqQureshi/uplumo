@@ -22,6 +22,12 @@ import {
   parseCompetitorList,
 } from "@/types/schemas/ai-search";
 import { detectTarget } from "@/shared/targetDetection";
+import { useProjectMarket } from "@/client/features/projects/useProjectMarket";
+import {
+  DEFAULT_LOCATION_CODE,
+  getLanguageCode,
+  LOCATIONS,
+} from "@/shared/keyword-locations";
 import {
   parseResearchTarget,
   RESEARCH_SCOPE_LABELS,
@@ -34,10 +40,13 @@ type Props = {
   initialQuery: string;
   initialCompetitors: string[];
   initialScope: ResearchScope | undefined;
+  /** The country in the URL; undefined means the project's market. */
+  initialLocationCode: number | undefined;
   onSearchChange: (
     nextQuery: string,
     nextCompetitors: string[],
     nextScope: ResearchScope | undefined,
+    nextLocationCode: number,
   ) => void;
 };
 
@@ -66,9 +75,19 @@ export function BrandLookupPage({
   initialQuery,
   initialCompetitors,
   initialScope,
+  initialLocationCode,
   onSearchChange,
 }: Props) {
   const planStatus = useHostedPlanGate();
+  const projectMarket = useProjectMarket(projectId);
+  // The lookup's country: the URL's, else the project's market. Undefined
+  // while the project list loads, so a paid lookup never runs for a country
+  // the customer did not mean.
+  const activeLocationCode = initialLocationCode ?? projectMarket?.locationCode;
+  // The country picked in the form; it applies on the next search.
+  const [locationChoice, setLocationChoice] = useState(initialLocationCode);
+  const formLocationCode =
+    locationChoice ?? activeLocationCode ?? DEFAULT_LOCATION_CODE;
   const [query, setQuery] = useState(initialQuery);
   // The user's explicit scope pick, or undefined to follow the input's default.
   const [scopeChoice, setScopeChoice] = useState<ResearchScope | undefined>(
@@ -112,10 +131,18 @@ export function BrandLookupPage({
       query: trimmedInitialQuery,
       competitors: competitorKey ? competitorKey.split(",") : [],
       scope: initialScope,
-      locationCode: 2840,
-      languageCode: "en",
+      locationCode: activeLocationCode ?? DEFAULT_LOCATION_CODE,
+      languageCode: getLanguageCode(
+        activeLocationCode ?? DEFAULT_LOCATION_CODE,
+      ),
     }),
-    [projectId, trimmedInitialQuery, competitorKey, initialScope],
+    [
+      projectId,
+      trimmedInitialQuery,
+      competitorKey,
+      initialScope,
+      activeLocationCode,
+    ],
   );
   const lookupQuery = useQuery({
     queryKey: [
@@ -124,12 +151,16 @@ export function BrandLookupPage({
       trimmedInitialQuery,
       competitorKey,
       initialScope ?? "",
+      activeLocationCode,
     ],
     queryFn: () => lookupBrand(lookupInput),
     // Client-side gate is a UX optimization only; the paywall is enforced
     // server-side (the Go API's plan check) before any DataForSEO spend,
     // so a stale free-plan window here just yields a rejected request, not cost.
-    enabled: hasActiveQuery && planStatus === "paid",
+    enabled:
+      hasActiveQuery &&
+      planStatus === "paid" &&
+      activeLocationCode !== undefined,
     staleTime: 5 * 60 * 1000,
     retry: false,
     refetchOnWindowFocus: false,
@@ -142,6 +173,7 @@ export function BrandLookupPage({
       trimmedInitialQuery,
       competitorKey,
       initialScope ?? "",
+      activeLocationCode,
     ],
     queryFn: () => getBrandVisibilityHistory(lookupInput),
     enabled: lookupQuery.isSuccess && planStatus === "paid",
@@ -223,13 +255,13 @@ export function BrandLookupPage({
       ? toScopeSearchParam(trimmed, selectedScope)
       : undefined;
     confirmCost.request(() =>
-      onSearchChange(trimmed, competitors, explicitScope),
+      onSearchChange(trimmed, competitors, explicitScope, formLocationCode),
     );
   };
 
   // The project is part of both keys, so switching projects resets the form
   // and records the search in the new project's history.
-  const historyKey = `${projectId}::${trimmedInitialQuery}::${competitorKey}::${initialScope ?? ""}`;
+  const historyKey = `${projectId}::${trimmedInitialQuery}::${competitorKey}::${initialScope ?? ""}::${activeLocationCode ?? ""}`;
 
   return (
     <ResearchPageShell
@@ -254,6 +286,8 @@ export function BrandLookupPage({
             }}
             scope={selectedScope}
             onScopeChange={setScopeChoice}
+            locationCode={formLocationCode}
+            onLocationChange={setLocationChoice}
             scopeDisabledReason={scopeDisabledReason}
             competitors={competitorsInput}
             onCompetitorsChange={(next) => {
@@ -277,6 +311,7 @@ export function BrandLookupPage({
         setQuery(initialQuery);
         setCompetitorsInput(competitorKey.split(",").join(", "));
         setScopeChoice(initialScope);
+        setLocationChoice(initialLocationCode);
         setValidationError(null);
       }}
       historyKey={historyKey}
@@ -285,6 +320,7 @@ export function BrandLookupPage({
           query: trimmedInitialQuery,
           competitors: competitorKey ? competitorKey.split(",") : [],
           scope: initialScope,
+          locationCode: activeLocationCode,
         })
       }
       backLink={
@@ -292,7 +328,12 @@ export function BrandLookupPage({
           from="/p/$projectId/brand-lookup"
           to="/p/$projectId/brand-lookup"
           params={{ projectId }}
-          search={{ q: undefined, c: undefined, scope: undefined }}
+          search={{
+            q: undefined,
+            c: undefined,
+            scope: undefined,
+            loc: undefined,
+          }}
           replace
         >
           Recent searches
@@ -300,7 +341,14 @@ export function BrandLookupPage({
       }
       renderResults={(result) => (
         <div className="space-y-4">
-          <BrandLookupResults result={result} projectId={projectId} />
+          <BrandLookupResults
+            result={result}
+            projectId={projectId}
+            countryLabel={
+              LOCATIONS[activeLocationCode ?? DEFAULT_LOCATION_CODE] ??
+              "this country"
+            }
+          />
           <BrandVisibilityHistoryCard
             projectId={projectId}
             snapshots={visibilityHistoryQuery.data}
@@ -329,9 +377,14 @@ export function BrandLookupPage({
             </>
           )}
           getSubtitle={(item) =>
-            item.competitors.length > 0
-              ? `vs ${item.competitors.join(", ")}`
-              : null
+            [
+              item.locationCode ? LOCATIONS[item.locationCode] : null,
+              item.competitors.length > 0
+                ? `vs ${item.competitors.join(", ")}`
+                : null,
+            ]
+              .filter(Boolean)
+              .join(" · ") || null
           }
           renderLink={(item, props) => (
             <Link
@@ -345,6 +398,7 @@ export function BrandLookupPage({
                     ? item.competitors.join(",")
                     : undefined,
                 scope: item.scope,
+                loc: item.locationCode,
               }}
               replace
               {...props}

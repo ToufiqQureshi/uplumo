@@ -6,6 +6,27 @@
 
 Brand Lookup compares brand mentions and cited pages across supported answer engines; Prompt Explorer runs a prompt against selected models.
 
+## Brand Lookup answers "does AI recommend me, and what do I fix"
+
+- **Decision:** Add a country picker (URL `loc`, default the project market,
+  language from the country), never run the lookup before the country is
+  known, show "Where AI recommends you" (unbranded prompts), "Sites AI reads
+  about you" (cited sites minus the brand's own) and "Brands AI names with you",
+  each with a plain next step, and a no-mentions panel with three first steps.
+  The competitor cost line reads 130 credits, 260 in the US.
+- **Why:** The page sent `locationCode: 2840` for every project, so an Indian
+  business saw US answers. The backend now returns the cited sites, co-mentioned
+  brands and a branded flag it used to drop (`backend/internal/aisearch/decision.md`).
+- **Preserve:** No paid retry/refetch; results cached before these fields
+  parse and render without the new sections; the brand's own domain is never
+  listed as a site to fix; the lookup is not enabled while the country is unknown.
+- **Trace:** `BrandLookupPage.tsx`, `components/BrandLookupSearchCard.tsx`,
+  `components/BrandLookupInsights.tsx` (+ test), `components/BrandLookupResults.tsx`,
+  `paid-refetch.test.ts`, `types/schemas/ai-search.ts`,
+  `client/hooks/useBrandLookupSearchHistory.ts`, the `brand-lookup` route.
+  Not checked in a browser against live data: production's DataForSEO key was
+  rejected and the provider account's daily limit was reached on 22 Oct.
+
 ## Decisions to preserve
 
 - **These lookups can incur paid provider cost: keep the server plan/cost gate and input validation before provider calls** _Why:_ This work consumes paid quota or shared capacity, so authorization and bounds must be checked before dispatch.
