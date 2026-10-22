@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/dataforseo"
 	"golang.org/x/sync/singleflight"
@@ -54,6 +56,7 @@ type Service struct {
 	now         func() time.Time
 	suggestions singleflight.Group
 	lookups     singleflight.Group
+	DB          *pgxpool.Pool
 }
 
 // NewService creates a service backed by the shared DataForSEO client and Redis.
@@ -188,6 +191,12 @@ func (s *Service) Overview(ctx context.Context, organizationID, projectID, rawDo
 		return OverviewResult{}, err
 	}
 	result, err := cachedDomainLookup(ctx, s, key, func(value OverviewResult) bool { return value.HasData }, func(shared context.Context) (OverviewResult, error) {
+		// This fallback runs only after both Redis reads miss; hot cache hits
+		// should not add a Postgres round trip.
+		if stored, ok := s.loadOverviewSnapshot(shared, organizationID, projectID, target.Hostname, locationCode, languageCode); ok && stored.HasData {
+			stored.Scope, stored.DisplayTarget = target.Scope, target.Display
+			return stored, nil
+		}
 		metrics, err := s.provider.overview(shared, organizationID, target.Hostname, locationCode, languageCode)
 		if err != nil {
 			return OverviewResult{}, err
@@ -204,10 +213,73 @@ func (s *Service) Overview(ctx context.Context, organizationID, projectID, rawDo
 			HasData:   keywords != nil && *keywords > 0,
 			FetchedAt: s.now().UTC().Format(time.RFC3339Nano),
 		}
+		if result.HasData {
+			s.saveOverviewSnapshot(shared, organizationID, projectID, target.Hostname, locationCode, languageCode, result)
+		}
 		return result, nil
 	})
 	result.Scope, result.DisplayTarget = target.Scope, target.Display
 	return result, err
+}
+
+// domainOverviewMaxAge is the longest a persisted overview is served from
+// Postgres. Older rows are ignored on read and deleted on the next write, so a
+// customer cannot be shown months-old data with no way to refresh.
+const domainOverviewMaxAge = 30 * 24 * time.Hour
+
+// loadOverviewSnapshot returns the persisted overview, or ok=false when none
+// exists, it is older than domainOverviewMaxAge, or the DB is unavailable.
+func (s *Service) loadOverviewSnapshot(ctx context.Context, organizationID, projectID, hostname string, locationCode int, languageCode string) (OverviewResult, bool) {
+	if s.DB == nil {
+		return OverviewResult{}, false
+	}
+	readCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	var payload []byte
+	err := s.DB.QueryRow(readCtx, `SELECT payload FROM go_domain_overviews
+		WHERE organization_id = $1 AND project_id = $2 AND hostname = $3 AND location_code = $4 AND language_code = $5
+			AND fetched_at > $6`,
+		organizationID, projectID, hostname, locationCode, languageCode,
+		time.Now().UTC().Add(-domainOverviewMaxAge)).Scan(&payload)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return OverviewResult{}, false
+	}
+	if err != nil {
+		s.logger.WarnContext(readCtx, "read domain overview snapshot", "err", err)
+		return OverviewResult{}, false
+	}
+	var out OverviewResult
+	if err := json.Unmarshal(payload, &out); err != nil {
+		s.logger.WarnContext(readCtx, "decode domain overview snapshot", "err", err)
+		return OverviewResult{}, false
+	}
+	return out, true
+}
+
+// saveOverviewSnapshot persists the overview best-effort: a DB failure must not
+// fail the answer the customer already paid for. It also deletes rows older than
+// domainOverviewMaxAge so the table does not grow forever.
+func (s *Service) saveOverviewSnapshot(ctx context.Context, organizationID, projectID, hostname string, locationCode int, languageCode string, value OverviewResult) {
+	if s.DB == nil {
+		return
+	}
+	payload, err := json.Marshal(value)
+	if err != nil {
+		s.logger.ErrorContext(ctx, "encode domain overview snapshot", "err", err)
+		return
+	}
+	writeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 2*time.Second)
+	defer cancel()
+	if _, err := s.DB.Exec(writeCtx, `DELETE FROM go_domain_overviews WHERE fetched_at < $1`,
+		time.Now().UTC().Add(-domainOverviewMaxAge)); err != nil {
+		s.logger.WarnContext(writeCtx, "delete expired domain overview snapshots", "err", err)
+	}
+	if _, err := s.DB.Exec(writeCtx, `INSERT INTO go_domain_overviews (organization_id, project_id, hostname, location_code, language_code, payload)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		ON CONFLICT (organization_id, project_id, hostname, location_code, language_code) DO UPDATE SET payload = EXCLUDED.payload, fetched_at = now()`,
+		organizationID, projectID, hostname, locationCode, languageCode, payload); err != nil {
+		s.logger.WarnContext(writeCtx, "write domain overview snapshot", "err", err)
+	}
 }
 
 // KeywordsPage returns sorted, filtered, paginated ranked keyword rows.

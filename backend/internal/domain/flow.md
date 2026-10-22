@@ -19,13 +19,16 @@ A cold overview buys one Labs overview task. Each distinct cold keyword-page
 or page-page request buys one task; sorting, filtering, paging and changing
 page size are distinct provider views. Equivalent concurrent requests to any
 of those three paths share one task within a server process. Redis cache hits
-buy zero tasks. An initial overview plus keyword tab can legitimately buy two
+buy zero tasks. On a Redis miss, a non-empty PostgreSQL overview snapshot up to
+30 days old also buys zero tasks; hot Redis hits do not query Postgres. An initial
+overview plus keyword tab can legitimately buy two
 different tasks; this is separate from duplicate identical purchases.
 
 `lookup.go` rechecks cancellation after the caller's cache read, then joins a
 bounded 90-second shared lookup and checks the cache again before purchasing.
 Individual callers can stop waiting without cancelling other waiters' work.
-Errors and empty overviews retain the existing no-persistent-cache policy.
+Errors and empty overviews retain the existing retry behavior; only non-empty
+overviews are saved in Postgres and served from that snapshot.
 
 ## Failure, security and data invariants
 

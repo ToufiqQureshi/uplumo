@@ -104,6 +104,23 @@ comparison and implementation of this supplemental field delivery remain open.
   `frontend/src/client/features/domain/{domainApi.ts,types.ts,
   components/DomainKeywordsTable.tsx,components/ResultTypeBadge.tsx}`.
 
+## Persist paid overviews without adding hot-cache database cost
+
+- **Decision:** Persist only non-empty overview results in
+  `go_domain_overviews`. Consult Postgres only after the initial and
+  singleflight Redis reads both miss; Redis hits remain one cache read. Serve
+  snapshots for at most 30 days.
+- **Why:** Reusing a paid overview avoids repeat provider spend after Redis TTL,
+  while a Postgres query on every hot hit would add latency and database load.
+  Empty results stay retryable because they can reflect transient provider data.
+- **Preserve:** Project and organization identity, market/language identity,
+  server-only RLS/revokes and project cascade. A Postgres failure falls back to
+  the provider and never fails an already-paid answer.
+- **Trace:** `service.go` (`Overview`, `loadOverviewSnapshot`),
+  `lookup.go`, `README.md`, `flow.md`,
+  `00039_domain_overviews.sql`, and
+  `service_persistence_test.go`.
+
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.
