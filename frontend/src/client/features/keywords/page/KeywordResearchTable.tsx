@@ -40,6 +40,11 @@ type Props = {
 
 const keywordColumnHelper = createColumnHelper<KeywordResearchDisplayRow>();
 
+/** A volume change in percent, signed, or "-" when unknown. */
+function formatChange(value: number | null | undefined): string {
+  return value == null ? "-" : `${value > 0 ? "+" : ""}${value}%`;
+}
+
 export function KeywordResearchTable({
   filteredRows,
   overviewKeyword,
@@ -240,18 +245,16 @@ export function KeywordResearchTable({
         ),
         cell: ({ row }) => {
           if (row.original.parentKeyword) return null;
-          const fmt = (v: number | null | undefined) =>
-            v == null ? "-" : `${v > 0 ? "+" : ""}${v}%`;
           const { quarterlyChange, yearlyChange } = row.original;
           if (quarterlyChange == null && yearlyChange == null) return "-";
           return (
             <span
-              title={`3-mo ${fmt(quarterlyChange)} · 12-mo ${fmt(yearlyChange)}`}
+              title={`3-mo ${formatChange(quarterlyChange)} · 12-mo ${formatChange(yearlyChange)}`}
             >
-              {fmt(quarterlyChange)}
+              {formatChange(quarterlyChange)}
               <span className="text-muted-foreground/60">
                 {" "}
-                / {fmt(yearlyChange)}
+                / {formatChange(yearlyChange)}
               </span>
             </span>
           );
