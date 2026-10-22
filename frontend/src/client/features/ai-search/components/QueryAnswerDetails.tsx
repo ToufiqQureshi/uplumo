@@ -16,7 +16,14 @@ export function QueryAnswerDetails({ query }: { query: TopQuery }) {
   const searches = query.fanOutQueries ?? [];
   const cited = query.citedSources ?? [];
   const brands = query.brandsMentioned ?? [];
-  if (!answer && pages.length === 0 && searches.length === 0 && cited.length === 0 && brands.length === 0) return null;
+  if (
+    !answer &&
+    pages.length === 0 &&
+    searches.length === 0 &&
+    cited.length === 0 &&
+    brands.length === 0
+  )
+    return null;
 
   return (
     <details className="mt-2 rounded-md border bg-muted/30 p-2 text-sm">
@@ -52,7 +59,9 @@ export function QueryAnswerDetails({ query }: { query: TopQuery }) {
                   >
                     {source.title || formatUrlForDisplay(source.url)}
                   </a>
-                  <span className="block text-muted-foreground">{source.domain}</span>
+                  <span className="block text-muted-foreground">
+                    {source.domain}
+                  </span>
                 </li>
               ))}
             </ol>
