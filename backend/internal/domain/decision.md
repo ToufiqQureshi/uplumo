@@ -59,9 +59,9 @@ metric leaf fields across the organic and paid objects. That describes schema
 coverage, not the proportion of useful populated data in any live response.
 
 **Options and scope:** UI ranked-keyword/pages requests omit `item_types`, so
-the documented default includes organic and paid. A future delivery fix must
-retain the result type or deliberately select and label the intended view;
-do not silently describe every returned row as organic. Clickstream is omitted
+the documented default includes organic and paid. Ranked keywords now retain
+their provider result type and intent, show both in the table, and include them
+in export; do not silently describe every returned row as organic. Clickstream is omitted
 (default false): its conditional normalized volumes, traffic and demographic
 fields are not purchased by these requests. Do not enable the documented double
 price to fill this audit. `load_rank_absolute` controls aggregate
