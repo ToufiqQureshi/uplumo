@@ -9,9 +9,9 @@ Every coding agent (Claude, Codex, Cursor, others) follows this file.
   service `uplumo` (one Go server that also serves the React build, plus
   Railway Redis and Supabase Postgres). Merging to `main` does **not**
   deploy: see `docs/DEPLOY.md`.
-- Razorpay is connected with **test-mode** keys: checkout works with test
-  cards, no real money moves yet. Live keys go in only after a full test
-  payment, renewal and cancel on the site.
+- Razorpay runs with **live** keys: customers pay real money. A billing,
+  credit or plan bug now takes or loses real money, so treat every billing
+  change as a finance change (section 3).
 - `DATAFORSEO_API_KEY` and `OPENROUTER_API_KEY` **are set in production**.
   Every DataForSEO task and every OpenRouter token is billed to Uplumo for
   real, so a wasted call is lost money (section 3, "Money first").
@@ -27,7 +27,7 @@ code before you trust this section.
 
 | You are about to...                      | Read first                                                               |
 | ---------------------------------------- | ------------------------------------------------------------------------ |
-| Do anything                              | This file                                                                |
+| Do anything                              | This file, then the latest week in `docs/WEEKLY.md`                      |
 | Choose, scope or prioritise a feature    | `docs/PRODUCT.md`, `ROADMAP.md`                                          |
 | Check what the owner already decided     | `DECISIONS.md` (decisions, Railway variable names, open asks)            |
 | Touch a feature's code                   | Its `README.md` → `flow.md` → `decision.md`, then tests and API contract |
@@ -291,10 +291,40 @@ Propose with a recommendation; do not decide silently.
   run it and how to deploy it. Dated reviews go in `docs/audits/`.
 - Do not keep plans, migration history or status logs as documents. Status
   lives in `ROADMAP.md`, history lives in git.
-- The one exception is `DECISIONS.md`: the owner's decisions, which Railway
-  variables are set (names only) and what waits on the owner. Update it in the
-  same change when one of those changes.
+- The exceptions are `DECISIONS.md` and `docs/WEEKLY.md`. `DECISIONS.md`
+  holds the owner's decisions, which Railway variables are set (names only)
+  and what waits on the owner; update it in the same change when one of those
+  changes. `docs/WEEKLY.md` holds one short summary per week (below).
 - Never put secrets in a document.
+
+### Keep this file and every feature's docs true
+
+- **`CLAUDE.md` is maintained, not frozen.** When a change makes any line
+  here untrue (production state, a provider, a rule, a check, the layout),
+  fix that line in the same PR. Section 0 must always match production; the
+  owner's word in chat beats this file, so update the file when they correct it.
+- **Feature docs are read against the code.** Before you edit a feature's
+  `README.md`, `flow.md` or `decision.md`, read the code it describes. Never
+  write a doc from memory, another doc or a PR title. If you find a doc that
+  contradicts the code, fix it even when it is outside your task, and say so
+  in the PR.
+- **Every change records its decision** in the feature's `decision.md`
+  (next section). There is no change too small for this.
+
+### Weekly summary (`docs/WEEKLY.md`)
+
+The Saturday workflow should add one section to the top of `docs/WEEKLY.md`
+covering Saturday to Friday, in a PR of its own. Read the latest week first:
+it is the fastest way to learn what moved. The schedule lives outside this
+repository; if it is not active, prepare the weekly update manually.
+
+- Build it from `git log origin/main` (merged PRs) and the `decision.md`
+  and `DECISIONS.md` changes of that week, never from memory or chat.
+- Per week, at most about 40 lines: what shipped (PR numbers), decisions
+  the owner took, money or provider-cost changes, what broke or was
+  reverted, open owner asks, and which docs the week changed.
+- Keep the last 8 weeks; delete older sections (git keeps them).
+- A week with no merges gets one line saying so.
 
 ### Mandatory decision record for every change
 

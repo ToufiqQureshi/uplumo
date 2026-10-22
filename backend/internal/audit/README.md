@@ -158,6 +158,5 @@ never "Google has no data".
 ## Tests
 
 `go test ./internal/audit/` needs no database for unit and handler tests.
-Repository tests need `TEST_DATABASE_URL` and run in CI.
-`scripts/audit-mutation-check.py` breaks the code on purpose to prove the tests
-notice.
+Repository tests need `TEST_DATABASE_URL` and run in CI. To prove a test can
+fail, break the code by hand and rerun it (`CLAUDE.md` section 4).

@@ -1,21 +1,21 @@
 # Rank tracking
 
-## Legacy behavior and edge cases found before porting
+## Behavior and edge cases
 
 - Configs are keyed by project, normalized domain, country and optional canonical city. An archived config reactivates with its keywords/history; an active duplicate fails. At most 500 active configs per project. A city name must exist in the country's location registry (same list as the picker). Deliberate difference from legacy: the legacy sandbox probe failed open, this check fails closed (503) when the registry is unreadable.
 - Devices are desktop/mobile/both; SERP depth is 10–100 in steps of 10. SERP allows any supported language in any country; keyword metrics use a country-served language instead. Keywords cap at 1,000 per config, 200 UTF-16 units each; match-case keywords can coexist with lowercase twins.
 - Schedule modes are manual/daily/weekly/monthly. Chosen hour, minute, weekday and IANA timezone set the initial UTC anchor; later runs advance that anchor without drift. Month-end checks preserve the user's last local day. Unchanged settings do not move an existing anchor.
-- Weekly is the default advertised schedule. Monthly estimates use an average 4.35 weekly runs. A daily schedule is saved only when its queued monthly estimate fits the active plan's monthly credit grant; adding keywords repeats the same check before insert.
-- Creating a config or adding keywords may auto-check; an imminent scheduled run within one hour takes precedence. No-keyword configs do not run. Hosted free plans cannot run checks or metric refreshes; self-hosted mode is open.
+- Weekly is the default advertised schedule. Monthly estimates use an average of 4.35 weekly runs. Daily configurations and daily keyword additions retain their plan and budget preflight when usage/limit sources are configured. Weekly keyword additions are not blocked by an incomplete per-config monthly estimate: Billing forecasts shared scheduled usage, while each live request is still held by the shared spend guard.
+- Creating a config or adding keywords never starts a paid check: the customer presses "Check rankings" (`checks/start`), and the add-keywords response always reports `checkTriggered: false` (`rankTrackingApi.ts`). No-keyword configs do not run. Hosted free plans cannot run checks or metric refreshes; self-hosted mode is open.
 - Manual checks use live SERP; scheduled checks use cheaper Standard-queue tasks with at most 100 tasks per post. Cost estimates share the published per-result-page rates in `platform/dataforseo/pricing.go`, and account for every keyword/device pair, depth, provider-call rounding and a fivefold charge for advanced search operators. A requested maximum credit ceiling must be checked again against the final keyword list before provider work.
 - At most one active run per config. A stale run may be failed before replacement; polling does not mutate it. Due config claims are conditional on the observed schedule token, advance eagerly to avoid retry storms, and obey task-unit and wall-clock budgets.
 - The workflow checks that the config remains active, prepares keywords, checks credit balance, writes snapshots incrementally, and finalizes based on actual distinct keyword snapshots. Zero snapshots mean failure; partial completion keeps the first provider error. A failed run never advances `lastCheckedAt`.
 - A Go retry must not double-bill DataForSEO or duplicate snapshots. Job claiming uses `FOR UPDATE SKIP LOCKED`; provider task IDs and persisted per-pair states must survive a crash. Canceled jobs release work safely; scheduled timing uses a controlled clock in tests.
 - Results include desktop/mobile positions, previous positions, ranking URLs, SERP features, run status, keyword history, trend buckets and a position matrix. A newer failed run must not hide the freshness of older snapshots. Every read/write is scoped through project and organization.
 
-## Migration status
+## What is built
 
-Done (Go, tested against a real Postgres):
+Go, tested against a real Postgres:
 
 - Rules: `schedule.go` (next-check anchors), `cost.go` (live vs queued estimates), `keywords.go` (domain and keyword normalising, caps).
 - Storage: migration `00009`, `store.go` (pgx, no ORM). The per-config keyword cap is enforced inside one transaction that locks the config row. The plan's workspace-wide cap also takes an organization advisory lock and recounts active keywords before insert, so concurrent additions across configs cannot exceed the plan.
@@ -27,7 +27,7 @@ Done (Go, tested against a real Postgres):
 - One active run per config comes from the partial unique index. A blocking run is cleared when its job ended without finishing it, or has no job a minute after it started (the Go replacement for the legacy workflow-state check).
 - A paid plan is required when billing is configured; without billing the check runs ungated, as on a self-hosted install.
 
-- Scheduled checks: `Ticker.Tick` runs every five minutes on every instance. It lists due configs oldest first (joining the legacy `projects` table for the organization), claims each with a compare-and-set on `next_check_at`, then starts a run. The anchor moves before the run starts, so a failing start cannot make a config due again and bill twice; it moves by whole intervals from the due time, so a late tick does not drift the schedule. A plan error leaves the anchor alone (the retry), a missing plan or no keywords advances it with `plan_required` or `no_keywords`, a blocking run gives the slot back. Work per tick is capped at 1,000 tasks (the first start is always admitted) and 3 minutes.
+- Scheduled checks: `Ticker.Tick` runs every five minutes on every instance. It lists due configs oldest first (joining `projects` for the organization), claims each with a compare-and-set on `next_check_at`, then starts a run. The anchor moves before the run starts, so a failing start cannot make a config due again and bill twice; it moves by whole intervals from the due time, so a late tick does not drift the schedule. A plan error leaves the anchor alone (the retry), a missing plan or no keywords advances it with `plan_required` or `no_keywords`, a blocking run gives the slot back. Work per tick is capped at 1,000 tasks (the first start is always admitted) and 3 minutes.
 - Scheduled runs use the provider's task queue (about 30% of the live price): post up to 100 tasks per request, store every task id at once in `go_rank_check_tasks`, poll `task_get` (free, so it goes through `DoUnmetered` and is never recorded as spend) at 4, 6, 8, 10, 12 and 15 minutes, and look up explicitly rejected, failed or timed-out tasks live. A failed/ambiguous task-post response never triggers live fallback for that chunk: it may already be billed. The run records a visible error and still collects earlier accepted chunks. A stable run-and-task-set idempotency key blocks a second paid post if a retry follows an uncertain post outcome. After a crash with task ids stored, the retry collects them instead of posting again.
 - Keyword metric refresh is `POST /api/v1/projects/{projectId}/rank-tracking/keywords/metrics/refresh`. It requires the tracked config, reuses the keyword research provider's bounded batches and country-served language rules, and sends lowercased distinct terms so case variants do not duplicate billed work. City configs use city-scoped Ads volume/CPC and national Labs difficulty. Hosted deployments require a paid plan before any provider call; self-hosted deployments remain ungated. Metric writes are one config-scoped statement and update only rows still present.
 
@@ -35,7 +35,7 @@ Not built: per-run credit holds (see the decisions below).
 
 ## Decisions for the owner
 
-- Credit maths (`costMarkup` 1.28, 1000 credits per USD) is copied from the legacy app. Uplumo's Razorpay plan model may want different numbers.
+- Credit maths (`costMarkup` 1.28, 1,000 credits per USD) matches the billing ledger (`billing.CreditMarkupMultiplier`, `CreditsPerUSD`); change both together.
 - Scheduled checks: when a post outcome is uncertain and no task ids were stored, the retry is refused by idempotency and the run requires a new manual or scheduled run. DataForSEO does not expose task lookup by the echoed tag, so automatic recovery cannot safely identify that task.
 - Plan depth: a config cannot be created, changed, started, or executed deeper than the plan's `MaxSerpDepth` (`ErrLimit`). A run already queued before a downgrade fails before any provider request; reduce the saved depth to resume it.
 - Credits: every check spends the workspace's credits through the spend guard in the DataForSEO client (`internal/billing/README.md`). A refused check stops the run like a provider billing issue and shows the customer's credit message as the run's error. The optional `maxCostCredits` ceiling still applies.
@@ -45,10 +45,11 @@ Not built: per-run credit holds (see the decisions below).
 
 
 The Go MCP `create_rank_tracker` tool reuses the rank-tracking service and its
-project-scoped duplicate/limit checks. It defaults to mobile, depth 40, and a
-manual schedule, matching the legacy MCP tool even though the API's own
-configuration defaults differ. Tool-contract tests are deferred to the final
-migration test phase.
+project-scoped duplicate/limit checks. It defaults to mobile, depth 10, and a
+manual schedule. The depth is valid on every paid tier, and creating a tracker
+starts no provider spend. A deeper requested value remains subject to the plan's
+`MaxSerpDepth`. `mcp/rank_tracking_tools_test.go` covers registration and ID
+validation.
 
 `Store.ScheduledCredits` forecasts configured queued checks due before a billing
 refill, including keyword operators, device pairs, depth and per-call rounding.

@@ -10,15 +10,15 @@ See `docs/audits/2026-10-20-feature-wiring-review.md` for scope and validation l
 
 Uplumo is live at `https://uplumo.com` on Railway. The whole backend is Go and
 the React app is a static SPA the Go server serves. People can sign up, verify
-their email and use the free features. **Nobody pays real money yet**:
-Razorpay runs with test-mode keys in production, so checkout works only with
-test cards. DataForSEO and OpenRouter variables are configured in production;
-requests can incur real provider costs. Their presence is not live acceptance
-validation for every feature.
+their email and use the free features. The owner confirmed Razorpay uses
+**live** keys, so a working subscription takes real money. Business checkout
+is unverified because its live plan ID has not been confirmed. DataForSEO and
+OpenRouter variables are configured in production; accepted provider calls
+can incur real costs, but DataForSEO account verification is still pending.
 
 ## Content editor
 
-- Built: visual editor, local SEO/AEO scoring, search briefs (Brief tab,
+- Built: visual editor, on-page SEO/AEO scoring, search briefs (Brief tab,
   `POST /api/v1/projects/{projectId}/content/brief`, shared 30-day cache),
   13 AI writing actions with per-action credit ceilings, publish to
   WordPress, and "Track this article" links to Rank Tracking and Prompt
@@ -39,13 +39,14 @@ validation for every feature.
 | Loops email: verify and reset working; invitation template made, not tested                            | 🔨                                                      |
 | Public pages: landing, pricing, about, contact, terms, privacy, refunds, shipping                      | ✅                                                      |
 | Razorpay account approved (KYC)                                                                        | ✅                                                      |
-| Razorpay test-mode keys in Railway                                                                     | ✅                                                      |
-| Razorpay test payment, renewal and cancel through the site, then live keys                             | ⏳                                                      |
-| One-click cancel (`POST /api/v1/billing/cancel`, "Cancel Pro" on Billing)                              | ✅ built, not yet run against Razorpay                  |
-| DataForSEO key in production (keywords, rank tracking, backlinks, AI visibility answer 503 without it) | ✅ configured; live feature acceptance remains separate |
+| Razorpay live keys in Railway                                                                          | ✅                                                      |
+| Live Razorpay plan IDs match the catalog (Business included)                                             | ⏳ owner confirmation needed                            |
+| Razorpay live renewal and one-click cancel confirmed on a real subscription                            | ⏳                                                      |
+| One-click cancel (`POST /api/v1/billing/cancel`, "Cancel <plan>" on Billing)                           | ✅ built, not yet run against Razorpay                  |
+| DataForSEO key in production (keywords, rank tracking, backlinks, AI visibility answer 503 without it) | ✅ configured; account verification 40104 pending       |
 | Google OAuth app verification (Search Console and Analytics scopes)                                    | ⏳                                                      |
 | Live usage shown to the customer (credits on Billing, cost next to paid actions)                       | ✅ built                                                |
-| Spend guard: credits held before every paid lookup and AI call, daily limit                            | ✅ built                                                |
+| Spend guard: credits held before every paid lookup and AI call; provider-wide emergency brake           | ✅ built                                                |
 | Lawyer review of the legal pages                                                                       | ⏳                                                      |
 
 ## What is built
@@ -108,16 +109,15 @@ This is a shortlist for product discovery, not a claim that competitors lack the
 
 ## Next up
 
-1. Take a Razorpay test payment through the site, cancel it, then switch to
-   live keys.
-2. Put the DataForSEO key in production, or hide the features that need it.
-3. Walk through every page on production as a real user and fix what breaks.
-4. Let a customer change plan from Billing.
+1. Verify live plan IDs (Business included), then confirm subscription, renewal
+   and cancel flows in Razorpay and reconcile them with the dashboard.
+2. Walk through every page on production as a real user and fix what breaks.
+3. Let a customer change plan from Billing.
 
 ## Owner actions
 
-- Razorpay: create the three plans and the webhook, put the `RAZORPAY_*`
-  values in Railway. Steps are in `docs/DEPLOY.md`.
+- Razorpay: confirm all four live plan ids (Business included) are in
+  Railway and each amount equals `backend/internal/plans/catalog.go`.
 - Submit the Google OAuth app for verification.
 - Have a lawyer read the terms, privacy, refund and shipping pages.
 - Make the GitHub repo private if it is not already.
@@ -132,15 +132,16 @@ Secrets go into Railway variables only, never into the repo or chat.
 - Credits (owner, 13 October 2026; public pricing clarified 15 October 2026).
   Every paid data lookup and AI call spends credits; customers see each plan's
   monthly grant on the pricing page and see their balance and estimated action
-  costs in the app.
-  Monthly credits: Solo 4,000, Growth 10,000, Business 15,000, Agency 25,000 (a credit is 1/1280
-  of a dollar of provider cost). No credits means no request is sent. Each
-  workspace may spend at most a third of its monthly credits in a day, so one
-  heavy client never stops the others; `PROVIDER_DAILY_LIMIT_USD` (default
-  $100) is only an emergency stop for a bug. Rules:
-  `backend/internal/billing/README.md`. Unused credits roll over up to two
-  months. Rank tracking depth is capped per plan (Basic top 30, Pro and
-  Agency top 40) so weekly checks of every tracked keyword fit the credits.
+  costs in the app. Monthly credits: Solo 4,000, Growth 10,000, Business 15,000,
+  Agency 25,000 (1 credit represents $1/1,280 of provider cost at the current
+  markup). New paid work stops when the shared workspace balance cannot cover
+  it. There is no per-workspace daily credit cap; `PROVIDER_DAILY_LIMIT_USD`
+  (default $100) is a provider-wide emergency brake. Unused plan credits roll
+  over for up to two months. Rank depth is Solo top 30 and Growth, Business,
+  Agency top 40; those are plan ceilings, not a guarantee that the maximum
+  keyword list can run weekly. Billing forecasts scheduled spend, and each
+  provider request still passes the shared spend guard. See
+  `backend/internal/billing/README.md`.
 - Plans (owner, 12 October 2026, confirmed 13 October). Built: the table
   below is `backend/internal/plans/catalog.go`. Free is one site with
   analytics and a starter audit.

@@ -19,8 +19,8 @@ limit, AI).
 - **One idempotency key is one user action, never one hold.** `requireSession`
   puts the browser's `Idempotency-Key` on the context
   (`spend.WithIdempotencyKey`). One action can buy several results (a backlink
-  summary and its history, two keyword legs in parallel, nine map points, the
-  steps of a chat turn), so every hold derives its own key with
+  summary and its history, two keyword legs in parallel, the steps of a chat
+  turn), so every hold derives its own key with
   `spend.ScopedKey(ctx, parts...)`: DataForSEO uses method, path and body;
   `DoBudgeted` and `AIMeter` use feature, endpoint and ceiling. Identical
   repeats in one action are numbered. A replay of the action therefore gets the

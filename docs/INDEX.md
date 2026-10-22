@@ -17,7 +17,7 @@ Code and tests are the source of truth. Feature docs are colocated with their so
 
 ## Repo-wide guidance and references
 
-`README.md`, `CLAUDE.md`, `AGENTS.md`, `.claude/CLAUDE.md`, `ROADMAP.md`, `DECISIONS.md`, `.agents/PAPERCUTS.md`, `backend/README.md`, `backend/internal/analytics/geo/ATTRIBUTION.md`, `backend/internal/sam/product_fact_sheet.md`, `frontend/src/client/features/ai-mcp/agentSetupPrompt.md`. Historical reviews are in `docs/audits/`.
+`README.md`, `CLAUDE.md`, `AGENTS.md`, `.claude/CLAUDE.md`, `ROADMAP.md`, `DECISIONS.md`, `docs/WEEKLY.md` (weekly summary, newest first), `.agents/PAPERCUTS.md`, `backend/README.md`, `backend/internal/analytics/geo/ATTRIBUTION.md`, `backend/internal/sam/product_fact_sheet.md`, `frontend/src/client/features/ai-mcp/agentSetupPrompt.md`. Historical reviews are in `docs/audits/`.
 
 Cross-cutting documents: `docs/FILE_MAP.md`, `docs/architecture/OVERVIEW.md`,
 `docs/integrations/DATAFORSEO.md`, `docs/security/MODEL.md`,

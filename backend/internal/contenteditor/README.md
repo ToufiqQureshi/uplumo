@@ -6,11 +6,13 @@ This is an internal developer/AI-agent guide, not customer-facing product copy. 
 
 ## Source map
 
-- `handler.go`
-- `brief_handler.go`
-- `contenteditor.go`
-- `writer.go`
-- `images.go`
+- `handler.go`: drafts, image upload and assistant routes.
+- `brief_handler.go`, `brief.go`, `brief_terms.go`, `brief_cache.go`: search
+  briefs and their shared 30-day cache.
+- `contenteditor.go`: draft storage.
+- `writer.go`: the 13 AI writing actions (`WriterAction`), each capped at
+  `MaxWriterCreditsPerAction` (15 credits).
+- `images.go`: image upload.
 
 ## API/trigger
 
