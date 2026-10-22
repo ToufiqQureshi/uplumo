@@ -96,6 +96,8 @@ type KeywordSuggestion struct {
 	Traffic           *float64 `json:"traffic"`
 	CPC               *float64 `json:"cpc"`
 	KeywordDifficulty *float64 `json:"keywordDifficulty"`
+	// Intent is the keyword's main search intent, when the provider reports it.
+	Intent *string `json:"intent"`
 }
 
 // KeywordRow is one ranked keyword on the keywords tab, including the ranking URL.
@@ -103,6 +105,9 @@ type KeywordRow struct {
 	KeywordSuggestion
 	URL         *string `json:"url"`
 	RelativeURL *string `json:"relativeUrl"`
+	// Type labels the ranking result the position comes from (organic or paid),
+	// so the customer can tell the two apart.
+	Type *string `json:"type"`
 }
 
 // KeywordsPageInput is a validated request for one page of ranking keywords.
@@ -356,20 +361,24 @@ func mapKeyword(item rankedKeywordItem) (KeywordRow, bool) {
 		return KeywordRow{}, false
 	}
 	var serp *struct {
+		Type         *string  `json:"type"`
 		URL          *string  `json:"url"`
 		RelativeURL  *string  `json:"relative_url"`
 		RankAbsolute *float64 `json:"rank_absolute"`
 		ETV          *float64 `json:"etv"`
 	}
 	var rank, traffic *float64
-	var pageURL, relativeURL *string
+	var pageURL, relativeURL, rowType *string
 	if element := item.RankedSERPElement; element != nil {
 		serp = element.SERPItem
 		rank, traffic = element.RankAbsolute, element.ETV
-		pageURL, relativeURL = element.URL, element.RelativeURL
+		pageURL, relativeURL, rowType = element.URL, element.RelativeURL, element.Type
 		if serp != nil {
 			rank = firstFloat(serp.RankAbsolute, rank)
 			traffic = firstFloat(serp.ETV, traffic)
+			if serp.Type != nil {
+				rowType = serp.Type
+			}
 			if serp.URL != nil {
 				pageURL = serp.URL
 			}
@@ -392,12 +401,16 @@ func mapKeyword(item rankedKeywordItem) (KeywordRow, bool) {
 	if info != nil {
 		volume, cpc = info.SearchVolume, info.CPC
 	}
+	var intent *string
+	if item.KeywordData != nil && item.KeywordData.SearchIntentInfo != nil {
+		intent = item.KeywordData.SearchIntentInfo.MainIntent
+	}
 	return KeywordRow{
 		KeywordSuggestion: KeywordSuggestion{
 			Keyword: *keyword, Position: roundNullable(rank), SearchVolume: roundNullable(volume),
-			Traffic: traffic, CPC: cpc, KeywordDifficulty: roundNullable(difficulty),
+			Traffic: traffic, CPC: cpc, KeywordDifficulty: roundNullable(difficulty), Intent: intent,
 		},
-		URL: pageURL, RelativeURL: relativeURL,
+		URL: pageURL, RelativeURL: relativeURL, Type: rowType,
 	}, true
 }
 

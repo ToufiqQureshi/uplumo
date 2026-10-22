@@ -81,6 +81,25 @@ change when old responses lack newly delivered metrics, and provider-shaped
 fixtures must reach API/schema/render/export tests. Full live raw-to-screen
 comparison and implementation of this supplemental field delivery remain open.
 
+## Label ranked-keyword rows by result type and intent
+
+- **Decision:** Decode `ranked_serp_element.serp_item.type` (organic vs paid)
+  and `keyword_data.search_intent_info.main_intent`, expose them on each
+  keyword row (`type`, `intent`), and render an Organic/Paid badge plus an
+  Intent column in the keyword table. The browser cache key is unchanged
+  because the payload fields are additive and old cached rows simply omit them.
+- **Why:** The UI request omits `item_types`, so the provider default returns
+  both organic and paid rows, but the app dropped the discriminator and intent.
+  Customers could not tell which rank came from ads and which from organic
+  search — a correctness gap in a headline report, fixed with no extra call.
+- **Preserve:** No new provider call; `type`/`intent` stay nullable in the
+  schema so cached rows before this change still parse; intent is the raw
+  provider label (not normalized) so it is not silently mislabelled.
+- **Trace:** `provider.go`, `service.go` (`mapKeyword`),
+  `service_test.go:TestKeywordsPageKeepsTypeAndIntent`,
+  `frontend/src/client/features/domain/{domainApi.ts,types.ts,
+  components/DomainKeywordsTable.tsx}`.
+
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.

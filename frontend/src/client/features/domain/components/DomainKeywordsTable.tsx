@@ -79,6 +79,26 @@ export function DomainKeywordsTable({
         ),
         cell: ({ getValue }) => getValue() ?? "-",
       }),
+      keywordColumnHelper.display({
+        id: "type",
+        header: () => "Type",
+        cell: ({ row }) => {
+          const type = row.original.type;
+          if (!type) return "-";
+          const isPaid = type === "paid";
+          return (
+            <span
+              className={`inline-flex rounded px-1.5 py-0.5 text-[11px] font-medium ${
+                isPaid
+                  ? "bg-amber-100 text-amber-800"
+                  : "bg-emerald-100 text-emerald-800"
+              }`}
+            >
+              {isPaid ? "Paid" : "Organic"}
+            </span>
+          );
+        },
+      }),
       keywordColumnHelper.accessor("searchVolume", {
         header: () => (
           <SortableHeader
@@ -147,6 +167,16 @@ export function DomainKeywordsTable({
           />
         ),
         cell: ({ getValue }) => <ScoreBadge value={getValue()} />,
+      }),
+      keywordColumnHelper.display({
+        id: "intent",
+        header: () => "Intent",
+        cell: ({ row }) => {
+          const intent = row.original.intent;
+          if (!intent) return "-";
+          return <span className="capitalize">{intent}</span>;
+        },
+        meta: { cellClassName: "whitespace-nowrap" },
       }),
     ],
     [currentSortOrder, domain, onSortClick, selectAnchorRef, sortMode],
