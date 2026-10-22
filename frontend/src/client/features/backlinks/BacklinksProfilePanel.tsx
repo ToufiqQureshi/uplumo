@@ -25,6 +25,23 @@ const PLACEMENT_LABELS: Record<string, string> = {
   section: "Page section",
   main: "Main content",
 };
+const LINK_TYPE_LABELS: Record<string, string> = {
+  anchor: "Text link",
+  image: "Image link",
+  redirect: "Redirect",
+  canonical: "Canonical",
+  form: "Form",
+  frame: "Frame",
+  rss: "RSS",
+  unknown: "Other",
+};
+const LINK_ATTRIBUTE_LABELS: Record<string, string> = {
+  nofollow: "Nofollow",
+  ugc: "User content",
+  sponsored: "Sponsored",
+  alternate: "Alternate",
+  unknown: "Other",
+};
 
 /**
  * The link-profile breakdown the summary task already returns with its totals.
@@ -50,7 +67,12 @@ export function BacklinksProfilePanel({ profile }: { profile: Profile }) {
     {
       label: "Nofollow domains",
       value: formatNumber(profile.referringDomainsNofollow ?? null),
-      help: "Domains that link only with nofollow, which passes little ranking value.",
+      help: "Domains that link with at least one nofollow link. Nofollow links pass little ranking value.",
+    },
+    {
+      label: "Pages crawled",
+      value: formatNumber(profile.crawledPages ?? null),
+      help: "Pages on your site the crawler checked for links.",
     },
   ];
   const lists = [
@@ -77,6 +99,18 @@ export function BacklinksProfilePanel({ profile }: { profile: Profile }) {
       help: "Country of the linking site, where the crawler could tell.",
       counts: profile.countries,
       label: (key: string) => key,
+    },
+    {
+      title: "Link type",
+      help: "How the link is built: a normal text link, an image, a redirect or a canonical tag.",
+      counts: profile.linkTypes,
+      label: (key: string) => LINK_TYPE_LABELS[key] ?? key,
+    },
+    {
+      title: "Link attribute",
+      help: "The rel attribute on the link: nofollow, sponsored or user-generated content (UGC).",
+      counts: profile.linkAttributes,
+      label: (key: string) => LINK_ATTRIBUTE_LABELS[key] ?? key,
     },
   ].filter((list) => Object.keys(list.counts).length > 0);
 
@@ -123,7 +157,7 @@ function CountList({
   const entries = sortBy(Object.entries(counts), [
     ([, count]) => count,
     "desc",
-  ]).slice(0, 6);
+  ]);
   const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
   return (
     <div className="space-y-1.5">

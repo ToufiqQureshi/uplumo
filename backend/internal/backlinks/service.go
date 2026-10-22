@@ -527,14 +527,16 @@ func mapSummary(v providerSummary) Summary {
 			TLDs: counts(v.TLDs), LinkTypes: counts(v.LinkTypes), LinkAttributes: counts(v.LinkAttributes), PlatformTypes: counts(v.PlatformTypes), Placements: counts(v.Placements), Countries: counts(v.Countries)}}
 }
 
-// counts drops the provider's blank key (links it could not classify) and
-// never returns nil, so the screen always gets an object.
+// counts keeps the provider's blank key (links it could not classify) under the
+// "unknown" label and never returns nil, so the screen always gets every
+// breakdown entry the summary paid for.
 func counts(m map[string]float64) map[string]float64 {
 	out := make(map[string]float64, len(m))
 	for k, v := range m {
-		if k != "" {
-			out[k] = v
+		if k == "" {
+			k = "unknown"
 		}
+		out[k] = v
 	}
 	return out
 }

@@ -276,7 +276,7 @@ function buildBaseColumns(
         <SortableHeader
           column={column}
           label="Link"
-          helpText="Authority of the linking page"
+          helpText="The authority this backlink passes to your page (the backlink's own rank). The linking page's rank is shown in the export as page rank."
           align="right"
         />
       ),
