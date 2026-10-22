@@ -209,9 +209,13 @@ export function KeywordResearchTable({
           if (row.original.parentKeyword) return null;
           const { referringDomains, backlinks, referringPages } = row.original;
           const details = [
-            referringDomains != null ? `Ref. domains: ${referringDomains}` : null,
+            referringDomains != null
+              ? `Ref. domains: ${referringDomains}`
+              : null,
             backlinks != null ? `Backlinks: ${backlinks}` : null,
-            referringPages != null ? `Referring pages: ${referringPages}` : null,
+            referringPages != null
+              ? `Referring pages: ${referringPages}`
+              : null,
           ]
             .filter(Boolean)
             .join(" · ");
@@ -241,7 +245,9 @@ export function KeywordResearchTable({
           const { quarterlyChange, yearlyChange } = row.original;
           if (quarterlyChange == null && yearlyChange == null) return "-";
           return (
-            <span title={`3-mo ${fmt(quarterlyChange)} · 12-mo ${fmt(yearlyChange)}`}>
+            <span
+              title={`3-mo ${fmt(quarterlyChange)} · 12-mo ${fmt(yearlyChange)}`}
+            >
               {fmt(quarterlyChange)}
               <span className="text-muted-foreground/60">
                 {" "}
