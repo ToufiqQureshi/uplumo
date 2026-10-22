@@ -6,7 +6,9 @@ This is an internal developer/AI-agent guide, not customer-facing product copy. 
 
 ## Source map
 
-- `razorpay.go`
+- `razorpay.go`: subscriptions, cancel, webhook signature (`ValidSignature`,
+  `hmac.Equal`). Every API call is bounded by `requestTimeout` (10 seconds).
+- `orders.go`: one-time orders for credit top-ups.
 
 ## API/trigger
 

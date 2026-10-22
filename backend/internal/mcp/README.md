@@ -15,9 +15,11 @@ reads the active organization's credit balance without charging credits. If
 the balance cannot be read, the response reports it as unknown.
 
 Keep tool names and JSON schemas compatible with MCP clients. Tools without a
-Go registration fail locally rather than being sent to the TypeScript server.
-OAuth and tool contract test files remain listed in the final migration test
-backlog.
+Go registration fail locally; there is no other backend to forward them to.
+Tests: `oauth_test.go`, `registry_test.go` (plan gating for every tool),
+`runner_test.go` and per-group tool tests (`project_context_tools_test.go`,
+`rank_tracking_tools_test.go`, `report_tools_test.go`). Most data tools
+(keywords, domain, backlinks, AI search) have no handler-level contract test.
 
 
 The Go MCP registry also owns `get_backlinks_overview`. It reads the
@@ -52,8 +54,9 @@ errors are returned alongside successful query rows.
 
 The Go MCP registry also owns `create_rank_tracker`. It creates an empty
 configuration with the project's market/domain defaults, validates optional
-canonical local locations, and keeps the MCP default schedule manual so tracker
-creation never starts future credit spend.
+canonical local locations, defaults to mobile/depth 10/manual, and starts no
+provider spend at creation. Depth 10 is allowed on every paid tier; deeper
+requests still pass the plan depth limit.
 
 
 The Go MCP registry also owns `estimate_rank_tracker_cost`. It reads

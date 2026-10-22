@@ -16,6 +16,22 @@ Streams model turns, persists bounded history, invokes registered project tools 
 
 OpenRouter/model provider; Postgres sessions/messages; Redis limits; billing; projectcontext and internal services.
 
+## Keep assistant skills within product data
+
+- **Decision:** Keyword-research guidance may use canonical local keyword markets,
+  but must not promise Google Business categories, Maps/local-pack rankings or
+  Local SEO grid data. Competitive-landscape guidance may describe location-
+  specific organic results only when returned by the tools and must label Maps
+  coverage as unavailable.
+- **Why:** The Local SEO feature and its Maps/Business Data calls were removed.
+  A prompt that requests or invents those fields misleads owners and encourages
+  the assistant to use tools that no longer exist.
+- **Preserve:** Local keyword volume remains supported; do not remove it with
+  the retired Local SEO feature. Keep the product limitations explicit.
+- **Trace:** `skills/keyword-research.md`,
+  `skills/competitive-landscape.md`, and root `DECISIONS.md` (Local SEO
+  removed).
+
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.

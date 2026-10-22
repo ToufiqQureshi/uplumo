@@ -3,9 +3,8 @@
 AI search lookups for a project: **Brand Lookup** (how often ChatGPT and Google
 AI Overviews mention a brand or domain, which pages they cite, how it compares
 with competitors) and **Prompt Explorer** (one prompt asked of ChatGPT, Claude,
-Gemini and Perplexity, answers side by side). Ported from the legacy
-`src/server/features/ai-search`. Both are stateless: no tables of their own,
-Redis cache only. Successful, user-triggered Brand Lookups also save one
+Gemini and Perplexity, answers side by side). Both lookups store no rows of their own, only
+Redis cache; saved prompt tracking (below) keeps its own tables. Successful, user-triggered Brand Lookups also save one
 aggregate visibility snapshot per month in Redis for a 13-month trend; history
 reads use saved snapshots and do not call DataForSEO.
 The Brand Lookup page can also show first-party AI referral totals from Uplumo

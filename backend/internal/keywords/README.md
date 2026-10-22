@@ -1,6 +1,6 @@
 # Keywords and SERP locations
 
-## Legacy behavior and edge cases found before porting
+## Behavior and edge cases
 
 - Research accepts 1–200 seeds, modes `auto`, `related`, `suggestions`, `ideas`, result limits 150/300/500, optional clickstream and grouping. Auto blends suggestions and ideas, alternating rows and deduplicating keywords; it falls back when fewer than five non-seed rows appear.
 - Labs countries use Labs keyword data. Countries marked Google Ads-only use Google Ads, which lacks difficulty and search intent. Local research validates the canonical city/region before spending; local volume replaces national volume rather than silently falling back. National metrics remain available for saved keywords. Labs rows also carry the top-of-page bid range, the average referring domains of page-one results and the 3-month volume change (`ResearchRow`, shown as the Top bid, Ref. domains and 3-mo trend columns); they come in the same call, so a field the provider already returned is shown, not re-bought. Google Ads-only rows leave them empty.
@@ -44,13 +44,13 @@ Market tables and resolution are in `platform/market`. Labs covers 94 countries;
 The Go MCP `get_serp_results` tool uses the shared keyword SERP provider for
 market and canonical local-location validation. It returns bounded live result
 rows per query and captures individual query failures without discarding
-successful results. Tool-contract tests are deferred to the final test phase.
+successful results. 
 
 
-The Go MCP `get_keyword_metrics` tool fetches known terms from Labs or Google Ads by market, supports optional clickstream refinement and monthly trends, and returns nullable metrics sorted by the requested field. Its contract tests are deferred to the final test phase.
+The Go MCP `get_keyword_metrics` tool fetches known terms from Labs or Google Ads by market, supports optional clickstream refinement and monthly trends, and returns nullable metrics sorted by the requested field. 
 
 
-The Go MCP `research_keywords` tool calls the shared Go research service per seed, honors local-area markets and the requested research options, and returns a separate result for each seed. Its contract tests are deferred to the final test phase.
+The Go MCP `research_keywords` tool calls the shared Go research service per seed, honors local-area markets and the requested research options, and returns a separate result for each seed. 
 
 
 Auto research buys two legs in parallel (suggestions and ideas). If one leg
@@ -62,3 +62,10 @@ replay, a customer who left, or a working leg with no rows is still an error.
 Cancellation during cache/project preparation is rechecked before detaching
 paid work. Active callers retain cache-outage fallback; existing shared work
 can finish for other waiters. See the cancellation decision and regressions.
+
+
+The three MCP keyword data tools (`mcp/serp_results.go`, `mcp/keyword_metrics.go`,
+`mcp/research_keywords.go`) do not yet have handler-level contract tests;
+`mcp/registry_test.go` covers plan gating. SERP status 40102 is a valid,
+billable empty result; 40501 is an invalid-field error and is refunded. See
+`../platform/dataforseo/decision.md`.

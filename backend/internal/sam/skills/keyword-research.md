@@ -43,7 +43,7 @@ Deliver through the `seo-report` skill, saving with `skill: "keyword-research"`.
 ## Workflow
 
 1. Normalize seeds into a small set of distinct research angles. If Search Console is connected for the project, first pull `get_search_console_performance` with `minPosition: 5, maxPosition: 20, minImpressions: 50` (default lookback), and hydrate those queries with `get_keyword_metrics` to attach KD and intent. That ranked, hydrated list is your fastest opportunity set — work it before broad discovery.
-2. If the request is local SEO, identify the business, location/coordinates or service area, and local categories. Research local volume for that city or county with `research_keywords` and `locationName`.
+2. For local keyword opportunities, identify the service area and seed terms. Research local volume with `research_keywords` and the canonical `locationName`. This tool does not provide Maps/local-pack rankings, Google Business categories or local rank grids.
 3. Call `research_keywords` for exploratory seeds. Use bulk calls when possible.
 4. Use `get_keyword_metrics` to hydrate a fixed keyword list — or the striking-distance queries from step 1 — with volume, KD, and intent before prioritizing.
 5. Use `get_ranked_keywords` when the user provides a domain/page and wants opportunities based on current rankings, near-misses, or competitor-owned terms.
@@ -54,7 +54,7 @@ Deliver through the `seo-report` skill, saving with `skill: "keyword-research"`.
    - Reasonable difficulty
    - Useful volume/CPC signal
    - SERP where the user can plausibly compete
-   - For local SEO, local-pack/Maps visibility and proximity fit
+   - For local keyword research, use location-scoped volume/CPC/competition. State clearly that keyword ideas, KD and intent remain national and Maps/local-pack visibility is not measured.
 8. Use `get_serp_results` for high-potential or ambiguous keywords when SERP intent would change the recommendation; keep the default check small.
 9. Present a shortlist and a longer opportunity table.
 10. Ask before saving keywords. When saving, suggest concise tags such as `topic:<topic>`, `intent:<intent>`, or `page:<slug>`.

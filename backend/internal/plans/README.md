@@ -44,6 +44,7 @@ The one list of what each Uplumo plan costs, limits and includes
 | `AIVisibility`   | `internal/aisearch`                                               |
 | `AIWriting`      | `internal/contenteditor` writing assistant                        |
 | `WhiteLabel`     | `internal/branding`: saving and resetting branding                |
+| `IndexNow`       | `internal/indexnow` (gate wired in `cmd/server/main.go`): setup and submit |
 | Sites            | `internal/projects`: create and restore                           |
 | Tracked keywords | `internal/ranktracking`: adding keywords                          |
 | Members          | `internal/team`: inviting                                         |

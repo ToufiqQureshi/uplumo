@@ -1,8 +1,8 @@
 # Backlinks
 
-## Legacy behavior and edge cases captured before the port
+## Behavior and edge cases
 
-| Behavior in TypeScript and its tests | Go behavior / edge case to keep |
+| Behavior | Edge case to keep |
 |---|---|
 | Overview fetches the DataForSEO summary and one year of monthly history for domain scopes. | Exact page scope omits history. History dates cover UTC yesterday back one calendar year; a credit refusal on either task fails the request, but if only the history task fails after the summary was billed, the summary is returned without a trend and cached for ten minutes. |
 | A subfolder cannot be targeted directly by summary/history. | Two sequential backlinks list tasks count all links and one-per-domain links with a `url_to` prefix filter; rank, spam, broken/new/lost values and trends stay null/empty. |
@@ -19,6 +19,8 @@
 `requireSession -> requireProjectAccess -> paid-plan check -> handler validation -> service/cache -> platform/dataforseo`
 
 Routes are `POST /api/v1/projects/{projectId}/backlinks/{overview,backlinks,referring-domains,top-pages}`. Table and row data remain provider-backed; the complete overview is also persisted in `go_backlinks_overviews` for up to 30 days so an expired Redis cache does not re-buy paid provider tasks. The table is organization-scoped, server-only and cascades with organization deletion. Project authorization supplies the organization ID used for plan checks, DataForSEO usage recording and cache isolation.
+Response fields and nullability match the frontend Zod schemas in
+`frontend/src/client/features/backlinks/`.
 
 ## Rules that must not break
 

@@ -11,10 +11,13 @@ Flow of `Client.Do(ctx, organizationID, feature, method, path, body, retrySafe)`
    body)` of the workspace's credits. A refusal stops here: nothing is sent,
    and the error wraps both the guard's error (`spend.ErrNoCredits`,
    `spend.ErrPaused`) and `ErrBillingIssue`.
-3. Send the request (only `retrySafe` requests are retried, on 5xx).
-4. Record every task's reported cost in `go_dataforseo_usage` and settle the
-   hold with their sum for successful tasks. A failed task remains in provider
-   spend telemetry but its customer credits are refunded.
+3. Send the request. Retry only operations explicitly marked `retrySafe`;
+   paid, non-idempotent tasks are not retried.
+4. Record every task's reported cost in `go_dataforseo_usage`. Charge customer
+   credits for successful tasks and 40102 ("No Search Results"), which the
+   provider bills after processing. Other task errors, including 40501
+   ("Invalid Field"), stay in provider-cost telemetry but are refunded to the
+   customer. Uplumo absorbs any provider cost for our invalid request.
 
 `DoUnmetered` is only for free calls that still carry a cost field, such as
 collecting a queued task that was charged when it was posted.
@@ -27,8 +30,8 @@ Rules that must never break:
   a large hold, never Uplumo money.
 - **Ceilings are maximums, not averages.** They come from DataForSEO's
   published prices: SERP pages by depth (default depth 10), queued and
-  priority rates, the 5x price for search operators, July 2026 Labs and
-  Backlinks rates, and endpoint-specific Business Data rates. Labs and
+  priority rates, the 5x price for search operators, and July 2026 Labs and
+  Backlinks rates. Labs and
   Backlinks requests without a `limit` are held as 1,000 rows.
   Labs tasks with `include_clickstream_data: true` hold twice the complete
   ordinary task price, including task and result-row charges.

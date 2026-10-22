@@ -47,7 +47,7 @@ Deliver through the `seo-report` skill, saving with `skill: "competitive-landsca
 1. Define the market query set:
    - Use provided keywords, or call `research_keywords` to build 5-10 representative queries.
    - Include mixed intent: informational, commercial, comparison, and tool/software terms when applicable.
-   - For local SEO, include neighborhood/city/service-area queries and identify the priority locations or coordinates.
+   - For local markets, include neighborhood/city/service-area organic queries and use canonical locations returned by Uplumo; do not promise Maps or local-pack results.
 2. If the query set is already known, use `get_keyword_metrics` to validate relative demand and difficulty and `find_serp_competitors` to identify recurring domains at scale.
 3. Call `get_serp_results` for representative queries when live SERP composition, ranking URLs, or SERP features need inspection. Send at most 10 queries per call.
 4. Identify recurring domains and group them by type:
@@ -59,7 +59,7 @@ Deliver through the `seo-report` skill, saving with `skill: "competitive-landsca
 5. For the strongest recurring domains, call `get_domain_overview`; default to the top 3-5 domains before expanding.
 6. For direct competitors and relevant publishers, call `get_ranked_keywords`.
 7. Use `get_backlinks_overview` when backlink authority appears important or the user asks why a domain is winning. Backlinks may be unavailable if the account has not enabled that data; continue with SERP/domain evidence if it fails.
-8. Synthesize patterns: content types, themes, SERP formats, local-pack signals, authority advantages, and underserved angles.
+8. Synthesize content types, themes, organic SERP formats, authority advantages, location-specific organic patterns when available, and underserved angles. Do not claim local-pack or Maps coverage.
 
 ## Output format
 
@@ -82,4 +82,4 @@ Sections in this order:
 - Do not overstate exact traffic when Uplumo returns estimates.
 - If using a small query set, call the result directional.
 - Do not assume a publisher is a product competitor; label domain types clearly.
-- For local markets, distinguish organic-page winners from Maps/local-pack winners.
+- For local markets, report organic-page evidence only; explicitly say Maps/local-pack winners are not measured by these tools.
