@@ -96,10 +96,14 @@ type fakeRegistry struct {
 	names     []string
 	locations []SerpLocation // typed rows; names carry no type
 	err       error
-	calls     int
+
+	mu    sync.Mutex
+	calls int
 }
 
 func (r *fakeRegistry) Locations(_ context.Context, _, _ string) ([]SerpLocation, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.calls++
 	if r.err != nil {
 		return nil, r.err
