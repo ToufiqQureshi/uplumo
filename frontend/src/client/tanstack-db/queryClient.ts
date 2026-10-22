@@ -1,7 +1,6 @@
 import { MutationCache, QueryClient } from "@tanstack/query-core";
 import { toast } from "sonner";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
-import { shouldRetryApiError } from "@/client/lib/uplumoApi";
 
 declare module "@tanstack/query-core" {
   interface Register {
@@ -27,7 +26,10 @@ export const queryClient = new QueryClient({
     queries: {
       gcTime: 1000 * 60 * 60,
       staleTime: 1000 * 60 * 5, // 5 minutes — show cached data instantly, refetch in background after
-      retry: shouldRetryApiError,
+      // Never retry by default: a paid provider call may already be billed even
+      // when the network or server answered 5xx, so a silent retry can double-charge
+      // the customer. Free GET reads that want a retry opt in explicitly.
+      retry: false,
     },
   },
 });
