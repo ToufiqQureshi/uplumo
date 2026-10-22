@@ -23,6 +23,8 @@ var (
 	ErrReservationNotFound = errors.New("credit reservation not found")
 	// ErrReservationAlreadyClosed means the reservation is already settled or refunded.
 	ErrReservationAlreadyClosed = errors.New("credit reservation already settled or refunded")
+	// ErrReservationNotStale means a heartbeat refreshed the hold before cleanup acquired its lock.
+	ErrReservationNotStale = errors.New("credit reservation is still active")
 	// ErrIdempotentReplay means this idempotency key already has a reservation.
 	ErrIdempotentReplay = errors.New("request with this idempotency key was already reserved")
 )
@@ -525,6 +527,20 @@ func restoreReservationCreditsTx(ctx context.Context, tx pgx.Tx, reservationID s
 	}
 	rows.Close()
 	if len(allocations) == 0 {
+		if amount <= 0 {
+			return 0, nil
+		}
+		// Reservations created before credit-grant allocation existed have no
+		// source bucket. Recreate the refund as a usable grant instead of only
+		// incrementing the legacy balance counter.
+		var organizationID string
+		if err := tx.QueryRow(ctx, `SELECT organization_id FROM go_billing_credit_reservations WHERE id = $1`, reservationID).Scan(&organizationID); err != nil {
+			return 0, fmt.Errorf("read legacy reservation owner: %w", err)
+		}
+		if _, err := tx.Exec(ctx, `INSERT INTO go_billing_credit_grants (id, organization_id, granted_credits, remaining_credits, expires_at)
+			VALUES ($1, $2, $3, $3, $4)`, "refund-"+reservationID, organizationID, amount, time.Now().UTC().AddDate(0, 2, 0)); err != nil {
+			return 0, fmt.Errorf("create grant for legacy reservation refund: %w", err)
+		}
 		return amount, nil
 	}
 	remaining, restored := amount, int64(0)
@@ -682,6 +698,14 @@ func (s *CreditLedgerService) settle(ctx context.Context, reservationID string, 
 
 // Refund refunds a reservation in full.
 func (s *CreditLedgerService) Refund(ctx context.Context, reservationID string, reason string) error {
+	return s.refundReservation(ctx, reservationID, reason, nil)
+}
+
+func (s *CreditLedgerService) refundStaleReservation(ctx context.Context, reservationID, reason string, cutoff time.Time) error {
+	return s.refundReservation(ctx, reservationID, reason, &cutoff)
+}
+
+func (s *CreditLedgerService) refundReservation(ctx context.Context, reservationID string, reason string, staleBefore *time.Time) error {
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
@@ -690,11 +714,12 @@ func (s *CreditLedgerService) Refund(ctx context.Context, reservationID string, 
 
 	var orgID, status, feature, endpoint, userID string
 	var reservedAmount int64
+	var updatedAt time.Time
 	err = tx.QueryRow(ctx, `
-		SELECT organization_id, amount_credits, status, feature, endpoint, COALESCE(user_id, '')
+		SELECT organization_id, amount_credits, status, feature, endpoint, COALESCE(user_id, ''), updated_at
 		FROM go_billing_credit_reservations
 		WHERE id = $1 FOR UPDATE
-	`, reservationID).Scan(&orgID, &reservedAmount, &status, &feature, &endpoint, &userID)
+	`, reservationID).Scan(&orgID, &reservedAmount, &status, &feature, &endpoint, &userID, &updatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ErrReservationNotFound
 	}
@@ -704,6 +729,9 @@ func (s *CreditLedgerService) Refund(ctx context.Context, reservationID string, 
 
 	if status != "reserved" {
 		return ErrReservationAlreadyClosed
+	}
+	if staleBefore != nil && !updatedAt.Before(*staleBefore) {
+		return ErrReservationNotStale
 	}
 
 	if err := lockBalanceTx(ctx, tx, orgID); err != nil {
@@ -735,6 +763,48 @@ func (s *CreditLedgerService) Refund(ctx context.Context, reservationID string, 
 	}
 
 	return tx.Commit(ctx)
+}
+
+// staleReservationAge is the no-heartbeat window after which a reservation is
+// treated as abandoned — the request crashed between Hold and Settle/Refund —
+// and the customer's credits are restored.
+const staleReservationAge = time.Hour
+
+// RefundStaleReservations refunds holds left reserved by a crash so the
+// customer's credits are restored and the idempotency key can be reused. It
+// returns the number of reservations refunded.
+func (s *CreditLedgerService) RefundStaleReservations(ctx context.Context) (int64, error) {
+	cutoff := time.Now().UTC().Add(-staleReservationAge)
+	rows, err := s.db.Query(ctx, `SELECT id FROM go_billing_credit_reservations WHERE status = 'reserved' AND updated_at < $1 ORDER BY updated_at`, cutoff)
+	if err != nil {
+		return 0, fmt.Errorf("list stale reservations: %w", err)
+	}
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return 0, fmt.Errorf("read stale reservation: %w", err)
+		}
+		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return 0, err
+	}
+	rows.Close()
+
+	var refunded int64
+	for _, id := range ids {
+		if err := s.refundStaleReservation(ctx, id, "stale reservation reconciliation", cutoff); err != nil {
+			if errors.Is(err, ErrReservationAlreadyClosed) || errors.Is(err, ErrReservationNotStale) {
+				continue // another worker closed it or an active heartbeat renewed it
+			}
+			return refunded, fmt.Errorf("refund stale reservation %s: %w", id, err)
+		}
+		refunded++
+	}
+	return refunded, nil
 }
 
 // FeatureSpend is the credits a workspace spent on one feature.
