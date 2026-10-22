@@ -16,6 +16,26 @@ Serves project-scoped backlink summaries, history, referring-domain and top-page
 
 DataForSEO paid endpoints and usage metering; project plan/credit checks.
 
+## Show every summary/profile field the report paid for
+
+- **Decision:** Preserve the provider's unclassified breakdown bucket (blank
+  key) as `"unknown"`, and render the summary profile fields that were already
+  decoded and in the API but hidden: crawled pages, link types and link
+  attributes. Correct two misleading labels: the nofollow-domains tooltip now
+  says "at least one nofollow link" (the provider's definition, not "only
+  nofollow"), the backlinks "Link" column help and export header now say the
+  rank is the backlink's own passed rank, not the linking page's authority.
+- **Why:** These arrive in the same summary task that is already paid for; hiding
+  them or mislabelling them loses customer value with no cost saving. The blank
+  key is real paid data (links the provider could not classify), not an error.
+- **Preserve:** No new provider call, no change to cache identity, and the
+  unknown bucket is never presented as zero. The 6-entry per-list display cap
+  and history rank/new-lost-referring-domain chart lines are deliberately left
+  for a follow-up; this change only makes already-returned data visible and
+  correct.
+- **Trace:** `service.go` (`counts`), `frontend/src/client/features/backlinks/
+  {BacklinksProfilePanel.tsx,BacklinksTableColumns.tsx,export.ts}`.
+
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.

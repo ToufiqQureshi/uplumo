@@ -34,7 +34,7 @@ export function buildBacklinksTabExport(args: {
         "Domain Rank",
         ...(domainRatings ? ["Ahrefs DR"] : []),
         "Source Page Rank",
-        "Target Rank",
+        "Link Rank",
         "Spam Score",
         "First Seen",
         "Last Seen",
