@@ -14,10 +14,12 @@ import (
 	"github.com/toufiqqureshi/uplumo/backend/internal/ranktracking"
 )
 
+const defaultRankTrackerSerpDepth = 10
+
 func createRankTrackerTool() *tool {
 	return &tool{
 		Name: "create_rank_tracker", Title: "Create rank tracker",
-		Description:  "Create an empty rank tracking configuration. No check or credit spend starts during creation. Defaults to the project domain and market, mobile device, depth 40, and a manual schedule. Scheduled checks can spend credits after keywords are added; estimate the cost and get user approval before adding keywords.",
+		Description:  "Create an empty rank tracking configuration. No check or credit spend starts during creation. Defaults to the project domain and market, mobile device, depth 10, and a manual schedule. Scheduled checks can spend credits after keywords are added; estimate the cost and get user approval before adding keywords.",
 		InputSchema:  json.RawMessage(`{"type":"object","properties":{"projectId":{"type":"string","minLength":1},"domain":{"type":"string","minLength":1,"maxLength":255},"locationCode":{"type":"integer","minimum":1},"languageCode":{"type":"string","minLength":2,"maxLength":8},"locationName":{"type":"string","minLength":1,"maxLength":200},"devices":{"type":"string","enum":["desktop","mobile","both"]},"serpDepth":{"type":"integer","minimum":10,"maximum":100,"multipleOf":10},"scheduleInterval":{"type":"string","enum":["manual","daily","weekly","monthly"]},"scheduleTime":{"type":"object","properties":{"weekday":{"type":"integer","minimum":0,"maximum":6},"hour":{"type":"integer","minimum":0,"maximum":23},"minute":{"type":"integer","minimum":0,"maximum":59},"timeZone":{"type":"string"}},"required":["hour","minute"],"additionalProperties":false}},"required":["projectId"],"additionalProperties":false}`),
 		OutputSchema: json.RawMessage(`{"type":"object","properties":{"trackerId":{"type":"string"},"config":{"type":"object"}},"required":["trackerId","config"],"additionalProperties":true}`),
 		Annotations:  map[string]any{"readOnlyHint": false, "openWorldHint": false, "destructiveHint": false},
@@ -64,7 +66,7 @@ func handleCreateRankTracker(ctx context.Context, raw json.RawMessage, env *call
 	}
 	depth := args.SerpDepth
 	if depth == 0 {
-		depth = 40
+		depth = defaultRankTrackerSerpDepth
 	}
 	if depth < 10 || depth > 100 || depth%10 != 0 {
 		return nil, newAppErrorf("VALIDATION_ERROR", "serpDepth must be a multiple of 10 from 10 to 100")

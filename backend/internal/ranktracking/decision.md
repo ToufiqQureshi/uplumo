@@ -55,6 +55,24 @@ DataForSEO SERP; Postgres configs/runs/tasks/snapshots; Redis jobs/locks; billin
   `00038_rank_snapshot_competitors.sql`,
   `checks_test.go:TestParseSerpKeepsCompetitors`.
 
+## Weekly schedules use the shared credit balance
+
+- **Decision:** Adding keywords to a weekly tracker is not rejected by a worst-case monthly estimate. Billing usage reports configured schedules and any projected shortfall; each live provider request still reserves credits and is refused if the workspace cannot cover it.
+- **Why:** The earlier per-config preflight blocked customers from adding keywords, missed config changes and other trackers, and treated all weekly usage as if rank tracking alone owned the whole monthly grant. Credits are shared across paid features.
+- **Preserve:** Keep plan keyword/depth limits, the daily opt-in preflight, and the global/provider spend guard. No provider call may exceed the credits available to the workspace.
+- **Trace:** `AddKeywords`, the billing usage forecast, and `SpendGuard.Hold`.
+
+## Safe default for MCP rank tracker depth
+
+- **Decision:** `create_rank_tracker` defaults to depth 10, the lowest supported
+  depth and one allowed on every paid tier. Users can request a deeper crawl
+  explicitly when their plan allows it.
+- **Why:** The old default of 40 made the tool fail for Solo accounts, whose
+  maximum depth is 30, before the user had a chance to choose a valid setting.
+- **Preserve:** Creating a tracker remains manual by default and starts no paid
+  check; configured checks still pass through plan and credit guards.
+- **Trace:** `backend/internal/mcp/rank_tracker_create.go` and plan depth limits.
+
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.
