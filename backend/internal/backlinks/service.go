@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/dataforseo"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/spend"
@@ -49,6 +51,8 @@ type Service struct {
 	logger   *slog.Logger
 	now      func() time.Time
 	flights  singleflight.Group
+	// DB persists complete overviews; nil skips persistence in lightweight callers.
+	DB *pgxpool.Pool
 }
 
 // NewService constructs a backlinks service using the shared DataForSEO client.
@@ -129,6 +133,9 @@ func (s *Service) Overview(ctx context.Context, org string, in lookupInput) (Ove
 	if err != nil {
 		return Overview{}, err
 	}
+	if err := ctx.Err(); err != nil {
+		return Overview{}, err
+	}
 	var cached Overview
 	if s.readCache(ctx, key, &cached) {
 		return cached, nil
@@ -146,6 +153,11 @@ func (s *Service) Overview(ctx context.Context, org string, in lookupInput) (Ove
 		var recent Overview
 		if s.readCache(flightCtx, key, &recent) {
 			return recent, nil
+		}
+		// Coalesce the durable fallback too, and refill Redis when it succeeds.
+		if stored, ok := s.loadOverviewSnapshot(flightCtx, org, target); ok {
+			s.writeCache(flightCtx, key, stored)
+			return stored, nil
 		}
 		return s.loadOverview(flightCtx, org, target, key)
 	})
@@ -176,6 +188,7 @@ func (s *Service) loadOverview(ctx context.Context, org string, target Target, k
 		result.Summary.Backlinks = floatInt(allTotal)
 		result.Summary.ReferringDomains = floatInt(domainTotal)
 		s.writeCache(ctx, key, result)
+		s.saveOverviewSnapshot(ctx, org, target, result)
 		return result, nil
 	}
 	// Sequential: a billing or provider error on the first task must stop the
@@ -220,12 +233,80 @@ func (s *Service) loadOverview(ctx context.Context, org string, target Target, k
 		ttl = partialCacheTTL
 	}
 	s.writeCacheFor(ctx, key, result, ttl)
+	// A summary without history is useful briefly in Redis, but it is not a
+	// complete report and must not replace the 30-day durable snapshot.
+	if !historyLost {
+		s.saveOverviewSnapshot(ctx, org, target, result)
+	}
 	return result, nil
 }
 
-// DashboardSummary fetches the metered summary only, without the history task
-// used by the full backlinks report. The dashboard stores this result as a
-// daily snapshot so repeated page visits do not repeat provider spend.
+// backlinksOverviewMaxAge is the longest a persisted overview is served from
+// Postgres. Older rows are ignored on read and deleted on the next write, so a
+// customer cannot be shown months-old data with no way to refresh.
+const backlinksOverviewMaxAge = 30 * 24 * time.Hour
+
+// loadOverviewSnapshot returns the persisted overview, or ok=false when none
+// exists, it is older than backlinksOverviewMaxAge, or the DB is unavailable.
+
+// backlinksOverviewMaxAge is the longest a persisted overview is served from
+// Postgres. Older rows are ignored on read and deleted on the next write, so a
+// customer cannot be shown months-old data with no way to refresh.
+const backlinksOverviewMaxAge = 30 * 24 * time.Hour
+
+// loadOverviewSnapshot returns the persisted overview, or ok=false when none
+// exists, it is older than backlinksOverviewMaxAge, or the DB is unavailable.
+func (s *Service) loadOverviewSnapshot(ctx context.Context, org string, target Target) (Overview, bool) {
+	if s.DB == nil {
+		return Overview{}, false
+	}
+	readCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	var payload []byte
+	err := s.DB.QueryRow(readCtx, `SELECT payload FROM go_backlinks_overviews
+		WHERE organization_id = $1 AND api_target = $2 AND scope = $3 AND fetched_at > $4`,
+		org, target.APITarget, target.Scope, time.Now().UTC().Add(-backlinksOverviewMaxAge)).Scan(&payload)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Overview{}, false
+	}
+	if err != nil {
+		s.logger.WarnContext(readCtx, "read backlinks overview snapshot", "err", err)
+		return Overview{}, false
+	}
+	var out Overview
+	if err := json.Unmarshal(payload, &out); err != nil {
+		s.logger.WarnContext(readCtx, "decode backlinks overview snapshot", "err", err)
+		return Overview{}, false
+	}
+	return out, true
+}
+
+// saveOverviewSnapshot persists the overview best-effort: a DB failure must not
+// fail the answer the customer already paid for. It also deletes rows older than
+// backlinksOverviewMaxAge so the table does not grow forever.
+func (s *Service) saveOverviewSnapshot(ctx context.Context, org string, target Target, value Overview) {
+	if s.DB == nil {
+		return
+	}
+	payload, err := json.Marshal(value)
+	if err != nil {
+		s.logger.ErrorContext(ctx, "encode backlinks overview snapshot", "err", err)
+		return
+	}
+	writeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 3*time.Second)
+	defer cancel()
+	if _, err := s.DB.Exec(writeCtx, `DELETE FROM go_backlinks_overviews WHERE fetched_at < $1`,
+		time.Now().UTC().Add(-backlinksOverviewMaxAge)); err != nil {
+		s.logger.WarnContext(writeCtx, "delete expired backlinks overview snapshots", "err", err)
+	}
+	if _, err := s.DB.Exec(writeCtx, `INSERT INTO go_backlinks_overviews (organization_id, api_target, scope, payload)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (organization_id, api_target, scope) DO UPDATE SET payload = EXCLUDED.payload, fetched_at = now()`,
+		org, target.APITarget, target.Scope, payload); err != nil {
+		s.logger.WarnContext(writeCtx, "write backlinks overview snapshot", "err", err)
+	}
+}
+
 func (s *Service) DashboardSummary(ctx context.Context, org, domain string) (Summary, error) {
 	target, err := normalizeTarget(domain, string(ScopeSubdomains))
 	if err != nil {

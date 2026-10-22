@@ -36,6 +36,22 @@ DataForSEO paid endpoints and usage metering; project plan/credit checks.
 - **Trace:** `service.go` (`counts`), `frontend/src/client/features/backlinks/
   {BacklinksProfilePanel.tsx,BacklinksTableColumns.tsx,export.ts}`.
 
+## Persist the overview so a cache miss does not re-buy
+
+- **Decision:** Persist complete overview responses in `go_backlinks_overviews`,
+  keyed by organization, API target and scope. A Redis miss can reuse a fresh
+  snapshot for up to 30 days; the durable lookup runs inside the singleflight
+  callback and refills Redis. Subfolder totals are complete and persist too.
+- **Why:** The summary and history are separately billed provider tasks. Reusing
+  a report avoids repeat spend after the 24-hour Redis TTL.
+- **Preserve:** A summary-only response after history failure stays in Redis
+  for ten minutes and never replaces a complete snapshot. Writes are best-effort;
+  DB read/write failures fall back without failing an already-paid answer.
+  The table is server-only, organization-scoped and cascades on org deletion.
+- **Trace:** `service.go` (`Overview`, `loadOverviewSnapshot`),
+  `00040_backlinks_overviews.sql`, `README.md`, `flow.md`,
+  `service_persistence_test.go`.
+
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.

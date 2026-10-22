@@ -18,7 +18,7 @@
 
 `requireSession -> requireProjectAccess -> paid-plan check -> handler validation -> service/cache -> platform/dataforseo`
 
-Routes are `POST /api/v1/projects/{projectId}/backlinks/{overview,backlinks,referring-domains,top-pages}`. There is no repository or table: the feature is a read-only provider proxy and uses no tenant-owned data. Project authorization supplies the organization ID that is used for plan checks, DataForSEO usage recording and Redis key isolation.
+Routes are `POST /api/v1/projects/{projectId}/backlinks/{overview,backlinks,referring-domains,top-pages}`. Table and row data remain provider-backed; the complete overview is also persisted in `go_backlinks_overviews` for up to 30 days so an expired Redis cache does not re-buy paid provider tasks. The table is organization-scoped, server-only and cascades with organization deletion. Project authorization supplies the organization ID used for plan checks, DataForSEO usage recording and cache isolation.
 
 ## Rules that must not break
 
@@ -37,7 +37,7 @@ Routes are `POST /api/v1/projects/{projectId}/backlinks/{overview,backlinks,refe
 
 ## Configuration, limits and tests
 
-`DATAFORSEO_API_KEY` configures the shared provider transport. No new environment variables or tables are required. Redis caches successful responses for 24 hours. Request bodies are limited to 32 KiB, filter strings to 500 bytes and provider filter expressions to eight conditions. Provider outbound timeouts and usage recording are enforced by `platform/dataforseo`.
+`DATAFORSEO_API_KEY` configures the shared provider transport; no new environment variable is required. Redis caches complete successful responses for 24 hours. A summary-only response after a history failure stays in Redis for ten minutes and never replaces a complete durable snapshot. Request bodies are limited to 32 KiB, filter strings to 500 bytes and provider filter expressions to eight conditions. Provider outbound timeouts and usage recording are enforced by `platform/dataforseo`.
 
 Tests cover target normalization, filter translation and budget, handler validation/plan checks, result mapping, provider errors, cache isolation/outages and cancellation. No database tenant-isolation test applies because this package has no repository; project authorization and organization-attributed provider usage are covered at the HTTP boundary.
 `service_test.go` also asserts that eight concurrent equivalent overviews issue
