@@ -67,9 +67,7 @@ func NewCreditLedgerService(db *pgxpool.Pool) *CreditLedgerService {
 }
 
 func generateID(prefix string) string {
-	b := make([]byte, 12)
-	_, _ = rand.Read(b)
-	return fmt.Sprintf("%s_%s", prefix, hex.EncodeToString(b))
+	return prefix + "_" + rand.Text()
 }
 
 // GetBalance returns the organization's credit balance.
@@ -583,6 +581,22 @@ func (s *CreditLedgerService) Settle(ctx context.Context, reservationID string, 
 // It returns the credits charged.
 func (s *CreditLedgerService) SettleUpTo(ctx context.Context, reservationID string, actualAmount int64) (int64, error) {
 	return s.settle(ctx, reservationID, actualAmount, true, 0, "")
+}
+
+// settleUnreservedProvider persists an already known outcome before any balance
+// operation. Zero credits were held; normal settlement charges available funds.
+func (s *CreditLedgerService) settleUnreservedProvider(ctx context.Context, org, feature, endpoint string, credits int64, costUSD float64) (int64, error) {
+	id := generateID("res")
+	if _, err := s.db.Exec(ctx, `INSERT INTO go_billing_credit_reservations
+  (id, organization_id, amount_credits, status, feature, endpoint, user_id, settlement_credits, provider_cost_usd)
+  VALUES ($1,$2,0,'reserved',$3,$4,NULLIF($5,''),$6,$7)`,
+		id, org, feature, endpoint, spend.UserIDFromContext(ctx), credits, costUSD); err != nil {
+		return 0, fmt.Errorf("record unreserved provider outcome: %w", err)
+	}
+	if err := s.topUpStaff(ctx, org, credits); err != nil {
+		return 0, err
+	}
+	return s.settle(ctx, id, credits, true, costUSD, endpoint)
 }
 
 // SettleProviderUpTo records provider cost while settling up to actualCredits.

@@ -51,3 +51,10 @@ Shows organic estimates, keyword/page tables and filtered domain research.
 - **Why:** Navigation should not repeatedly request an identical empty paid lookup.
 - **Preserve:** Tenant/market query keys, explicit retry and disabled automatic paid retries.
 - **Trace:** `hooks/useDomainOverviewQuery.ts`; matching backend empty-result TTL/call-count regressions.
+
+## Exercise the actual transport in browser tests
+
+- **Decision:** Remove runtime fixture imports/flags and install mocked HTTP/session responses in Playwright only.
+- **Why:** A global fixture flag skipped the suggestions endpoint entirely, so the paid-call regression could not exercise the real request path. Several filter tests also depended on an unrelated logged-in dev backend.
+- **Preserve:** Customer API schemas and requests, no real paid browser-test calls, exact suggestion-call counts and filter URL assertions.
+- **Trace:** `domainApi.ts`, test utility and spend/browser regressions. Filter selectors use the current visible label.

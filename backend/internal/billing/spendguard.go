@@ -298,7 +298,13 @@ func (h *creditHold) SettleProviderCost(ctx context.Context, providerCostUSD, cu
 func (g *SpendGuard) settle(ctx context.Context, org string, feature spend.Feature, endpoint, reservationID string, providerCostUSD, customerCostUSD float64) error {
 	credits := CreditsForUSD(customerCostUSD)
 	if reservationID == "" && g.chargeCredits && credits > 0 {
-		return g.chargeDown(ctx, org, feature, endpoint, credits, providerCostUSD)
+		charged, err := g.ledger.settleUnreservedProvider(ctx, org, string(feature), endpoint, credits, providerCostUSD)
+		if err != nil {
+			return fmt.Errorf("settle unreserved %s spend: %w", feature, err)
+		}
+		g.warnShort(ctx, org, feature, credits, charged)
+		spend.RecordCredits(ctx, charged)
+		return nil
 	}
 	if providerCostUSD > 0 && reservationID == "" {
 		if _, err := g.db.Exec(ctx, `INSERT INTO go_provider_spend (organization_id, feature, cost_usd) VALUES ($1, $2, $3)`,
@@ -315,35 +321,6 @@ func (g *SpendGuard) settle(ctx context.Context, org string, feature spend.Featu
 		spend.RecordCredits(ctx, charged)
 		return nil
 	}
-	return nil
-}
-
-// chargeDown charges credits for work already paid for, down to a zero
-// balance.
-func (g *SpendGuard) chargeDown(ctx context.Context, org string, feature spend.Feature, endpoint string, credits int64, costUSD float64) error {
-	reservation, err := g.ledger.ReserveFor(ctx, org, credits, "", string(feature))
-	if errors.Is(err, ErrInsufficientBalance) {
-		balance, balanceErr := g.ledger.GetBalance(ctx, org)
-		if balanceErr != nil {
-			return fmt.Errorf("read balance after shortfall: %w", balanceErr)
-		}
-		g.warnShort(ctx, org, feature, credits, balance)
-		if balance <= 0 {
-			if _, err := g.db.Exec(ctx, `INSERT INTO go_provider_spend (organization_id, feature, cost_usd) VALUES ($1, $2, $3)`, org, string(feature), costUSD); err != nil {
-				return fmt.Errorf("log uncharged provider spend: %w", err)
-			}
-			return nil
-		}
-		reservation, err = g.ledger.ReserveFor(ctx, org, balance, "", string(feature))
-	}
-	if err != nil {
-		return fmt.Errorf("charge %d credits for %s: %w", credits, feature, err)
-	}
-	charged, err := g.ledger.SettleProviderUpTo(ctx, reservation.ID, credits, costUSD, endpoint)
-	if err != nil {
-		return fmt.Errorf("settle %s charge: %w", feature, err)
-	}
-	spend.RecordCredits(ctx, charged)
 	return nil
 }
 

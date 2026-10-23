@@ -13,9 +13,12 @@ test("a rapid AI writer double click sends one keyed request", async ({
   const requests: string[] = [];
   const writerRequests: Record<string, unknown>[] = [];
   await openEditor(page, requests, writerRequests);
+  await page.getByLabel("Target topics", { exact: true }).fill("technical SEO");
+  await page.getByLabel("Target topics", { exact: true }).press("Enter");
   await page.getByRole("tab", { name: "AI help" }).click();
-  await expect(page.getByText("Up to 15 credits")).toHaveCount(10);
-  const outline = page.getByRole("button", { name: "Create outline" });
+  await expect(page.getByText(/never more than 15/u)).toBeVisible();
+  await page.locator("summary").filter({ hasText: "More AI actions" }).click();
+  const outline = page.getByRole("button", { name: /^Make an outline/u });
   await expect(outline).toBeEnabled();
   await outline.dispatchEvent("click");
   await outline.dispatchEvent("click");
@@ -28,7 +31,10 @@ test("block insert menu stays beside the editor and inside the viewport", async 
 }, testInfo: TestInfo) => {
   const requests: string[] = [];
   await openEditor(page, requests);
-  await page.getByText("How it looks on Google").click();
+  await page
+    .locator("summary")
+    .filter({ hasText: "How it looks on Google" })
+    .click();
 
   const article = page.locator(
     '[role="textbox"][aria-labelledby="article-editor-label"]',
@@ -194,7 +200,7 @@ test("unsaved editor navigation can be cancelled without losing writing", async 
   expect(requests.filter((path) => paidEndpoints.test(path))).toEqual([]);
 });
 
-test("a slow save locks editing until the saved snapshot is applied", async ({
+test("writing during a slow save survives the saved snapshot response", async ({
   page,
 }) => {
   const requests: string[] = [];
@@ -221,13 +227,17 @@ test("a slow save locks editing until the saved snapshot is applied", async ({
   await title.fill("Original title");
   await page.getByRole("button", { name: "Save draft", exact: true }).click();
   await expect.poll(() => submitted?.title).toBe("Original title");
-  await expect(title).toBeDisabled();
+  await expect(title).toBeEnabled();
+  await title.fill("New writing while the save is pending");
   releaseSave?.();
   await expect(page).toHaveURL(/draft=slow-draft/u);
   await expect(title).toBeEnabled();
-  await expect(title).toHaveValue("Original title");
-  await title.fill("New writing after the save completes");
+  await expect(title).toHaveValue("New writing while the save is pending");
   await expect(page.getByText(/Unsaved changes/u)).toBeVisible();
+  await page.getByRole("button", { name: "Save draft", exact: true }).click();
+  await expect
+    .poll(() => submitted?.title)
+    .toBe("New writing while the save is pending");
   expect(requests.filter((path) => paidEndpoints.test(path))).toEqual([]);
 });
 

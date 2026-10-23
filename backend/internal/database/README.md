@@ -5,8 +5,7 @@ product started with (users, sessions, organizations, projects, audits,
 reports and the rest) plus the first analytics table, so a new database is
 built by `Migrate` alone. Versions 2 onward add tables prefixed `go_`.
 
-Never edit a migration that has run anywhere, and production has run all of
-them: add a new file numbered after the highest one. Two files with the same
+Never edit a migration that has run anywhere: add a new file numbered after the highest one. Check live migration history at release; repository versions may not be deployed yet. Two files with the same
 number stop the server from starting, so check `main` before picking a number
 when several branches are open.
 
@@ -41,3 +40,9 @@ verifies that table grants alone cannot expose or alter stored evidence.
 Migration 35 adds optional analytics browser recognition and sanitized click destinations. It enables RLS and revokes public/client privileges on the browser registry and pageview/custom-event tables. The Go server must own these tables or have BYPASSRLS. See analytics `decision.md` and `AUDIENCE_DESTINATIONS.txt`; migration tests verify fresh startup, restricted-role denial and legacy-write compatibility.
 
 Migration 41 adds pending-outcome and settlement metadata to credit reservations. It protects already-bought work during credit-transaction recovery and marks existing open feature holds conservatively; no plan price or grant changes.
+
+## Private server storage
+
+Migration 42 enables RLS on non-extension tables in the application schema and revokes PUBLIC/anon/authenticated privileges on its tables, views and sequences. It also removes the migration owner's default client privileges for future objects. The Go database role must own the tables or have BYPASSRLS; browser traffic uses Go session/project authorization, never direct Data API table access. Storage API service-role uploads are separate. Rollback retains these protections. `private_storage_test.go` verifies fresh migration, owner reads, client read denial after accidental grants, and TRUNCATE privilege removal.
+
+Known costs after a zero estimate use a zero-amount outcome reservation (migration 43), committed before staff top-up, expiry or customer charging. The existing settlement/reconciler charges available credits and records provider spend once; charging failure cannot turn it into an ordinary refundable hold.

@@ -146,3 +146,5 @@ Use the package tests next to the source files in `README.md`. For changes cross
 - **Why:** Identical revisits bought the same empty Labs task every time. A short TTL bounds transient emptiness without repeatedly charging during navigation.
 - **Preserve:** Tenant/market/scope keys, non-empty TTLs, error handling and concurrent coalescing. Overview cache entries still need a fetched timestamp.
 - **Trace:** `lookup.go`, `service.go`, `suggestions.go`; empty-result call-count and TTL regressions in `service_test.go`.
+
+Provider fixtures include task path and explicit cost, including zero on rejected tasks. Missing task billing metadata now keeps a purchase uncertain rather than proving it was free. Mapping and exact one-call failure assertions remain unchanged.

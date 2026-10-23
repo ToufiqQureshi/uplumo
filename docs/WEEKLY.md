@@ -3,12 +3,15 @@
 One short section per week (Saturday to Friday), newest first, last 8 weeks.
 Read the latest week first; rules are in `CLAUDE.md` section 7.
 
-## 17–23 Oct 2026 (updated 22 Oct; week closes Friday 23 Oct)
+## 17–23 Oct 2026 (updated 23 Oct; week closes Friday 23 Oct)
 
 **Production:** Owner confirmed Razorpay live keys, so working subscriptions
-charge real money. Business plan ID and live renewal/cancel acceptance remain
-unconfirmed. DataForSEO's key is configured, but account verification 40104 is
-pending; OpenRouter calls can incur real provider cost.
+charge real money. All four plan variable names are present; live terms and renewal/cancel
+acceptance remain unconfirmed. The owner confirms DataForSEO works and keeps
+an intentional $2/day account cap; paid provider calls incur real cost.
+Emergency RLS/grant hardening closed direct client access to app tables.
+PR #196 contains the code counterpart, financial fixes, cleanup and launch
+checks; see `docs/audits/2026-10-23-launch-readiness.md`.
 
 **Merged this week:**
 
@@ -34,9 +37,8 @@ pending; OpenRouter calls can incur real provider cost.
 ₹9,999; no per-workspace daily credit cap; Local SEO removed; IndexNow is paid;
 Razorpay keys are live. See `DECISIONS.md`.
 
-**Open owner asks:** confirm live plan IDs (especially Business), finish
-DataForSEO account verification, Google OAuth verification, and reconnect
-Railway GitHub auto-deploy. See section 2 of `DECISIONS.md`.
+**Open owner asks:** complete live billing acceptance, finish Google OAuth
+verification, and reconnect Railway GitHub auto-deploy. See section 2 of `DECISIONS.md`.
 
 **Docs:** agent guidance now requires code-checked feature docs and a weekly
 summary; external schedule status is outside this repository.

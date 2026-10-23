@@ -58,3 +58,10 @@ Use the package tests next to the source files in `README.md`. For changes cross
 Decision: privacy copy and tracker FAQ/blog disclose optional 180-day first-party browser recognition, default anonymous mode, first-seen/hash history retention until project/account deletion, host-managed consent and sanitized click destinations. Remove blanket claims that no visitor can be followed across days or that storage-based analytics never needs consent.
 
 Why: optional recognition changes the privacy behavior of enabled customer snippets. Existing owner tracking remains on its current default configuration; this change does not enable recognition there or inject a consent UI. Preserve accurate distinctions between browser identity and people, click intent and success, browser expiry and historical database deletion. Trace: `site.go`, `templates/privacy.html`, `blog/chatgpt-traffic-google-analytics.md`, site tests and analytics feature handover.
+
+## Explain the shared scheduled credit allowance
+
+- **Decision:** Pricing explicitly says schedules, research and AI share credits and that five-run months/multiple devices can exhaust the allowance.
+- **Why:** Business at its full keyword/depth limit can require 15,400 credits across five weekly runs, exceeding its 15,000 grant before research. A blanket weekly-check promise without this caveat can cause refunds.
+- **Preserve:** Owner-approved prices, grants, keyword capacities and default weekly schedule; no automatic paid top-up or new cap. Billing forecasts runs and the spend guard prevents overspending.
+- **Trace:** Pricing template, plan/cost tests and launch economics review.

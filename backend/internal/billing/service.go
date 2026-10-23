@@ -166,10 +166,6 @@ func NewReadOnlyService(db *pgxpool.Pool) *Service {
 
 // PaymentsConfigured reports whether this service can accept payment actions.
 func (s *Service) PaymentsConfigured() bool {
-	return s.providerConfigured()
-}
-
-func (s *Service) providerConfigured() bool {
 	return s != nil && s.razorpay != nil && s.webhookSecret != ""
 }
 
@@ -185,6 +181,25 @@ func (s *Service) AvailablePlans() []string {
 		}
 	}
 	return available
+}
+
+// VerifyPlan checks provider terms without creating a subscription or payment.
+func (s *Service) VerifyPlan(ctx context.Context, plan string) error {
+	if !s.PaymentsConfigured() {
+		return ErrPaymentUnavailable
+	}
+	definition, ok := plans.Get(plan)
+	if !ok || definition.PriceINR <= 0 || s.planIDs[plan] == "" {
+		return ErrPlanUnavailable
+	}
+	terms, err := s.razorpay.FetchPlan(ctx, s.planIDs[plan])
+	if err != nil {
+		return fmt.Errorf("verify checkout plan: %w: %w", ErrPaymentProvider, err)
+	}
+	if terms.Period != "monthly" || terms.Interval != 1 || terms.Item.Currency != "INR" || terms.Item.Amount != int64(definition.PriceINR)*100 {
+		return fmt.Errorf("%w: provider plan differs from catalog", ErrPlanUnavailable)
+	}
+	return nil
 }
 
 // MonthlyGrantFor returns the credits a paid month of plan grants.
@@ -393,7 +408,7 @@ func (s *Service) Checkout(ctx context.Context, orgID string) (Checkout, error) 
 // one to another plan is cancelled before the new one is created. If that
 // cancel fails, checkout fails rather than leave two payable subscriptions.
 func (s *Service) CheckoutPlan(ctx context.Context, orgID, plan string) (Checkout, error) {
-	if !s.providerConfigured() {
+	if !s.PaymentsConfigured() {
 		return Checkout{}, ErrPaymentUnavailable
 	}
 	planID := s.planIDs[plan]
@@ -411,6 +426,9 @@ func (s *Service) CheckoutPlan(ctx context.Context, orgID, plan string) (Checkou
 	}
 	if found && slices.Contains(liveStatuses, current.Status) {
 		return Checkout{}, ErrAlreadySubscribed
+	}
+	if err := s.VerifyPlan(ctx, plan); err != nil {
+		return Checkout{}, err
 	}
 	if found && current.Status == "created" {
 		if current.Plan == plan {
@@ -447,7 +465,7 @@ func (s *Service) CheckoutPlan(ctx context.Context, orgID, plan string) (Checkou
 // (the first charge has not happened, or a charge is failing) has no paid
 // time left and ends now. Cancelling twice is not an error.
 func (s *Service) Cancel(ctx context.Context, orgID string) (Status, error) {
-	if !s.providerConfigured() {
+	if !s.PaymentsConfigured() {
 		return Status{}, ErrPaymentUnavailable
 	}
 	current, found, err := s.repo.subscription(ctx, orgID)
@@ -486,7 +504,7 @@ func (s *Service) Cancel(ctx context.Context, orgID string) (Status, error) {
 // in any order. Events for organizations that no longer exist, or without
 // the organization note, are ignored.
 func (s *Service) HandleWebhook(ctx context.Context, body []byte, signature, eventID string) (WebhookResult, error) {
-	if !s.providerConfigured() {
+	if !s.PaymentsConfigured() {
 		return "", ErrPaymentUnavailable
 	}
 	if !razorpay.ValidSignature(body, signature, s.webhookSecret) {
@@ -529,12 +547,15 @@ func (s *Service) HandleWebhook(ctx context.Context, body []byte, signature, eve
 		return "", fmt.Errorf("%w: subscription %s of organization %s is on plan %q", ErrUnknownPlan, sub.ID, orgID, sub.PlanID)
 	}
 	grantCredits := s.grantFor(event.Event, sub.Status, plan)
-	grantIdentity := ""
+	var grantIdentities []string
 	if grantCredits > 0 {
 		// The delivery header is not covered by Razorpay's signature. Bind
 		// monthly credits to the verified body as well, so replaying it with
 		// a different header cannot mint another grant.
-		grantIdentity = fmt.Sprintf("signed-plan-grant:%x", sha256.Sum256(body))
+		grantIdentities = []string{fmt.Sprintf("signed-plan-grant:%x", sha256.Sum256(body))}
+		if payment := event.Payload.Payment; payment != nil && payment.Entity.ID != "" {
+			grantIdentities = append(grantIdentities, "razorpay-payment:"+payment.Entity.ID)
+		}
 	}
 	outcome, err := s.repo.applyEvent(ctx, eventID, subscription{
 		OrganizationID:   orgID,
@@ -543,7 +564,7 @@ func (s *Service) HandleWebhook(ctx context.Context, body []byte, signature, eve
 		Status:           sub.Status,
 		CurrentPeriodEnd: periodEnd,
 		EventAt:          time.Unix(event.CreatedAt, 0).UTC(),
-	}, liveStatuses, grantCredits, grantIdentity)
+	}, liveStatuses, grantCredits, grantIdentities)
 	if err != nil {
 		return "", fmt.Errorf("apply %s event %s: %w", event.Event, eventID, err)
 	}

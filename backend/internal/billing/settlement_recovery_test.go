@@ -98,3 +98,47 @@ CREATE TRIGGER %s BEFORE INSERT ON go_billing_credit_ledger FOR EACH ROW EXECUTE
 		t.Fatalf("reconciliation repeated provider spend: %v", cost)
 	}
 }
+
+func TestZeroEstimatePersistsOutcomeBeforeChargingFails(t *testing.T) {
+	pool := setupTestDB(t)
+	ledger := NewCreditLedgerService(pool)
+	org := spendOrg(t.Context(), t, pool, 1000)
+	guard := testGuard(t, pool, ledger, noDailyLimit, true)
+	hold, err := guard.Hold(t.Context(), spend.Request{OrganizationID: org, Feature: spend.Backlinks})
+	if err != nil {
+		t.Fatal(err)
+	}
+	name := pgx.Identifier{"audit_postpaid_" + rand.Text()}.Sanitize()
+	if _, err := pool.Exec(t.Context(), fmt.Sprintf(`CREATE FUNCTION %s() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.organization_id='%s' THEN RAISE EXCEPTION 'postpaid charge failure'; END IF; RETURN NEW; END $$;
+CREATE TRIGGER %s BEFORE UPDATE ON go_billing_credits FOR EACH ROW EXECUTE FUNCTION %s()`, name, org, name, name)); err != nil {
+		t.Fatal(err)
+	}
+	cleanup := func() {
+		if _, err := pool.Exec(context.Background(), fmt.Sprintf(`DROP TRIGGER IF EXISTS %s ON go_billing_credits; DROP FUNCTION IF EXISTS %s()`, name, name)); err != nil {
+			t.Error(err)
+		}
+	}
+	t.Cleanup(cleanup)
+	if err := hold.Settle(t.Context(), 0.02); err == nil {
+		t.Fatal("injected charging failure was ignored")
+	}
+	var outcomes int
+	if err := pool.QueryRow(t.Context(), `SELECT count(*) FROM go_billing_credit_reservations WHERE organization_id=$1 AND status='reserved' AND settlement_credits=26 AND provider_cost_usd=0.02`, org).Scan(&outcomes); err != nil || outcomes != 1 {
+		t.Fatalf("durable known outcomes=%d, err=%v; want one before customer charging", outcomes, err)
+	}
+	cleanup()
+	if _, err := pool.Exec(t.Context(), `UPDATE go_billing_credit_reservations SET updated_at=now()-interval '2 hours' WHERE organization_id=$1`, org); err != nil {
+		t.Fatal(err)
+	}
+	for range 2 {
+		if _, err := ledger.RefundStaleReservations(t.Context()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if got := balanceOf(t.Context(), t, ledger, org); got != 974 {
+		t.Fatalf("balance=%d, want 974", got)
+	}
+	if cost, _ := providerSpend(t, pool, org); cost != 0.02 {
+		t.Fatalf("provider spend=%v, want exactly 0.02", cost)
+	}
+}

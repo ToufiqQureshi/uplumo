@@ -51,3 +51,24 @@ Use the package tests next to the source files in `README.md`. For changes cross
 - **Why:** A one-hour age check alone can refund a long-running stream that is still consuming provider resources, and a legacy balance-only refund is not consumable by the grant-based ledger.
 - **Preserve:** Heartbeats stop when the request context ends or the hold settles; a crashed process stops refreshing; recovery uses the recorded outcome or leaves uncertain provider credits reserved for reconciliation. Refund and settlement remain locked and idempotent.
 - **Trace:** `SpendGuard.Hold`, `creditHold`, `RefundStaleReservations`, and `restoreReservationCreditsTx`.
+
+## Validate checkout prices and deduplicate actual payments
+
+- **Decision:** Fetch and validate recurring terms before creating/reusing unpaid checkout. Deduplicate grants by both signed body and payment ID when present.
+- **Why:** Wrong plan configuration can undercharge Uplumo or overcharge a customer. Two different signed event bodies for one payment previously refilled credits after spending.
+- **Preserve:** Existing paid subscriptions are not replaced, mismatches create/cancel no new subscription, catalog terms remain unchanged, old body fingerprints still block identical replays, and legacy events without payment ID retain fingerprint deduplication. Historical semantic identities cannot be reconstructed from event IDs alone. Duplicate grants may still carry a newer legitimate subscription state.
+- **Trace:** `service.go`, `repository.go`, adapter `plans.go`; five checkout mismatch cases and `TestDifferentSignedEventsForOnePaymentGrantCreditsOnce` failed before the fix. Existing concurrency/rollover/cancellation tests remain required.
+
+## Remove redundant billing plumbing
+
+- **Decision:** Use `PaymentsConfigured` directly and standard `crypto/rand.Text` for opaque ledger/grant/reservation IDs. Production provider charging follows the entitlement gate even when checkout is read-only.
+- **Why:** Duplicate wrappers and custom random-byte formatting add no business rule; public deployments must keep charging independently of checkout availability.
+- **Preserve:** Secure opaque unique IDs, existing prefixes, local self-hosted behavior and all ledger transactions.
+- **Trace:** `credits.go`, `service.go`, server wiring and billing/server tests.
+
+## Zero-estimate postpaid outcomes
+
+- **Decision:** Persist a known outcome in a zero-amount reservation before any balance operation, then reuse normal settlement and reconciliation. Migration 43 permits zero, never negative, reservation amounts.
+- **Why:** PR review found that a failed post-call ReserveFor could lose both provider expense and a recoverable charge. Remove that separate charging loop rather than duplicate recovery.
+- **Preserve:** Normal reservations still require positive amounts; postpaid shortfalls charge only available credits, staff top-ups remain counted, and spend is committed once with settlement. Rollback retains outcome rows.
+- **Trace:** `settlement_recovery_test.go` injects balance-update failure, observes a durable known cost, then reconciles twice to one 26-credit charge and one $0.02 spend. The test failed before the fix.

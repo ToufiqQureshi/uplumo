@@ -8,8 +8,6 @@ COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml 
 RUN pnpm install --frozen-lockfile
 COPY frontend/index.html frontend/vite.config.ts frontend/tsconfig.json frontend/components.json ./
 COPY frontend/src ./src
-# The app lazy-loads e2e fixtures from tests/, so the bundler must see them.
-COPY frontend/tests ./tests
 # Vite bakes these into the bundle, so they are build arguments, not runtime
 # variables.
 ARG BYPASS_EMAIL_VERIFICATION=

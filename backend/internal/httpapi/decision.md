@@ -34,3 +34,10 @@ Preserve: DNT/GPC before storage/collection, session expiry, hidden-time exclusi
 - **Trace:** `httpapi.go`; `backlinks_test.go` uses real authentication, Postgres plan state and provider-usage recording to check the mounted bypass is refused before another purchase.
 
 The mounted plan regression sends the explicit `userInitiated: true` contract, so its 402 proves the plan gate, rather than failing at request validation.
+
+## Mounted checkout verifies provider pricing
+
+- **Decision:** Update the real-session/Postgres billing HTTP fixture to serve the provider plan read before subscription creation.
+- **Why:** Checkout now refuses unverified/mismatched terms before making a plan payable. A fake subscription response cannot stand in for a plan response.
+- **Preserve:** Owner-only checkout, HMAC webhook validation, duplicate delivery behavior, internal/provider error distinction and read-only billing behavior.
+- **Trace:** `billing_test.go`, `TestBillingEndToEnd`; full mounted suite required before release.

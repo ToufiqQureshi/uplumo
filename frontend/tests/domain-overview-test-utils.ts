@@ -1,4 +1,11 @@
+import { z } from "zod";
 import { writeFile } from "node:fs/promises";
+import { installGrowthFixtures } from "./search-growth.fixtures";
+import {
+  getFixtureOverview,
+  getFixtureKeywordsPage,
+  getFixturePagesPage,
+} from "./fixtures/domain-overview-fixtures";
 import {
   expect,
   type CDPSession,
@@ -168,6 +175,26 @@ export async function attachJsonArtifact(
 }
 
 export async function openDomainOverview(page: Page, tab: DomainTab) {
+  await installGrowthFixtures(page);
+  await page.route("**/api/v1/projects/*/domain/*", async (route) => {
+    const input = z
+      .object({
+        domain: z.string(),
+        page: z.number().int().positive().default(1),
+        pageSize: z.number().int().positive().default(100),
+      })
+      .parse(route.request().postDataJSON());
+    const endpoint = new URL(route.request().url()).pathname.split("/").at(-1);
+    const json =
+      endpoint === "overview"
+        ? getFixtureOverview(input.domain)
+        : endpoint === "keywords"
+          ? getFixtureKeywordsPage(input)
+          : endpoint === "pages"
+            ? getFixturePagesPage(input)
+            : [];
+    await route.fulfill({ json });
+  });
   await page.addInitScript(() => {
     if (window.sessionStorage.getItem("domain-overview-e2e-cleared") === "1") {
       return;
@@ -180,14 +207,6 @@ export async function openDomainOverview(page: Page, tab: DomainTab) {
     }
     window.sessionStorage.setItem("domain-overview-e2e-cleared", "1");
   });
-  await page.goto("/");
-  await page.waitForURL(/\/p\/([^/]+)\/?$/, {
-    timeout: 30_000,
-  });
-
-  const match = page.url().match(/\/p\/([^/]+)/);
-  if (!match) throw new Error(`Could not read project id from ${page.url()}`);
-
   const params = new URLSearchParams({
     domain: PRIMARY_TEST_DOMAIN,
     scope: "subdomains",
@@ -196,7 +215,7 @@ export async function openDomainOverview(page: Page, tab: DomainTab) {
   });
   if (tab === "pages") params.set("tab", "pages");
 
-  await page.goto(`/p/${match[1]}/domain?${params.toString()}`);
+  await page.goto(`/p/e2e-project/domain?${params.toString()}`);
   await expect(
     page.getByRole("heading", { name: "Domain Overview" }),
   ).toBeVisible();
@@ -238,13 +257,13 @@ export async function switchDomainTab(page: Page, tab: DomainTab) {
 
 export async function openFilters(page: Page) {
   await page.getByRole("button", { name: /Filters/ }).click();
-  await expect(page.getByText("Refine table results")).toBeVisible();
+  await expect(page.getByText("Refine results", { exact: true })).toBeVisible();
   await expectPageResponsive(page, "after opening filters");
 }
 
 export async function closeFilters(page: Page) {
   await page.getByRole("button", { name: /Filters/ }).click();
-  await expect(page.getByText("Refine table results")).toBeHidden();
+  await expect(page.getByText("Refine results", { exact: true })).toBeHidden();
   await expectPageResponsive(page, "after closing filters");
 }
 

@@ -53,7 +53,7 @@ func (r *Runner) Call(ctx context.Context, auth Auth, name string, arguments jso
 	if len(arguments) == 0 {
 		arguments = json.RawMessage(`{}`)
 	}
-	res, _ := r.h.callTool(ctx, t, arguments, auth)
+	res := r.h.callTool(ctx, t, arguments, auth)
 	out := ToolResult{Structured: res.StructuredContent, IsError: res.IsError}
 	for _, block := range res.Content {
 		if block.Type != "text" {

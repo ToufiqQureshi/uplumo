@@ -92,3 +92,5 @@ Use the package tests next to the source files in `README.md`. For changes cross
 - **Why:** Discarding a bought summary left the customer charged without usable output and made a revisit buy it again.
 - **Preserve:** A refused summary buys no history; no later paid work or provider retry is introduced. Partial reports never overwrite complete durable snapshots.
 - **Trace:** `service.go`, `TestOverviewKeepsTheBilledSummaryWhenCreditsCannotCoverHistory`, existing history-error and persistence regressions. One summary provider call covers the tested repeated visit.
+
+Provider rejection fixtures include explicit zero cost and task path: missing billing metadata represents an uncertain purchase, not a confirmed free rejection. `TestProviderErrorIsNotRetried` still requires one request and the upstream error classification.

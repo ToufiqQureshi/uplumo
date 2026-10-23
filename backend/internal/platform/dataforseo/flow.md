@@ -20,3 +20,5 @@ DataForSEO API, platform spend guard, Postgres usage ledger, Redis worker/cache 
 - Provider may bill rejected/failed tasks: validate request before transport and never add automatic retries to task-post calls.
 - Attribute every billable task to the organization causing it; usage-write failure behavior must remain explicit.
 - Never put credentials in URLs/logs; cap body/response sizes and enforce timeouts.
+
+Track dispatch with the standard HTTP trace. Unknown outcomes bypass settlement, so billing's pending reservation is not falsely recorded as a known zero cost. A budget retains its whole hold if any dispatched leg is uncertain; other already-confirmed task costs stay in usage records. Explicit request rejection remains a zero-cost release.

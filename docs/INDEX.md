@@ -14,6 +14,7 @@ Code and tests are the source of truth. Feature docs are colocated with their so
 
 - [Feature wiring review](audits/2026-10-20-feature-wiring-review.md)
 - [DataForSEO field-delivery audit](audits/2026-10-21-dataforseo-field-delivery.md)
+- [Launch readiness and unit economics](audits/2026-10-23-launch-readiness.md)
 
 ## Repo-wide guidance and references
 

@@ -52,7 +52,5 @@ Contract: `backend/api/keywords.yaml`; response shapes in
   "unexpected answer" error, never a half-rendered table.
 - Never sneak a billed refetch past the user (retries off for research/serp;
   refresh and SERP depth changes are explicit).
-- Playwright runs research against `VITE_E2E_KEYWORD_FIXTURES` canned rows,
-  never against DataForSEO.
-- The fixture use for e2e and tests stays opt-in; production builds call the
-  API.
+- Playwright intercepts research HTTP requests and installs its own authenticated session/project fixtures; it never calls live DataForSEO.
+- Customer runtime always uses the Go API; there is no build-time fixture bypass.

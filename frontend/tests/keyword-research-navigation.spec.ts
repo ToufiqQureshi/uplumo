@@ -1,14 +1,34 @@
 import { expect, test, type Page } from "@playwright/test";
+import { installGrowthFixtures } from "./search-growth.fixtures";
+import { z } from "zod";
+import { getKeywordResearchFixture } from "./fixtures/keyword-research-fixtures";
 
 async function getProjectId(page: Page) {
-  await page.goto("/");
-  await page.waitForURL(/\/p\/([^/]+)\/?$/, {
-    timeout: 30_000,
-  });
-
-  const match = page.url().match(/\/p\/([^/]+)/);
-  if (!match) throw new Error(`Could not read project id from ${page.url()}`);
-  return match[1];
+  await installGrowthFixtures(page);
+  await page.route("**/api/v1/projects/*/keywords/research", (route) =>
+    route.fulfill({
+      json: getKeywordResearchFixture(
+        z
+          .object({
+            projectId: z.string().default("e2e-project"),
+            keywords: z.array(z.string()).min(1),
+            locationCode: z.number().default(2840),
+            languageCode: z.string().default("en"),
+            resultLimit: z
+              .union([z.literal(150), z.literal(300), z.literal(500)])
+              .default(150),
+            mode: z
+              .enum(["auto", "related", "suggestions", "ideas"])
+              .default("auto"),
+            clickstream: z.boolean().default(false),
+            groupKeywords: z.boolean().default(false),
+            locationName: z.string().optional(),
+          })
+          .parse(route.request().postDataJSON()),
+      ),
+    }),
+  );
+  return "e2e-project";
 }
 
 test.describe("Keyword Research navigation", () => {

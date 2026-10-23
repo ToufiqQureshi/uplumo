@@ -417,22 +417,7 @@ func (s *Tracking) RunWorkers(ctx context.Context, logger interface{ Error(strin
 	}
 	worker := jobs.Worker{Queue: queue, QueueName: trackingQueue, Handle: s.Execute, Lease: time.Minute, PollInterval: 2 * time.Second}
 	for range 2 {
-		go func() {
-			for ctx.Err() == nil {
-				err := worker.Run(ctx)
-				if ctx.Err() != nil {
-					return
-				}
-				logger.Error("AI tracking worker restarting", "err", err)
-				timer := time.NewTimer(5 * time.Second)
-				select {
-				case <-ctx.Done():
-					timer.Stop()
-					return
-				case <-timer.C:
-				}
-			}
-		}()
+		go worker.RunSupervised(ctx, logger)
 	}
 	go func() {
 		ticker := time.NewTicker(5 * time.Minute)

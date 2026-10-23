@@ -178,6 +178,17 @@ func run(logger *slog.Logger) (err error) {
 	if rzp := cfg.Razorpay; rzp != nil {
 		billingSvc = billing.NewPlanService(db, razorpay.NewClient(razorpay.BaseURL, rzp.KeyID, rzp.KeySecret), rzp.PlanIDs, rzp.WebhookSecret)
 		billingRoutes = billingSvc
+		go func() {
+			checkCtx, cancel := context.WithTimeout(ctx, time.Minute)
+			defer cancel()
+			for _, plan := range billingSvc.AvailablePlans() {
+				if err := billingSvc.VerifyPlan(checkCtx, plan); err != nil {
+					logger.Error("billing plan verification failed", "plan", plan, "err", err)
+				} else {
+					logger.Info("billing plan verified", "plan", plan)
+				}
+			}
+		}()
 	} else {
 		logger.Warn("RAZORPAY_* not set; billing status is read-only and checkout is unavailable")
 	}
@@ -194,7 +205,7 @@ func run(logger *slog.Logger) (err error) {
 	// Every paid DataForSEO request and AI call goes through this guard.
 	// Without payments (self-hosted) nobody is charged credits, but the daily
 	// provider spend limit still applies.
-	spendGuard, err := billing.NewSpendGuard(db, credits, cfg.ProviderDailyLimitUSD, billingSvc != nil, logger)
+	spendGuard, err := billing.NewSpendGuard(db, credits, cfg.ProviderDailyLimitUSD, gateSvc != nil, logger)
 	if err != nil {
 		return fmt.Errorf("create spend guard: %w", err)
 	}
@@ -628,11 +639,7 @@ func buildRankChecks(ctx context.Context, logger *slog.Logger, db *pgxpool.Pool,
 		Queue: queue, QueueName: ranktracking.QueueName, Handle: checks.JobHandler(),
 		Lease: time.Minute, PollInterval: 2 * time.Second,
 	}
-	go func() {
-		if err := worker.Run(ctx); err != nil && ctx.Err() == nil {
-			logger.Error("rank check worker stopped", "err", err)
-		}
-	}()
+	go worker.RunSupervised(ctx, logger)
 	// Every instance ticks: each due config is claimed with a compare-and-set,
 	// so only one of them starts it.
 	ticker := &ranktracking.Ticker{
@@ -709,11 +716,7 @@ func startAuditWorker(ctx context.Context, logger *slog.Logger, queue *jobs.Queu
 		Queue: queue, QueueName: audit.AuditQueueName, Handle: audit.RunnerHandler(runner),
 		Lease: time.Minute, PollInterval: 2 * time.Second,
 	}
-	go func() {
-		if err := worker.Run(ctx); err != nil && ctx.Err() == nil {
-			logger.Error("audit worker stopped", "err", err)
-		}
-	}()
+	go worker.RunSupervised(ctx, logger)
 }
 
 // newDashboardOverview leaves Backlinks as a nil interface when DataForSEO is

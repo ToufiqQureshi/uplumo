@@ -181,7 +181,7 @@ func TestProviderRejectsBillingIssueWithoutRetry(t *testing.T) {
 	server := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		calls++
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]any{"status_code": 20000, "tasks": []any{map[string]any{"status_code": 40210, "status_message": "Insufficient funds"}}})
+		_ = json.NewEncoder(w).Encode(map[string]any{"status_code": 20000, "tasks": []any{map[string]any{"status_code": 40210, "status_message": "Insufficient funds", "cost": 0, "path": []string{"v3", "backlinks", "summary", "live"}}}})
 	})
 	svc := newService(testClient(t, server, &usageRecorder{}), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Now)
 	_, err := svc.Overview(context.Background(), "org", lookupInput{Target: "example.com", Scope: "exact_url"})
@@ -199,7 +199,7 @@ func TestProviderErrorIsNotRetried(t *testing.T) {
 	server := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		calls.Add(1)
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]any{"status_code": 20000, "tasks": []any{map[string]any{"status_code": 50000, "status_message": "provider unavailable"}}})
+		_ = json.NewEncoder(w).Encode(map[string]any{"status_code": 20000, "tasks": []any{map[string]any{"status_code": 50000, "status_message": "provider unavailable", "cost": 0, "path": []string{"v3", "backlinks", "summary", "live"}}}})
 	})
 	svc := newService(testClient(t, server, &usageRecorder{}), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Now)
 	_, err := svc.Overview(context.Background(), "org", lookupInput{Target: "example.com", Scope: "exact_url"})
@@ -703,7 +703,7 @@ func TestFilterConditionsCountNestedGroups(t *testing.T) {
 
 func providerFailure(w http.ResponseWriter, code int) {
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]any{"status_code": 20000, "tasks": []any{map[string]any{"status_code": code, "status_message": "task failed"}}})
+	_ = json.NewEncoder(w).Encode(map[string]any{"status_code": 20000, "tasks": []any{map[string]any{"status_code": code, "status_message": "task failed", "cost": 0, "path": []string{"v3", "backlinks", "summary", "live"}}}})
 }
 
 // A task-level failure (HTTP 200 carrying status 50000) is treated like a

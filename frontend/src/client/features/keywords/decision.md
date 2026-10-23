@@ -67,3 +67,10 @@ Researches seed terms and SERP results for a project market, with location selec
 - **Why:** Ads rows have no secondary-intent list, and local competition must not be paired with the national LOW/MEDIUM/HIGH label.
 - **Preserve:** Missing data stays unavailable; the schema accepts older cached rows with no secondary intents.
 - **Trace:** Keyword research response schema, local result mapping, and table/export delivery.
+
+## Keep research fixtures outside customer runtime
+
+- **Decision:** Delete the fixture import/dispatch wrapper; browser tests intercept research HTTP requests and provide their own authenticated project session.
+- **Why:** Runtime test flags bypassed the actual API/schema/replay path and hid defects.
+- **Preserve:** One explicit research action uses the existing Go transport; isolated browser tests buy no live task. A unit regression confirms an old fixture flag cannot bypass fetch.
+- **Trace:** `keywordsApi.ts`, `keywordsGoApi.test.ts`, navigation fixtures and Playwright checks.

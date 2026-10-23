@@ -22,3 +22,5 @@ does not retry automatically; the user can use the existing Retry action.
 An overview without data stays stale, preserving the backend's retry policy.
 
 Successful empty overviews stay fresh for five minutes, matching the server short cache; data-bearing results retain the twelve-hour client freshness interval.
+
+Browser tests intercept HTTP routes in Playwright. Runtime `domainApi.ts` always uses the Go transport and contains no test data imports or build-time fixture bypass, so tests exercise the same schema, replay-key and request code as customers.

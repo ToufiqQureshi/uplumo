@@ -19,3 +19,10 @@ Razorpay HTTP API and secret configuration.
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.
+
+## Verify checkout terms and payment identity
+
+- **Decision:** Add a read-only plan fetch; expose the signed charged-event payment ID.
+- **Why:** A configured plan ID alone cannot prove the customer will pay the advertised amount/frequency, and separate signed bodies can refer to the same payment.
+- **Preserve:** Existing ten-second HTTP timeout, Basic authentication, escaped IDs, server-owned commercial policy and webhook HMAC validation. No new payment is created by validation.
+- **Trace:** `plans.go`, `razorpay.go`, billing checkout mismatch and repeated-payment regressions. Contract: https://razorpay.com/docs/api/payments/subscriptions/fetch-a-plan/.

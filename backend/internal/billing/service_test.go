@@ -22,6 +22,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/toufiqqureshi/uplumo/backend/internal/database"
+	"github.com/toufiqqureshi/uplumo/backend/internal/plans"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/pgdb"
 	"github.com/toufiqqureshi/uplumo/backend/internal/razorpay"
 )
@@ -557,6 +558,7 @@ type fixture struct {
 	failWith int
 	// duringCreate runs while the fake Razorpay handles a creation.
 	duringCreate func()
+	planOverride func(*razorpay.Plan)
 	// cancels are the cancellations the fake Razorpay received, in order.
 	cancels []cancelCall
 }
@@ -592,6 +594,23 @@ func newFixture(ctx context.Context, t *testing.T) *fixture {
 		if f.failWith != 0 {
 			w.WriteHeader(f.failWith)
 			_, _ = io.WriteString(w, `{"error":{"code":"BAD_REQUEST_ERROR","description":"plan not found"}}`)
+			return
+		}
+		if id, ok := strings.CutPrefix(r.URL.Path, "/plans/"); ok {
+			got := razorpay.Plan{ID: id, Period: "monthly", Interval: 1}
+			got.Item.Currency = "INR"
+			for plan, configured := range f.svc.planIDs {
+				if configured == id {
+					definition, _ := plans.Get(plan)
+					got.Item.Amount = int64(definition.PriceINR) * 100
+				}
+			}
+			if f.planOverride != nil {
+				f.planOverride(&got)
+			}
+			if err := json.NewEncoder(w).Encode(got); err != nil {
+				t.Error(err)
+			}
 			return
 		}
 		if id, ok := strings.CutSuffix(strings.TrimPrefix(r.URL.Path, "/subscriptions/"), "/cancel"); ok {
@@ -639,6 +658,60 @@ func newFixture(ctx context.Context, t *testing.T) *fixture {
 		}
 	})
 	return f
+}
+
+func TestCheckoutNeverCreatesAMismatchedPlan(t *testing.T) {
+	for name, change := range map[string]func(*razorpay.Plan){
+		"wrong amount":   func(p *razorpay.Plan) { p.Item.Amount-- },
+		"wrong currency": func(p *razorpay.Plan) { p.Item.Currency = "USD" },
+		"wrong period":   func(p *razorpay.Plan) { p.Period = "weekly" },
+		"wrong interval": func(p *razorpay.Plan) { p.Interval = 2 },
+		"wrong identity": func(p *razorpay.Plan) { p.ID = "another_plan" },
+	} {
+		t.Run(name, func(t *testing.T) {
+			f := newFixture(t.Context(), t)
+			f.planOverride = change
+			if _, err := f.svc.Checkout(t.Context(), f.org); err == nil {
+				t.Fatal("checkout offered a plan that differs from the advertised terms")
+			}
+			if f.calls.Load() != 0 {
+				t.Fatal("mismatched plan created a payable subscription")
+			}
+		})
+	}
+}
+
+func TestDifferentSignedEventsForOnePaymentGrantCreditsOnce(t *testing.T) {
+	f := newFixture(t.Context(), t)
+	ledger := NewCreditLedgerService(f.pool)
+	var event map[string]any
+	if err := json.Unmarshal(f.event("subscription.charged", "sub_1", "active", t1), &event); err != nil {
+		t.Fatal(err)
+	}
+	event["payload"].(map[string]any)["payment"] = map[string]any{"entity": map[string]any{"id": "pay_" + f.org}}
+	encode := func() []byte {
+		t.Helper()
+		body, err := json.Marshal(event)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return body
+	}
+	f.deliver(t.Context(), t, encode())
+	hold, err := ledger.Reserve(t.Context(), f.org, 500, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ledger.Settle(t.Context(), hold.ID, 500); err != nil {
+		t.Fatal(err)
+	}
+	event["created_at"] = t2.Unix()
+	if got := f.deliverAs(t.Context(), t, "evt_other_"+f.org, encode()); got != WebhookDuplicate {
+		t.Fatalf("same payment with another signed body = %s, want duplicate", got)
+	}
+	if got, err := ledger.GetBalance(t.Context(), f.org); err != nil || got != 9500 {
+		t.Fatalf("one payment refilled spent credits: balance=%d, err=%v", got, err)
+	}
 }
 
 func TestCheckoutPlanUsesSelectedRazorpayPlan(t *testing.T) {

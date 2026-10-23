@@ -15,3 +15,10 @@ Enqueues, leases, retries and completes asynchronous jobs with optional idempote
 ## Cost and risk boundary
 
 Postgres `go_jobs`; worker lifecycle in server startup.
+
+## Recover workers after temporary storage failure
+
+- **Decision:** Reuse `Worker.RunSupervised` for audit, rank and AI tracking; remove AI tracking's duplicate restart loop.
+- **Why:** Production logs showed audit/rank workers permanently stopping after a database outage while the HTTP server stayed healthy. Paid customers could enqueue work that never ran.
+- **Preserve:** Five-second retry delay, cancellation, queue leases, attempt limits and paid-task checkpoints; supervisor recovery does not authorize a second paid submission.
+- **Trace:** `worker.go`, server wiring, AI tracking wiring and `TestSupervisedWorkerRecoversAfterDatabaseFailure`, using real Postgres and one injected acquisition error.

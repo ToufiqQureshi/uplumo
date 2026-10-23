@@ -60,11 +60,7 @@ once per signed charge body, deduplicating both the delivery event ID and a
 SHA-256 fingerprint of the verified body in the grant transaction. Changing
 the unsigned delivery header cannot grant credits again, even after spending
 the original grant. These fingerprints protect newly processed charges;
-historical event-ID-only records cannot reconstruct old signed bodies. This
-identity covers byte-identical signed bodies with changed delivery headers;
-it does not deduplicate different valid event bodies for the same payment.
-The subscription event adapter does not read a payment ID, so semantic
-per-payment deduplication remains unverified.
+historical event-ID-only records cannot reconstruct old signed bodies. New charged events also record the signed payment ID when supplied, so different signed bodies for one payment cannot grant twice. Both identities are retained: older body fingerprints still block identical replays. Events without payment IDs retain body-fingerprint protection; historical semantic identities cannot be reconstructed from event IDs alone.
 Unused credits roll over up to two months of the
 plan: each grant expires after two months and reservations consume the oldest
 unexpired grants first. The hourly expiry worker records `expire` ledger rows;
@@ -85,7 +81,7 @@ for a five-run billing month: Business at 1,000 plain keywords, desktop, depth
 40 can need 5 × 10 queued batches × ceil($0.24 × 1,280) = 15,400 credits,
 above its 15,000-credit grant. Early target detection can lower actual spend
 but cannot guarantee it. Prices, grants and tracked-keyword limits are
-unchanged; resolving the promise versus allowance requires an owner decision.
+unchanged; pricing now explicitly discloses this shared-credit limitation.
 Choosing both devices doubles the estimate.
 
 After a downgrade, existing sites, members and tracked keywords are retained.
@@ -249,3 +245,7 @@ catalog prices, feature gates and daily workspace limits are unaffected.
 Migration 41 marks provider holds before dispatch and stores the first settlement outcome. Credit settlement and `go_provider_spend` commit together. After an interrupted settlement, the hourly worker applies that recorded outcome once; it does not refund already-bought work. Plain abandoned non-provider holds still refund after one hour without a heartbeat.
 
 A provider hold with no recorded outcome stays reserved and emits an error containing its reservation/workspace IDs. Reconcile it against provider usage before explicitly settling or refunding through `CreditLedgerService`; do not infer a zero cost from age or re-run the paid request. The same rule applies to pre-migration open feature holds. Production provider reconciliation is not performed by the tests.
+
+Checkout verifies provider ID, INR amount and monthly frequency against the catalog before creating or reusing an unpaid subscription. Startup performs the same read-only checks and logs each configured plan for release verification; failed verification does not stop free features. No payment is created by these checks.
+
+Known costs after a zero estimate use a zero-amount outcome reservation (migration 43), committed before staff top-up, expiry or customer charging. The existing settlement/reconciler charges available credits and records provider spend once; charging failure cannot turn it into an ordinary refundable hold.

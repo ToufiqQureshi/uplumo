@@ -50,3 +50,12 @@ verify schema validation and project binding through the existing MCP/SAM tests.
 - **Why:** Exact slice membership is already provided by Go; a wrapper adds no policy.
 - **Preserve:** Exact case-sensitive scope checks, token authorization and tool cost gates remain unchanged.
 - **Trace:** `oauth.go` and existing MCP/OAuth tests.
+
+## Contain failures and remove unwired telemetry
+
+- **Decision:** Return one validated non-nil tool result; use named panic recovery and safe unexpected-error messages. Remove the unused outcome struct and no-op telemetry call.
+- **Why:** Recovery previously returned nil, which crashed SAM's runner or returned a null external result; unexpected errors exposed raw implementation/provider details. The telemetry fields were never persisted or consumed.
+- **Preserve:** Explicit tool classification, plan gates before execution, safe app/spend messages, and actual provider ledger accounting. No activation/usage event is claimed for the removed no-op.
+- **Trace:** Registry, runner, transport and `TestRunnerContainsInternalFailures` covering panic, error and missing response.
+
+Successful external tool calls now persist the first authorized/call timestamps in organization activation state with a two-second best-effort write; internal SAM and failed calls do not complete onboarding. COALESCE preserves the first evidence across repeats. `activation_test.go` verifies external/internal/failure boundaries on real Postgres.

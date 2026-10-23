@@ -50,3 +50,17 @@ Preserve: table owner/BYPASSRLS remains the trusted server role, API tenant chec
 - **Why:** Provider side effects cannot be rolled back with a failed Postgres credit transaction. Persist enough evidence to recover a known outcome without making another provider call.
 - **Preserve:** Applied migrations remain immutable. No new public database policy, pricing change or retroactive guess about unknown provider cost.
 - **Trace:** Migration 41, billing `settlement_recovery_test.go`; fresh migration and real Postgres transaction checks.
+
+## Server-only auth, billing and application storage
+
+- **Decision:** Migration 42 applies RLS and removes public/client grants on non-extension application relations and future objects created by the migration role. Keep protections on rollback.
+- **Why:** The 23 October live advisor/privilege review confirmed 83 tables without RLS, including sessions, accounts and credits, with anonymous write/TRUNCATE grants. This bypassed the Go authorization boundary.
+- **Preserve:** Go owns authorization and uses the trusted table owner/BYPASSRLS role. Do not create blanket authenticated policies or force RLS on the trusted owner. Extension relations are excluded. Future migration authors must still enable RLS on new tables.
+- **Trace:** `00042_server_private_storage.sql`, `private_storage_test.go`; regression found 84 unprotected tables including the pre-granted fixture before the fix. The same SQL was applied as an emergency Supabase migration on 23 October: 0 unprotected public tables, 0 client table grants, owner reads and live ready/session endpoints confirmed. Goose production history remains version 36 until application deployment.
+
+## Zero-estimate postpaid outcomes
+
+- **Decision:** Persist a known outcome in a zero-amount reservation before any balance operation, then reuse normal settlement and reconciliation. Migration 43 permits zero, never negative, reservation amounts.
+- **Why:** PR review found that a failed post-call ReserveFor could lose both provider expense and a recoverable charge. Remove that separate charging loop rather than duplicate recovery.
+- **Preserve:** Normal reservations still require positive amounts; postpaid shortfalls charge only available credits, staff top-ups remain counted, and spend is committed once with settlement. Rollback retains outcome rows.
+- **Trace:** `settlement_recovery_test.go` injects balance-update failure, observes a durable known cost, then reconciles twice to one 26-credit charge and one $0.02 spend. The test failed before the fix.

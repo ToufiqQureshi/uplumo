@@ -6,15 +6,80 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"os"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/toufiqqureshi/uplumo/backend/internal/database"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/pgdb"
 )
+
+func TestSupervisedWorkerRecoversAfterDatabaseFailure(t *testing.T) {
+	ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
+	defer cancel()
+	pool := jobsTestPool(ctx, t)
+	if err := database.Migrate(ctx, pool); err != nil {
+		t.Fatal(err)
+	}
+	queue, err := New(pool)
+	if err != nil {
+		t.Fatal(err)
+	}
+	name := "recovery-" + randomSuffix(t)
+	job, err := queue.Enqueue(ctx, EnqueueInput{Queue: name, Payload: json.RawMessage(`{}`)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if _, err := pool.Exec(context.Background(), "DELETE FROM go_jobs WHERE queue=$1", name); err != nil {
+			t.Error(err)
+		}
+	})
+	cfg := pool.Config()
+	var acquisitions atomic.Int32
+	cfg.PrepareConn = func(context.Context, *pgx.Conn) (bool, error) {
+		if acquisitions.Add(1) == 1 {
+			return true, errors.New("simulated database outage")
+		}
+		return true, nil
+	}
+	recoveringPool, err := pgxpool.NewWithConfig(ctx, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer recoveringPool.Close()
+	recoveringQueue, err := New(recoveringPool)
+	if err != nil {
+		t.Fatal(err)
+	}
+	processed := make(chan int64, 1)
+	worker := Worker{Queue: recoveringQueue, QueueName: name, Handle: func(_ context.Context, j Job) error {
+		processed <- j.ID
+		return nil
+	}}
+	done := make(chan struct{})
+	go func() {
+		worker.RunSupervised(ctx, slog.New(slog.DiscardHandler))
+		close(done)
+	}()
+	select {
+	case id := <-processed:
+		if id != job.ID || acquisitions.Load() < 2 {
+			t.Fatalf("worker did not recover: id=%d, acquisitions=%d", id, acquisitions.Load())
+		}
+	case <-done:
+		t.Fatal("worker exited instead of recovering")
+	case <-ctx.Done():
+		t.Fatal("worker failed to resume queued work")
+	}
+	cancel()
+	<-done
+}
 
 func TestQueueEnqueueClaimConcurrencyAndStaleClaims(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"runtime/debug"
 	"time"
 
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/spend"
@@ -58,10 +59,15 @@ func (h *handler) listTools() ([]json.RawMessage, error) {
 	return local, nil
 }
 
-// callTool invokes a registered tool with panic recovery and output validation.
-func (h *handler) callTool(ctx context.Context, t *tool, params json.RawMessage, auth Auth) (*callResult, toolOutcome) {
-	started := time.Now()
-	outcome := toolOutcome{success: false}
+// callTool enforces the plan before dispatch and contains handler failures.
+func (h *handler) callTool(ctx context.Context, t *tool, params json.RawMessage, auth Auth) (result *callResult) {
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			h.deps.Logger.ErrorContext(ctx, "panic in MCP tool", "tool", t.Name,
+				"panic_type", fmt.Sprintf("%T", recovered), "stack", string(debug.Stack()))
+			result = errorResult("The tool could not finish. Please try again.")
+		}
+	}()
 	planAccess := h.deps.Plans
 	if planAccess == nil && h.deps.Billing != nil {
 		planAccess = h.deps.Billing
@@ -69,95 +75,44 @@ func (h *handler) callTool(ctx context.Context, t *tool, params json.RawMessage,
 	if planAccess != nil {
 		feature, known := toolFeature(t.Name)
 		if !known {
-			outcome.errorCode = "PLAN_REQUIRED"
-			return errorResult("This tool is unavailable on your plan."), outcome
+			return errorResult("This tool is unavailable on your plan.")
 		}
 		if feature != "" {
 			allowed, err := planAccess.Allows(ctx, auth.OrganizationID, feature)
 			if err != nil {
-				outcome.errorCode = "INTERNAL_ERROR"
-				return errorResult("Plan access could not be checked. Please try again."), outcome
+				return errorResult("Plan access could not be checked. Please try again.")
 			}
 			if !allowed {
-				outcome.errorCode = "PLAN_REQUIRED"
-				return errorResult("This tool is not included in your plan."), outcome
+				return errorResult("This tool is not included in your plan.")
 			}
 		}
 	}
-	defer func() {
-		if recovered := recover(); recovered != nil {
-			h.deps.Logger.ErrorContext(ctx, "panic in tool",
-				"tool", t.Name, "panic_type", fmt.Sprintf("%T", recovered), "stack", string(make([]byte, 0)))
-			outcome.success = false
-			outcome.errorCode = "INTERNAL_ERROR"
-			outcome.durationMs = time.Since(started).Milliseconds()
-		}
-	}()
-
 	env := callEnv{h: h, deps: h.deps, auth: auth}
 	result, err := t.Handler(ctx, params, &env)
 	if err != nil {
 		if message := spend.Message(err); message != "" {
-			outcome.errorCode = "INSUFFICIENT_CREDITS"
-			if errors.Is(err, spend.ErrPaused) {
-				outcome.errorCode = "USAGE_PAUSED"
-			}
-			outcome.durationMs = time.Since(started).Milliseconds()
-			return errorResult(message), outcome
+			return errorResult(message)
 		}
-		var appErr *appError
-		if errors.As(err, &appErr) {
-			outcome.errorCode = appErr.code
-		} else {
-			outcome.errorCode = "INTERNAL_ERROR"
+		if appErr, ok := errors.AsType[*appError](err); ok {
+			return errorResult(appErr.Error())
 		}
-		outcome.durationMs = time.Since(started).Milliseconds()
-		return errorResult(err.Error()), outcome
+		h.deps.Logger.ErrorContext(ctx, "MCP tool failed", "tool", t.Name, "err", err)
+		return errorResult("The tool could not finish. Please try again.")
 	}
-
-	// Output schema validation happens on the client side via the SDK;
-	// the legacy instrumentation does a server-side re-validate but we
-	// keep that in the activation layer. For now, trust the handler.
-
-	outcome.success = !result.IsError
-	outcome.durationMs = time.Since(started).Milliseconds()
-	if result.Meta != nil {
-		if pid, ok := result.Meta["projectId"].(string); ok {
-			outcome.projectID = pid
-		}
-		if quota, ok := result.Meta["quota"].(map[string]any); ok {
-			if tokensPerDay, ok := quota["tokensPerDay"].(map[string]any); ok {
-				if rem, ok := tokensPerDay["remaining"].(float64); ok {
-					outcome.quotaRemaining = int(rem)
-				}
-			}
+	if result == nil {
+		return errorResult("The tool returned no result. Please try again.")
+	}
+	if auth.IsExternal() && auth.OrganizationID != "" && h.deps.DB != nil && !result.IsError {
+		writeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 2*time.Second)
+		defer cancel()
+		stamp := time.Now().UTC().Format(time.RFC3339Nano)
+		if _, err := h.deps.DB.Exec(writeCtx, `INSERT INTO organization_activation_state
+			(organization_id, first_mcp_authorized_at, first_mcp_tool_call_at, updated_at) VALUES ($1,$2,$2,$2)
+			ON CONFLICT (organization_id) DO UPDATE SET
+			first_mcp_authorized_at=COALESCE(organization_activation_state.first_mcp_authorized_at,EXCLUDED.first_mcp_authorized_at),
+			first_mcp_tool_call_at=COALESCE(organization_activation_state.first_mcp_tool_call_at,EXCLUDED.first_mcp_tool_call_at), updated_at=EXCLUDED.updated_at`, auth.OrganizationID, stamp); err != nil {
+			h.deps.Logger.WarnContext(ctx, "record MCP activation", "err", err)
 		}
 	}
-	return result, outcome
-}
-
-// toolOutcome is the structured result of a tool call for telemetry.
-type toolOutcome struct {
-	success        bool
-	errorCode      string
-	durationMs     int64
-	projectID      string
-	quotaRemaining int
-}
-
-// recordToolCall emits the usage event (mcp:tool_call) and the activation
-// milestone for external clients. It is non-blocking.
-func (h *handler) recordToolCall(_ context.Context, _ string, auth Auth, _ time.Time, outcome toolOutcome) {
-	if h.deps.Billing == nil {
-		// Self-hosted: no telemetry.
-		return
-	}
-	if !auth.IsExternal() {
-		return
-	}
-	// The activation milestone is a non-blocking write; we don't wait for it.
-	// The legacy code uses `await recordExternalMcpToolCall` to keep it inside
-	// the DB transaction scope; here we emit to the usage ledger.
-	// TODO: wire to the Autumn credits ledger when Go billing has it.
-	_ = outcome // suppress unused for now
+	return result
 }

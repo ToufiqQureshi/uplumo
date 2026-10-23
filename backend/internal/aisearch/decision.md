@@ -106,3 +106,10 @@ Use the package tests next to the source files in `README.md`. For changes cross
   provider-shaped HTTP regression failed before the fix and checks the original
   source, absent/unsafe/credentialed fallback and both URLs unsafe. Official
   contract: https://docs.dataforseo.com/v3/ai_optimization-gemini-llm_responses-live/.
+
+## Share queue supervision
+
+- **Decision:** Use the common jobs supervisor for both AI tracking workers.
+- **Why:** Audit/rank now need the same outage recovery; keeping one loop avoids drift and removes duplicate lifecycle code.
+- **Preserve:** Two workers, five-second restart delay, cancellation, existing task checkpoints and paid-call limits.
+- **Trace:** `tracking_worker.go`, `platform/jobs/worker.go` and its injected-database-failure integration test.

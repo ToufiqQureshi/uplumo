@@ -188,3 +188,5 @@ after process shutdown without buying another task.
 Cancellation during cache/project preparation is rechecked before detaching
 paid work. Active callers retain cache-outage fallback; existing shared work
 can finish for other waiters. See the cancellation decision and regressions.
+
+AI tracking workers use the shared `jobs.Worker.RunSupervised` restart loop. Temporary storage errors resume after five seconds; existing accepted-task checkpoints and retry limits still prevent replaying uncertain purchases.
