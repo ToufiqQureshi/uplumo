@@ -9,6 +9,11 @@ Every coding agent (Claude, Codex, Cursor, others) follows this file.
   service `uplumo` (one Go server that also serves the React build, plus
   Railway Redis and Supabase Postgres). Merging to `main` does **not**
   deploy: see `docs/DEPLOY.md`.
+- **Staging** is the Railway environment `staging` (service
+  `uplumo-staging`, own Postgres and Redis,
+  `https://uplumo-staging-staging.up.railway.app`). Deploy a PR there and
+  check it in a browser before it goes to production (`docs/DEPLOY.md`,
+  "Staging"). Never put production data or live Razorpay keys on staging.
 - Razorpay runs with **live** keys: customers pay real money. A billing,
   credit or plan bug now takes or loses real money, so treat every billing
   change as a finance change (section 3).
