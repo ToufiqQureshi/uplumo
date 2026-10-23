@@ -22,20 +22,10 @@ Postgres ledger/reservations/subscriptions; Razorpay adapter; plan catalog.
 
 ## Reconcile abandoned credit holds
 
-- **Decision:** The hourly credit worker now also calls
-  `RefundStaleReservations`, which refunds every `reserved` reservation older
-  than one hour (a crash between Hold and Settle/Refund) with reason "stale
-  reservation reconciliation".
-- **Why:** A hold deducts credits immediately and only Settle/Refund closes it.
-  A crash leaked the customer's credits forever and wedged the idempotency key
-  (a replay of the same key was refused), so the same work could never be
-  retried. Refunding stale holds restores the balance and re-enables the key.
-- **Preserve:** One-hour age is far longer than any legitimate hold (provider
-  timeout 60s, write timeout 150s); already-closed reservations are skipped;
-  the ledger keeps a `refund` row for audit; no pricing/limit change.
-- **Trace:** `credits.go` (`RefundStaleReservations`, `staleReservationAge`),
-  `cmd/server/main.go` (hourly `reconcileCredits`),
-  `credits_test.go:TestRefundStaleReservationsRestoresAbandonedHolds`.
+- **Decision:** Mark SpendGuard holds as potentially dispatched in their reservation transaction. Persist the first provider/customer settlement outcome before charging; commit the charge and provider-spend row together. The hourly worker recovers known outcomes, refunds stale non-provider holds and flags uncertain provider holds for operator reconciliation.
+- **Why:** A crash or failed credit transaction after a billed call previously returned the whole reservation, allowing paid work to become free. A reservation's age cannot prove the provider charged nothing.
+- **Preserve:** No provider retry, duplicate settlement/spend row or automatic refund of an unknown provider outcome. Customer refunds for confirmed failed results remain possible; no price, grant or plan-limit change. Migration 41 conservatively marks existing open feature holds as uncertain.
+- **Trace:** `credits.go`, `spendguard.go`, migration 41, `settlement_recovery_test.go`, hourly `reconcileCredits`. Tests use disposable Postgres with an injected ledger-insert failure and verify recovery charges exactly once. Zero-estimate calls record actual spend once, including when the customer has no balance. Unknown outcomes require provider evidence and operator resolution.
 
 ## Verification
 
@@ -59,5 +49,5 @@ Use the package tests next to the source files in `README.md`. For changes cross
 
 - **Decision:** Refresh `updated_at` while a provider request is active; stale cleanup uses that heartbeat and grants a fresh usable bucket when refunding a pre-expiry legacy hold with no allocation rows.
 - **Why:** A one-hour age check alone can refund a long-running stream that is still consuming provider resources, and a legacy balance-only refund is not consumable by the grant-based ledger.
-- **Preserve:** Heartbeats stop when the request context ends or the hold settles; a crashed process stops refreshing and is still refunded. Refund and settlement remain locked and idempotent.
+- **Preserve:** Heartbeats stop when the request context ends or the hold settles; a crashed process stops refreshing; recovery uses the recorded outcome or leaves uncertain provider credits reserved for reconciliation. Refund and settlement remain locked and idempotent.
 - **Trace:** `SpendGuard.Hold`, `creditHold`, `RefundStaleReservations`, and `restoreReservationCreditsTx`.

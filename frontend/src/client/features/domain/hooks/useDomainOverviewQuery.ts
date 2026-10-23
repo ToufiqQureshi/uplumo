@@ -34,7 +34,8 @@ export function useDomainOverviewQuery(input: Input) {
           locationCode: input.locationCode,
         },
       }),
-    staleTime: (query) => (query.state.data?.hasData ? 12 * 60 * 60_000 : 0),
+    staleTime: (query) =>
+      query.state.data?.hasData ? 12 * 60 * 60_000 : 5 * 60_000,
     gcTime: 12 * 60 * 60_000,
   });
 }

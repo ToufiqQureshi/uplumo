@@ -27,7 +27,7 @@ func (s *Service) KeywordSuggestions(ctx context.Context, organizationID, projec
 		return nil, err
 	}
 	var cached []KeywordSuggestion
-	if s.readCache(ctx, key, &cached) && len(cached) > 0 {
+	if s.readCache(ctx, key, &cached) && cached != nil {
 		return cached, nil
 	}
 	if err := ctx.Err(); err != nil {
@@ -37,7 +37,7 @@ func (s *Service) KeywordSuggestions(ctx context.Context, organizationID, projec
 		shared, cancel := context.WithTimeout(context.WithoutCancel(ctx), 90*time.Second)
 		defer cancel()
 		var recent []KeywordSuggestion
-		if s.readCache(shared, key, &recent) && len(recent) > 0 {
+		if s.readCache(shared, key, &recent) && recent != nil {
 			return recent, nil
 		}
 
@@ -62,9 +62,11 @@ func (s *Service) KeywordSuggestions(ctx context.Context, organizationID, projec
 			}
 			out = append(out, mapped.KeywordSuggestion)
 		}
-		if len(out) > 0 {
-			s.writeCache(shared, key, out)
+		ttl := cacheTTL
+		if len(out) == 0 {
+			ttl = emptyResultCacheTTL
 		}
+		s.writeCacheFor(shared, key, out, ttl)
 		return out, nil
 	})
 	select {

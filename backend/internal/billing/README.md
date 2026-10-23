@@ -148,8 +148,7 @@ assistant. Rules that must never break:
   in `go_provider_spend`. Once today's total across all workspaces plus a
   request's estimate passes `PROVIDER_DAILY_LIMIT_USD` (default $100), every
   paid request is refused with `spend.ErrPaused` (`503 usage_paused`) and an
-  error reaches Sentry. With per-workspace limits it should only trip on a
-  bug; set it above the sum of your clients' daily limits.
+  error reaches Sentry. It is an emergency brake; set it above expected aggregate use, since customers have no per-workspace daily cap.
 - **AI visibility.** Its two actions have separate hints (`ActionCost.Action`:
   `prompt_explorer` about 128 credits, `brand_lookup` about 372), because a brand
   lookup buys a totals task and a prompt sample (only the totals, about 130
@@ -162,7 +161,7 @@ assistant. Rules that must never break:
   expensive-end fallback prices of $5 / $25 per million tokens) and settles
   the real cost after. A SAM step with 16,000 output tokens holds about $0.40
   plus its input (about 640 credits for a typical chat); a writing action
-  about $0.07 (90 credits). The held credits come back at settle, so they
+  uses its pinned model and a maximum 15-credit customer charge (`contenteditor/writer.go`). The held credits come back at settle, so they
   only decide whether the call may start: a workspace with fewer credits than
   the ceiling is refused instead of being let in and charged down to zero,
   which was Uplumo's money. SAM stops a turn at one dollar. When OpenRouter
@@ -244,3 +243,9 @@ catalog prices, feature gates and daily workspace limits are unaffected.
 - Creation failure grants nothing. A lost browser response reuses the saved
   order. An ambiguous provider response cannot grant anything without a
   captured payment tied to a stored order; reconcile exceptions in Razorpay.
+
+## Settlement recovery
+
+Migration 41 marks provider holds before dispatch and stores the first settlement outcome. Credit settlement and `go_provider_spend` commit together. After an interrupted settlement, the hourly worker applies that recorded outcome once; it does not refund already-bought work. Plain abandoned non-provider holds still refund after one hour without a heartbeat.
+
+A provider hold with no recorded outcome stays reserved and emits an error containing its reservation/workspace IDs. Reconcile it against provider usage before explicitly settling or refunding through `CreditLedgerService`; do not infer a zero cost from age or re-run the paid request. The same rule applies to pre-migration open feature holds. Production provider reconciliation is not performed by the tests.

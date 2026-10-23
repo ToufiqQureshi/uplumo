@@ -8,11 +8,16 @@ import (
 // cachedDomainLookup shares equivalent report purchases within this server.
 // Every caller has already validated its input and supplied the full tenant,
 // project, market, scope and result-changing input cache identity.
-func cachedDomainLookup[T any](ctx context.Context, s *Service, key string, usable func(T) bool, load func(context.Context) (T, error)) (T, error) {
+func cachedDomainLookup[T any](ctx context.Context, s *Service, key string, lifetime func(T) time.Duration, load func(context.Context) (T, error)) (T, error) {
 	var zero T
-	valid := func(value T) bool { return usable == nil || usable(value) }
+	ttl := func(value T) time.Duration {
+		if lifetime != nil {
+			return lifetime(value)
+		}
+		return cacheTTL
+	}
 	var cached T
-	if s.readCache(ctx, key, &cached) && valid(cached) {
+	if s.readCache(ctx, key, &cached) && ttl(cached) > 0 {
 		return cached, nil
 	}
 	if err := ctx.Err(); err != nil {
@@ -22,12 +27,12 @@ func cachedDomainLookup[T any](ctx context.Context, s *Service, key string, usab
 		shared, cancel := context.WithTimeout(context.WithoutCancel(ctx), 90*time.Second)
 		defer cancel()
 		var recent T
-		if s.readCache(shared, key, &recent) && valid(recent) {
+		if s.readCache(shared, key, &recent) && ttl(recent) > 0 {
 			return recent, nil
 		}
 		value, err := load(shared)
-		if err == nil && valid(value) {
-			s.writeCache(shared, key, value)
+		if err == nil && ttl(value) > 0 {
+			s.writeCacheFor(shared, key, value, ttl(value))
 		}
 		return value, err
 	})

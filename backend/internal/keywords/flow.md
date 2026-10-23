@@ -45,3 +45,5 @@ place as well as the country code.
 
 Preparation boundary: `Research` rechecks cancellation after `cached` and before `flights.DoChan`. A cancelled request returns its context error
 without starting a new provider operation. Existing shared work is unaffected.
+
+A successful empty research response is a short-lived answer: repeated identical requests buy zero new tasks for ten minutes. Provider failures are not converted into successful empty responses.

@@ -59,3 +59,10 @@ Use the package tests next to the source files in `README.md`. For changes cross
 
 See `tools.go`, `prompt.go` and `tools_test.go`; update this file whenever the
 allowlist, reasoning scope, project binding or explicit-action boundary changes.
+
+## Keep skill sources aligned with shipped capability boundaries
+
+- **Decision:** Align the two `.agents/skills` source copies with the existing embedded competitive-landscape and keyword-research prompts.
+- **Why:** Source copies still promised Local SEO/Maps capabilities removed by owner decision, and the embedded-copy regression failed.
+- **Preserve:** No runtime prompt expansion or new paid tool; existing shipped prompts remain the capability boundary. This updates agent skill instructions and must be called out in the PR.
+- **Trace:** `skills_test.go:TestEmbeddedCopiesMatchTheirSources` and the two source/embedded pairs.

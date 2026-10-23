@@ -143,8 +143,8 @@ type ResearchService struct {
 	Logger   *slog.Logger
 	Now      func() time.Time
 	// DB persists SERP snapshots; nil skips persistence (tests without a DB).
-	DB *pgxpool.Pool
-	flights  singleflight.Group
+	DB      *pgxpool.Pool
+	flights singleflight.Group
 }
 
 // NewResearchService builds a service that caches in Redis.
@@ -333,7 +333,7 @@ func (s *ResearchService) Research(ctx context.Context, in ResearchInput) (Resea
 		return ResearchResult{}, err
 	}
 	var hit ResearchResult
-	if s.cached(ctx, key, &hit) && len(hit.Rows) > 0 && validSource(hit.Source) {
+	if s.cached(ctx, key, &hit) && hit.Rows != nil && validSource(hit.Source) {
 		return hit, nil
 	}
 	if err := ctx.Err(); err != nil {
@@ -345,7 +345,7 @@ func (s *ResearchService) Research(ctx context.Context, in ResearchInput) (Resea
 		flightCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), flightTimeout)
 		defer cancel()
 		var recent ResearchResult
-		if s.cached(flightCtx, key, &recent) && len(recent.Rows) > 0 && validSource(recent.Source) {
+		if s.cached(flightCtx, key, &recent) && recent.Rows != nil && validSource(recent.Source) {
 			return recent, nil
 		}
 		return s.researchUncached(flightCtx, in, key, seeds, ads)
@@ -388,7 +388,7 @@ func (s *ResearchService) researchUncached(ctx context.Context, in ResearchInput
 		result.PlaceFilter = &in.place
 	}
 	ttl := researchCacheTTL
-	if result.partial {
+	if result.partial || len(result.Rows) == 0 {
 		ttl = partialResearchCacheTTL
 	}
 	s.store(ctx, key, result, ttl)

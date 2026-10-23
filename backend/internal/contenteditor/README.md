@@ -17,3 +17,5 @@ This is an internal developer/AI-agent guide, not customer-facing product copy. 
 ## API/trigger
 
 POST /api/v1/projects/{projectId}/content/{brief|assistant/generate|drafts/...|images/upload}
+
+A writer request makes one model call. Known provider cost is recorded even for an empty/failed answer or a cost above the customer ceiling; confirmed unusable answers remain free to the customer and successful answers stay capped at 15 credits.

@@ -61,7 +61,6 @@ Researches seed terms and SERP results for a project market, with location selec
   `components/SerpAnalysisCard.test.ts` checks description display and export,
   using the description already present in the API response.
 
-
 ## Deliver paid research fields consistently
 
 - **Decision:** Omit absent secondary intents from JSON and replace both local competition value and label with the Google Ads city-level values.

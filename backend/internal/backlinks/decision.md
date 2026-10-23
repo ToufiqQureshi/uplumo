@@ -85,3 +85,10 @@ Use the package tests next to the source files in `README.md`. For changes cross
 - **Why:** Preparation could return a cache miss/project result after the caller left, and `context.WithoutCancel` then revived it into paid work.
 - **Preserve:** Active callers keep existing cache-outage fallback and tenant/cost checks. Already-registered bounded shared work can finish for other waiters; this does not add a retry, limit or pricing change.
 - **Trace:** `cancellation_test.go` reproduced both summary/history tasks after cancellation; it now requires zero. Tests synchronize existing work before counting calls; see the shared [fixture decision](../platform/spend/spendtest/decision.md).
+
+## Preserve a summary when history cannot be bought
+
+- **Decision:** A history credit/billing refusal returns the already-paid summary with absent trends and the existing ten-minute partial cache. Remove the duplicated overview-age declaration that prevented the server from compiling.
+- **Why:** Discarding a bought summary left the customer charged without usable output and made a revisit buy it again.
+- **Preserve:** A refused summary buys no history; no later paid work or provider retry is introduced. Partial reports never overwrite complete durable snapshots.
+- **Trace:** `service.go`, `TestOverviewKeepsTheBilledSummaryWhenCreditsCannotCoverHistory`, existing history-error and persistence regressions. One summary provider call covers the tested repeated visit.

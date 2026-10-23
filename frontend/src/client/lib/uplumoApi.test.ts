@@ -108,6 +108,23 @@ describe("apiRequest", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("retains a paid POST key until its successful body validates", async () => {
+    fetchMock
+      .mockResolvedValueOnce(Response.json({ plan: "unknown" }))
+      .mockResolvedValueOnce(Response.json({ plan: "pro" }))
+      .mockResolvedValueOnce(Response.json({ plan: "pro" }));
+    const post = () =>
+      apiRequest("/api/v1/paid-malformed", schema, "POST", { q: "x" });
+    await expect(post()).rejects.toMatchObject({ code: "invalid_response" });
+    await post();
+    await post();
+    const keys = fetchMock.mock.calls.map(([, init]) =>
+      new Headers(init?.headers).get("Idempotency-Key"),
+    );
+    expect(keys[0]).toBe(keys[1]);
+    expect(keys[2]).not.toBe(keys[1]);
+  });
+
   it("rejects a 200 whose body breaks the contract", async () => {
     respond(200, JSON.stringify({ plan: "enterprise" }));
     const error = await rejection(apiRequest("/x", schema));

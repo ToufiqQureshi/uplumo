@@ -39,3 +39,5 @@ organization/project predicates. `TestSearchGrowthStorageDeniesPublicRole`
 verifies that table grants alone cannot expose or alter stored evidence.
 
 Migration 35 adds optional analytics browser recognition and sanitized click destinations. It enables RLS and revokes public/client privileges on the browser registry and pageview/custom-event tables. The Go server must own these tables or have BYPASSRLS. See analytics `decision.md` and `AUDIENCE_DESTINATIONS.txt`; migration tests verify fresh startup, restricted-role denial and legacy-write compatibility.
+
+Migration 41 adds pending-outcome and settlement metadata to credit reservations. It protects already-bought work during credit-transaction recovery and marks existing open feature holds conservatively; no plan price or grant changes.

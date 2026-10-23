@@ -675,17 +675,21 @@ func TestOverviewKeepsTheBilledSummaryWhenOnlyTheHistoryFails(t *testing.T) {
 	}
 }
 
-func TestOverviewStillFailsWhenTheGuardRefusesTheHistory(t *testing.T) {
+func TestOverviewKeepsTheBilledSummaryWhenCreditsCannotCoverHistory(t *testing.T) {
 	t.Parallel()
 	guard := &refuseAfter{err: spend.ErrNoCredits}
 	guard.left.Store(1) // the summary is allowed, the history is not
-	svc, cache, _ := newOverviewService(t, 90, http.StatusOK, guard)
-	_, err := svc.Overview(t.Context(), "org-one", lookupInput{Target: "example.com", Scope: string(ScopeDomain)})
-	if !errors.Is(err, spend.ErrNoCredits) {
-		t.Fatalf("Overview() error = %v, want the customer told they are out of credits", err)
+	svc, cache, calls := newOverviewService(t, 90, http.StatusOK, guard)
+	in := lookupInput{Target: "example.com", Scope: string(ScopeDomain)}
+	got, err := svc.Overview(t.Context(), "org-one", in)
+	if err != nil || got.Summary.Backlinks == nil || *got.Summary.Backlinks != 90 || len(got.Trends) != 0 {
+		t.Fatalf("overview = %+v, error = %v; want the bought summary without history", got, err)
 	}
-	if cache.onlyTTL() != 0 {
-		t.Fatal("a refused overview was cached")
+	if cache.onlyTTL() != partialCacheTTL {
+		t.Fatal("the bought summary must be briefly reusable")
+	}
+	if _, err := svc.Overview(t.Context(), "org-one", in); err != nil || calls.Load() != 1 {
+		t.Fatalf("revisit bought work again: calls=%d, err=%v", calls.Load(), err)
 	}
 }
 

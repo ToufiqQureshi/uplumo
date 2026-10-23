@@ -36,3 +36,5 @@ Go package: `backend/internal/domain`; provider requests use the shared DataForS
 The suggestions wrapper adds the Go explicit-action marker. Its only UI caller
 is Rank Tracking's optional Find existing keywords action; request fields and
 legacy-client behavior are covered by `domainApi.test.ts` and Go handler tests.
+
+Empty successful overview data remains fresh for five minutes; it is not a provider-error substitute.

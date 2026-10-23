@@ -154,10 +154,10 @@ func run(logger *slog.Logger) (err error) {
 		} else if expired > 0 {
 			logger.Info("expired billing credits", "credits", expired)
 		}
-		if refunded, err := credits.RefundStaleReservations(ctx); err != nil {
-			logger.Error("refund stale credit reservations", "err", err)
-		} else if refunded > 0 {
-			logger.Info("refunded stale credit reservations", "reservations", refunded)
+		if recovered, err := credits.RefundStaleReservations(ctx); err != nil {
+			logger.Error("reconcile stale credit reservations", "err", err)
+		} else if recovered > 0 {
+			logger.Info("reconciled stale credit reservations", "reservations", recovered)
 		}
 	}
 	go func() {

@@ -547,7 +547,7 @@ func TestResearchCache(t *testing.T) {
 		}
 	}
 
-	// A cache entry with no rows, or one that does not decode, is not an answer.
+	// Successful empty searches should not buy the same tasks on every revisit.
 	empty := newResearchFixture(t)
 	empty.data.labsFn = func(LabsRequest) ([]LabsItem, error) { return nil, nil }
 	for range 2 {
@@ -555,8 +555,8 @@ func TestResearchCache(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if len(empty.data.labsCalls(SourceSuggestions)) != 2 {
-		t.Error("an empty result was served from the cache; the provider's emptiness may be transient")
+	if len(empty.data.labsCalls(SourceSuggestions)) != 1 || empty.cache.onlyTTL() != 10*time.Minute {
+		t.Errorf("empty search bought %d suggestion tasks, ttl=%v; want one purchase cached for ten minutes", len(empty.data.labsCalls(SourceSuggestions)), empty.cache.onlyTTL())
 	}
 	for key := range f.cache.values {
 		f.cache.values[key] = []byte(`{"rows":"nope"}`)

@@ -20,3 +20,5 @@ Successful overview/keyword/page snapshots remain fresh and retained for the
 backend's 12-hour cache lifetime. Remounting a previously failed paid query
 does not retry automatically; the user can use the existing Retry action.
 An overview without data stays stale, preserving the backend's retry policy.
+
+Successful empty overviews stay fresh for five minutes, matching the server short cache; data-bearing results retain the twelve-hour client freshness interval.

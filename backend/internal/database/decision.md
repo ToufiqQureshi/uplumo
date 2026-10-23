@@ -43,3 +43,10 @@ Decision: add a server-owned site/browser-hash primary-key registry with first-o
 Why: daily salted identifiers cannot establish cross-day returns, while destination association must not inflate pageviews or count duplicate event deliveries. Public collection remains behind the Go validator; no database client policies are added. Browser registry, pageviews and custom events have RLS enabled, PUBLIC privileges revoked, and anon/authenticated privileges revoked where those roles exist, including TRUNCATE privileges that RLS alone would not protect.
 
 Preserve: table owner/BYPASSRLS remains the trusted server role, API tenant checks remain necessary, and server hashes/first-seen records persist with project analytics history until deletion (not a claimed 180-day DB TTL). Goose version ordering stays canonical; production is not used for migration/testing. Trace: migration 35, `analytics_audience_test.go`, analytics integration tests and fresh migration checks. No production migration or role change is performed by opening the PR.
+
+## Provider settlement recovery (migration 41)
+
+- **Decision:** Add a pending-outcome flag and nullable settlement-credit/provider-cost fields to reservations; mark existing open feature holds as uncertain.
+- **Why:** Provider side effects cannot be rolled back with a failed Postgres credit transaction. Persist enough evidence to recover a known outcome without making another provider call.
+- **Preserve:** Applied migrations remain immutable. No new public database policy, pricing change or retroactive guess about unknown provider cost.
+- **Trace:** Migration 41, billing `settlement_recovery_test.go`; fresh migration and real Postgres transaction checks.

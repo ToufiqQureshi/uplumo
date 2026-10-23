@@ -41,7 +41,7 @@ func Mount(mux *http.ServeMux, service *Service, withSession func(http.Handler) 
 			httpx.WriteError(w, http.StatusForbidden, "forbidden", "You cannot manage crawler access for this project.")
 			return
 		}
-		if !canManageIntegrations(user.Role) {
+		if user.OrganizationID != org || !canManageIntegrations(user.Role) {
 			httpx.WriteError(w, http.StatusForbidden, "forbidden", "Only workspace admins can manage crawler access.")
 			return
 		}
@@ -115,9 +115,8 @@ func Mount(mux *http.ServeMux, service *Service, withSession func(http.Handler) 
 	})))
 }
 
-func canManageIntegrations(role string) bool { return roleCanManage(role) }
-func roleCanManage(role string) bool {
-	for _, part := range strings.Split(role, ",") {
+func canManageIntegrations(role string) bool {
+	for part := range strings.SplitSeq(role, ",") {
 		if strings.TrimSpace(part) == "owner" || strings.TrimSpace(part) == "admin" {
 			return true
 		}

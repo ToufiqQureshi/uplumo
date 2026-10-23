@@ -12,3 +12,5 @@ This is an internal developer/AI-agent guide, not customer-facing product copy. 
 ## API/trigger
 
 POST /api/v1/projects/{projectId}/crawler-access/save; GET credentials; POST delete
+
+Saving a credential requires an owner/admin role in the active workspace that owns the authorized project. Being an admin in another workspace grants no integration-management authority here.

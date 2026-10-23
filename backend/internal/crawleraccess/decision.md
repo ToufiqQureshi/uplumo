@@ -19,3 +19,10 @@ Postgres credential rows; `BETTER_AUTH_SECRET`-derived encryption; audit crawler
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.
+
+## Bind integration authority to the project workspace
+
+- **Decision:** Require both the matching active workspace and its manager role before saving a crawler credential; remove the duplicate role-helper wrapper and use `strings.SplitSeq`.
+- **Why:** Project membership plus an unrelated active-workspace admin role could previously pass the manager check.
+- **Preserve:** Members cannot save credentials, managers of the correct active workspace can, and secrets remain encrypted and absent from responses.
+- **Trace:** `handler.go`, `TestSaveRequiresManagerRoleInTheProjectsWorkspace` reproduces the cross-workspace bypass before the fix.

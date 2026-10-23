@@ -150,7 +150,7 @@ func TestRefundStaleReservationsRestoresAbandonedHolds(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := pool.Exec(ctx, `UPDATE go_billing_credit_reservations SET created_at = now() - interval '2 hours' WHERE id = $1`, res.ID); err != nil {
+	if _, err := pool.Exec(ctx, `UPDATE go_billing_credit_reservations SET created_at = now() - interval '2 hours', updated_at = now() - interval '2 hours' WHERE id = $1`, res.ID); err != nil {
 		t.Fatal(err)
 	}
 	refunded, err := svc.RefundStaleReservations(ctx)

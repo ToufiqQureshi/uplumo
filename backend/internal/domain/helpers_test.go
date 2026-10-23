@@ -22,9 +22,10 @@ import (
 var fixedNow = time.Date(2026, 10, 9, 11, 12, 13, 0, time.UTC)
 
 type memoryCache struct {
-	mu     sync.Mutex
-	values map[string][]byte
-	fail   bool
+	mu      sync.Mutex
+	values  map[string][]byte
+	fail    bool
+	lastTTL time.Duration
 }
 
 func (c *memoryCache) Get(_ context.Context, key string) ([]byte, error) {
@@ -40,7 +41,7 @@ func (c *memoryCache) Get(_ context.Context, key string) ([]byte, error) {
 	return append([]byte(nil), value...), nil
 }
 
-func (c *memoryCache) Set(_ context.Context, key string, value []byte, _ time.Duration) error {
+func (c *memoryCache) Set(_ context.Context, key string, value []byte, ttl time.Duration) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.fail {
@@ -50,6 +51,7 @@ func (c *memoryCache) Set(_ context.Context, key string, value []byte, _ time.Du
 		c.values = map[string][]byte{}
 	}
 	c.values[key] = append([]byte(nil), value...)
+	c.lastTTL = ttl
 	return nil
 }
 

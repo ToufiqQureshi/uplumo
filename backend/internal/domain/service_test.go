@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/dataforseo"
 )
@@ -63,7 +64,7 @@ func TestOverviewRoundsMetricsAndCachesPerOrganization(t *testing.T) {
 	}
 }
 
-func TestOverviewDoesNotCacheEmptyResults(t *testing.T) {
+func TestOverviewBrieflyReusesSuccessfulEmptyResults(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name   string
@@ -86,8 +87,11 @@ func TestOverviewDoesNotCacheEmptyResults(t *testing.T) {
 			if got.HasData {
 				t.Fatalf("HasData = true for %s", tc.name)
 			}
-			if cache.size() != 0 {
-				t.Fatal("an empty result was cached; the next lookup would never retry")
+			if _, err := svc.Overview(context.Background(), "org", "proj", "example.com", ScopeDomain, 0, ""); err != nil {
+				t.Fatal(err)
+			}
+			if cache.size() != 1 || cache.lastTTL != 5*time.Minute || provider.calls.Load() != 1 {
+				t.Fatalf("empty result: cache=%d, ttl=%v, paid calls=%d; want one purchase cached for five minutes", cache.size(), cache.lastTTL, provider.calls.Load())
 			}
 			body := provider.lastBody(t)
 			if body["location_code"] != 2840.0 || body["language_code"] != "en" {
@@ -221,7 +225,7 @@ func TestKeywordSuggestionsRequestAndMapping(t *testing.T) {
 	}
 }
 
-func TestKeywordSuggestionsEmptyResultIsNotCached(t *testing.T) {
+func TestKeywordSuggestionsBrieflyReuseEmptyResults(t *testing.T) {
 	t.Parallel()
 	provider := &fakeProvider{result: rankedKeywordsResult(0)}
 	cache := &memoryCache{}
@@ -230,8 +234,11 @@ func TestKeywordSuggestionsEmptyResultIsNotCached(t *testing.T) {
 	if err != nil || len(got) != 0 || got == nil {
 		t.Fatalf("suggestions = %#v, err = %v, want an empty non-nil slice", got, err)
 	}
-	if cache.size() != 0 {
-		t.Fatal("empty suggestions were cached")
+	if _, err := svc.KeywordSuggestions(context.Background(), "org", "proj", "example.com", ScopeSubdomains, 2840, "en"); err != nil {
+		t.Fatal(err)
+	}
+	if cache.size() != 1 || cache.lastTTL != 5*time.Minute || provider.calls.Load() != 1 {
+		t.Fatalf("empty suggestions: cache=%d, ttl=%v, paid calls=%d; want one purchase cached for five minutes", cache.size(), cache.lastTTL, provider.calls.Load())
 	}
 	if _, has := provider.lastBody(t)["filters"]; has {
 		t.Fatal("subdomains scope must not send a scope filter")

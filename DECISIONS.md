@@ -299,3 +299,10 @@ Owner-approved scope: one focused PR adds optional 180-day browser recognition a
   AI search READMEs were read line by line against source. Most edits correct
   internal docs; behavior-affecting prompt changes are recorded in their
   feature decision file. Review corrections: #193 now defaults MCP `create_rank_tracker` to depth 10, valid on every paid tier. The SAM keyword-research and competitive-landscape prompts were also corrected so local keyword research does not promise Local SEO, Maps or local-pack data.
+
+## Audit: paid request recovery and verification
+
+- **Decision:** Keep failed queries idle on remount by default; free reads can explicitly opt in. Retain a POST idempotency key until a successful body passes Zod validation. Include TSX tests in Vitest discovery and fix the existing source-title type errors and formatting blockers.
+- **Why:** `retry: false` did not prevent a failed query from running again on remount, and malformed successful responses discarded replay protection before the customer received usable data.
+- **Preserve:** Explicit manual retry, existing key lifetime and workspace-scoped server keys; no new pricing, monthly grant, daily workspace cap or automatic provider retry. Test fixes retain the shipped Local SEO removal in both agent skill sources and embedded prompts.
+- **Trace:** `queryClient.ts`, `uplumoApi.ts`, their behavioral regressions, `vite.config.ts`, AI source rendering and feature decision files. All audit fixes are kept in one PR as requested by the owner.

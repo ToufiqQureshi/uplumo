@@ -24,3 +24,5 @@ Postgres ledger/reservations/subscriptions; Razorpay adapter; plan catalog.
 ## Credit packs and forecast
 
 Usage reads aggregate rank/AI schedule ceilings without paid calls. Owner/admin pack checkout accepts only a configured pack ID, locks the workspace and snapshots price/credits/validity before creating a Razorpay order. The signed `payment.captured` webhook verifies the stored order/amount/currency and grants once atomically; browser callbacks only poll. Pack sales default off. See README for configuration and refund limits.
+
+Provider settlement first saves a durable outcome, then atomically records credits and provider spend. Hourly recovery applies known outcomes once; unknown provider holds remain reserved and are flagged for reconciliation. Age alone never authorizes a provider refund.
