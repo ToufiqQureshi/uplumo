@@ -32,6 +32,7 @@ import (
 	"github.com/toufiqqureshi/uplumo/backend/internal/contentauthors"
 	"github.com/toufiqqureshi/uplumo/backend/internal/contenteditor"
 	"github.com/toufiqqureshi/uplumo/backend/internal/crawleraccess"
+	"github.com/toufiqqureshi/uplumo/backend/internal/dashboard"
 	"github.com/toufiqqureshi/uplumo/backend/internal/dashboardoverview"
 	"github.com/toufiqqureshi/uplumo/backend/internal/database"
 	"github.com/toufiqqureshi/uplumo/backend/internal/domain"
@@ -395,6 +396,7 @@ func run(logger *slog.Logger) (err error) {
 			Backlinks:               backlinksSvc,
 			Domain:                  domainSvc,
 			DashboardOverview:       newDashboardOverview(db, backlinksSvc),
+			DashboardLayouts:        dashboard.Store{DB: db},
 			GoogleAccounts:          google.AccountRepository{Pool: db},
 			GoogleOAuth:             googleOAuthSvc,
 			GA4:                     ga4Svc,

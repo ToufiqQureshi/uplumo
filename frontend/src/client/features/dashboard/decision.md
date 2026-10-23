@@ -24,6 +24,35 @@ Combines project onboarding state, audit/backlink summaries and GA4 overview car
 - **Preserve:** Keep stored results and project-scoped queries. No paid work on visits, reloads, focus or error; a click sends one mutation. Errors remain visible and do not remove saved metrics.
 - **Trace:** `DashboardPage.tsx`, `DashboardCards.tsx`, `dashboardApi.ts`; `dashboardApi.test.ts` and `frontend/tests/dashboard-spend.spec.ts`; backend dashboardoverview decision.
 
+## Customizable cards that answer "what does this mean"
+
+- **Decision:** the dashboard renders cards from a member's saved layout
+  (`dashboardLayout.ts`, `DashboardCustomize.tsx`) instead of the old
+  "cards with data first" sort, and adds three cards built from saved data:
+  visitors and AI traffic, AI visibility, rank tracking. Each card shows two
+  to four numbers and, where it can, one plain sentence on what to do next
+  (for example "AI names you but links to other sites").
+- **Why:** owner review on 23 Oct 2026 of the live dashboard: it showed GSC
+  numbers dropping with no next step, and the AI tracker, rank tracker and
+  Uplumo Analytics data a customer already had never appeared. The owner
+  asked for a dashboard customers find useful and can shape.
+- **Preserve:**
+  - Every card reads stored data. No card may call an endpoint that buys
+    provider work on page load; `dashboard-spend.spec.ts` lists the paid
+    paths and fails if a visit reaches one.
+  - A card the member never saw (added in a later release) appears, visible,
+    after their saved cards; ids the client no longer knows are ignored.
+  - Card failures stay inside the card; the layout falling back to default
+    must not block the page.
+  - Up/down buttons, not drag and drop: they work with a keyboard and a
+    screen reader and need no new dependency.
+- **Trace:** `DashboardPage.tsx`, `dashboardLayout.ts` (+ test),
+  `DashboardCustomize.tsx`, `InsightCards.tsx`, `dashboardApi.ts` (+ test),
+  `frontend/tests/dashboard-spend.spec.ts`; backend
+  [`dashboard` decision](../../../../../backend/internal/dashboard/decision.md).
+  Checked in a local browser with mocked APIs (cards, Customize, save).
+  Not checked against production data yet.
+
 ## Keep action compatibility and project state isolated
 
 - **Decision:** Send `userInitiated: true` only through the explicit refresh wrapper; remount the dashboard on project changes using its project key.
