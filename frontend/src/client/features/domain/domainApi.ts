@@ -85,20 +85,11 @@ type DomainPageRequest = DomainTarget & {
   search?: string;
 };
 
-// Playwright runs the domain pages against canned data instead of the API.
-async function loadFixtures() {
-  return import("../../../../tests/fixtures/domain-overview-fixtures");
-}
-
 function post<T>(
   endpoint: string,
   schema: z.ZodType<T>,
   { projectId, ...body }: { projectId: string } & Record<string, unknown>,
-  fixture: () => Promise<unknown>,
 ) {
-  if (import.meta.env.VITE_E2E_DOMAIN_FIXTURES === "1") {
-    return fixture().then((value) => schema.parse(value));
-  }
   return apiRequest(
     `/api/v1/projects/${encodeURIComponent(projectId)}/domain/${endpoint}`,
     schema,
@@ -108,28 +99,20 @@ function post<T>(
 }
 
 export function getDomainOverview({ data }: { data: DomainTarget }) {
-  return post("overview", overviewSchema, data, async () =>
-    (await loadFixtures()).getFixtureOverview(data.domain),
-  );
+  return post("overview", overviewSchema, data);
 }
 
 export function getDomainKeywordSuggestions({ data }: { data: DomainTarget }) {
-  return post(
-    "keyword-suggestions",
-    keywordSuggestionsSchema,
-    { ...data, userInitiated: true },
-    async () => [],
-  );
+  return post("keyword-suggestions", keywordSuggestionsSchema, {
+    ...data,
+    userInitiated: true,
+  });
 }
 
 export function getDomainKeywordsPage({ data }: { data: DomainPageRequest }) {
-  return post("keywords", keywordsPageSchema, data, async () =>
-    (await loadFixtures()).getFixtureKeywordsPage(data),
-  );
+  return post("keywords", keywordsPageSchema, data);
 }
 
 export function getDomainPagesPage({ data }: { data: DomainPageRequest }) {
-  return post("pages", pagesPageSchema, data, async () =>
-    (await loadFixtures()).getFixturePagesPage(data),
-  );
+  return post("pages", pagesPageSchema, data);
 }

@@ -18,3 +18,5 @@ Called by `backend/internal/billing`; no public direct route.
 supplies an amount; billing passes the saved pack price. Returned receipt,
 currency and amount must match. Captured-payment webhook validation and
 idempotent grants belong to `internal/billing/topups.go`.
+
+`plans.go` fetches a plan with a bounded authenticated GET. Before creating or reusing an unpaid checkout, billing verifies its ID, monthly interval, INR currency and exact catalog amount. Payment entities in signed subscription events expose their ID for credit-grant deduplication; byte-identical body fingerprints are retained for compatibility.

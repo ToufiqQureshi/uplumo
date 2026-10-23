@@ -7,6 +7,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log/slog"
+	"math"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -65,9 +67,7 @@ func NewCreditLedgerService(db *pgxpool.Pool) *CreditLedgerService {
 }
 
 func generateID(prefix string) string {
-	b := make([]byte, 12)
-	_, _ = rand.Read(b)
-	return fmt.Sprintf("%s_%s", prefix, hex.EncodeToString(b))
+	return prefix + "_" + rand.Text()
 }
 
 // GetBalance returns the organization's credit balance.
@@ -583,8 +583,35 @@ func (s *CreditLedgerService) SettleUpTo(ctx context.Context, reservationID stri
 	return s.settle(ctx, reservationID, actualAmount, true, 0, "")
 }
 
+// settleUnreservedProvider persists an already known outcome before any balance
+// operation. Zero credits were held; normal settlement charges available funds.
+func (s *CreditLedgerService) settleUnreservedProvider(ctx context.Context, org, feature, endpoint string, credits int64, costUSD float64) (int64, error) {
+	id := generateID("res")
+	if _, err := s.db.Exec(ctx, `INSERT INTO go_billing_credit_reservations
+  (id, organization_id, amount_credits, status, feature, endpoint, user_id, settlement_credits, provider_cost_usd)
+  VALUES ($1,$2,0,'reserved',$3,$4,NULLIF($5,''),$6,$7)`,
+		id, org, feature, endpoint, spend.UserIDFromContext(ctx), credits, costUSD); err != nil {
+		return 0, fmt.Errorf("record unreserved provider outcome: %w", err)
+	}
+	if err := s.topUpStaff(ctx, org, credits); err != nil {
+		return 0, err
+	}
+	return s.settle(ctx, id, credits, true, costUSD, endpoint)
+}
+
 // SettleProviderUpTo records provider cost while settling up to actualCredits.
 func (s *CreditLedgerService) SettleProviderUpTo(ctx context.Context, reservationID string, actualCredits int64, providerCostUSD float64, endpoint string) (int64, error) {
+	if actualCredits < 0 || providerCostUSD < 0 || math.IsNaN(providerCostUSD) || math.IsInf(providerCostUSD, 0) {
+		return 0, errors.New("invalid provider settlement")
+	}
+	// Commit the outcome before settling the ledger. A later transaction
+	// failure can then be recovered without buying again or refunding paid work.
+	if _, err := s.db.Exec(ctx, `UPDATE go_billing_credit_reservations
+		SET settlement_credits=$2, provider_cost_usd=$3, provider_outcome_pending=false,
+			endpoint=CASE WHEN $4='' THEN endpoint ELSE $4 END, updated_at=now()
+		WHERE id=$1 AND status='reserved' AND settlement_credits IS NULL`, reservationID, actualCredits, providerCostUSD, endpoint); err != nil {
+		return 0, fmt.Errorf("record provider settlement outcome: %w", err)
+	}
 	return s.settle(ctx, reservationID, actualCredits, true, providerCostUSD, endpoint)
 }
 
@@ -610,11 +637,14 @@ func (s *CreditLedgerService) settle(ctx context.Context, reservationID string, 
 
 	var orgID, status, feature, reservedEndpoint, userID string
 	var reservedAmount int64
+	var recordedCredits *int64
+	var recordedProviderCost float64
 	err = tx.QueryRow(ctx, `
-		SELECT organization_id, amount_credits, status, feature, endpoint, COALESCE(user_id, '')
+		SELECT organization_id, amount_credits, status, feature, endpoint, COALESCE(user_id, ''),
+			settlement_credits, COALESCE(provider_cost_usd, 0)::float8
 		FROM go_billing_credit_reservations
 		WHERE id = $1 FOR UPDATE
-	`, reservationID).Scan(&orgID, &reservedAmount, &status, &feature, &reservedEndpoint, &userID)
+	`, reservationID).Scan(&orgID, &reservedAmount, &status, &feature, &reservedEndpoint, &userID, &recordedCredits, &recordedProviderCost)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return 0, ErrReservationNotFound
 	}
@@ -624,6 +654,9 @@ func (s *CreditLedgerService) settle(ctx context.Context, reservationID string, 
 
 	if status != "reserved" {
 		return 0, ErrReservationAlreadyClosed
+	}
+	if recordedCredits != nil {
+		actualAmount, providerCostUSD, endpoint = *recordedCredits, recordedProviderCost, reservedEndpoint
 	}
 	if endpoint == "" {
 		endpoint = reservedEndpoint
@@ -688,6 +721,11 @@ func (s *CreditLedgerService) settle(ctx context.Context, reservationID string, 
 	`, generateID("led"), orgID, reservationID, userID, -actualAmount, reason, feature, endpoint, providerCostUSD)
 	if err != nil {
 		return 0, fmt.Errorf("insert ledger settle: %w", err)
+	}
+	if providerCostUSD > 0 {
+		if _, err := tx.Exec(ctx, `INSERT INTO go_provider_spend (organization_id, feature, cost_usd) VALUES ($1, $2, $3)`, orgID, feature, providerCostUSD); err != nil {
+			return 0, fmt.Errorf("record settled provider spend: %w", err)
+		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -766,27 +804,35 @@ func (s *CreditLedgerService) refundReservation(ctx context.Context, reservation
 }
 
 // staleReservationAge is the no-heartbeat window after which a reservation is
-// treated as abandoned — the request crashed between Hold and Settle/Refund —
-// and the customer's credits are restored.
+// reconciled using the recorded outcome or flagged for operator review.
 const staleReservationAge = time.Hour
 
-// RefundStaleReservations refunds holds left reserved by a crash so the
-// customer's credits are restored and the idempotency key can be reused. It
-// returns the number of reservations refunded.
+// RefundStaleReservations recovers recorded settlements and refunds abandoned
+// non-provider holds. An unknown provider outcome stays reserved for operator
+// reconciliation: a crash does not prove the provider charged nothing.
+// It returns the number of reservations recovered or refunded.
 func (s *CreditLedgerService) RefundStaleReservations(ctx context.Context) (int64, error) {
 	cutoff := time.Now().UTC().Add(-staleReservationAge)
-	rows, err := s.db.Query(ctx, `SELECT id FROM go_billing_credit_reservations WHERE status = 'reserved' AND updated_at < $1 ORDER BY updated_at`, cutoff)
+	rows, err := s.db.Query(ctx, `SELECT id, organization_id, provider_outcome_pending, settlement_credits,
+		COALESCE(provider_cost_usd, 0)::float8, endpoint
+		FROM go_billing_credit_reservations WHERE status = 'reserved' AND updated_at < $1 ORDER BY updated_at`, cutoff)
 	if err != nil {
 		return 0, fmt.Errorf("list stale reservations: %w", err)
 	}
-	var ids []string
+	type outcome struct {
+		id, org, endpoint string
+		pending           bool
+		credits           *int64
+		cost              float64
+	}
+	var outcomes []outcome
 	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
+		var item outcome
+		if err := rows.Scan(&item.id, &item.org, &item.pending, &item.credits, &item.cost, &item.endpoint); err != nil {
 			rows.Close()
 			return 0, fmt.Errorf("read stale reservation: %w", err)
 		}
-		ids = append(ids, id)
+		outcomes = append(outcomes, item)
 	}
 	if err := rows.Err(); err != nil {
 		rows.Close()
@@ -795,12 +841,22 @@ func (s *CreditLedgerService) RefundStaleReservations(ctx context.Context) (int6
 	rows.Close()
 
 	var refunded int64
-	for _, id := range ids {
-		if err := s.refundStaleReservation(ctx, id, "stale reservation reconciliation", cutoff); err != nil {
+	for _, item := range outcomes {
+		if item.pending {
+			slog.ErrorContext(ctx, "provider outcome unknown; reservation needs reconciliation", "reservation", item.id, "organization", item.org)
+			continue
+		}
+		var err error
+		if item.credits != nil {
+			_, err = s.SettleProviderUpTo(ctx, item.id, *item.credits, item.cost, item.endpoint)
+		} else {
+			err = s.refundStaleReservation(ctx, item.id, "stale reservation reconciliation", cutoff)
+		}
+		if err != nil {
 			if errors.Is(err, ErrReservationAlreadyClosed) || errors.Is(err, ErrReservationNotStale) {
 				continue // another worker closed it or an active heartbeat renewed it
 			}
-			return refunded, fmt.Errorf("refund stale reservation %s: %w", id, err)
+			return refunded, fmt.Errorf("reconcile stale reservation %s: %w", item.id, err)
 		}
 		refunded++
 	}

@@ -373,34 +373,8 @@ export function refreshSavedKeywordMetrics(input: { projectId: string }) {
   );
 }
 
-/* Playwright runs the keyword-research page against canned data instead of
- * the billed DataForSEO calls. */
-async function loadResearchFixtures() {
-  return import("../../../../tests/fixtures/keyword-research-fixtures");
-}
-
 type ResearchRequest = Parameters<typeof researchKeywords>[0];
 
-function researchOrFixture(input: ResearchRequest) {
-  if (import.meta.env.VITE_E2E_KEYWORD_FIXTURES === "1") {
-    return loadResearchFixtures()
-      .then((fixtures) =>
-        fixtures.getKeywordResearchFixture({
-          keywords: input.keywords,
-          locationCode: input.locationCode ?? 2840,
-          languageCode: input.languageCode ?? "en",
-          projectId: input.projectId,
-          resultLimit: input.resultLimit ?? 150,
-          mode: input.mode ?? "auto",
-          clickstream: input.clickstream ?? false,
-          groupKeywords: input.groupKeywords ?? false,
-        }),
-      )
-      .then((value) => researchResultSchema.parse(value));
-  }
-  return researchKeywords(input);
-}
-
 export function getKeywordResearch({ data }: { data: ResearchRequest }) {
-  return researchOrFixture(data);
+  return researchKeywords(data);
 }

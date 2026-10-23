@@ -20,3 +20,7 @@ Postgres/pgx and goose migrations.
 - Migrations are forward-only and ordered uniquely; duplicate versions can prevent server startup.
 - New feature tables use `go_` prefixes and deliberate indexes/FKs/cascades.
 - Never use production data in tests; integration tests require explicit TEST_DATABASE_URL.
+
+Migration 42 runs after all earlier schema changes, hardens existing and newly created server tables, and preserves trusted owner access. Supabase client roles receive no table policies. A production emergency application of the same idempotent SQL does not advance Goose history; normal startup still applies versions 37–42 in order.
+
+Known costs after a zero estimate use a zero-amount outcome reservation (migration 43), committed before staff top-up, expiry or customer charging. The existing settlement/reconciler charges available credits and records provider spend once; charging failure cannot turn it into an ordinary refundable hold.

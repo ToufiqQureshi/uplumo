@@ -103,14 +103,15 @@ describe("keyword research API", () => {
     ).rejects.toThrow(ApiError);
   });
 
-  it("serves the Playwright fixture instead of a billed call", async () => {
+  it("keeps the Go transport active even when an old test flag is present", async () => {
+    reply({ rows: [], source: "auto", usedFallback: false });
     vi.stubEnv("VITE_E2E_KEYWORD_FIXTURES", "1");
     try {
       const result = await getKeywordResearch({
         data: { projectId: "p1", keywords: ["keyword research"] },
       });
-      expect(result.rows.length).toBeGreaterThan(0);
-      expect(fetchSpy).not.toHaveBeenCalled();
+      expect(result.rows).toEqual([]);
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
     } finally {
       vi.unstubAllEnvs();
     }

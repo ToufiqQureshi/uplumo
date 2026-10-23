@@ -11,10 +11,11 @@ See `docs/audits/2026-10-20-feature-wiring-review.md` for scope and validation l
 Uplumo is live at `https://uplumo.com` on Railway. The whole backend is Go and
 the React app is a static SPA the Go server serves. People can sign up, verify
 their email and use the free features. The owner confirmed Razorpay uses
-**live** keys, so a working subscription takes real money. Business checkout
-is unverified because its live plan ID has not been confirmed. DataForSEO and
-OpenRouter variables are configured in production; accepted provider calls
-can incur real costs, but DataForSEO account verification is still pending.
+**live** keys, so a working subscription takes real money. All four plan variable names are present (23 October); their live terms and
+real purchase/cancel acceptance still require release verification. DataForSEO
+and OpenRouter variables are configured in production; accepted provider calls
+incur real costs. The owner confirms DataForSEO works and intentionally keeps
+its $2/day account cap. See `docs/audits/2026-10-23-launch-readiness.md`.
 
 ## Content editor
 
@@ -40,10 +41,10 @@ can incur real costs, but DataForSEO account verification is still pending.
 | Public pages: landing, pricing, about, contact, terms, privacy, refunds, shipping                      | ✅                                                      |
 | Razorpay account approved (KYC)                                                                        | ✅                                                      |
 | Razorpay live keys in Railway                                                                          | ✅                                                      |
-| Live Razorpay plan IDs match the catalog (Business included)                                             | ⏳ owner confirmation needed                            |
+| Live Razorpay plan IDs match the catalog (Business included)                                             | 🔨 all four variables present; live terms pending                            |
 | Razorpay live renewal and one-click cancel confirmed on a real subscription                            | ⏳                                                      |
 | One-click cancel (`POST /api/v1/billing/cancel`, "Cancel <plan>" on Billing)                           | ✅ built, not yet run against Razorpay                  |
-| DataForSEO key in production (keywords, rank tracking, backlinks, AI visibility answer 503 without it) | ✅ configured; account verification 40104 pending       |
+| DataForSEO key in production (keywords, rank tracking, backlinks, AI visibility answer 503 without it) | ✅ owner confirms working 23 Oct; intentional $2/day cap       |
 | Google OAuth app verification (Search Console and Analytics scopes)                                    | ⏳                                                      |
 | Live usage shown to the customer (credits on Billing, cost next to paid actions)                       | ✅ built                                                |
 | Spend guard: credits held before every paid lookup and AI call; provider-wide emergency brake           | ✅ built                                                |
@@ -116,8 +117,8 @@ This is a shortlist for product discovery, not a claim that competitors lack the
 
 ## Owner actions
 
-- Razorpay: confirm all four live plan ids (Business included) are in
-  Railway and each amount equals `backend/internal/plans/catalog.go`.
+- Razorpay: after release, inspect read-only plan verification logs against
+  `backend/internal/plans/catalog.go`, then complete live payment/cancel acceptance.
 - Submit the Google OAuth app for verification.
 - Have a lawyer read the terms, privacy, refund and shipping pages.
 - Make the GitHub repo private if it is not already.

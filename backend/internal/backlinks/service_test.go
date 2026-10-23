@@ -181,7 +181,7 @@ func TestProviderRejectsBillingIssueWithoutRetry(t *testing.T) {
 	server := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		calls++
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]any{"status_code": 20000, "tasks": []any{map[string]any{"status_code": 40210, "status_message": "Insufficient funds"}}})
+		_ = json.NewEncoder(w).Encode(map[string]any{"status_code": 20000, "tasks": []any{map[string]any{"status_code": 40210, "status_message": "Insufficient funds", "cost": 0, "path": []string{"v3", "backlinks", "summary", "live"}}}})
 	})
 	svc := newService(testClient(t, server, &usageRecorder{}), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Now)
 	_, err := svc.Overview(context.Background(), "org", lookupInput{Target: "example.com", Scope: "exact_url"})
@@ -199,7 +199,7 @@ func TestProviderErrorIsNotRetried(t *testing.T) {
 	server := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		calls.Add(1)
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]any{"status_code": 20000, "tasks": []any{map[string]any{"status_code": 50000, "status_message": "provider unavailable"}}})
+		_ = json.NewEncoder(w).Encode(map[string]any{"status_code": 20000, "tasks": []any{map[string]any{"status_code": 50000, "status_message": "provider unavailable", "cost": 0, "path": []string{"v3", "backlinks", "summary", "live"}}}})
 	})
 	svc := newService(testClient(t, server, &usageRecorder{}), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Now)
 	_, err := svc.Overview(context.Background(), "org", lookupInput{Target: "example.com", Scope: "exact_url"})
@@ -675,17 +675,21 @@ func TestOverviewKeepsTheBilledSummaryWhenOnlyTheHistoryFails(t *testing.T) {
 	}
 }
 
-func TestOverviewStillFailsWhenTheGuardRefusesTheHistory(t *testing.T) {
+func TestOverviewKeepsTheBilledSummaryWhenCreditsCannotCoverHistory(t *testing.T) {
 	t.Parallel()
 	guard := &refuseAfter{err: spend.ErrNoCredits}
 	guard.left.Store(1) // the summary is allowed, the history is not
-	svc, cache, _ := newOverviewService(t, 90, http.StatusOK, guard)
-	_, err := svc.Overview(t.Context(), "org-one", lookupInput{Target: "example.com", Scope: string(ScopeDomain)})
-	if !errors.Is(err, spend.ErrNoCredits) {
-		t.Fatalf("Overview() error = %v, want the customer told they are out of credits", err)
+	svc, cache, calls := newOverviewService(t, 90, http.StatusOK, guard)
+	in := lookupInput{Target: "example.com", Scope: string(ScopeDomain)}
+	got, err := svc.Overview(t.Context(), "org-one", in)
+	if err != nil || got.Summary.Backlinks == nil || *got.Summary.Backlinks != 90 || len(got.Trends) != 0 {
+		t.Fatalf("overview = %+v, error = %v; want the bought summary without history", got, err)
 	}
-	if cache.onlyTTL() != 0 {
-		t.Fatal("a refused overview was cached")
+	if cache.onlyTTL() != partialCacheTTL {
+		t.Fatal("the bought summary must be briefly reusable")
+	}
+	if _, err := svc.Overview(t.Context(), "org-one", in); err != nil || calls.Load() != 1 {
+		t.Fatalf("revisit bought work again: calls=%d, err=%v", calls.Load(), err)
 	}
 }
 
@@ -699,7 +703,7 @@ func TestFilterConditionsCountNestedGroups(t *testing.T) {
 
 func providerFailure(w http.ResponseWriter, code int) {
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]any{"status_code": 20000, "tasks": []any{map[string]any{"status_code": code, "status_message": "task failed"}}})
+	_ = json.NewEncoder(w).Encode(map[string]any{"status_code": 20000, "tasks": []any{map[string]any{"status_code": code, "status_message": "task failed", "cost": 0, "path": []string{"v3", "backlinks", "summary", "live"}}}})
 }
 
 // A task-level failure (HTTP 200 carrying status 50000) is treated like a

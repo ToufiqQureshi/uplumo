@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"runtime/debug"
-	"time"
 )
 
 // serverInfo mirrors the legacy McpServer constructor arguments.
@@ -148,9 +147,7 @@ func (h *handler) execute(ctx context.Context, _ *http.Request, req rpcRequest, 
 		if !ok {
 			return errorResponse(req.ID, codeMethodNotFound, "Method not found.")
 		}
-		started := time.Now()
-		result, outcome := h.callTool(ctx, t, toolCallArguments(req.Params), auth)
-		h.recordToolCall(ctx, name, auth, started, outcome)
+		result := h.callTool(ctx, t, toolCallArguments(req.Params), auth)
 		return resultResponse(req.ID, result)
 	default:
 		return errorResponse(req.ID, codeMethodNotFound, "Method not found.")

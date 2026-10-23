@@ -20,3 +20,5 @@ Razorpay HTTP API and secret configuration.
 - No raw payment secret in URL, logs or error responses.
 - Use deadlines and validate signatures with constant-time comparison.
 - Never let the adapter decide plan price or entitlement; billing catalog remains authoritative.
+
+Checkout reads `/plans/{id}` before making a subscription payable and billing compares the returned commercial terms with its catalog. This GET does not create a payment. Signed charged-event payment IDs are passed to billing for semantic deduplication.

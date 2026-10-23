@@ -25,7 +25,7 @@ func TestProviderOverviewMapsDataForSEOResult(t *testing.T) {
 		if len(body) != 1 || body[0]["target"] != "example.com" {
 			t.Errorf("request body = %#v", body)
 		}
-		_, _ = w.Write([]byte(`{"status_code":20000,"tasks":[{"status_code":20000,"result":[{"items":[{"metrics":{"organic":{"etv":1234.6,"count":99.2}}}]}]}]}`))
+		_, _ = w.Write([]byte(`{"status_code":20000,"tasks":[{"path":["v3","dataforseo_labs","google","domain_rank_overview","live"],"cost":0.01,"status_code":20000,"result":[{"items":[{"metrics":{"organic":{"etv":1234.6,"count":99.2}}}]}]}]}`))
 	}))
 	t.Cleanup(server.Close)
 
@@ -59,7 +59,7 @@ func TestProviderDoesNotRetryPaidCall(t *testing.T) {
 	calls := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		calls++
-		_, _ = w.Write([]byte(`{"status_code":20000,"tasks":[{"status_code":40500,"status_message":"failed"}]} `))
+		_, _ = w.Write([]byte(`{"status_code":20000,"tasks":[{"path":["v3","dataforseo_labs","google","domain_rank_overview","live"],"cost":0,"status_code":40500,"status_message":"failed"}]} `))
 	}))
 	t.Cleanup(server.Close)
 	client, err := dataforseo.NewClient(dataforseo.Options{

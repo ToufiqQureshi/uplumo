@@ -99,3 +99,7 @@ Search growth accepts `goalEvent`, `comparison` (`previous`/`year`) and explicit
 reads and keys its cache by all three. Standard uses at most 5 report reads plus
 1 goal metadata read; expanded at most 25 + metadata. SAM's draft includes the
 selected goal/comparison so the analyst does not silently switch outcome scope.
+
+Registry dispatch contains handler panics and missing results as explicit tool errors for both external MCP clients and SAM. Unexpected internal errors are logged server-side and returned with a generic message; intentional app/spend errors retain their safe guidance. Removed unused telemetry bookkeeping never wrote any usage; provider spending remains recorded by the shared spend guard.
+
+Successful external calls persist the first connection/tool-call onboarding milestone. Internal SAM and failed tools do not advance it. Writes are bounded to two seconds, preserve the first timestamp and cannot make a successful tool fail.

@@ -69,3 +69,5 @@ The three MCP keyword data tools (`mcp/serp_results.go`, `mcp/keyword_metrics.go
 `mcp/registry_test.go` covers plan gating. SERP status 40102 is a valid,
 billable empty result; 40501 is an invalid-field error and is refunded. See
 `../platform/dataforseo/decision.md`.
+
+Successful empty keyword research is reused for ten minutes (`partialResearchCacheTTL`) instead of buying the same tasks again on every revisit. Null/malformed results, invalid source identities and provider errors remain cache misses/errors; non-empty research keeps its 24-hour TTL.

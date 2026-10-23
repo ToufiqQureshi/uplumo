@@ -39,9 +39,7 @@ Validation runs before the provider: failed provider tasks are billed.
   Counting is done by `countConditions`, not hard-coded.
 - **Cache keys carry organization and project**, plus every input that changes
   the answer (scope, path, market, page, size, sort, filters, search).
-- Empty overviews and empty suggestions are never served from cache or the
-  persisted snapshot (a later lookup must retry); a cached entry without data
-  is ignored. PostgreSQL is consulted only after both Redis checks miss.
+- Successful empty overviews and suggestions are reused in Redis for five minutes, so revisits do not buy the same empty task repeatedly. Empty overviews are not persisted for 30 days; malformed cached overviews without a fetched timestamp are ignored. PostgreSQL is consulted only after both Redis checks miss.
 - Redis down is soft: log, try a fresh persisted snapshot, then call the provider.
 - Concurrent equivalent overview/keyword-page/page-page misses share one
   provider task per server process. Organization, project, market and every

@@ -5,7 +5,7 @@ on the owner. Feature status lives in `ROADMAP.md`, history in git.
 **No secret values here, only variable names.** Agents: keep this file and
 update it when the owner decides something or a Railway variable changes.
 
-Last updated: 22 Oct 2026
+Last updated: 23 Oct 2026
 
 ---
 
@@ -44,7 +44,7 @@ Last updated: 22 Oct 2026
 ## 2. Waiting for the owner
 
 - [ ] **Razorpay live plans:** confirm `RAZORPAY_PLAN_ID_BASIC`, `_PRO`, `_BUSINESS` and `_AGENCY` hold live plan ids whose amounts equal `catalog.go` (Solo ₹999, Growth ₹2,499, Business ₹4,999, Agency ₹9,999).
-- [ ] **DataForSEO:** verify the account and top up (at least $50). Until then these return 40104 "verify your account": keyword research, domain, backlinks, brand lookup, prompt explorer and rank tracking. No money is charged meanwhile.
+- [x] **DataForSEO:** owner confirms current access works (23 Oct). The account-side $2/day limit is deliberate protection while bugs are fixed; preserve it. Earlier 401/40104 logs do not establish current failure.
 - [ ] **Google OAuth data-access verification:** add the scope justification, upload the demo video (YouTube, unlisted), then submit in the Verification Center. Branding is already verified.
 - [ ] **GA4 connect:** use "Advanced → Go to uplumo" until Google verifies the app. The user cap is 100, and 1 is used.
 - [ ] **WordPress (revmerito.com):** add the 2 `.htaccess` lines on Hostinger (the host drops the Authorization header), then connect with a real application password (24 characters).
@@ -61,11 +61,11 @@ Last updated: 22 Oct 2026
 | `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `PUBLIC_URL`                        | set                                                                         | Login and links                                                              |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`                                   | set                                                                         | Google login, Search Console, GA4                                            |
 | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`          | set (**live**, 22 Oct)                                                      | Billing                                                                      |
-| `RAZORPAY_PLAN_ID_BASIC`, `_PRO`, `_AGENCY`                                  | set (live ids: owner to confirm)                                            | Monthly plans; each live plan amount must equal `catalog.go` (Agency ₹9,999) |
-| `RAZORPAY_PLAN_ID_BUSINESS`                                                  | owner to confirm                                                            | Business ₹4,999 monthly plan; without it Business cannot be bought           |
+| `RAZORPAY_PLAN_ID_BASIC`, `_PRO`, `_AGENCY`                                  | set; presence verified 23 Oct; terms checked at release                                            | Monthly plans; each live plan amount must equal `catalog.go` (Agency ₹9,999) |
+| `RAZORPAY_PLAN_ID_BUSINESS`                                                  | set; presence verified 23 Oct; terms checked at release                      | Business ₹4,999 monthly plan; without it Business cannot be bought           |
 | `LOOPS_API_KEY` + 3 `LOOPS_TRANSACTIONAL_*_ID`                               | set                                                                         | Email                                                                        |
 | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_CONTENT_IMAGE_BUCKET` | set (14 Oct)                                                                | Content editor images (`content-images` bucket)                              |
-| `DATAFORSEO_API_KEY`                                                         | **set 14 Oct**                                                              | SEO data; the account is not verified yet                                    |
+| `DATAFORSEO_API_KEY`                                                         | **set 14 Oct**                                                              | SEO data; owner confirms working 23 Oct; intentional $2/day cap                                    |
 | `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`                                     | set                                                                         | AI writing and assistant                                                     |
 | `PAGESPEED_API_KEY`                                                          | **set 15 Oct**                                                              | Lighthouse in Site Audit (free, 200 checks per workspace per day)            |
 | `CRUX_API_KEY`                                                               | **set 15 Oct** (same key)                                                   | Real-visitor Core Web Vitals                                                 |
@@ -101,7 +101,7 @@ Google Cloud project `agentproject-473109`:
 - Content editor: a 265-word article scored SEO 82 and AEO 85. Typing makes 0 API calls. Save, reload and reopen work. The image upload reaches Supabase and shows in the preview.
 - Site audit on revmerito.com, 10 pages: 25 issues (3 warnings, 22 info).
 - Security: another workspace's project answers 404.
-- Blocked by DataForSEO verification: keyword research and prompt explorer.
+- At the 14 Oct test, keyword research and prompt explorer were blocked by DataForSEO verification. The owner confirms DataForSEO now works (23 Oct), with the intentional $2/day cap.
 - Blocked by Hostinger: WordPress connect (the `.htaccess` fix is pending).
 
 ## Content publishing implementation choices (15 October 2026)
@@ -121,7 +121,7 @@ Google Cloud project `agentproject-473109`:
 
 ## 6. Cost notes
 
-- A content brief costs about $0.0065 (9 credits). Pro (10,000 credits) ≈ 1,111 briefs a month. The daily limit per workspace is a third of its monthly credits.
+- A content brief costs about $0.0065 (9 credits). Pro (10,000 credits) ≈ 1,111 briefs a month. There is no per-workspace daily cap; workspace credits cap usage.
 - An AI action costs at most 11–15 credits.
 - PageSpeed and CrUX are free (Google quota).
 - 1 credit = $1/1,280 of provider cost.
@@ -129,7 +129,7 @@ Google Cloud project `agentproject-473109`:
 ## Approved implementation scope (18 October 2026)
 
 - Owner requested two PRs: (1) AI question tracking, scheduled usage previews and self-service credit packs; (2) content editor improvements, published-page tracking and enquiry opportunities.
-- Reuse Go/Postgres jobs and the existing credit ledger. Paid features share workspace credits and retain daily limits. No subscription prices or grants are changed.
+- Reuse Go/Postgres jobs and the existing credit ledger. Paid features share workspace credits; only the global/provider emergency brakes remain. No subscription prices or grants are changed.
 - Credit-pack commercial terms require an explicit `BILLING_TOPUP_PACKS` configuration; no default pack price or new production configuration is activated by these PRs.
 
 - Owner requested two improvement PRs including the content editor and a paid
@@ -221,8 +221,7 @@ Owner-approved scope: one focused PR adds optional 180-day browser recognition a
   limits; its source comparisons do not prove production raw-response equality.
 - **Trace:** Backlinks, Domain, AI, Keywords, Local SEO and Billing feature
   decision files and regression tests; shared provider and regression guides.
-  Business five-run-month affordability and semantic payment replay remain
-  explicit limitations, not silently changed product policy.
+  Business five-run-month affordability is explicitly disclosed. The launch follow-up adds payment-ID deduplication when the signed event supplies it; historical events without that identity remain limited to body fingerprints.
 
 ## Sidebar grouping for non-technical owners
 
@@ -299,3 +298,18 @@ Owner-approved scope: one focused PR adds optional 180-day browser recognition a
   AI search READMEs were read line by line against source. Most edits correct
   internal docs; behavior-affecting prompt changes are recorded in their
   feature decision file. Review corrections: #193 now defaults MCP `create_rank_tracker` to depth 10, valid on every paid tier. The SAM keyword-research and competitive-landscape prompts were also corrected so local keyword research does not promise Local SEO, Maps or local-pack data.
+
+## Audit: paid request recovery and verification
+
+- **Decision:** Keep failed queries idle on remount by default; free reads can explicitly opt in. Retain a POST idempotency key until a successful body passes Zod validation. Include TSX tests in Vitest discovery and fix the existing source-title type errors and formatting blockers.
+- **Why:** `retry: false` did not prevent a failed query from running again on remount, and malformed successful responses discarded replay protection before the customer received usable data.
+- **Preserve:** Explicit manual retry, existing key lifetime and workspace-scoped server keys; no new pricing, monthly grant, daily workspace cap or automatic provider retry. Test fixes retain the shipped Local SEO removal in both agent skill sources and embedded prompts.
+- **Trace:** `queryClient.ts`, `uplumoApi.ts`, their behavioral regressions, `vite.config.ts`, AI source rendering and feature decision files. All audit fixes are kept in one PR as requested by the owner.
+
+## Launch review in PR #196 (23 October)
+
+- Owner requests all launch fixes, necessary cleanup and evidence in the existing PR #196. No plan prices, grants, markup or provider safety ceilings change.
+- Owner confirms DataForSEO is working and its $2/day account limit is intentional; no new paid acceptance call was made by the audit. Railway/Supabase connections now work. All four Razorpay plan variable names, including Business, are present; actual recurring terms are checked against the catalog at startup/checkout.
+- Confirmed live Data API exposure was closed using the same idempotent SQL committed as migration 42. Afterward: 0 tables without RLS, 0 client grants, trusted-owner reads and HTTP readiness/session checks pass. This emergency Supabase migration does not mark pending Goose versions as applied.
+- Shared worker supervision replaces duplicated restart code and prevents audit/rank queues from permanently stopping after temporary DB errors. Opaque IDs use Go `crypto/rand.Text`; MCP no-op telemetry and frontend fixture bypass code are removed. Successful external MCP tools now persist the actual first-call onboarding milestone.
+- The [launch audit](docs/audits/2026-10-23-launch-readiness.md) records economics assumptions, checks and live acceptance limits.

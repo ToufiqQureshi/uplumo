@@ -17,7 +17,7 @@ function safeExternalHref(raw: string): string | null {
   }
 }
 
-function SourceLink({ url, title }: { url: string; title: string }) {
+function SourceLink({ url, title }: { url: string; title: string | null }) {
   const href = safeExternalHref(url);
   const label = title || (href ? formatUrlForDisplay(href) : url);
   if (!href) return <span className="break-words font-medium">{label}</span>;

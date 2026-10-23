@@ -20,3 +20,5 @@ Postgres drafts/brief cache/authors; configured AI/DataForSEO providers; object 
 - Do not call paid providers on page load or keystrokes; cache and explicit user actions control spend.
 - Apply output/input/image bounds and do not publish generated content automatically.
 - Project authorization and draft IDs must be checked together; do not trust the caller’s project field alone.
+
+Writer settlement separates provider spend from customer cost: the former includes known failed/empty work and overage, while customer refunds and the 15-credit cap remain in force. No retry is introduced.

@@ -139,3 +139,12 @@ Use the package tests next to the source files in `README.md`. For changes cross
 - **Why:** Preparation could return a cache miss/project result after the caller left, and `context.WithoutCancel` then revived it into paid work.
 - **Preserve:** Active callers keep existing cache-outage fallback and tenant/cost checks. Already-registered bounded shared work can finish for other waiters; this does not add a retry, limit or pricing change.
 - **Trace:** `suggestions_test.go` reproduced one paid task after cancellation; it now requires zero. Tests synchronize existing work before counting calls; see the shared [fixture decision](../platform/spend/spendtest/decision.md).
+
+## Briefly reuse successful empty paid results
+
+- **Decision:** Cache successful empty overviews and suggestions for five minutes, preserving missing metrics as unknown and keeping empty results out of the 30-day durable snapshot.
+- **Why:** Identical revisits bought the same empty Labs task every time. A short TTL bounds transient emptiness without repeatedly charging during navigation.
+- **Preserve:** Tenant/market/scope keys, non-empty TTLs, error handling and concurrent coalescing. Overview cache entries still need a fetched timestamp.
+- **Trace:** `lookup.go`, `service.go`, `suggestions.go`; empty-result call-count and TTL regressions in `service_test.go`.
+
+Provider fixtures include task path and explicit cost, including zero on rejected tasks. Missing task billing metadata now keeps a purchase uncertain rather than proving it was free. Mapping and exact one-call failure assertions remain unchanged.

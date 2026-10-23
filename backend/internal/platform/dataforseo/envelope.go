@@ -33,7 +33,7 @@ func (e *TaskError) Error() string {
 }
 
 var (
-	billingStatuses = []int{40200, 40210, 402}
+	billingStatuses = []int{40200, 40203, 40210, 402}
 	billingSignals  = []string{"insufficient funds", "balance is too low", "payment required", "billing", "balance", "problem billing", "recharged"}
 	// upstreamStatuses are provider-side failures returned on an HTTP 200. An
 	// explicit list, not a range: 50100 "Not Implemented" means we posted a

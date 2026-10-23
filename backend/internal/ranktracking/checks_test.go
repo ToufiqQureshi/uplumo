@@ -683,8 +683,6 @@ func TestParseSerpKeepsCompetitors(t *testing.T) {
 
 type noopRecorder struct{}
 
-type noopRecorder struct{}
-
 func (noopRecorder) RecordDataForSEO(context.Context, string, dataforseo.Cost) error { return nil }
 
 func TestDataForSEOSerp(t *testing.T) {

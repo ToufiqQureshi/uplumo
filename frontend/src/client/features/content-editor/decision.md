@@ -55,3 +55,10 @@ The slow-save browser check preserves the existing input lock until the saved sn
 - **Autosave failure boundary:** A refused save must not resubmit the unchanged draft every three seconds. The mutation carries the immutable submitted input; autosave pauses when that exact input failed. A later edit may save again, and Save draft remains an explicit retry. Real backend 400 logs exposed the loop, and the browser regression observed a second unchanged submission before the guard. Preserve unsaved content and the existing pending input lock; no paid generation or publication is added.
 
 Browser fixtures live in `frontend/tests/content-editor.fixtures.ts` so request/response contract handling stays in one bounded file shared by the browser scenarios. Fixtures reject response-only date fields rather than silently accepting every payload.
+
+## Verify current writing and credit UX in the browser
+
+- **Decision:** Update browser selectors for the current AI menu and cost disclosure; replace the obsolete save-lock assumption with an assertion that writing during a delayed save survives its response and can be saved again.
+- **Why:** The editor intentionally preserves newer in-memory edits with its sent-snapshot comparison. Stale tests failed before reaching the business assertions.
+- **Preserve:** AI double-click sends one keyed request; typing/autosave buys nothing; delayed responses never erase newer writing; failed autosave does not loop.
+- **Trace:** `tests/content-editor.spec.ts`, existing save-snapshot unit checks and browser suite. Runtime editor behavior is unchanged.

@@ -143,8 +143,6 @@ export async function apiRequest<T>(
     );
   }
 
-  if (idempotency) pendingPostKeys.delete(idempotency.scope);
-
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
     throw new ApiError(
@@ -153,6 +151,7 @@ export async function apiRequest<T>(
       "We got an unexpected answer from the server. Reload the page and try again.",
     );
   }
+  if (idempotency) pendingPostKeys.delete(idempotency.scope);
   return parsed.data;
 }
 

@@ -42,3 +42,5 @@ Mention/citation summaries exclude failed and empty answers. Trend warnings
 compare complete identical scopes; market/question changes must not imply a
 visibility decline. The comparison is a sampled answer rate, not AI traffic,
 search demand, guaranteed ranking or revenue attribution.
+
+Source titles may be null; link labels fall back to the safe URL. Vitest discovers both `.test.ts` and `.test.tsx`, including the empty-history rendering regression.

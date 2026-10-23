@@ -56,3 +56,5 @@ DataForSEO paid endpoints and usage metering; project plan/credit checks.
 
 Preparation boundary: `Overview` rechecks cancellation after `readCache` and before `flights.DoChan`. A cancelled request returns its context error
 without starting a new provider operation. Existing shared work is unaffected.
+
+If history is refused after a successful summary, return/cache that summary briefly rather than discarding paid work. The refused history is not sent; a repeat visit during the partial cache window buys no task.

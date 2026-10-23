@@ -171,8 +171,14 @@ func (a *WriterAgent) Generate(ctx context.Context, organizationID string, input
 	callCtx, cancel := context.WithTimeout(ctx, writerTimeout)
 	defer cancel()
 	result, err := a.LLM.Stream(callCtx, req, openrouter.Handler{})
+	providerCost := result.Usage.CostUSD
+	if providerCost <= 0 {
+		inputTokens := max(0, result.Usage.PromptTokens)
+		outputTokens := max(result.Usage.CompletionTokens, (len(result.Text)+2)/3)
+		providerCost = float64(inputTokens)*writerInputUSDPerToken + float64(outputTokens)*writerOutputUSDPerToken
+	}
 	if err != nil {
-		if settleErr := a.settle(ctx, hold, 0); settleErr != nil {
+		if settleErr := a.settle(ctx, hold, providerCost, 0); settleErr != nil {
 			err = errors.Join(err, fmt.Errorf("release failed writing assistant hold: %w", settleErr))
 		}
 		if errors.Is(err, context.DeadlineExceeded) {
@@ -182,21 +188,12 @@ func (a *WriterAgent) Generate(ctx context.Context, organizationID string, input
 	}
 	content := strings.TrimSpace(result.Text)
 	if content == "" || !utf8.ValidString(content) {
-		if settleErr := a.settle(ctx, hold, 0); settleErr != nil {
+		if settleErr := a.settle(ctx, hold, providerCost, 0); settleErr != nil {
 			return WriterOutput{}, fmt.Errorf("release empty writing assistant result: %w", settleErr)
 		}
 		return WriterOutput{}, errors.New("writing assistant returned an empty or invalid response")
 	}
-	cost := result.Usage.CostUSD
-	if cost <= 0 {
-		inputTokens := max(0, result.Usage.PromptTokens)
-		outputTokens := max(result.Usage.CompletionTokens, (len(result.Text)+2)/3)
-		if inputTokens == 0 && outputTokens == 0 {
-			cost = ceiling
-		} else {
-			cost = float64(inputTokens)*writerInputUSDPerToken + float64(outputTokens)*writerOutputUSDPerToken
-		}
-	}
+	cost := providerCost
 	if cost > writerMaxChargeUSD {
 		logger := a.Logger
 		if logger == nil {
@@ -207,7 +204,7 @@ func (a *WriterAgent) Generate(ctx context.Context, organizationID string, input
 	}
 	// Fail closed: if the charge cannot be recorded, the suggestion is not
 	// returned, so a billing outage cannot become free AI.
-	if err := a.settle(ctx, hold, cost); err != nil {
+	if err := a.settle(ctx, hold, providerCost, cost); err != nil {
 		return WriterOutput{}, fmt.Errorf("settle writing assistant credits: %w", err)
 	}
 	return WriterOutput{Content: content}, nil
@@ -215,13 +212,13 @@ func (a *WriterAgent) Generate(ctx context.Context, organizationID string, input
 
 // settle charges the call's real cost against its hold, on a context that
 // survives the client leaving: the provider has already been paid.
-func (a *WriterAgent) settle(ctx context.Context, hold spend.Hold, costUSD float64) error {
+func (a *WriterAgent) settle(ctx context.Context, hold spend.Hold, providerCostUSD, customerCostUSD float64) error {
 	if hold == nil {
 		return nil
 	}
 	settleCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), writerChargeWait)
 	defer cancel()
-	if err := hold.Settle(settleCtx, costUSD); err != nil {
+	if err := spend.SettleProviderCost(settleCtx, hold, providerCostUSD, customerCostUSD, ""); err != nil {
 		logger := a.Logger
 		if logger == nil {
 			logger = slog.Default()

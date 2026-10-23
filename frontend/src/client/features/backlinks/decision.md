@@ -16,7 +16,6 @@ Shows domain/page backlink summaries, referring domains and top linked pages.
 
 - `backlinksFilterTypes.test.ts`
 
-
 ## Show the complete paid link profile
 
 - **Decision:** Show every returned link-type and link-attribute bucket, including the provider's unclassified bucket as “Other”.

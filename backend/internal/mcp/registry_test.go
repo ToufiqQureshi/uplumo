@@ -19,6 +19,27 @@ type fixedPlanAccess struct {
 	err  error
 }
 
+func TestRunnerContainsInternalFailures(t *testing.T) {
+	for name, handle := range map[string]func(context.Context, json.RawMessage, *callEnv) (*callResult, error){
+		"panic": func(context.Context, json.RawMessage, *callEnv) (*callResult, error) {
+			panic("private provider details")
+		},
+		"error": func(context.Context, json.RawMessage, *callEnv) (*callResult, error) {
+			return nil, errors.New("private provider details")
+		},
+		"empty": func(context.Context, json.RawMessage, *callEnv) (*callResult, error) { return nil, nil },
+	} {
+		t.Run(name, func(t *testing.T) {
+			h := newHandler(Deps{Logger: slog.New(slog.DiscardHandler)})
+			runner := &Runner{h: h, index: map[string]*tool{"test": {Name: "test", Handler: handle}}}
+			result, ok := runner.Call(t.Context(), Auth{}, "test", json.RawMessage(`{}`))
+			if !ok || !result.IsError || result.Text == "" || strings.Contains(result.Text, "private provider details") {
+				t.Fatalf("internal failure was not safely contained: %+v, ok=%v", result, ok)
+			}
+		})
+	}
+}
+
 func (f fixedPlanAccess) Allows(_ context.Context, _ string, feature plans.Feature) (bool, error) {
 	if f.err != nil {
 		return false, f.err
@@ -58,15 +79,15 @@ func TestMCPPlanGateRunsBeforeToolHandler(t *testing.T) {
 				called = true
 				return textResult("ok"), nil
 			}}
-			result, outcome := h.callTool(context.Background(), candidate, json.RawMessage(`{}`), Auth{OrganizationID: "org"})
+			result := h.callTool(context.Background(), candidate, json.RawMessage(`{}`), Auth{OrganizationID: "org"})
 			if called != tt.allowed || result.IsError == tt.allowed {
-				t.Fatalf("called=%v, error=%v, outcome=%s; want allowed=%v", called, result.IsError, outcome.errorCode, tt.allowed)
+				t.Fatalf("called=%v, error=%v; want allowed=%v", called, result.IsError, tt.allowed)
 			}
 		})
 	}
 	h := newHandler(Deps{Plans: fixedPlanAccess{err: errors.New("database unavailable")}})
 	called := false
-	result, _ := h.callTool(context.Background(), &tool{Name: "get_backlinks_overview", Handler: func(context.Context, json.RawMessage, *callEnv) (*callResult, error) {
+	result := h.callTool(context.Background(), &tool{Name: "get_backlinks_overview", Handler: func(context.Context, json.RawMessage, *callEnv) (*callResult, error) {
 		called = true
 		return textResult("ok"), nil
 	}}, json.RawMessage(`{}`), Auth{OrganizationID: "org"})

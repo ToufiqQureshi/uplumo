@@ -142,3 +142,10 @@ Use the package tests next to the source files in `README.md`. For changes cross
   `frontend/src/client/features/keywords/{keywordsApi.ts,state/keywordControllerActions.ts,
   page/KeywordResearchTable.tsx,state/keyword-delivery.test.ts}` and
   `frontend/src/types/keywords.ts`.
+
+## Reuse empty research for a bounded interval
+
+- **Decision:** Accept well-formed empty research from Redis and give it the existing ten-minute partial-result TTL.
+- **Why:** The writer stored empty results for 24 hours but readers always ignored them, buying the same suggestions/ideas again.
+- **Preserve:** Provider errors and corrupt/missing rows remain invalid; tenant/input isolation, normal 24-hour caching and no-retry controls stay in force.
+- **Trace:** `research.go`, `TestResearchCache` checks one paid suggestions task across two identical empty searches and a ten-minute TTL.

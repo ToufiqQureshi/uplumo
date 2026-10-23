@@ -15,7 +15,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/dataforseo"
-	"github.com/toufiqqureshi/uplumo/backend/internal/platform/spend"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -206,9 +205,8 @@ func (s *Service) loadOverview(ctx context.Context, org string, target Target, k
 		if err != nil {
 			// The summary is already billed. Losing only the trend chart is no
 			// reason to throw it away and bill it again on the retry. A credit
-			// refusal, a provider billing problem or a customer who left still
-			// stop here, as they would for the first task.
-			if spend.Refused(err) || errors.Is(err, dataforseo.ErrBillingIssue) || ctx.Err() != nil {
+			// refusal stops new work, but does not invalidate the bought summary.
+			if ctx.Err() != nil {
 				return Overview{}, err
 			}
 			s.logger.WarnContext(ctx, "backlinks history failed; answering with the summary only", "err", err)
@@ -240,14 +238,6 @@ func (s *Service) loadOverview(ctx context.Context, org string, target Target, k
 	}
 	return result, nil
 }
-
-// backlinksOverviewMaxAge is the longest a persisted overview is served from
-// Postgres. Older rows are ignored on read and deleted on the next write, so a
-// customer cannot be shown months-old data with no way to refresh.
-const backlinksOverviewMaxAge = 30 * 24 * time.Hour
-
-// loadOverviewSnapshot returns the persisted overview, or ok=false when none
-// exists, it is older than backlinksOverviewMaxAge, or the DB is unavailable.
 
 // backlinksOverviewMaxAge is the longest a persisted overview is served from
 // Postgres. Older rows are ignored on read and deleted on the next write, so a
@@ -307,6 +297,7 @@ func (s *Service) saveOverviewSnapshot(ctx context.Context, org string, target T
 	}
 }
 
+// DashboardSummary buys a summary without requesting backlink history.
 func (s *Service) DashboardSummary(ctx context.Context, org, domain string) (Summary, error) {
 	target, err := normalizeTarget(domain, string(ScopeSubdomains))
 	if err != nil {

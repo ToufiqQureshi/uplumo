@@ -44,3 +44,5 @@ and one-replica constraints.
 
 Preparation boundary: `KeywordSuggestions` rechecks cancellation after `readCache` and before `suggestions.DoChan`. A cancelled request returns its context error
 without starting a new provider operation. Existing shared work is unaffected.
+
+Successful empty overviews and suggestions buy one cold task, then reuse the result for five minutes. Existing non-empty TTLs and durable snapshots remain; provider errors and malformed cache entries do not become valid empty results.

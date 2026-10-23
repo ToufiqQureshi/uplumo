@@ -55,3 +55,12 @@ Use the package tests next to the source files in `README.md`. For changes cross
   sufficient credits are refused before purchasing the more expensive option.
 - **Trace:** `pricing.go`, `pricing_test.go` (enabled/disabled/mixed batch), and
   https://docs.dataforseo.com/v3/dataforseo_labs-google-keyword_suggestions-live/.
+
+## Missing responses do not prove zero provider spend
+
+- **Decision:** Mark dispatched requests with unconfirmed responses as `ErrOutcomeUnknown`, retain their hold and stop additional budgeted purchases. Use standard `httptrace` to distinguish failure before request dispatch.
+- **Why:** Empty/invalid responses previously settled at zero and restored credits even though the provider could have billed the accepted request.
+- **Preserve:** No paid POST retry; explicit rejected requests still refund; known successful costs and intentional unusable-result refunds keep their existing rules. Budgeted timeout/5xx uncertainty requires reconciliation rather than guessing the missing leg's cost.
+- **Trace:** `client.go`, `uncertain_test.go`, updated budget/timeout tests. Empty/malformed JSON, missing tasks and missing task-cost regressions failed with a zero settlement before the fix; tests also cover a caller swallowing the uncertainty. No live paid request was made for validation.
+
+Documented account refusals 40200/40203/40210 release credits even without task-cost metadata; 40203 is classified as a billing stop so budget callers stop further purchases. Other missing costs remain uncertain. Source: https://dataforseo.com/help-center/limit-my-payments and the provider error appendix. `TestAccountCapRejectionReleasesCreditsAndStopsBudgetLegs` covers top-level and task-level $2/day refusals without making a live request.

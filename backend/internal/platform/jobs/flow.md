@@ -16,3 +16,5 @@ Postgres `go_jobs`; worker lifecycle in server startup.
 - `worker.go`
 - `queue_test.go`
 - `queue_integration_test.go`
+
+The server starts supervised workers. A failed claim/lease/completion returns to a bounded five-second restart wait, then polling resumes. Cancellation stops the wait. Invalid configuration terminates rather than looping. Existing job attempt/lease fencing remains authoritative.

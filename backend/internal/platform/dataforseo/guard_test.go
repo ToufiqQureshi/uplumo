@@ -16,9 +16,9 @@ import (
 // A slow provider must not hold a customer past the HTTP server's write
 // timeout: the connection would close, the customer would see a generic error
 // and the work already bought would be lost. A budgeted operation stops
-// starting requests after twice the per-request timeout, and what finished is
-// still settled.
-func TestDoBudgetedStopsStartingRequestsPastItsCapAndSettlesWhatFinished(t *testing.T) {
+// starting requests after twice the per-request timeout. If the last dispatched
+// request timed out, its cost is unknown and the hold requires reconciliation.
+func TestDoBudgetedKeepsTheHoldWhenTheLastSentRequestTimesOut(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		select {
 		case <-time.After(1600 * time.Millisecond):
@@ -28,7 +28,8 @@ func TestDoBudgetedStopsStartingRequestsPastItsCapAndSettlesWhatFinished(t *test
 	}))
 	defer server.Close()
 	guard := &spendtest.Guard{}
-	client := guardedClient(t, server, &testRecorder{}, guard, 0) // 2s per request, so a 4s cap
+	recorder := &testRecorder{}
+	client := guardedClient(t, server, recorder, guard, 0) // 2s per request, so a 4s cap
 	started := time.Now()
 	var failures []error
 	err := client.DoBudgeted(context.Background(), "org-1", spend.AIVisibility, 0.01, func(request DoBudgetedRequest) error {
@@ -39,8 +40,8 @@ func TestDoBudgetedStopsStartingRequestsPastItsCapAndSettlesWhatFinished(t *test
 		}
 		return nil
 	})
-	if err != nil {
-		t.Fatal(err)
+	if !errors.Is(err, ErrOutcomeUnknown) {
+		t.Fatalf("error = %v; want uncertain outcome despite the caller swallowing it", err)
 	}
 	if elapsed := time.Since(started); elapsed > 5200*time.Millisecond {
 		t.Fatalf("operation ran %v, want it cut off near its 4s cap", elapsed)
@@ -48,8 +49,8 @@ func TestDoBudgetedStopsStartingRequestsPastItsCapAndSettlesWhatFinished(t *test
 	if len(failures) == 0 || !errors.Is(failures[len(failures)-1], context.DeadlineExceeded) {
 		t.Fatalf("failures = %v, want the late requests to fail on the deadline", failures)
 	}
-	if settled := guard.Settled(); len(settled) != 1 || settled[0] < 0.0019 || settled[0] > 0.0021 {
-		t.Fatalf("settled = %v, want the two finished requests (0.002) settled once", settled)
+	if settled := guard.Settled(); len(settled) != 0 || len(recorder.snapshot()) != 2 {
+		t.Fatalf("settled = %v, known task costs=%v; want a pending hold with two recorded costs for reconciliation", settled, recorder.snapshot())
 	}
 }
 
@@ -104,7 +105,7 @@ func TestDoBudgetedSettlesSuccessfulPartialProviderWork(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				calls++
 				if failSecond && calls == 2 {
-					http.Error(w, "provider down", http.StatusBadGateway)
+					http.Error(w, "request rejected", http.StatusBadRequest)
 					return
 				}
 				cost := `0.006`
@@ -156,7 +157,7 @@ func TestDoBudgetedCapsProviderOverageAtReservedCeiling(t *testing.T) {
 	}
 }
 
-func TestDoReleasesTheHoldWhenTheProviderFails(t *testing.T) {
+func TestDoKeepsTheHoldWhenTheProviderAnswersAnUncertainServerError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "down", http.StatusBadGateway)
 	}))
@@ -166,8 +167,8 @@ func TestDoReleasesTheHoldWhenTheProviderFails(t *testing.T) {
 	if _, err := client.Do(context.Background(), "org", spend.DomainResearch, http.MethodPost, "/v3/dataforseo_labs/google/ranked_keywords/live", []byte(`[{}]`), false); err == nil {
 		t.Fatal("Do() succeeded on HTTP 502")
 	}
-	if settled := guard.Settled(); len(settled) != 1 || settled[0] != 0 {
-		t.Fatalf("settled = %v, want one release at zero", settled)
+	if settled := guard.Settled(); len(settled) != 0 {
+		t.Fatalf("settled = %v, want the uncertain hold kept", settled)
 	}
 }
 

@@ -79,3 +79,10 @@ Use the package tests next to the source files in `README.md`. For changes cross
 
 
 - **Preserve retries across edits:** Live checks use a stable run/keyword/device hold identity, independent of the current config body. A retried pair cannot become a second billed lookup after a domain, location, language or depth edit.
+
+## Keep the regression package compilable
+
+- **Decision:** Remove the duplicate `noopRecorder` declaration from `checks_test.go`.
+- **Why:** The merged test package did not compile, preventing execution of paid-call regressions.
+- **Preserve:** Recorder behavior, provider-call assertions and runtime scheduling are unchanged.
+- **Trace:** Full Go race/integration checks include the ranktracking package.

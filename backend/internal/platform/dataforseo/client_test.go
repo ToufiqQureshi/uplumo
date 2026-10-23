@@ -232,7 +232,7 @@ func TestDoRetriesOnlyRetrySafeRequests(t *testing.T) {
 					http.Error(w, "temporarily unavailable", http.StatusServiceUnavailable)
 					return
 				}
-				_, _ = io.WriteString(w, `{}`)
+				_, _ = io.WriteString(w, `{"tasks":[{"path":["v3","appendix","status"],"cost":0}]}`)
 			}))
 			defer server.Close()
 			client := testClient(t, server, &testRecorder{}, 1)

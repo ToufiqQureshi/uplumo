@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 )
 
@@ -22,6 +23,31 @@ type Worker struct {
 	Lease        time.Duration
 	PollInterval time.Duration
 	Handle       Handler
+}
+
+// RunSupervised restarts queue polling after storage/lease failures. Job
+// retries still use the queue's attempt limits and the handler's checkpoints.
+func (w Worker) RunSupervised(ctx context.Context, logger interface{ Error(string, ...any) }) {
+	if logger == nil {
+		logger = slog.Default()
+	}
+	for ctx.Err() == nil {
+		err := w.Run(ctx)
+		if ctx.Err() != nil {
+			return
+		}
+		logger.Error("job worker stopped", "queue", w.QueueName, "err", err)
+		if errors.Is(err, ErrInvalidJob) {
+			return
+		}
+		timer := time.NewTimer(5 * time.Second)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return
+		case <-timer.C:
+		}
+	}
 }
 
 // Run polls and processes one job at a time. Multiple Worker instances can

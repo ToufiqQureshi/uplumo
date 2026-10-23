@@ -4,7 +4,7 @@
 
 | Behavior | Edge case to keep |
 |---|---|
-| Overview fetches the DataForSEO summary and one year of monthly history for domain scopes. | Exact page scope omits history. History dates cover UTC yesterday back one calendar year; a credit refusal on either task fails the request, but if only the history task fails after the summary was billed, the summary is returned without a trend and cached for ten minutes. |
+| Overview fetches the DataForSEO summary and one year of monthly history for domain scopes. | Exact page scope omits history. History dates cover UTC yesterday back one calendar year; a refused summary fails before history is bought; if history fails or is refused after the summary was billed, the summary is returned without a trend and cached for ten minutes. |
 | A subfolder cannot be targeted directly by summary/history. | Two sequential backlinks list tasks count all links and one-per-domain links with a `url_to` prefix filter; rank, spam, broken/new/lost values and trends stay null/empty. |
 | Target scopes include exact URL, subfolder, domain and subdomains; persisted `page` is an alias for exact URL. | Normalize host through IDNA, remove leading `www.`, reject IPs, invalid suffixes, credentials and exact URLs with queries/fragments. A subfolder needs a non-root path. |
 | Backlinks rows support all-links or strongest-per-domain mode, sort, pagination, spam hiding and include/exclude/numeric/link/lost/broken/domain filters. | Strict sort mapping, `50/100/200` page sizes, a maximum of eight provider filter conditions including scope and spam filters; include terms OR, excludes AND, escaped LIKE metacharacters. |
@@ -45,9 +45,9 @@ Tests cover target normalization, filter translation and budget, handler validat
 `service_test.go` also asserts that eight concurrent equivalent overviews issue
 only the required summary and history provider calls.
 
-The overview is two sequential provider tasks, summary then history. A credit
-refusal, provider billing problem or departed customer stops after the first;
-any other history failure keeps the already-billed summary (empty trend,
+The overview is two sequential provider tasks, summary then history. A refused
+summary stops immediately. Any history failure, including a credit or billing
+refusal, keeps the already-billed summary (empty trend,
 `partialCacheTTL` of ten minutes) instead of discarding it.
 
 Cancellation during cache/project preparation is rechecked before detaching

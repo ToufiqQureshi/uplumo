@@ -180,6 +180,11 @@ func (c *Client) do(req *http.Request, dst any) (err error) {
 type Event struct {
 	Event   string `json:"event"`
 	Payload struct {
+		Payment *struct {
+			Entity struct {
+				ID string `json:"id"`
+			} `json:"entity"`
+		} `json:"payment"`
 		Subscription *struct {
 			Entity Subscription `json:"entity"`
 		} `json:"subscription"`

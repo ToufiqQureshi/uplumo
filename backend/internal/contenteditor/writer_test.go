@@ -31,12 +31,13 @@ func (f *fakeWriterLLM) Stream(_ context.Context, request openrouter.Request, _ 
 }
 
 type fakeWriterMeter struct {
-	allowed   bool
-	orgID     string
-	ceiling   float64
-	cost      float64
-	settled   int
-	settleErr error
+	allowed      bool
+	orgID        string
+	ceiling      float64
+	cost         float64
+	providerCost float64
+	settled      int
+	settleErr    error
 }
 
 type fakeIdempotentWriterMeter struct {
@@ -67,6 +68,32 @@ func (h fakeWriterHold) Settle(_ context.Context, cost float64) error {
 	h.meter.cost = cost
 	h.meter.settled++
 	return h.meter.settleErr
+}
+
+func (h fakeWriterHold) SettleProviderCost(ctx context.Context, providerCost, customerCost float64, _ string) error {
+	h.meter.providerCost = providerCost
+	return h.Settle(ctx, customerCost)
+}
+
+func TestWriterRecordsProviderSpendEvenWhenCustomerIsRefundedOrCapped(t *testing.T) {
+	for _, tc := range []struct {
+		name, text   string
+		cost, charge float64
+		err          error
+	}{
+		{name: "failed stream", text: "partial", cost: 0.004, err: errors.New("stream ended")},
+		{name: "empty answer", cost: 0.002},
+		{name: "capped answer", text: "answer", cost: 0.02, charge: writerMaxChargeUSD},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			meter := &fakeWriterMeter{allowed: true}
+			agent := &WriterAgent{LLM: &fakeWriterLLM{result: openrouter.Result{Text: tc.text, Usage: openrouter.Usage{CostUSD: tc.cost}}, err: tc.err}, Meter: meter}
+			_, _ = agent.Generate(t.Context(), "org-writer-cost", WriterInput{Action: WriterImprove, Mode: "seo", Content: "Article", IdempotencyKey: tc.name})
+			if meter.providerCost != tc.cost || meter.cost != tc.charge || meter.settled != 1 {
+				t.Fatalf("provider/customer/settlements = %v/%v/%d, want %v/%v/1", meter.providerCost, meter.cost, meter.settled, tc.cost, tc.charge)
+			}
+		})
+	}
 }
 
 func TestWriterAgentUsesTaskSpecificPromptAndChargesOrganization(t *testing.T) {

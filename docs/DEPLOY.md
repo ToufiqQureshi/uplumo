@@ -113,8 +113,7 @@ in Live Mode:
 2. The landing, pricing, about, contact, terms, privacy, refunds and shipping pages open, and each shows `support@uplumo.com` as text.
 3. Sign up with a real address, receive the verification email, reach the
    dashboard.
-4. Buy Pro with a Razorpay test card, see the workspace switch to Pro, then
-   cancel it from Billing.
+4. In a staging environment with Razorpay **test** keys/plans/webhooks, buy Growth with a test card, see the workspace switch, then cancel from Billing. Production uses live keys: do not use test cards there or initiate a real charge without an owner-controlled acceptance purchase.
 5. Ask for a password reset and finish it.
 6. Invite a teammate and open the invitation email.
 
@@ -131,3 +130,16 @@ The image also carries `/erase-user`. Its use is in
 ## Optional credit-pack checkout
 
 Set `BILLING_TOPUP_PACKS` only after approving pack prices, credits and validity (schema in `backend/internal/billing/README.md`). Unset means no purchasable packs. Add `payment.captured` to the existing signed Razorpay webhook event subscription and test captured, duplicate, incorrect-amount and interrupted-browser flows in test mode before enabling live purchases. Subscription webhook events remain required. Refund/dispute handling needs operator reconciliation; checkout does not initiate refunds.
+
+Migration 41 adds provider settlement recovery. Existing open feature holds are marked uncertain and require provider reconciliation if their outcome was never recorded; known outcomes recover automatically. A rollback to an older binary that blindly refunds stale holds restores that old risk, so assess open holds before such a rollback.
+
+## Release checks added by the launch audit
+
+- At startup, `billing plan verified` must appear for each configured paid plan; `billing plan verification failed` means amount/currency/frequency or API access needs attention. Checks use GET only and create no charge. Checkout independently repeats validation.
+- Migration 42 retains RLS/client-grant revocation across rollback. The Go database role must own application tables or have BYPASSRLS. The same idempotent SQL was applied on 23 October to close live Data API exposure; Goose history was not advanced, so normal startup still applies pending versions in order.
+- The owner confirmed DataForSEO works and deliberately set its account-side $2/day ceiling as a temporary bug brake. Preserve it and `PROVIDER_DAILY_LIMIT_USD`; raising either is a separate owner decision. A low shared provider ceiling can pause customer research even while workspace credits remain.
+- Check audit/rank/AI queue progress after a database interruption; shared supervision now resumes polling. Do not replay uncertain paid provider submissions to test recovery.
+
+Migration 43 permits zero-amount reservations only for known postpaid outcomes. These rows hold no customer funds but retain the recoverable charge and provider cost before balance operations. They settle through the same reconciler; do not delete them as empty holds.
+
+The production frontend no longer imports browser fixtures; the Docker build copies frontend source without `frontend/tests`. Playwright builds and tests the same production SPA separately.

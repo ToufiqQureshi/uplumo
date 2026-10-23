@@ -127,6 +127,11 @@ func (g *SpendGuard) Hold(ctx context.Context, req spend.Request) (spend.Hold, e
 	if reservation.Reused {
 		return nil, spend.ErrIdempotentReplay
 	}
+	// Once this hold is handed to the transport, a crash cannot prove that
+	// nothing was bought. Keep uncertain provider work out of automatic refunds.
+	if _, err := tx.Exec(ctx, `UPDATE go_billing_credit_reservations SET provider_outcome_pending = true WHERE id = $1`, reservation.ID); err != nil {
+		return nil, fmt.Errorf("mark provider reservation: %w", err)
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("commit spend hold: %w", err)
 	}
@@ -213,7 +218,7 @@ const reservationHeartbeatInterval = 10 * time.Minute
 
 // startHeartbeat marks a reservation active while its provider operation is
 // still running. If the process crashes, the request context and heartbeat stop
-// so stale reconciliation can refund the abandoned hold.
+// so stale reconciliation can recover the outcome or flag it for review.
 func (h *creditHold) startHeartbeat(ctx context.Context) {
 	if h.reservationID == "" {
 		return
@@ -291,13 +296,22 @@ func (h *creditHold) SettleProviderCost(ctx context.Context, providerCostUSD, cu
 // settle charges costUSD against reservationID, or against the balance when
 // there is no reservation, and logs it.
 func (g *SpendGuard) settle(ctx context.Context, org string, feature spend.Feature, endpoint, reservationID string, providerCostUSD, customerCostUSD float64) error {
-	if providerCostUSD > 0 {
+	credits := CreditsForUSD(customerCostUSD)
+	if reservationID == "" && g.chargeCredits && credits > 0 {
+		charged, err := g.ledger.settleUnreservedProvider(ctx, org, string(feature), endpoint, credits, providerCostUSD)
+		if err != nil {
+			return fmt.Errorf("settle unreserved %s spend: %w", feature, err)
+		}
+		g.warnShort(ctx, org, feature, credits, charged)
+		spend.RecordCredits(ctx, charged)
+		return nil
+	}
+	if providerCostUSD > 0 && reservationID == "" {
 		if _, err := g.db.Exec(ctx, `INSERT INTO go_provider_spend (organization_id, feature, cost_usd) VALUES ($1, $2, $3)`,
 			org, string(feature), providerCostUSD); err != nil {
 			return fmt.Errorf("log provider spend: %w", err)
 		}
 	}
-	credits := CreditsForUSD(customerCostUSD)
 	if reservationID != "" {
 		charged, err := g.ledger.SettleProviderUpTo(ctx, reservationID, credits, providerCostUSD, endpoint)
 		if err != nil {
@@ -307,35 +321,6 @@ func (g *SpendGuard) settle(ctx context.Context, org string, feature spend.Featu
 		spend.RecordCredits(ctx, charged)
 		return nil
 	}
-	if !g.chargeCredits || credits == 0 {
-		return nil
-	}
-	return g.chargeDown(ctx, org, feature, endpoint, credits, providerCostUSD)
-}
-
-// chargeDown charges credits for work already paid for, down to a zero
-// balance.
-func (g *SpendGuard) chargeDown(ctx context.Context, org string, feature spend.Feature, endpoint string, credits int64, costUSD float64) error {
-	reservation, err := g.ledger.ReserveFor(ctx, org, credits, "", string(feature))
-	if errors.Is(err, ErrInsufficientBalance) {
-		balance, balanceErr := g.ledger.GetBalance(ctx, org)
-		if balanceErr != nil {
-			return fmt.Errorf("read balance after shortfall: %w", balanceErr)
-		}
-		g.warnShort(ctx, org, feature, credits, balance)
-		if balance <= 0 {
-			return nil
-		}
-		reservation, err = g.ledger.ReserveFor(ctx, org, balance, "", string(feature))
-	}
-	if err != nil {
-		return fmt.Errorf("charge %d credits for %s: %w", credits, feature, err)
-	}
-	charged, err := g.ledger.SettleProviderUpTo(ctx, reservation.ID, credits, costUSD, endpoint)
-	if err != nil {
-		return fmt.Errorf("settle %s charge: %w", feature, err)
-	}
-	spend.RecordCredits(ctx, charged)
 	return nil
 }
 

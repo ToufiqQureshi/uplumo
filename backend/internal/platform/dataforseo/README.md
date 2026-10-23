@@ -49,3 +49,7 @@ Rules that must never break:
   longest one call may take; the HTTP server's `writeTimeout` in
   `cmd/server/main.go` is derived from it, so a slow provider is answered, not a
   closed connection.
+
+## Unconfirmed purchases
+
+After request headers are written, a network failure, unreadable/empty/malformed successful response, invalid billing metadata or terminal HTTP 5xx can conceal a billed task. These return `ErrOutcomeUnknown` and retain the reservation for evidence-based reconciliation. Failure before dispatch and explicit HTTP 4xx rejection still settle at zero. A budgeted operation stops further purchases after uncertainty and cannot turn a swallowed error into a refund; known task costs already recorded remain available for reconciliation. The customer balance can remain reserved until operator resolution. No paid automatic retry is added.

@@ -68,3 +68,10 @@ Brand Lookup compares brand mentions and cited pages across supported answer eng
   server's plan gate. Do not change pricing or the provider's model selection.
 - **Trace:** `BrandLookupPage.tsx`, `PromptExplorerPage.tsx` and mounted React
   Query regressions in `paid-refetch.test.ts` (failure/focus/reconnect).
+
+## Render provider source titles as nullable
+
+- **Decision:** Let `SourceLink` accept the API's nullable title and use its existing URL-label fallback.
+- **Why:** Both cited/retrieved source call sites failed TypeScript checks because the provider schema permits missing titles.
+- **Preserve:** Only credential-free HTTP(S) links are clickable; no new fetch or provider work.
+- **Trace:** `components/QueryAnswerDetails.tsx`, TypeScript checks; the previously excluded TSX history regression is now included by Vite test discovery.

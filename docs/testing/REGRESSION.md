@@ -32,3 +32,9 @@ Billing `service_test.go` replays the same signed charge with changed delivery
 headers, concurrently and after spending, including a charge first received at
 the rollover cap. These require real disposable Postgres; compilation or a skipped
 local test is not transaction verification. Prices, grants and markup are unchanged.
+
+Audit regressions include provider/customer writer costs, injected Postgres settlement failures with recovery, unknown provider holds, project-workspace manager checks, malformed-response replay keys, failed-query remounts, bounded empty-result caches and credit-refused Backlinks history. Vitest includes both `.test.ts` and `.test.tsx`; all database checks use disposable local services, not production.
+
+## Launch checks
+
+`pnpm test:e2e` builds and serves the production SPA through Vite preview; Playwright owns session/project/provider-response mocks. No customer runtime imports test fixtures. The suite retains exact paid-call counts, delayed-save preservation, navigation, mobile layouts and throttled filter performance budgets. Build/server startup gets a separate five-minute allowance; interaction/performance thresholds are unchanged. These mocked browser tests complement real Postgres/Redis Go tests; they do not prove live payment/provider acceptance.

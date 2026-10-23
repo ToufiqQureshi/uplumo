@@ -26,7 +26,7 @@ Shows organic estimates, keyword/page tables and filtered domain research.
   and remounting a previously failed query retried it despite `retry: false`.
   The server cache cannot recover the cost of repeating a failed paid request.
 - **Preserve:** Project/market/view query identities, no focus/reconnect retries,
-  explicit manual retry, existing empty-overview retry behavior and unchanged
+  explicit manual retry, a five-minute freshness interval for successful empty overviews and unchanged
   request/response schemas. This does not make different page/filter views free.
 - **Trace:** The three `hooks/useDomain*Query.ts` files and the mounted
   `domain-cache.test.ts` regressions (fail before fixes, pass afterwards).
@@ -38,10 +38,23 @@ Shows organic estimates, keyword/page tables and filtered domain research.
 - **Preserve:** This marker is not authorization or proof of a click. The caller must remain an explicit action with no automatic retry; existing tenant, market, plan and spend checks still apply.
 - **Trace:** `domainApi.ts`, `domainApi.test.ts`; [backend cost/concurrency decision](../../../../../backend/internal/domain/decision.md) and [Rank Tracking UX decision](../rank-tracking/decision.md).
 
-
 ## Label organic and paid ranked keywords
 
 - **Decision:** Keep each provider row's organic/paid result type and search intent; show both in the ranked-keyword table and exports.
 - **Why:** The paid ranked-keywords task already returns both fields, and dropping them made paid rows look organic.
 - **Preserve:** No extra provider call and no change to the endpoint request; unknown provider types remain explicit.
 - **Trace:** `domainApi.ts`, `DomainKeywordsTable.tsx`, and `ResultTypeBadge.tsx`.
+
+## Reuse the server's short empty-result window
+
+- **Decision:** Treat successful empty overviews as fresh for five minutes; non-empty overviews remain fresh for twelve hours.
+- **Why:** Navigation should not repeatedly request an identical empty paid lookup.
+- **Preserve:** Tenant/market query keys, explicit retry and disabled automatic paid retries.
+- **Trace:** `hooks/useDomainOverviewQuery.ts`; matching backend empty-result TTL/call-count regressions.
+
+## Exercise the actual transport in browser tests
+
+- **Decision:** Remove runtime fixture imports/flags and install mocked HTTP/session responses in Playwright only.
+- **Why:** A global fixture flag skipped the suggestions endpoint entirely, so the paid-call regression could not exercise the real request path. Several filter tests also depended on an unrelated logged-in dev backend.
+- **Preserve:** Customer API schemas and requests, no real paid browser-test calls, exact suggestion-call counts and filter URL assertions.
+- **Trace:** `domainApi.ts`, test utility and spend/browser regressions. Filter selectors use the current visible label.

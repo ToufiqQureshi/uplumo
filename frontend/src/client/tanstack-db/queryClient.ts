@@ -30,6 +30,8 @@ export const queryClient = new QueryClient({
       // when the network or server answered 5xx, so a silent retry can double-charge
       // the customer. Free GET reads that want a retry opt in explicitly.
       retry: false,
+      // Remount is a separate retry path; only an explicit retry may buy again.
+      retryOnMount: false,
     },
   },
 });

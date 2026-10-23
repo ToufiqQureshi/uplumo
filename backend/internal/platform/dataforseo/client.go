@@ -13,14 +13,20 @@ import (
 	"io"
 	"math"
 	"net/http"
+	"net/http/httptrace"
 	"net/url"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/spend"
 )
+
+// ErrOutcomeUnknown means a sent request has no trustworthy billing response.
+// Keep its hold pending; a missing answer is not evidence of a free task.
+var ErrOutcomeUnknown = errors.New("DataForSEO purchase outcome needs reconciliation")
 
 const (
 	// APIBaseURL is the production DataForSEO API origin.
@@ -175,6 +181,9 @@ func (c *Client) Do(ctx context.Context, organizationID string, feature spend.Fe
 		return nil, fmt.Errorf("%w: %w", ErrBillingIssue, err)
 	}
 	payload, providerCost, err := c.do(ctx, organizationID, true, method, path, body, retrySafe)
+	if errors.Is(err, ErrOutcomeUnknown) {
+		return nil, errors.Join(ErrBillingIssue, err)
+	}
 	customerCost := 0.0
 	if err == nil {
 		customerCost = responseSuccessfulCost(payload)
@@ -209,6 +218,7 @@ func (c *Client) DoBudgeted(ctx context.Context, organizationID string, feature 
 	defer cancelWork()
 	var mu sync.Mutex
 	var providerCost, customerCost float64
+	var uncertain error
 	var endpoints []string
 	endpointSet := make(map[string]struct{})
 	open := true
@@ -218,6 +228,9 @@ func (c *Client) DoBudgeted(ctx context.Context, organizationID string, feature 
 		if !open {
 			return nil, errors.New("DataForSEO budgeted operation is closed")
 		}
+		if uncertain != nil {
+			return nil, uncertain
+		}
 		if _, err := c.endpoint(path); err != nil {
 			return nil, err
 		}
@@ -226,6 +239,9 @@ func (c *Client) DoBudgeted(ctx context.Context, organizationID string, feature 
 			endpoints = append(endpoints, path)
 		}
 		payload, cost, requestErr := c.do(workCtx, organizationID, true, method, path, body, retrySafe)
+		if errors.Is(requestErr, ErrOutcomeUnknown) {
+			uncertain = requestErr
+		}
 		providerCost += cost
 		if requestErr == nil {
 			customerCost += responseSuccessfulCost(payload)
@@ -243,7 +259,9 @@ func (c *Client) DoBudgeted(ctx context.Context, organizationID string, feature 
 			defer cancel()
 			// Preserve the original panic; an unsettled reservation is
 			// reported by the normal billing reconciliation path.
-			_ = spend.SettleProviderCost(settleCtx, hold, providerTotal, customerTotal, strings.Join(endpointPaths, ","))
+			if uncertain == nil {
+				_ = spend.SettleProviderCost(settleCtx, hold, providerTotal, customerTotal, strings.Join(endpointPaths, ","))
+			}
 			panic(recovered)
 		}
 	}()
@@ -253,6 +271,9 @@ func (c *Client) DoBudgeted(ctx context.Context, organizationID string, feature 
 	providerTotal, customerTotal := providerCost, customerCost
 	endpointPaths := append([]string(nil), endpoints...)
 	mu.Unlock()
+	if uncertain != nil {
+		return errors.Join(workErr, ErrBillingIssue, uncertain)
+	}
 	if errors.Is(workErr, ErrNothingDelivered) {
 		// The provider was paid but the customer got nothing they can use;
 		// Uplumo absorbs the recorded provider cost.
@@ -328,6 +349,9 @@ func (c *Client) do(ctx context.Context, organizationID string, record bool, met
 	requestCtx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 	for attempt := 0; ; attempt++ {
+		if err := requestCtx.Err(); err != nil {
+			return nil, 0, err
+		}
 		var requestBody io.Reader
 		if body != nil {
 			requestBody = bytes.NewReader(body)
@@ -341,20 +365,27 @@ func (c *Client) do(ctx context.Context, organizationID string, record bool, met
 		if body != nil {
 			req.Header.Set("Content-Type", "application/json")
 		}
+		var sent atomic.Bool
+		req = req.WithContext(httptrace.WithClientTrace(requestCtx, &httptrace.ClientTrace{
+			WroteHeaders: func() { sent.Store(true) },
+		}))
 		response, err := c.http.Do(req)
 		if err != nil {
+			if sent.Load() {
+				err = errors.Join(ErrOutcomeUnknown, err)
+			}
 			return nil, 0, fmt.Errorf("send DataForSEO request: %w", err)
 		}
 		payload, readErr := io.ReadAll(io.LimitReader(response.Body, maxResponseBytes+1))
 		closeErr := response.Body.Close()
 		if readErr != nil {
-			return nil, 0, fmt.Errorf("read DataForSEO response: %w", readErr)
+			return nil, 0, fmt.Errorf("read DataForSEO response: %w: %w", ErrOutcomeUnknown, readErr)
 		}
 		if closeErr != nil {
-			return nil, 0, fmt.Errorf("close DataForSEO response: %w", closeErr)
+			return nil, 0, fmt.Errorf("close DataForSEO response: %w: %w", ErrOutcomeUnknown, closeErr)
 		}
 		if len(payload) > maxResponseBytes {
-			return nil, 0, fmt.Errorf("DataForSEO response exceeds %d bytes", maxResponseBytes)
+			return nil, 0, fmt.Errorf("%w: response exceeds %d bytes", ErrOutcomeUnknown, maxResponseBytes)
 		}
 		if response.StatusCode >= 500 && retrySafe && attempt < c.maxRetries {
 			if err := wait(requestCtx, c.backoff*time.Duration(attempt+1)); err != nil {
@@ -363,20 +394,24 @@ func (c *Client) do(ctx context.Context, organizationID string, record bool, met
 			continue
 		}
 		if response.StatusCode < 200 || response.StatusCode >= 300 {
-			return nil, 0, &HTTPError{StatusCode: response.StatusCode, Body: truncate(string(payload), 1600)}
+			err := error(&HTTPError{StatusCode: response.StatusCode, Body: truncate(string(payload), 1600)})
+			if response.StatusCode >= 500 {
+				err = errors.Join(ErrOutcomeUnknown, err)
+			}
+			return nil, 0, err
 		}
 		if len(payload) == 0 {
-			return nil, 0, nil
+			return nil, 0, fmt.Errorf("%w: empty response", ErrOutcomeUnknown)
 		}
 		if !json.Valid(payload) {
-			return nil, 0, errors.New("DataForSEO returned invalid JSON")
+			return nil, 0, fmt.Errorf("%w: invalid JSON", ErrOutcomeUnknown)
 		}
 		if !record {
 			return json.RawMessage(payload), 0, nil
 		}
 		costs, err := responseCosts(payload)
 		if err != nil {
-			return nil, 0, err
+			return nil, 0, errors.Join(ErrOutcomeUnknown, err)
 		}
 		charged := 0.0
 		for _, cost := range costs {
@@ -404,18 +439,29 @@ func (c *Client) endpoint(path string) (string, error) {
 
 func responseCosts(payload []byte) ([]Cost, error) {
 	var envelope struct {
-		Tasks []struct {
-			Path []string `json:"path"`
-			Cost *float64 `json:"cost"`
+		StatusCode int `json:"status_code"`
+		Tasks      []struct {
+			StatusCode int      `json:"status_code"`
+			Path       []string `json:"path"`
+			Cost       *float64 `json:"cost"`
 		} `json:"tasks"`
 	}
 	if err := json.Unmarshal(payload, &envelope); err != nil {
 		return nil, fmt.Errorf("decode DataForSEO billing metadata: %w", err)
 	}
+	if len(envelope.Tasks) == 0 {
+		if accountRejected(envelope.StatusCode) {
+			return nil, nil
+		}
+		return nil, errors.New("DataForSEO response has no task billing metadata")
+	}
 	costs := make([]Cost, 0, len(envelope.Tasks))
 	for _, task := range envelope.Tasks {
 		if task.Cost == nil {
-			continue
+			if accountRejected(task.StatusCode) {
+				continue
+			}
+			return nil, errors.New("DataForSEO task has no reported cost")
 		}
 		if len(task.Path) == 0 || math.IsNaN(*task.Cost) || math.IsInf(*task.Cost, 0) || *task.Cost < 0 {
 			return nil, errors.New("DataForSEO returned invalid billing metadata")
@@ -441,4 +487,10 @@ func truncate(value string, limit int) string {
 		return value[:limit] + "... [truncated]"
 	}
 	return value
+}
+
+// These account refusals mean the provider did not accept a purchase, including
+// the owner's deliberate daily spending cap. Other failures may still be billed.
+func accountRejected(status int) bool {
+	return status == 40200 || status == 40203 || status == 40210
 }

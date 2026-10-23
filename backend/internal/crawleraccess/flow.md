@@ -20,3 +20,5 @@ Postgres credential rows; `BETTER_AUTH_SECRET`-derived encryption; audit crawler
 - Plaintext exists only for the request/needed crawl; never return it from list or log it.
 - Fail closed on malformed ciphertext or missing/weak encryption configuration.
 - Bind the credential to the expected project/site so it cannot be sent to an attacker-controlled redirect.
+
+The save handler verifies that the session active workspace equals the authorized project workspace before interpreting its owner/admin role or processing credentials.

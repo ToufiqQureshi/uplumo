@@ -22,3 +22,10 @@ Postgres drafts/brief cache/authors; configured AI/DataForSEO providers; object 
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.
+
+## Keep provider cost separate from writer refunds
+
+- **Decision:** Use the existing provider/customer settlement contract for writing, including partial failures and empty responses.
+- **Why:** Settling zero or a capped amount as the provider cost hid real expense from the emergency spend guard.
+- **Preserve:** One model call, no automatic retry, zero customer charge for unusable answers and the 15-credit ceiling. Unknown usage remains an estimate rather than claimed invoice evidence.
+- **Trace:** `writer.go`, `TestWriterRecordsProviderSpendEvenWhenCustomerIsRefundedOrCapped`; provider spend and customer charge are asserted separately.

@@ -21,6 +21,7 @@ import (
 
 const (
 	cacheTTL            = 12 * time.Hour
+	emptyResultCacheTTL = 5 * time.Minute
 	cacheWriteTimeout   = 2 * time.Second
 	defaultLocationCode = 2840
 	defaultLanguageCode = "en"
@@ -190,7 +191,15 @@ func (s *Service) Overview(ctx context.Context, organizationID, projectID, rawDo
 	if err != nil {
 		return OverviewResult{}, err
 	}
-	result, err := cachedDomainLookup(ctx, s, key, func(value OverviewResult) bool { return value.HasData }, func(shared context.Context) (OverviewResult, error) {
+	result, err := cachedDomainLookup(ctx, s, key, func(value OverviewResult) time.Duration {
+		if value.FetchedAt == "" {
+			return 0
+		}
+		if !value.HasData {
+			return emptyResultCacheTTL
+		}
+		return cacheTTL
+	}, func(shared context.Context) (OverviewResult, error) {
 		// This fallback runs only after both Redis reads miss; hot cache hits
 		// should not add a Postgres round trip.
 		if stored, ok := s.loadOverviewSnapshot(shared, organizationID, projectID, target.Hostname, locationCode, languageCode); ok && stored.HasData {
@@ -612,7 +621,7 @@ func (s *Service) readCache(ctx context.Context, key string, destination any) bo
 	return true
 }
 
-func (s *Service) writeCache(ctx context.Context, key string, value any) {
+func (s *Service) writeCacheFor(ctx context.Context, key string, value any, ttl time.Duration) {
 	if s.cache == nil {
 		return
 	}
@@ -623,7 +632,7 @@ func (s *Service) writeCache(ctx context.Context, key string, value any) {
 	}
 	writeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), cacheWriteTimeout)
 	defer cancel()
-	if err := s.cache.Set(writeCtx, key, encoded, cacheTTL); err != nil {
+	if err := s.cache.Set(writeCtx, key, encoded, ttl); err != nil {
 		s.logger.WarnContext(ctx, "write domain cache", "err", err)
 	}
 }

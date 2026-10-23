@@ -19,6 +19,7 @@ import (
 	"github.com/toufiqqureshi/uplumo/backend/internal/auth"
 	"github.com/toufiqqureshi/uplumo/backend/internal/billing"
 	"github.com/toufiqqureshi/uplumo/backend/internal/database"
+	"github.com/toufiqqureshi/uplumo/backend/internal/plans"
 	"github.com/toufiqqureshi/uplumo/backend/internal/razorpay"
 )
 
@@ -35,9 +36,14 @@ func TestBillingEndToEnd(t *testing.T) {
 	org, owner, member, loner := "org-"+id, "owner-"+id, "member-"+id, "loner-"+id
 	subID := "sub_" + id
 	var razorpayDown atomic.Bool
-	fakeRazorpay := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	fakeRazorpay := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if razorpayDown.Load() {
 			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if r.Method == http.MethodGet && r.URL.Path == "/plans/plan_pro" {
+			plan, _ := plans.Get(plans.Pro)
+			_, _ = fmt.Fprintf(w, `{"id":"plan_pro","period":"monthly","interval":1,"item":{"amount":%d,"currency":"INR"}}`, plan.PriceINR*100)
 			return
 		}
 		_, _ = fmt.Fprintf(w, `{"id":%q,"status":"created","current_end":null,"created_at":%d}`, subID, time.Now().Add(-time.Hour).Unix())
