@@ -16,7 +16,7 @@ conversation routes, the agent loop and its tool surface.
    (`projectcontext`), the skill catalog, and the rolling summary if the chat has
    one. Context written by another session, the settings UI or an MCP client is
    therefore current on every turn.
-4. Up to 40 steps: stream one OpenRouter completion, run the tool calls it asked
+4. Up to 40 steps: stream one DeepSeek completion, run the tool calls it asked
    for, feed the results back. Every event goes out as an AI SDK UI message
    stream chunk and is folded into the assistant message that gets stored.
 5. The assistant message is stored, unbilled spend is charged, the session is
@@ -49,11 +49,12 @@ membership, and take a strict JSON body. Spec: `backend/api/sam.yaml`.
 
 ## Env vars
 
-- `OPENROUTER_API_KEY`: Uplumo's own key, set in Railway. Customers never
+- `DEEPSEEK_API_KEY`: Uplumo's own key, set in Railway. Customers never
   supply one. Without it the chat routes answer 503 and the app shows "SAM is
   unavailable right now".
-- `OPENROUTER_MODEL`: optional. Default `openai/gpt-5.6-luna` at reasoning
-  effort `max`.
+- `DEEPSEEK_MODEL`: optional. Default `deepseek-flash`, thinking mode off
+  (with tools DeepSeek needs every earlier reasoning text sent back, and SAM
+  never sends reasoning back; see `platform/deepseek`).
 
 ## Rules that must never break
 
@@ -70,8 +71,8 @@ membership, and take a strict JSON body. Spec: `backend/api/sam.yaml`.
   result is re-sent on each later step of its turn.
 - Reasoning is never sent back to the provider.
 - Every model call (each step, and the history summary) first holds its
-  ceiling from the workspace's credits (`openrouter.MaxCostUSD`: the full
-  output budget plus the input, at the expensive fallback prices) and settles
+  ceiling from the workspace's credits (`deepseek.MaxCostUSD`: the full
+  output budget plus the input, at the model's peak rates) and settles
   the real cost when it ends, on a context that outlives the request. Parallel
   turns cannot together spend past the balance. A stopped turn still consumed
   what it consumed. The refusal replies are free; running out, the workspace's
@@ -109,15 +110,15 @@ membership, and take a strict JSON body. Spec: `backend/api/sam.yaml`.
   guard (`billing.AIMeter`, feature `ai_assistant`). Credits are checked again
   before every step, so a turn stops when they run out or the daily limit is
   reached, and a turn stops at `maxTurnUSD` ($1) of provider cost. A step
-  whose cost OpenRouter did not report is charged an estimate
-  (`openrouter.Usage.BillableUSD`). The legacy turn failed open on a billing
+  whose usage never arrived is charged an estimate at the model's peak rates
+  (`deepseek.Usage.BillableUSD`). The legacy turn failed open on a billing
   outage; this one fails closed. Uplumo is SaaS: there is no
   bring-your-own-key or unmetered mode.
 - **Telemetry.** The `sam:turn` PostHog events are not ported; failures are
   logged with `slog`.
 - **Transcripts.** Existing Durable Object transcripts are not migrated.
-- **Model routing.** The MiniMax-specific provider pinning is not ported; any
-  `OPENROUTER_MODEL` is called with default routing.
+- **Model routing.** The MiniMax-specific provider pinning is not ported; `DEEPSEEK_MODEL`
+  picks the model directly.
 - **Dev tools.** The dev-only "clear history" button is gone; rewind covers it.
 - **Skills and fact sheet.** `skills/*.md` and `product_fact_sheet.md` are copies
   of files outside the Go module. `TestEmbeddedCopiesMatchTheirSources` fails

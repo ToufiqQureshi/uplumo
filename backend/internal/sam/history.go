@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/toufiqqureshi/uplumo/backend/internal/platform/openrouter"
+	"github.com/toufiqqureshi/uplumo/backend/internal/platform/deepseek"
 )
 
 const interruptedToolResult = "Error: this tool call was interrupted before it returned a result."
@@ -13,13 +13,13 @@ const interruptedToolResult = "Error: this tool call was interrupted before it r
 // stored assistant message holds every step of one turn, separated by
 // step-start parts; each step becomes one assistant message followed by the
 // tool results it asked for, which is the order providers require.
-func toLLMMessages(messages []Message) []openrouter.Message {
-	var out []openrouter.Message
+func toLLMMessages(messages []Message) []deepseek.Message {
+	var out []deepseek.Message
 	for _, message := range messages {
 		switch message.Role {
 		case "user":
 			if text := joinText(message.Parts); text != "" {
-				out = append(out, openrouter.Message{Role: "user", Content: text})
+				out = append(out, deepseek.Message{Role: "user", Content: text})
 			}
 		case "assistant":
 			out = append(out, assistantSteps(message.Parts)...)
@@ -38,16 +38,16 @@ func joinText(parts []Part) string {
 	return strings.Join(texts, "\n")
 }
 
-func assistantSteps(parts []Part) []openrouter.Message {
+func assistantSteps(parts []Part) []deepseek.Message {
 	var (
-		out     []openrouter.Message
+		out     []deepseek.Message
 		text    strings.Builder
-		calls   []openrouter.ToolCall
-		results []openrouter.Message
+		calls   []deepseek.ToolCall
+		results []deepseek.Message
 	)
 	flush := func() {
 		if text.Len() > 0 || len(calls) > 0 {
-			out = append(out, openrouter.Message{Role: "assistant", Content: text.String(), ToolCalls: calls})
+			out = append(out, deepseek.Message{Role: "assistant", Content: text.String(), ToolCalls: calls})
 			out = append(out, results...)
 		}
 		text.Reset()
@@ -64,15 +64,15 @@ func assistantSteps(parts []Part) []openrouter.Message {
 			if arguments == "" {
 				arguments = "{}"
 			}
-			calls = append(calls, openrouter.ToolCall{
+			calls = append(calls, deepseek.ToolCall{
 				ID:   part.ToolCallID,
 				Type: "function",
-				Function: openrouter.FunctionCall{
+				Function: deepseek.FunctionCall{
 					Name:      strings.TrimPrefix(part.Type, "tool-"),
 					Arguments: arguments,
 				},
 			})
-			results = append(results, openrouter.Message{
+			results = append(results, deepseek.Message{
 				Role:       "tool",
 				ToolCallID: part.ToolCallID,
 				Content:    toolResultContent(part),

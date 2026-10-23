@@ -56,7 +56,7 @@ Needed before real users sign up:
 | The `RAZORPAY_*` variables (three credentials and a plan id per plan) | No paid plan: the Billing page shows the plan but offers no checkout, and checkout, cancel and the webhook answer `503`.                                                                                                                        |
 | `STAFF_EMAILS`                                                        | The owner and the team are held to the Free plan like any customer.                                                                                                                                                                             |
 | `DATAFORSEO_API_KEY`                                                  | No keywords, rank tracking, backlinks or AI visibility (`503`).                                                                                                                                                                                 |
-| `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`                              | No AI assistant or AI writing.                                                                                                                                                                                                                  |
+| `DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL`                                  | No AI assistant or AI writing.                                                                                                                                                                                                                  |
 | `PAGESPEED_API_KEY`                                                   | Site audits skip the page speed (Lighthouse) test. A free Google Cloud API key with the PageSpeed Insights API enabled; restrict the key to that API.                                                                                           |
 | `CRUX_API_KEY`                                                        | Real-visitor (Core Web Vitals) data on audits comes only from what PageSpeed Insights still embeds. A free key with the Chrome UX Report API enabled; it may be the same key as `PAGESPEED_API_KEY` if both APIs are enabled and allowed on it. |
 
@@ -75,7 +75,7 @@ the frontend at build time, so redeploy after changing them.
 The server refuses to start on a live `https` site when:
 
 - `BYPASS_EMAIL_VERIFICATION` is `true`, or
-- `DATAFORSEO_API_KEY` or `OPENROUTER_API_KEY` is set without the `RAZORPAY_*`
+- `DATAFORSEO_API_KEY` or `DEEPSEEK_API_KEY` is set without the `RAZORPAY_*`
   variables. Without billing nothing limits usage, and every lookup is charged
   to our provider accounts.
 

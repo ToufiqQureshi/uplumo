@@ -13,7 +13,7 @@ the React app is a static SPA the Go server serves. People can sign up, verify
 their email and use the free features. The owner confirmed Razorpay uses
 **live** keys, so a working subscription takes real money. All four plan variable names are present (23 October); their live terms and
 real purchase/cancel acceptance still require release verification. DataForSEO
-and OpenRouter variables are configured in production; accepted provider calls
+and AI model (OpenRouter today, DeepSeek once its key is set) variables are configured in production; accepted provider calls
 incur real costs. The owner confirms DataForSEO works and intentionally keeps
 its $2/day account cap. See `docs/audits/2026-10-23-launch-readiness.md`.
 
@@ -169,7 +169,7 @@ Secrets go into Railway variables only, never into the repo or chat.
 
 - The typical costs on Billing (`backend/internal/billing/costs.go`) are from
   published prices; check them against the first real DataForSEO and
-  OpenRouter invoices.
+  DeepSeek invoices.
 - Data provider: keep DataForSEO, or drop the features that need it
   (keywords, rank tracking, backlinks, AI visibility). An AI model cannot
   replace it, because it has no real search data.

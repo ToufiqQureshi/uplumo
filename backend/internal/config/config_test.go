@@ -53,7 +53,7 @@ func TestLoad(t *testing.T) {
 		{name: "rejects a negative port", env: with("PORT", "-1"), wantErr: true},
 		{name: "rejects skipping email verification on a live site", env: with("BYPASS_EMAIL_VERIFICATION", "true"), wantErr: true},
 		{name: "rejects a provider key without billing on a live site", env: with("DATAFORSEO_API_KEY", "key"), wantErr: true},
-		{name: "rejects a model key without billing on a live site", env: with("OPENROUTER_API_KEY", "key"), wantErr: true},
+		{name: "rejects a model key without billing on a live site", env: with("DEEPSEEK_API_KEY", "key"), wantErr: true},
 		{name: "allows a provider key without billing locally", env: withAll(map[string]string{"PUBLIC_URL": "http://localhost:8080", "DATAFORSEO_API_KEY": "key", "BYPASS_EMAIL_VERIFICATION": "true"}), wantAddr: ":8080"},
 		{name: "allows a provider key with billing on a live site", env: withAll(map[string]string{"DATAFORSEO_API_KEY": "key", "RAZORPAY_KEY_ID": "a", "RAZORPAY_KEY_SECRET": "b", "RAZORPAY_WEBHOOK_SECRET": "c", "RAZORPAY_PLAN_ID_PRO": "d"}), wantAddr: ":8080"},
 	}

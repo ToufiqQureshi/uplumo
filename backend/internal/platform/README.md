@@ -13,7 +13,7 @@ This is an internal developer/AI-agent guide, not customer-facing product copy. 
 - `ids/README.md`
 - `jobs/README.md`
 - `market/README.md`
-- `openrouter/README.md`
+- `deepseek/README.md`
 - `pgdb/README.md`
 - `spend/README.md`
 

@@ -382,7 +382,7 @@ func TestOneRequestCanMeterManyAIModelSteps(t *testing.T) {
 	ledger := NewCreditLedgerService(pool)
 	org := spendOrg(t.Context(), t, pool, 3000)
 	guard := testGuard(t, pool, ledger, noDailyLimit, true)
-	meter := guard.AIMeter(spend.AIAssistant, "openrouter/test")
+	meter := guard.AIMeter(spend.AIAssistant, "deepseek/test")
 	ctx := spend.WithIdempotencyKey(t.Context(), "one-chat-turn")
 
 	for step := range 3 {
@@ -567,7 +567,7 @@ func TestAIMeter(t *testing.T) {
 	ctx := t.Context()
 	ledger := NewCreditLedgerService(pool)
 	guard := testGuard(t, pool, ledger, noDailyLimit, true)
-	meter := guard.AIMeter(spend.AIWriting, "openrouter/test-model")
+	meter := guard.AIMeter(spend.AIWriting, "deepseek/test-model")
 
 	t.Run("needs the whole ceiling to start", func(t *testing.T) {
 		org := spendOrg(ctx, t, pool, CreditsForUSD(0.05)-1)
@@ -601,7 +601,7 @@ func TestAIMeter(t *testing.T) {
 		if reason != string(spend.AIWriting) {
 			t.Fatalf("reason = %q", reason)
 		}
-		if endpoint != "openrouter/test-model" {
+		if endpoint != "deepseek/test-model" {
 			t.Fatalf("AI provider endpoint = %q, want model identifier", endpoint)
 		}
 	})

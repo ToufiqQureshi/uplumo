@@ -12,8 +12,9 @@ Every coding agent (Claude, Codex, Cursor, others) follows this file.
 - Razorpay runs with **live** keys: customers pay real money. A billing,
   credit or plan bug now takes or loses real money, so treat every billing
   change as a finance change (section 3).
-- `DATAFORSEO_API_KEY` and `OPENROUTER_API_KEY` **are set in production**.
-  Every DataForSEO task and every OpenRouter token is billed to Uplumo for
+- `DATAFORSEO_API_KEY` is set in production, and AI moves from OpenRouter to
+  `DEEPSEEK_API_KEY` (owner decision, 23 Oct 2026). Every DataForSEO task and
+  every model token is billed to Uplumo for
   real, so a wasted call is lost money (section 3, "Money first").
 - `PROVIDER_DAILY_LIMIT_USD` is set as a global emergency brake. It stays
   until the known paid-call bugs are fixed; only the owner removes it.
@@ -124,7 +125,7 @@ Then delete every line that does not earn its place.
 
 ### Money first: no bug may cost the owner money
 
-DataForSEO and OpenRouter are live and billed per call. Customers have
+DataForSEO and the AI model provider (DeepSeek) are live and billed per call. Customers have
 already seen one click buy many tasks and drain their credits, and Uplumo
 has paid for provider work on a Pro workspace that was within its limits.
 Treat any change that can add, repeat or widen a paid call as a finance
@@ -148,7 +149,7 @@ change.
   the cost shown before the action without the owner's approval.
 - **Every paid call is recorded.** DataForSEO tasks go to
   `go_dataforseo_usage` (workspace, endpoint, cost); every provider's spend,
-  OpenRouter included, goes through the spend guard into `go_provider_spend`
+  DeepSeek included, goes through the spend guard into `go_provider_spend`
   (workspace, feature, cost). The owner must be able to answer "where did
   this dollar go" with one query; a paid call outside the spend guard is a
   bug.

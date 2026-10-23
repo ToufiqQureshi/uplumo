@@ -12,8 +12,8 @@ import (
 	"unicode/utf8"
 
 	"github.com/toufiqqureshi/uplumo/backend/internal/mcp"
+	"github.com/toufiqqureshi/uplumo/backend/internal/platform/deepseek"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/ids"
-	"github.com/toufiqqureshi/uplumo/backend/internal/platform/openrouter"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/spend"
 )
 
@@ -22,9 +22,9 @@ const (
 	// (site-read intake plus a full research chain, multi-competitor sweeps);
 	// cost is bounded by per-chunk metering and the model stopping on its own.
 	maxSteps = 40
-	// maxOutputTokens is shared by max-effort reasoning and the visible reply,
-	// so it stays well above measured reasoning use (~3k tokens). A tight cap
-	// lets reasoning eat the reply.
+	// maxOutputTokens bounds one step's reply and tool-call arguments. SAM runs
+	// with DeepSeek thinking mode off (see the deepseek package), so no
+	// reasoning shares this budget.
 	maxOutputTokens = 16_000
 
 	// maxTurnUSD stops one turn once its provider cost reaches it, so a model
@@ -45,9 +45,9 @@ const (
 
 var errStreamClosed = errors.New("stream closed")
 
-// LLM streams one model completion. *openrouter.Client implements it.
+// LLM streams one model completion. *deepseek.Client implements it.
 type LLM interface {
-	Stream(ctx context.Context, req openrouter.Request, h openrouter.Handler) (openrouter.Result, error)
+	Stream(ctx context.Context, req deepseek.Request, h deepseek.Handler) (deepseek.Result, error)
 }
 
 // Meter reserves credits before every model call and charges its real cost
@@ -165,12 +165,12 @@ func (a *Agent) gate(sc SessionContext) string {
 
 // holdStep reserves credits for one model call. midTurn picks the wording
 // when credits run out after the turn has started.
-func (t *turnState) holdStep(ctx context.Context, req openrouter.Request, midTurn bool) (spend.Hold, string) {
+func (t *turnState) holdStep(ctx context.Context, req deepseek.Request, midTurn bool) (spend.Hold, string) {
 	a := t.agent
 	if a.Meter == nil {
 		return nil, ""
 	}
-	ceiling, err := openrouter.MaxCostUSD(req)
+	ceiling, err := deepseek.MaxCostUSD(req)
 	if err != nil {
 		a.logger().ErrorContext(ctx, "SAM step has no cost ceiling", "err", err)
 		return nil, refuseBillingUnknown
@@ -312,18 +312,21 @@ func (t *turnState) run(ctx context.Context) error {
 		toolset.restrictToGrowth()
 		system += "\nThis turn is Search growth analyst mode. Only read-only first-party Google reporting and guarded site-reading tools are available. No paid research, writes, jobs or site changes are authorized. Start with the requested evidence analysis instead of onboarding."
 	}
-	conversation := append([]openrouter.Message{{Role: "system", Content: system}}, history...)
+	conversation := append([]deepseek.Message{{Role: "system", Content: system}}, history...)
 	for step := 0; step < maxSteps; step++ {
 		if step > 0 && t.spent >= maxTurnUSD {
 			t.refuse(refuseTurnLimit)
 			return nil
 		}
-		req := openrouter.Request{
-			Model:           a.Model,
-			Messages:        conversation,
-			Tools:           toolset.Definitions(),
-			MaxTokens:       maxOutputTokens,
-			ReasoningEffort: "max",
+		// Thinking stays off: with tools, DeepSeek's thinking mode needs every
+		// earlier reasoning text sent back, and SAM never returns reasoning to
+		// the provider (history.go).
+		req := deepseek.Request{
+			Model:      a.Model,
+			Messages:   conversation,
+			Tools:      toolset.Definitions(),
+			MaxTokens:  maxOutputTokens,
+			CacheScope: t.sc.OrganizationID,
 		}
 		// Every step costs money, so each holds its ceiling first: credits
 		// can run out, or the daily limit be reached, mid-turn.
@@ -339,7 +342,7 @@ func (t *turnState) run(ctx context.Context) error {
 		if len(result.ToolCalls) == 0 {
 			return nil
 		}
-		conversation = append(conversation, openrouter.Message{Role: "assistant", Content: result.Text, ToolCalls: result.ToolCalls})
+		conversation = append(conversation, deepseek.Message{Role: "assistant", Content: result.Text, ToolCalls: result.ToolCalls})
 		for _, call := range result.ToolCalls {
 			conversation = append(conversation, t.runTool(ctx, toolset, call))
 		}
@@ -367,7 +370,7 @@ func (t *turnState) auth() mcp.Auth {
 
 // step runs one model call, streams it and settles its hold with the real
 // cost. ok is false when the turn must end.
-func (t *turnState) step(ctx context.Context, req openrouter.Request, hold spend.Hold) (openrouter.Result, bool) {
+func (t *turnState) step(ctx context.Context, req deepseek.Request, hold spend.Hold) (deepseek.Result, bool) {
 	a := t.agent
 	t.textPart, t.reasoningPart = -1, -1
 	t.stepChars = 0
@@ -375,7 +378,7 @@ func (t *turnState) step(ctx context.Context, req openrouter.Request, hold spend
 	_ = t.sink.Send(Chunk{"type": "start-step"})
 
 	var textID, reasoningID string
-	handler := openrouter.Handler{
+	handler := deepseek.Handler{
 		OnReasoning: func(delta string) error {
 			if t.reasoningPart < 0 {
 				reasoningID = t.newPartID("reasoning")
@@ -422,7 +425,7 @@ func (t *turnState) step(ctx context.Context, req openrouter.Request, hold spend
 		t.assistant.Parts[t.textPart].State = stateDone
 		_ = t.sink.Send(Chunk{"type": "text-end", "id": textID})
 	}
-	cost, estimated := result.Usage.BillableUSD(t.stepChars)
+	cost, estimated := result.Usage.BillableUSD(req.Model, t.stepChars)
 	if estimated {
 		a.logger().WarnContext(ctx, "SAM model call reported no cost; charging an estimate", "session", t.sc.SessionID, "cost_usd", cost)
 	}
@@ -439,7 +442,7 @@ func (t *turnState) step(ctx context.Context, req openrouter.Request, hold spend
 }
 
 // runTool executes one call and returns the message that answers it.
-func (t *turnState) runTool(ctx context.Context, toolset *toolset, call openrouter.ToolCall) openrouter.Message {
+func (t *turnState) runTool(ctx context.Context, toolset *toolset, call deepseek.ToolCall) deepseek.Message {
 	if call.ID == "" {
 		if id, err := ids.New(); err == nil {
 			call.ID = id
@@ -458,7 +461,7 @@ func (t *turnState) runTool(ctx context.Context, toolset *toolset, call openrout
 	switch {
 	case err != nil && ctx.Err() != nil:
 		// The turn was stopped mid-tool; finish() marks the part interrupted.
-		return openrouter.Message{Role: "tool", ToolCallID: call.ID, Content: interruptedToolResult}
+		return deepseek.Message{Role: "tool", ToolCallID: call.ID, Content: interruptedToolResult}
 	case err != nil || isError:
 		// Failures go back to the model so it can recover or report them,
 		// instead of aborting the whole turn on one bad call.
@@ -469,7 +472,7 @@ func (t *turnState) runTool(ctx context.Context, toolset *toolset, call openrout
 		t.assistant.Parts[index].State = stateOutputError
 		t.assistant.Parts[index].ErrorText = text
 		_ = t.sink.Send(Chunk{"type": "tool-output-error", "toolCallId": call.ID, "errorText": text})
-		return openrouter.Message{Role: "tool", ToolCallID: call.ID, Content: "Error: " + text}
+		return deepseek.Message{Role: "tool", ToolCallID: call.ID, Content: "Error: " + text}
 	}
 	encoded, err := json.Marshal(output)
 	if err != nil {
@@ -478,7 +481,7 @@ func (t *turnState) runTool(ctx context.Context, toolset *toolset, call openrout
 	t.assistant.Parts[index].State = stateOutputAvailable
 	t.assistant.Parts[index].Output = encoded
 	_ = t.sink.Send(Chunk{"type": "tool-output-available", "toolCallId": call.ID, "output": json.RawMessage(encoded)})
-	return openrouter.Message{Role: "tool", ToolCallID: call.ID, Content: string(encoded)}
+	return deepseek.Message{Role: "tool", ToolCallID: call.ID, Content: string(encoded)}
 }
 
 func (t *turnState) refuseStepLimit() {
@@ -532,7 +535,7 @@ func (a *Agent) systemPrompt(ctx context.Context, sc SessionContext) (string, er
 }
 
 // history loads the provider conversation: messages after the summary.
-func (a *Agent) history(ctx context.Context, sessionID string) ([]openrouter.Message, error) {
+func (a *Agent) history(ctx context.Context, sessionID string) ([]deepseek.Message, error) {
 	messages, err := a.Store.List(ctx, sessionID)
 	if err != nil {
 		return nil, err

@@ -145,7 +145,7 @@ type Deps struct {
 	EmailAuth *emailauth.Service
 	// APIKeys manages MCP API keys; nil leaves those routes with the legacy app.
 	APIKeys *apikeys.Service
-	// SAMChat serves SAM conversations; nil answers 503 (no OpenRouter key).
+	// SAMChat serves SAM conversations; nil answers 503 (no DeepSeek key).
 	SAMChat *sam.Chat
 	// Onboarding stores account-scoped signup answers and the Search Console nudge.
 	Onboarding    *onboarding.Service
@@ -155,7 +155,7 @@ type Deps struct {
 	Reports                 *reports.Service
 	PublicURL               *url.URL
 	DataForSEOConfigured    bool
-	OpenRouterConfigured    bool
+	DeepSeekConfigured      bool
 	ContentWriterConfigured bool
 	Credits                 *billing.CreditLedgerService
 	// MCP serves API-key and Go-issued OAuth requests through the Go dispatcher.
@@ -273,7 +273,7 @@ func NewHandler(d Deps) http.Handler {
 			httpx.WriteError(w, http.StatusBadRequest, "invalid_request", "Choose a valid SAM setup request.")
 			return
 		}
-		enabled := d.OpenRouterConfigured
+		enabled := d.DeepSeekConfigured
 		var message *string
 		if !enabled {
 			text := "SAM is temporarily unavailable. Please try again in a few minutes."

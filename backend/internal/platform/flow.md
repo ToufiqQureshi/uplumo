@@ -5,7 +5,7 @@
 ## Entry points
 
 - **API/trigger:** No direct customer route; mounted feature handlers/jobs call these components.
-- **Source:** The folder groups shared Go packages under `dataforseo/`, `entitlements/`, `errreport/`, `httpx/`, `ids/`, `jobs/`, `market/`, `openrouter/`, `pgdb/` and `spend/`.
+- **Source:** The folder groups shared Go packages under `dataforseo/`, `entitlements/`, `errreport/`, `httpx/`, `ids/`, `jobs/`, `market/`, `deepseek/`, `pgdb/` and `spend/`.
 
 ## Request or job flow
 
@@ -13,7 +13,7 @@ Feature services use the package for their specific concern: provider transport/
 
 ## Dependencies and cost boundary
 
-HTTP; DataForSEO/OpenRouter/market/spend subpackages; Redis/Postgres queue adapters.
+HTTP; DataForSEO/DeepSeek/market/spend subpackages; Redis/Postgres queue adapters.
 
 ## Failure, security and data invariants
 

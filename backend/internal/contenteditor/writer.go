@@ -9,7 +9,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/toufiqqureshi/uplumo/backend/internal/platform/openrouter"
+	"github.com/toufiqqureshi/uplumo/backend/internal/platform/deepseek"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/spend"
 )
 
@@ -19,12 +19,10 @@ const (
 	maxWriterContext                = 20_000
 	writerTimeout                   = 25 * time.Second
 	writerChargeWait                = 10 * time.Second
-	// WriterModel pins the editor to a cost-calibrated model.
-	WriterModel             = "openai/gpt-4.1-mini"
-	writerModel             = WriterModel
-	writerInputUSDPerToken  = 0.40 / 1_000_000
-	writerOutputUSDPerToken = 1.60 / 1_000_000
-	writerMaxChargeUSD      = float64(MaxWriterCreditsPerAction) / 1280
+	// WriterModel pins the editor to a priced model, whatever DEEPSEEK_MODEL
+	// sets for SAM, so the per-action credit cap holds.
+	WriterModel        = deepseek.DefaultModel
+	writerMaxChargeUSD = float64(MaxWriterCreditsPerAction) / 1280
 )
 
 // ErrWriterUnavailable indicates the writing assistant is not configured.
@@ -113,7 +111,7 @@ type WriterPlanAccess interface {
 // WriterAgent uses a language model to generate content.
 type WriterAgent struct {
 	LLM interface {
-		Stream(context.Context, openrouter.Request, openrouter.Handler) (openrouter.Result, error)
+		Stream(context.Context, deepseek.Request, deepseek.Handler) (deepseek.Result, error)
 	}
 	Meter  WriterMeter
 	Plans  WriterPlanAccess
@@ -137,19 +135,21 @@ func (a *WriterAgent) Generate(ctx context.Context, organizationID string, input
 			return WriterOutput{}, ErrWriterPlanRequired
 		}
 	}
-	// Pinned to the approved model so the per-action credit ceilings hold.
-	// OPENROUTER_MODEL configures SAM and must not change these prices.
-	model := writerModel
-	maxTokens := writerOutputLimit(input.Action)
-	req := openrouter.Request{
-		Model: model,
-		Messages: []openrouter.Message{
+	// Thinking stays off: the output budget is the visible text, and the
+	// per-action cap is priced for it.
+	req := deepseek.Request{
+		Model: WriterModel,
+		Messages: []deepseek.Message{
 			{Role: "system", Content: writerSystemPrompt(input.Action, input.Mode)},
 			{Role: "user", Content: writerUserPrompt(input)},
 		},
-		MaxTokens: maxTokens,
+		MaxTokens:  writerOutputLimit(input.Action),
+		CacheScope: organizationID,
 	}
-	ceiling := writerCeilingUSD(req)
+	ceiling, err := deepseek.MaxCostUSD(req)
+	if err != nil {
+		return WriterOutput{}, fmt.Errorf("price writing assistant request: %w", err)
+	}
 	if ceiling > writerMaxChargeUSD {
 		return WriterOutput{}, &ValidationError{Message: "Shorten the article or brief to keep this AI action within its 15-credit limit."}
 	}
@@ -170,13 +170,9 @@ func (a *WriterAgent) Generate(ctx context.Context, organizationID string, input
 	}
 	callCtx, cancel := context.WithTimeout(ctx, writerTimeout)
 	defer cancel()
-	result, err := a.LLM.Stream(callCtx, req, openrouter.Handler{})
-	providerCost := result.Usage.CostUSD
-	if providerCost <= 0 {
-		inputTokens := max(0, result.Usage.PromptTokens)
-		outputTokens := max(result.Usage.CompletionTokens, (len(result.Text)+2)/3)
-		providerCost = float64(inputTokens)*writerInputUSDPerToken + float64(outputTokens)*writerOutputUSDPerToken
-	}
+	result, err := a.LLM.Stream(callCtx, req, deepseek.Handler{})
+	// No usage (a broken stream) is charged at the most expensive rate.
+	providerCost, _ := result.Usage.BillableUSD(WriterModel, len(result.Text))
 	if err != nil {
 		if settleErr := a.settle(ctx, hold, providerCost, 0); settleErr != nil {
 			err = errors.Join(err, fmt.Errorf("release failed writing assistant hold: %w", settleErr))
@@ -321,14 +317,4 @@ func writerOutputLimit(action WriterAction) int {
 	default:
 		return 2_000
 	}
-}
-
-func writerCeilingUSD(req openrouter.Request) float64 {
-	chars := 0
-	for _, message := range req.Messages {
-		chars += len(message.Content)
-	}
-	// One UTF-8 byte per token is deliberately conservative and keeps even
-	// multilingual input under the customer's hard per-action credit cap.
-	return float64(chars)*writerInputUSDPerToken + float64(req.MaxTokens)*writerOutputUSDPerToken
 }

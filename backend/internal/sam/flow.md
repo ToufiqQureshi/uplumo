@@ -13,7 +13,7 @@ Authenticated user opens a project session; handler checks access/plan/credits; 
 
 ## Dependencies and cost boundary
 
-OpenRouter/model provider; Postgres sessions/messages; Redis limits; billing; projectcontext and internal services.
+DeepSeek model provider (`platform/deepseek`); Postgres sessions/messages; Redis limits; billing; projectcontext and internal services.
 
 ## Failure, security and data invariants
 

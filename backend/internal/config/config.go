@@ -48,16 +48,16 @@ type Config struct {
 	// PageSpeed Insights still embeds. It may be the same key as
 	// PageSpeedAPIKey if both APIs are enabled on it.
 	CrUXAPIKey string
-	// OpenRouterAPIKey is Uplumo's own model key for SAM.
-	OpenRouterAPIKey string
+	// DeepSeekAPIKey is Uplumo's own model key for SAM and the writer.
+	DeepSeekAPIKey string
 	// StaffEmails are the people whose own workspaces are never limited by a
 	// plan, lower case.
 	StaffEmails []string
 	// ProviderDailyLimitUSD stops every paid DataForSEO and AI request, for
 	// all workspaces, once today's (UTC) provider spend reaches it.
 	ProviderDailyLimitUSD float64
-	// OpenRouterModel overrides the SAM chat model (OPENROUTER_MODEL).
-	OpenRouterModel string
+	// DeepSeekModel overrides the SAM chat model (DEEPSEEK_MODEL).
+	DeepSeekModel string
 	// Loops configures hosted teammate invitation email.
 	LoopsAPIKey               string
 	LoopsInvitationTemplateID string
@@ -193,7 +193,7 @@ func Load(getenv func(string) string) (Config, error) {
 	}
 
 	dataForSEOKey := strings.TrimSpace(getenv("DATAFORSEO_API_KEY"))
-	openRouterKey := strings.TrimSpace(getenv("OPENROUTER_API_KEY"))
+	deepSeekKey := strings.TrimSpace(getenv("DEEPSEEK_API_KEY"))
 	supabaseStorage, err := loadSupabaseStorage(getenv)
 	if err != nil {
 		return Config{}, err
@@ -207,8 +207,8 @@ func Load(getenv func(string) string) (Config, error) {
 		}
 		// Without billing nothing limits usage, so every lookup would be
 		// charged to our provider accounts with no plan behind it.
-		if rzp == nil && (dataForSEOKey != "" || openRouterKey != "") {
-			return Config{}, errors.New("a live site with DATAFORSEO_API_KEY or OPENROUTER_API_KEY also needs the RAZORPAY_* variables")
+		if rzp == nil && (dataForSEOKey != "" || deepSeekKey != "") {
+			return Config{}, errors.New("a live site with DATAFORSEO_API_KEY or DEEPSEEK_API_KEY also needs the RAZORPAY_* variables")
 		}
 	}
 
@@ -230,8 +230,8 @@ func Load(getenv func(string) string) (Config, error) {
 		DataForSEOAPIKey:             dataForSEOKey,
 		PageSpeedAPIKey:              strings.TrimSpace(getenv("PAGESPEED_API_KEY")),
 		CrUXAPIKey:                   strings.TrimSpace(getenv("CRUX_API_KEY")),
-		OpenRouterAPIKey:             openRouterKey,
-		OpenRouterModel:              strings.TrimSpace(getenv("OPENROUTER_MODEL")),
+		DeepSeekAPIKey:               deepSeekKey,
+		DeepSeekModel:                strings.TrimSpace(getenv("DEEPSEEK_MODEL")),
 		LoopsAPIKey:                  strings.TrimSpace(getenv("LOOPS_API_KEY")),
 		LoopsInvitationTemplateID:    strings.TrimSpace(getenv("LOOPS_TRANSACTIONAL_INVITATION_ID")),
 		LoopsVerifyEmailTemplateID:   strings.TrimSpace(getenv("LOOPS_TRANSACTIONAL_VERIFY_EMAIL_ID")),

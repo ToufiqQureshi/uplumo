@@ -43,8 +43,12 @@ var typicalUSD = []struct {
 	{spend.Backlinks, "", "backlink report", 0.108},
 	{spend.AIVisibility, ActionPromptExplorer, "prompt on 4 AI models", 0.1},
 	{spend.AIVisibility, ActionBrandLookup, "brand lookup (less when AI has no data, more with competitors)", 0.29},
-	{spend.AIAssistant, "", "AI assistant reply", 0.03},
-	{spend.AIWriting, "", "AI writing action", 0.01},
+	// DeepSeek deepseek-flash at peak rates (platform/deepseek): a reply of a
+	// few tool steps, and a long writing action. Estimates until the first
+	// DeepSeek invoice; they err high so the customer is not charged more
+	// than the hint suggests.
+	{spend.AIAssistant, "", "AI assistant reply", 0.02},
+	{spend.AIWriting, "", "AI writing action", 0.004},
 }
 
 // Actions of the AI visibility feature that ActionCost tells apart.

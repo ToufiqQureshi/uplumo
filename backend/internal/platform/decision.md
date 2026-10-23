@@ -14,7 +14,7 @@ Contains common HTTP/provider utilities and shared queue primitives used across 
 
 ## Dependencies
 
-HTTP; DataForSEO/OpenRouter/market/spend subpackages; Redis/Postgres queue adapters.
+HTTP; DataForSEO/DeepSeek/market/spend subpackages; Redis/Postgres queue adapters.
 
 ## Verification
 

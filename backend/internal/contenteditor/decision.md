@@ -29,3 +29,20 @@ Use the package tests next to the source files in `README.md`. For changes cross
 - **Why:** Settling zero or a capped amount as the provider cost hid real expense from the emergency spend guard.
 - **Preserve:** One model call, no automatic retry, zero customer charge for unusable answers and the 15-credit ceiling. Unknown usage remains an estimate rather than claimed invoice evidence.
 - **Trace:** `writer.go`, `TestWriterRecordsProviderSpendEvenWhenCustomerIsRefundedOrCapped`; provider spend and customer charge are asserted separately.
+
+## Writer on deepseek-flash
+
+- **Decision:** the writer is pinned to `deepseek-flash` (thinking off,
+  workspace cache scope). Its hold is `deepseek.MaxCostUSD` of the request;
+  the 15-credit per-action cap and its pre-call check stay.
+- **Why:** owner decision (23 Oct 2026) to move AI to DeepSeek. An outline
+  now holds about 2 credits instead of about 12, and the largest context the
+  writer accepts (20,000 three-byte characters, longest output) holds about
+  7, so the cap is never the binding limit on this model.
+- **Preserve:** pinned model regardless of `DEEPSEEK_MODEL`; charge capped at
+  15 credits; failed or empty answers settle the provider cost with no
+  customer charge; a missing usage is estimated at peak rates, never free.
+- **Trace:** `writer.go`, `writer_test.go`
+  (`TestWriterLargestAcceptedContextStaysUnderFifteenCredits` replaces the
+  old over-cap test, which can no longer be triggered on this model, and still
+  proves a longer context is refused before any call).

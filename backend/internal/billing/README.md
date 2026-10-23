@@ -152,17 +152,19 @@ assistant. Rules that must never break:
   (`dataforseo.AIResponseCeilingUSD` $0.10, `AIMentionsCeilingUSD` $0.25), above
   what live calls billed; a flat $0.50 held more than a Pro workspace's day.
 - **AI.** A model's cost is only known after it answers, so every AI call
-  holds its ceiling first (`AIMeter.Hold` with `openrouter.MaxCostUSD`: the
+  holds its ceiling first (`AIMeter.Hold` with `deepseek.MaxCostUSD`: the
   input counted at three bytes a token plus the whole output budget, at the
-  expensive-end fallback prices of $5 / $25 per million tokens) and settles
-  the real cost after. A SAM step with 16,000 output tokens holds about $0.40
-  plus its input (about 640 credits for a typical chat); a writing action
+  model's peak DeepSeek rates, $0.30 / $1.20 per million tokens for
+  `deepseek-flash`) and settles the real cost after. A SAM step with 16,000
+  output tokens holds about $0.02 plus its input (about 30-60 credits for a
+  typical chat); a writing action
   uses its pinned model and a maximum 15-credit customer charge (`contenteditor/writer.go`). The held credits come back at settle, so they
   only decide whether the call may start: a workspace with fewer credits than
   the ceiling is refused instead of being let in and charged down to zero,
-  which was Uplumo's money. SAM stops a turn at one dollar. When OpenRouter
-  reports no cost, a conservative estimate from tokens (or from the streamed
-  text) is charged instead of nothing.
+  which was Uplumo's money. SAM stops a turn at one dollar. DeepSeek reports
+  tokens, not money: `platform/deepseek` prices them (peak when the call
+  touches peak hours). When no usage arrives, an estimate from tokens (or
+  from the streamed text) at peak rates is charged instead of nothing.
 - Without payments (self-hosted) nobody is charged credits.
 
 Edge cases: two requests racing the last credits are decided by the row

@@ -72,3 +72,15 @@ Use the package tests next to the source files in `README.md`. For changes cross
 - **Why:** PR review found that a failed post-call ReserveFor could lose both provider expense and a recoverable charge. Remove that separate charging loop rather than duplicate recovery.
 - **Preserve:** Normal reservations still require positive amounts; postpaid shortfalls charge only available credits, staff top-ups remain counted, and spend is committed once with settlement. Rollback retains outcome rows.
 - **Trace:** `settlement_recovery_test.go` injects balance-update failure, observes a durable known cost, then reconciles twice to one 26-credit charge and one $0.02 spend. The test failed before the fix.
+
+## AI cost hints for DeepSeek
+
+- **Decision:** the Billing hints for an AI assistant reply and an AI writing
+  action drop from $0.03 and $0.01 to $0.02 and $0.004 (`costs.go`).
+- **Why:** AI moved to DeepSeek `deepseek-flash` (23 Oct 2026), which costs a
+  fraction of the old models. The hints stay deliberately high until the first
+  DeepSeek invoice, because a customer must never be charged more than the
+  hint suggested.
+- **Preserve:** recalibrate from real settled `go_provider_spend` rows, not
+  from the price list alone; the AIMeter hold/settle flow is unchanged.
+- **Trace:** `costs.go`; billing tests pass. Measured values pending.

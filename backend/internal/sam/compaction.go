@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/toufiqqureshi/uplumo/backend/internal/platform/openrouter"
+	"github.com/toufiqqureshi/uplumo/backend/internal/platform/deepseek"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/spend"
 )
 
@@ -46,18 +46,18 @@ func (a *Agent) compact(ctx context.Context, sc SessionContext) error {
 	prompt.WriteString("Conversation to fold in:\n\n")
 	prompt.WriteString(renderTranscript(older))
 
-	req := openrouter.Request{
+	req := deepseek.Request{
 		Model: a.Model,
-		Messages: []openrouter.Message{
+		Messages: []deepseek.Message{
 			{Role: "system", Content: summarizeInstruction},
 			{Role: "user", Content: prompt.String()},
 		},
-		MaxTokens:       summaryMaxTokens,
-		ReasoningEffort: "low",
+		MaxTokens:  summaryMaxTokens,
+		CacheScope: sc.OrganizationID,
 	}
 	var hold spend.Hold
 	if a.Meter != nil {
-		ceiling, err := openrouter.MaxCostUSD(req)
+		ceiling, err := deepseek.MaxCostUSD(req)
 		if err != nil {
 			return fmt.Errorf("summarize: %w", err)
 		}
@@ -67,10 +67,10 @@ func (a *Agent) compact(ctx context.Context, sc SessionContext) error {
 			return fmt.Errorf("hold credits for a summary: %w", err)
 		}
 	}
-	result, err := a.LLM.Stream(ctx, req, openrouter.Handler{})
+	result, err := a.LLM.Stream(ctx, req, deepseek.Handler{})
 	// The call is billed even when its text turns out unusable.
 	if hold != nil {
-		cost, _ := result.Usage.BillableUSD(len(result.Text))
+		cost, _ := result.Usage.BillableUSD(req.Model, len(result.Text))
 		if settleErr := hold.Settle(ctx, cost); settleErr != nil {
 			a.logger().ErrorContext(ctx, "SAM compaction metering failed", "err", settleErr)
 		}

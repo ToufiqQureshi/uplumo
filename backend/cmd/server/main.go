@@ -49,10 +49,10 @@ import (
 	"github.com/toufiqqureshi/uplumo/backend/internal/onboarding"
 	planCatalog "github.com/toufiqqureshi/uplumo/backend/internal/plans"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/dataforseo"
+	"github.com/toufiqqureshi/uplumo/backend/internal/platform/deepseek"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/errreport"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/httpx"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/jobs"
-	"github.com/toufiqqureshi/uplumo/backend/internal/platform/openrouter"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/pgdb"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/spend"
 	"github.com/toufiqqureshi/uplumo/backend/internal/projectcontext"
@@ -371,11 +371,11 @@ func run(logger *slog.Logger) (err error) {
 		RankTracking: rankTrackingService, RankChecks: rankChecks,
 	}
 	emailAuthSvc := buildEmailAuth(cfg, logger, db, rdb, authService)
-	samModel := strings.TrimSpace(cfg.OpenRouterModel)
+	samModel := strings.TrimSpace(cfg.DeepSeekModel)
 	if samModel == "" {
-		samModel = openrouter.DefaultModel
+		samModel = deepseek.DefaultModel
 	}
-	samChat := buildSAMChat(cfg, logger, db, projectContextSvc, mcpDeps, spendGuard.AIMeter(spend.AIAssistant, "openrouter/"+samModel))
+	samChat := buildSAMChat(cfg, logger, db, projectContextSvc, mcpDeps, spendGuard.AIMeter(spend.AIAssistant, "deepseek/"+samModel))
 	srv := &http.Server{
 		Addr: cfg.Addr,
 		Handler: httpapi.NewHandler(httpapi.Deps{
@@ -412,7 +412,7 @@ func run(logger *slog.Logger) (err error) {
 			LinkSuggest:             linkSuggestSvc,
 			SitePublish:             sitePublish,
 			IndexNow:                indexNowService,
-			ContentWriter:           buildContentWriter(cfg, logger, spendGuard.AIMeter(spend.AIWriting, "openrouter/"+contenteditor.WriterModel), billingRoutes.Gate(planCatalog.AIWriting)),
+			ContentWriter:           buildContentWriter(cfg, logger, spendGuard.AIMeter(spend.AIWriting, "deepseek/"+contenteditor.WriterModel), billingRoutes.Gate(planCatalog.AIWriting)),
 			ContentBriefs:           buildContentBriefs(db, dfClient),
 			ProjectsRepo:            projects.Repository{DB: db},
 			ContentImages:           contentImages,
@@ -428,8 +428,8 @@ func run(logger *slog.Logger) (err error) {
 			Reports:                 reportsSvc,
 			PublicURL:               cfg.PublicURL,
 			DataForSEOConfigured:    strings.TrimSpace(cfg.DataForSEOAPIKey) != "",
-			OpenRouterConfigured:    strings.TrimSpace(cfg.OpenRouterAPIKey) != "",
-			ContentWriterConfigured: strings.TrimSpace(cfg.OpenRouterAPIKey) != "",
+			DeepSeekConfigured:      strings.TrimSpace(cfg.DeepSeekAPIKey) != "",
+			ContentWriterConfigured: strings.TrimSpace(cfg.DeepSeekAPIKey) != "",
 			Credits:                 credits,
 			MCP:                     mcpDeps,
 			SavedKeywords:           savedKeywordsSvc,
@@ -497,11 +497,11 @@ func buildSitePublish(cfg config.Config, db *pgxpool.Pool) (*sitepublish.Service
 }
 
 func buildContentWriter(cfg config.Config, logger *slog.Logger, meter contenteditor.WriterMeter, plans contenteditor.WriterPlanAccess) contenteditor.WriterService {
-	if strings.TrimSpace(cfg.OpenRouterAPIKey) == "" {
+	if strings.TrimSpace(cfg.DeepSeekAPIKey) == "" {
 		return nil
 	}
 	return &contenteditor.WriterAgent{
-		LLM:    &openrouter.Client{APIKey: cfg.OpenRouterAPIKey},
+		LLM:    &deepseek.Client{APIKey: cfg.DeepSeekAPIKey},
 		Meter:  meter,
 		Plans:  plans,
 		Logger: logger,
@@ -558,19 +558,19 @@ func buildEmailAuth(cfg config.Config, logger *slog.Logger, db *pgxpool.Pool, rd
 }
 
 // buildSAMChat wires the SAM agent. The model key is Uplumo's own, never the
-// customer's: it returns nil without OPENROUTER_API_KEY and the chat routes
+// customer's: it returns nil without DEEPSEEK_API_KEY and the chat routes
 // then answer 503. Every turn is gated on and charged to the organization's
 // credits.
 func buildSAMChat(cfg config.Config, logger *slog.Logger, db *pgxpool.Pool, memory *projectcontext.Service, mcpDeps *mcp.Deps, meter sam.Meter) *sam.Chat {
-	if cfg.OpenRouterAPIKey == "" {
+	if cfg.DeepSeekAPIKey == "" {
 		return nil
 	}
-	model := cfg.OpenRouterModel
+	model := cfg.DeepSeekModel
 	if model == "" {
-		model = openrouter.DefaultModel
+		model = deepseek.DefaultModel
 	}
 	agent := &sam.Agent{
-		LLM:     &openrouter.Client{APIKey: cfg.OpenRouterAPIKey},
+		LLM:     &deepseek.Client{APIKey: cfg.DeepSeekAPIKey},
 		Model:   model,
 		Store:   sam.MessageRepository{DB: db},
 		Titles:  sam.Repository{DB: db},

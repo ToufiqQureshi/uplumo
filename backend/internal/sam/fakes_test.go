@@ -10,7 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/toufiqqureshi/uplumo/backend/internal/mcp"
-	"github.com/toufiqqureshi/uplumo/backend/internal/platform/openrouter"
+	"github.com/toufiqqureshi/uplumo/backend/internal/platform/deepseek"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/spend"
 )
 
@@ -18,7 +18,7 @@ import (
 type scriptStep struct {
 	reasoning []string
 	text      []string
-	toolCalls []openrouter.ToolCall
+	toolCalls []deepseek.ToolCall
 	cost      float64
 	err       error
 }
@@ -26,12 +26,12 @@ type scriptStep struct {
 type scriptedLLM struct {
 	mu       sync.Mutex
 	steps    []scriptStep
-	requests []openrouter.Request
+	requests []deepseek.Request
 	// repeat serves the last step forever instead of failing when steps run out.
 	repeat bool
 }
 
-func (l *scriptedLLM) Stream(_ context.Context, req openrouter.Request, h openrouter.Handler) (openrouter.Result, error) {
+func (l *scriptedLLM) Stream(_ context.Context, req deepseek.Request, h deepseek.Handler) (deepseek.Result, error) {
 	l.mu.Lock()
 	l.requests = append(l.requests, req)
 	var step scriptStep
@@ -42,11 +42,11 @@ func (l *scriptedLLM) Stream(_ context.Context, req openrouter.Request, h openro
 		step = l.steps[len(l.steps)-1]
 	default:
 		l.mu.Unlock()
-		return openrouter.Result{}, errors.New("scriptedLLM: no more steps")
+		return deepseek.Result{}, errors.New("scriptedLLM: no more steps")
 	}
 	l.mu.Unlock()
 
-	var result openrouter.Result
+	var result deepseek.Result
 	for _, d := range step.reasoning {
 		if h.OnReasoning != nil {
 			if err := h.OnReasoning(d); err != nil {
@@ -344,6 +344,6 @@ func (h *harness) lastAssistant(t *testing.T) Message {
 	return Message{}
 }
 
-func toolCall(id, name, args string) openrouter.ToolCall {
-	return openrouter.ToolCall{ID: id, Type: "function", Function: openrouter.FunctionCall{Name: name, Arguments: args}}
+func toolCall(id, name, args string) deepseek.ToolCall {
+	return deepseek.ToolCall{ID: id, Type: "function", Function: deepseek.FunctionCall{Name: name, Arguments: args}}
 }

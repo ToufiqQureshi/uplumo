@@ -56,8 +56,8 @@ func TestCompactionSummarizesOlderMessagesAndKeepsRecentOnes(t *testing.T) {
 		t.Fatalf("the summary call is billed: charges = %v", h.meter.charges)
 	}
 	req := h.llm.requests[0]
-	if req.ReasoningEffort != "low" || len(req.Tools) != 0 {
-		t.Fatalf("summaries run at low effort without tools: %+v", req)
+	if req.ReasoningEffort != "" || len(req.Tools) != 0 || req.CacheScope == "" {
+		t.Fatalf("summaries run without thinking or tools, in the workspace's cache scope: %+v", req)
 	}
 	if !strings.Contains(req.Messages[1].Content, "Conversation to fold in") {
 		t.Fatalf("prompt = %.200s", req.Messages[1].Content)

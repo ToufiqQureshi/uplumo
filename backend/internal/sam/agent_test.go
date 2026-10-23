@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/toufiqqureshi/uplumo/backend/internal/mcp"
-	"github.com/toufiqqureshi/uplumo/backend/internal/platform/openrouter"
+	"github.com/toufiqqureshi/uplumo/backend/internal/platform/deepseek"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/spend"
 )
 
@@ -71,7 +71,7 @@ func TestSystemPromptCarriesMemoryAndProject(t *testing.T) {
 
 func TestToolTurnBindsProjectAndFeedsResultBack(t *testing.T) {
 	h := newHarness(t,
-		scriptStep{toolCalls: []openrouter.ToolCall{toolCall("call-1", "get_domain_overview", `{"domain":"acme.test"}`)}},
+		scriptStep{toolCalls: []deepseek.ToolCall{toolCall("call-1", "get_domain_overview", `{"domain":"acme.test"}`)}},
 		scriptStep{text: []string{"Here you go."}},
 	)
 	h.runner.results["get_domain_overview"] = []mcp.ToolResult{{Text: "Domain overview", Structured: map[string]any{"rows": []any{"a", "b"}}}}
@@ -122,7 +122,7 @@ func TestToolTurnBindsProjectAndFeedsResultBack(t *testing.T) {
 
 func TestModelCannotTargetAnotherProject(t *testing.T) {
 	h := newHarness(t,
-		scriptStep{toolCalls: []openrouter.ToolCall{toolCall("c", "get_domain_overview", `{"projectId":"someone-elses","domain":"x.test"}`)}},
+		scriptStep{toolCalls: []deepseek.ToolCall{toolCall("c", "get_domain_overview", `{"projectId":"someone-elses","domain":"x.test"}`)}},
 		scriptStep{text: []string{"done"}},
 	)
 	h.run(context.Background(), t, "go", &recordingSink{})
@@ -149,7 +149,7 @@ func TestToolSchemaHidesProjectID(t *testing.T) {
 
 func TestToolFailuresGoBackToTheModel(t *testing.T) {
 	h := newHarness(t,
-		scriptStep{toolCalls: []openrouter.ToolCall{
+		scriptStep{toolCalls: []deepseek.ToolCall{
 			toolCall("a", "get_domain_overview", `{}`),
 			toolCall("b", "no_such_tool", `{}`),
 			toolCall("c", "get_serp_results", `not json`),
@@ -250,7 +250,7 @@ func TestCreditCheckFailureFailsClosed(t *testing.T) {
 
 func TestTurnStopsWhenCreditsRunOutMidTurn(t *testing.T) {
 	h := newHarness(t,
-		scriptStep{toolCalls: []openrouter.ToolCall{toolCall("1", "whoami", `{}`)}, cost: 0.06},
+		scriptStep{toolCalls: []deepseek.ToolCall{toolCall("1", "whoami", `{}`)}, cost: 0.06},
 		scriptStep{text: []string{"should not run"}, cost: 0.5},
 	)
 	h.agent.Meter = h.meter
@@ -275,7 +275,7 @@ func TestTurnStopsWhenCreditsRunOutMidTurn(t *testing.T) {
 func TestTurnStopsAtTheCostLimit(t *testing.T) {
 	steps := make([]scriptStep, 0, 5)
 	for i := range 5 {
-		steps = append(steps, scriptStep{toolCalls: []openrouter.ToolCall{toolCall(strconv.Itoa(i), "whoami", `{}`)}, cost: 0.6})
+		steps = append(steps, scriptStep{toolCalls: []deepseek.ToolCall{toolCall(strconv.Itoa(i), "whoami", `{}`)}, cost: 0.6})
 	}
 	h := newHarness(t, steps...)
 	h.agent.Meter = h.meter
@@ -302,7 +302,7 @@ func TestAnAnswerWithoutAReportedCostIsStillCharged(t *testing.T) {
 
 func TestEveryStepHoldsItsCeilingAndSettlesItsRealCost(t *testing.T) {
 	h := newHarness(t,
-		scriptStep{toolCalls: []openrouter.ToolCall{toolCall("1", "whoami", `{}`)}, cost: 0.03},
+		scriptStep{toolCalls: []deepseek.ToolCall{toolCall("1", "whoami", `{}`)}, cost: 0.03},
 		scriptStep{text: []string{"done"}, cost: 0.01},
 	)
 	h.agent.Meter = h.meter
@@ -315,9 +315,10 @@ func TestEveryStepHoldsItsCeilingAndSettlesItsRealCost(t *testing.T) {
 	if got := h.meter.charges[0]; got < 0.0299 || got > 0.0301 {
 		t.Errorf("first step settled %v, want 0.03", got)
 	}
-	// The ceiling covers the full output budget at the expensive fallback
-	// price, so no single step can cost more than was held for it.
-	if floor := float64(maxOutputTokens) * 25.0 / 1_000_000; h.meter.ceilings[0] < floor {
+	// The ceiling covers the full output budget at the model's peak output
+	// price (the harness model is not on the rate card, so the most expensive,
+	// deepseek-v4-pro at $3.96/M), so no single step can cost more than was held.
+	if floor := float64(maxOutputTokens) * 3.96 / 1_000_000; h.meter.ceilings[0] < floor {
 		t.Errorf("ceiling %v is below the output budget's %v", h.meter.ceilings[0], floor)
 	}
 	if h.meter.ceilings[1] <= h.meter.ceilings[0] {
@@ -373,7 +374,7 @@ type cancelingLLM struct {
 	cancel context.CancelFunc
 }
 
-func (c cancelingLLM) Stream(ctx context.Context, req openrouter.Request, h openrouter.Handler) (openrouter.Result, error) {
+func (c cancelingLLM) Stream(ctx context.Context, req deepseek.Request, h deepseek.Handler) (deepseek.Result, error) {
 	onText := h.OnText
 	h.OnText = func(d string) error {
 		err := onText(d)
@@ -389,7 +390,7 @@ func (c cancelingLLM) Stream(ctx context.Context, req openrouter.Request, h open
 
 func TestInterruptedToolIsNotLeftRunning(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	h := newHarness(t, scriptStep{toolCalls: []openrouter.ToolCall{toolCall("1", "get_audit_status", `{}`)}})
+	h := newHarness(t, scriptStep{toolCalls: []deepseek.ToolCall{toolCall("1", "get_audit_status", `{}`)}})
 	h.runner.results["get_audit_status"] = []mcp.ToolResult{{Text: "running", Structured: map[string]any{"status": map[string]any{"status": "running"}}}}
 	// Cancel as soon as the tool is invoked.
 	h.agent.Runner = cancelOnCall{fakeRunner: h.runner, cancel: cancel}
@@ -441,7 +442,7 @@ func TestModelFailureReachesTheClientAsAnErrorChunk(t *testing.T) {
 }
 
 func TestStepLimitEndsRunawayLoops(t *testing.T) {
-	h := newHarness(t, scriptStep{toolCalls: []openrouter.ToolCall{toolCall("x", "whoami", `{}`)}})
+	h := newHarness(t, scriptStep{toolCalls: []deepseek.ToolCall{toolCall("x", "whoami", `{}`)}})
 	h.llm.repeat = true
 	h.run(context.Background(), t, "loop", &recordingSink{})
 	if h.llm.callCount() != maxSteps {

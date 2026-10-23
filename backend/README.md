@@ -26,7 +26,7 @@ PORT=8080 go run ./cmd/server
 | `PROVIDER_DAILY_LIMIT_USD` | no | Emergency limit, default 100, 1 to 10000. Once today's (UTC) DataForSEO and AI spend across every workspace reaches it, all paid lookups and AI answer `usage_paused` until midnight UTC. There is no per-workspace daily cap; set this emergency brake above expected aggregate usage. Monthly credits per plan are in `internal/plans/catalog.go`. |
 | `STAFF_EMAILS` | no | Comma-separated addresses. A workspace owned by one of them, verified, gets every feature with no limits and pays nothing. For the owner and the team only. |
 | `DATAFORSEO_API_KEY` | no | Base64 `login:password`. Without it keywords, rank tracking, backlinks, domain and AI search answer `503`. |
-| `OPENROUTER_API_KEY`, `OPENROUTER_MODEL` | no | The model behind the assistant and AI writing. |
+| `DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL` | no | The model behind the assistant and AI writing (default `deepseek-flash`). |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | no | Google sign-in, Search Console and Analytics. |
 | `GOOGLE_TOKEN_ENCRYPTION_KEY` | no | Base64, 32 bytes. Encrypts Google tokens with its own key instead of the one derived from `BETTER_AUTH_SECRET`. |
 | `LOOPS_API_KEY`, `LOOPS_TRANSACTIONAL_VERIFY_EMAIL_ID`, `LOOPS_TRANSACTIONAL_RESET_PASSWORD_ID`, `LOOPS_TRANSACTIONAL_INVITATION_ID` | no | Transactional email. The key, the verify ID and the reset ID are needed together. See `internal/email/README.md`. |
@@ -36,7 +36,7 @@ PORT=8080 go run ./cmd/server
 | `OPENAI_APPS_CHALLENGE` | no | Token served at `/.well-known/openai-apps-challenge`. |
 
 On an `https` site the server also refuses to start when `DATAFORSEO_API_KEY`
-or `OPENROUTER_API_KEY` is set without the `RAZORPAY_*` variables: without
+or `DEEPSEEK_API_KEY` is set without the `RAZORPAY_*` variables: without
 billing nothing limits what a workspace can cost us.
 
 At startup the server connects to Postgres, applies pending migrations,

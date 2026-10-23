@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/toufiqqureshi/uplumo/backend/internal/auth"
+	"github.com/toufiqqureshi/uplumo/backend/internal/platform/deepseek"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/httpx"
-	"github.com/toufiqqureshi/uplumo/backend/internal/platform/openrouter"
 )
 
 // ownerLoader only knows user-1's session-1 in project-1.
@@ -34,8 +34,8 @@ type blockingLLM struct {
 	release chan struct{}
 }
 
-func (b *blockingLLM) Stream(ctx context.Context, _ openrouter.Request, h openrouter.Handler) (openrouter.Result, error) {
-	result := openrouter.Result{Text: "working"}
+func (b *blockingLLM) Stream(ctx context.Context, _ deepseek.Request, h deepseek.Handler) (deepseek.Result, error) {
+	result := deepseek.Result{Text: "working"}
 	if err := h.OnText("working"); err != nil {
 		return result, err
 	}

@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/toufiqqureshi/uplumo/backend/internal/mcp"
-	"github.com/toufiqqureshi/uplumo/backend/internal/platform/openrouter"
+	"github.com/toufiqqureshi/uplumo/backend/internal/platform/deepseek"
 )
 
 //go:embed product_fact_sheet.md
@@ -86,7 +86,7 @@ type ToolRunner interface {
 }
 
 type localTool struct {
-	def openrouter.Tool
+	def deepseek.Tool
 	run func(ctx context.Context, args json.RawMessage) (any, error)
 }
 
@@ -99,7 +99,7 @@ type toolset struct {
 	project    projectInfo
 	// binds records which MCP tools had projectId stripped from their schema.
 	binds map[string]bool
-	defs  []openrouter.Tool
+	defs  []deepseek.Tool
 	local map[string]localTool
 	// sleep and now drive the audit wait; tests replace them.
 	sleep func(context.Context, time.Duration) error
@@ -136,7 +136,7 @@ func newToolset(runner ToolRunner, sc scraper, skills []skill, auth mcp.Auth, pr
 			description += " While the audit is running this call waits up to ~1 minute server-side and returns as soon as progress changes, so never call it in a tight loop: check a few times, narrating progress to the user in between, and if it is still running after that, say so and let the user come back for the results."
 		}
 		ts.binds[name] = binds
-		ts.defs = append(ts.defs, openrouter.Tool{Name: name, Description: description, Parameters: schema})
+		ts.defs = append(ts.defs, deepseek.Tool{Name: name, Description: description, Parameters: schema})
 	}
 
 	for _, lt := range ts.localTools(sc, skills) {
@@ -147,7 +147,7 @@ func newToolset(runner ToolRunner, sc scraper, skills []skill, auth mcp.Auth, pr
 }
 
 // Definitions returns the tools in a stable order for the provider.
-func (ts *toolset) Definitions() []openrouter.Tool { return ts.defs }
+func (ts *toolset) Definitions() []deepseek.Tool { return ts.defs }
 
 // Run executes one tool call. The returned value is what the model sees;
 // isError marks results the UI should show as failed. A Go error means the
@@ -339,7 +339,7 @@ func (ts *toolset) localTools(sc scraper, skills []skill) []localTool {
 	}
 	tools := []localTool{
 		{
-			def: openrouter.Tool{
+			def: deepseek.Tool{
 				Name:        "get_product_info",
 				Description: "The Uplumo fact sheet: what the product does, plans/pricing, credit costs, integrations, MCP setup. Call before answering questions about Uplumo itself. Uses no credits.",
 				Parameters:  objectSchema(""),
@@ -349,7 +349,7 @@ func (ts *toolset) localTools(sc scraper, skills []skill) []localTool {
 			},
 		},
 		{
-			def: openrouter.Tool{
+			def: deepseek.Tool{
 				Name:        "map_links",
 				Description: "List a site's page URLs (homepage plus its sitemap) so you can choose which pages to read with read_pages. Defaults to the project's own site; pass `domain` to map another site (e.g. a competitor). Uses no credits.",
 				Parameters:  objectSchema(`"domain":{"type":"string","description":"Domain or URL to map. Omit for the project's own site."}`),
@@ -376,7 +376,7 @@ func (ts *toolset) localTools(sc scraper, skills []skill) []localTool {
 			},
 		},
 		{
-			def: openrouter.Tool{
+			def: deepseek.Tool{
 				Name:        "read_pages",
 				Description: fmt.Sprintf("Read up to %d web pages as plain text — the project's own pages or anyone else's (competitors, references). Pass specific `urls` (usually picked from map_links); omit to read a representative sample of the project's own site. Uses no credits.", maxScrapePages),
 				Parameters:  objectSchema(fmt.Sprintf(`"urls":{"type":"array","maxItems":%d,"items":{"type":"string","format":"uri"},"description":"Specific page URLs to read (max %d). Omit to read the project's own site."}`, maxScrapePages, maxScrapePages)),
@@ -411,7 +411,7 @@ func (ts *toolset) localTools(sc scraper, skills []skill) []localTool {
 	}
 	if len(skills) > 0 {
 		tools = append(tools, localTool{
-			def: openrouter.Tool{
+			def: deepseek.Tool{
 				Name:        "activate_skill",
 				Description: "Load the full step-by-step instructions of one skill from the skills list in your system prompt. Uses no credits.",
 				Parameters:  json.RawMessage(`{"type":"object","properties":{"name":{"type":"string"}},"required":["name"],"additionalProperties":false}`),
@@ -465,5 +465,5 @@ func growthReadTool(name string) bool {
 }
 func (ts *toolset) restrictToGrowth() {
 	ts.growthOnly = true
-	ts.defs = slices.DeleteFunc(ts.defs, func(def openrouter.Tool) bool { return !growthReadTool(def.Name) })
+	ts.defs = slices.DeleteFunc(ts.defs, func(def deepseek.Tool) bool { return !growthReadTool(def.Name) })
 }

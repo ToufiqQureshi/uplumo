@@ -136,7 +136,7 @@ TanStack Query/Router. `EditorPanels.tsx` contains the shared toolbar and previe
   topic stops it applying.
 - AI writing actions get the brief's terms, questions and headings, never the
   competitor text, to stay inside the 15-credit per-action ceiling. The AI
-  writer always uses `openai/gpt-4.1-mini`; `OPENROUTER_MODEL` configures SAM
+  writer always uses `deepseek-flash` with thinking off; `DEEPSEEK_MODEL` configures SAM
   only.
 
 ## Free publishing guidance
