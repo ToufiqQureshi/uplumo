@@ -26,7 +26,10 @@ RUN CGO_ENABLED=0 go build -trimpath -o /out/server ./cmd/server \
 
 FROM gcr.io/distroless/static-debian12:nonroot
 COPY --from=server /out/server /out/erase-user /
-COPY --from=web /app/dist /dist
+# The image runs as nonroot (65532). Files copied from the build context
+# (frontend/src/public: logo, favicons) keep the uploader's mode, which can be
+# owner-only, and Go then answers 403 for them. Owning /dist fixes that.
+COPY --from=web --chown=65532:65532 /app/dist /dist
 ENV STATIC_DIR=/dist
 EXPOSE 8080
 ENTRYPOINT ["/server"]

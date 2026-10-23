@@ -28,17 +28,21 @@ func (r Repository) ProjectDomain(ctx context.Context, projectID, organizationID
 	return domain, nil
 }
 
-// LatestAudit returns the latest audit summary for a project.
+// LatestAudit returns the latest audit summary for a project. Audits live in
+// go_audits (written by internal/audit); the legacy audits table is no longer
+// written, so reading it showed "Run an audit" after a finished crawl.
 func (r Repository) LatestAudit(ctx context.Context, projectID string) (*AuditSummary, error) {
 	var row AuditSummary
-	err := r.DB.QueryRow(ctx, `SELECT status,pages_crawled,started_at FROM audits WHERE project_id=$1 ORDER BY started_at DESC,id DESC LIMIT 1`, projectID).Scan(&row.Status, &row.PagesCrawled, &row.StartedAt)
+	var auditID string
+	err := r.DB.QueryRow(ctx, `SELECT id,status,pages_crawled,to_char(started_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+		FROM go_audits WHERE project_id=$1 ORDER BY started_at DESC,id DESC LIMIT 1`, projectID).Scan(&auditID, &row.Status, &row.PagesCrawled, &row.StartedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, fmt.Errorf("load dashboard audit: %w", err)
 	}
-	rows, err := r.DB.Query(ctx, `SELECT issue_type,severity,count(DISTINCT page_url)::int FROM audit_issues WHERE audit_id=(SELECT id FROM audits WHERE project_id=$1 ORDER BY started_at DESC,id DESC LIMIT 1) GROUP BY issue_type,severity`, projectID)
+	rows, err := r.DB.Query(ctx, `SELECT issue_type,severity,count(DISTINCT page_url)::int FROM go_audit_issues WHERE audit_id=$1 GROUP BY issue_type,severity`, auditID)
 	if err != nil {
 		return nil, fmt.Errorf("query dashboard audit issues: %w", err)
 	}

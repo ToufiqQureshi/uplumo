@@ -6,7 +6,7 @@ The backlink snapshot is refreshed only by the explicit
 `dashboard/backlinks/refresh` call, authorized by the same paid Backlinks gate.
 
 All reads are scoped to the authenticated project and organization. Latest
-audits and snapshots use stable newest-first ordering, and stale snapshots are
+audits (`go_audits`, `go_audit_issues`) and snapshots use stable newest-first ordering, and stale snapshots are
 still returned with an explicit `stale` flag so a provider outage cannot hide
 the last known data.
 
