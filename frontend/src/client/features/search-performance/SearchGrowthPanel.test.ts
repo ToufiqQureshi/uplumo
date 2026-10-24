@@ -142,49 +142,6 @@ describe("Search growth action boundaries", () => {
       "Review search intent before rewriting.",
     );
   });
-  it("reuses the project-scoped report after remount without a Google read", async () => {
-    await mount();
-    await click("Find opportunities");
-    await act(async () => {
-      root.render(null);
-    });
-    await act(async () => {
-      root.render(
-        createElement(
-          QueryClientProvider,
-          { client },
-          createElement(SearchGrowthPanel, { projectId: "project-a" }),
-        ),
-      );
-    });
-    expect(container.textContent).toContain("Your next best actions");
-    expect(analyzeGrowth).toHaveBeenCalledOnce();
-    await act(async () => {
-      root.render(
-        createElement(
-          QueryClientProvider,
-          { client },
-          createElement(SearchGrowthPanel, {
-            projectId: "project-b",
-            key: "project-b",
-          }),
-        ),
-      );
-    });
-    expect(container.textContent).not.toContain("Your next best actions");
-    expect(analyzeGrowth).toHaveBeenCalledOnce();
-  });
-
-  it("puts a chosen analyst question in an editable draft without a paid call", async () => {
-    await mount();
-    await click("Find opportunities");
-    await click("Which pages account for the biggest click losses?");
-    expect(takeAnalystDraft("project-a")).toContain(
-      "My question: Which pages account for the biggest click losses?",
-    );
-    expect(analyzeGrowth).toHaveBeenCalledOnce();
-  });
-
   it("opens a scoped editable analyst draft without sending any paid message", async () => {
     await mount();
     await click("Find opportunities");

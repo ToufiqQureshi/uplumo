@@ -9,7 +9,7 @@ in the linked feature READMEs; do not silently change them during a UI refactor.
 
 | Decision                                                                                                                | Why                                                                                                                                | Code / related contract                                                                   |
 | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Lead with the combined GSC/GA4 intelligence workspace and explicit analysis; keep detailed GSC tables in a disclosure.  | A solo owner needs a useful decision before a large report. More metrics alone do not deliver value.                               | `SearchGrowthPanel.tsx`, `GrowthSettings.tsx`                                             |
+| Start with measured search change and page candidates; keep goal-led analysis in an expandable section.                 | A solo owner needs a useful decision before a large report. More metrics alone do not deliver value.                               | `SearchGrowthPanel.tsx`, `GrowthSettings.tsx`                                             |
 | Keep the detailed GSC report's dates/filters in the URL, and label the growth analysis's independent date/source scope. | Shareable investigation filters must not silently reinterpret a saved GA4 finding.                                                 | `SearchPerformancePage.tsx`, `searchPerformanceQueries.ts`                                |
 | Keep all-event counts, selected-goal session rates, ordered user funnels and AI evidence separately labeled.            | They have different denominators and collection scopes; combining labels can invent business outcomes.                             | `growthApi.ts`, `GrowthPageCard.tsx`, `GrowthFunnel.tsx`                                  |
 | Show measured evidence, possible explanations and a next check; keep missing/limited values explicit.                   | Search averages do not establish why a person did not click, and unavailable data is not measured zero.                            | `GrowthClickDiagnosis.tsx`, backend `ga4/growth_clicks.go`                                |
@@ -59,24 +59,19 @@ in the linked feature READMEs; do not silently change them during a UI refactor.
   choice, reason, affected code, trade-off and verification/constraints; replace
   superseded statements rather than accumulating contradictory appendices.
 
-## Evidence-led intelligence workspace
+## Show value before configuration
 
-- **Decision:** replace the generic impression-only overview with the existing
-  combined GSC/GA4 analysis as the primary workspace. Show eight scoped metric
-  cards, paged measured findings, page investigations and editable analyst
-  questions. Keep detailed GSC reports accessible with explicit scope.
-- **Why:** the owner requested business insights from both Google sources, with
-  the provided dashboard image as visual direction. Repeated general advice and
-  ranking candidates alone did not answer what changed or where outcomes fell.
-- **Preserve:** the existing server's findings, minimum samples, authorization,
-  report cache, restricted-data suppression and bounded calls. No new paid or
-  automatic Google reads. Cards describe returned/matched pages rather than
-  whole-site totals; rates are weighted and missing values are never zero-filled.
-  A changed match cohort suppresses GA4 deltas. Goal rates never fall back to all
-  key events. AI drafts retain existing credit review and explicit Send.
-- **Trace:** `SearchGrowthPanel.tsx`, `IntelligenceMetrics.tsx`,
-  `intelligenceMetrics.ts`, `IntelligenceOpportunities.tsx`, `GrowthPageCard.tsx`,
-  `SearchPerformancePage.tsx`. Metric regressions cover weighting, missing goals,
-  restricted data, empty reports and comparison coverage. Mounted panel tests
-  cover cached remounts, project isolation and question handoff. No new backend
-  report endpoint, scoring model, indexing guarantee or revenue inference.
+- **Decision:** lead with report dates, absolute click movement, three page review
+  candidates, totals and the trend. Move combined goal-led analysis, stored-index
+  inspection and IndexNow into labeled disclosures. Keep every existing workflow.
+- **Why:** the live first viewport was dominated by configuration while a 19.9%
+  click decline and 311 candidate query rows were buried. Existing report data can
+  provide immediate review candidates without requiring GA4 or another request.
+- **Preserve:** candidates reuse the existing impression-sorted refresh grouping;
+  they do not predict revenue, establish causes or promise rankings. Show partial
+  row coverage and unavailable comparisons. Independent GA4 scope, URL filters,
+  exports, explicit paid actions and safe external links stay unchanged.
+- **Trace:** `SearchPerformanceOverview.tsx`, `SearchPerformancePage.tsx`,
+  `SearchPerformanceOverview.test.tsx`; browser regressions explicitly open the
+  business-outcomes disclosure before exercising the original analysis flow.
+  Browser visual acceptance is separate from unit/type validation.

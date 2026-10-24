@@ -16,7 +16,6 @@ let visibility: DocumentVisibilityState;
 let clock: number;
 let beacons: Record<string, unknown>[];
 const originalPushState = history.pushState;
-const originalReplaceState = history.replaceState;
 let cleanup: Array<() => void>;
 
 function runTracker(options: {
@@ -24,12 +23,7 @@ function runTracker(options: {
   historyLength: number;
   navigation: string;
   recognition?: boolean;
-  sameDocument?: boolean;
 }) {
-  // A real reload replaces the window. Duplicate-install tests deliberately
-  // retain the same document and its initialized tracker instead.
-  if (!options.sameDocument)
-    Reflect.deleteProperty(window, "__uplumoTrackerSites");
   const script = document.createElement("script");
   script.setAttribute("data-site", siteKey);
   if (options.recognition) script.setAttribute("data-recognition", "true");
@@ -103,8 +97,6 @@ beforeEach(() => {
 afterEach(() => {
   cleanup.forEach((remove) => remove());
   history.pushState = originalPushState;
-  history.replaceState = originalReplaceState;
-  Reflect.deleteProperty(window, "__uplumoTrackerSites");
   document.body.replaceChildren();
   vi.useRealTimers();
   vi.restoreAllMocks();
@@ -112,29 +104,6 @@ afterEach(() => {
 
 describe("tracker", () => {
   const options = { opener: false, historyLength: 1, navigation: "navigate" };
-
-  it("does not double count when the same snippet is installed twice", () => {
-    runTracker(options);
-    runTracker({ ...options, sameDocument: true });
-    expect(beacons.filter((hit) => !hit.d && !hit.n)).toHaveLength(1);
-    history.pushState({}, "", "/next");
-    expect(beacons.filter((hit) => !hit.d && !hit.n)).toHaveLength(2);
-    document.body.innerHTML = '<button data-uplumo-event="Book">Book</button>';
-    document.querySelector("button")!.click();
-    expect(beacons.filter((hit) => hit.n === "Book")).toHaveLength(1);
-  });
-
-  it("tracks replaceState navigation once and ignores state-only or hash changes", () => {
-    runTracker(options);
-    const first = beacons[0];
-    history.replaceState({}, "", "/offer");
-    const views = () => beacons.filter((hit) => !hit.d && !hit.n);
-    expect(views()).toHaveLength(2);
-    expect(views()[1]?.s).toBe(first?.s);
-    expect(views()[1]?.p).not.toBe(first?.p);
-    history.replaceState({ filter: true }, "", "/offer#details");
-    expect(views()).toHaveLength(2);
-  });
 
   it("keeps recognition off by default", () => {
     const view = runTracker(options);

@@ -1,5 +1,8 @@
-import { SearchGrowthPanel } from "./SearchGrowthPanel";
-import { SearchIndexingTools } from "./SearchPerformanceTools";
+import { SearchPerformanceOverview } from "./SearchPerformanceOverview";
+import {
+  GrowthAnalysisDisclosure,
+  SearchIndexingTools,
+} from "./SearchPerformanceTools";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
@@ -267,130 +270,129 @@ export function SearchPerformancePage({
         ) : (
           <>
             {reportQuery.isError ? reportError : null}
-            <SearchGrowthPanel key={projectId} projectId={projectId} />
-            <details
-              open={Boolean(search.tab || filterCount)}
-              className="rounded-xl border border-border bg-card p-4"
+            {reportQuery.isPlaceholderData ? (
+              <SearchPerformanceLoadingState />
+            ) : (
+              <>
+                <SearchPerformanceOverview
+                  report={report}
+                  onReviewPages={() => {
+                    onSearchChange({ tab: "refresh", page: undefined });
+                    document
+                      .getElementById("search-details")
+                      ?.scrollIntoView({ block: "start" });
+                  }}
+                />
+                <TotalsCards report={report} />
+              </>
+            )}
+            {!reportQuery.isPlaceholderData ? (
+              <SearchPerformanceTrend report={report} />
+            ) : null}
+            <GrowthAnalysisDisclosure projectId={projectId} />
+            <div
+              id="search-details"
+              className="scroll-mt-4 overflow-hidden rounded-xl border border-border bg-card"
             >
-              <summary className="cursor-pointer font-medium">
-                Detailed Search Console report · queries, pages and trends
-              </summary>
-              <div className="mt-4 space-y-4">
-                {reportQuery.isPlaceholderData ? (
-                  <SearchPerformanceLoadingState />
-                ) : (
-                  <>
-                    <TotalsCards report={report} />
-                  </>
-                )}
-                {!reportQuery.isPlaceholderData ? (
-                  <SearchPerformanceTrend report={report} />
-                ) : null}
-                <div
-                  id="search-details"
-                  className="scroll-mt-4 overflow-hidden rounded-xl border border-border bg-card"
+              <DataTableTabs
+                value={tab}
+                onValueChange={(value) => {
+                  const nextTab = SEARCH_PERFORMANCE_TABS.find(
+                    (item) => item === value,
+                  );
+                  if (nextTab)
+                    onSearchChange({ tab: nextTab, page: undefined });
+                }}
+                actions={
+                  <ExportMenu
+                    actions={["sheets", "csv"]}
+                    onExport={(target) => void handleExport(target)}
+                    busy={isExporting}
+                    disabled={reportQuery.isPlaceholderData}
+                  />
+                }
+              >
+                <TabsTrigger value="striking">
+                  {reportQuery.isPlaceholderData
+                    ? "Striking distance"
+                    : `Striking distance (${report.strikingDistance.length})`}
+                </TabsTrigger>
+                <TabsTrigger value="queries">Queries</TabsTrigger>
+                <TabsTrigger value="pages">Pages</TabsTrigger>
+                <TabsTrigger value="refresh">Refresh queue</TabsTrigger>
+              </DataTableTabs>
+              <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-2">
+                <Button
+                  type="button"
+                  variant={showFilters ? "secondary" : "ghost"}
+                  size="sm"
+                  aria-expanded={showFilters}
+                  aria-controls="search-performance-filters"
+                  onClick={() => setShowFilters((current) => !current)}
+                  title="Toggle table filters"
                 >
-                  <DataTableTabs
-                    value={tab}
-                    onValueChange={(value) => {
-                      const nextTab = SEARCH_PERFORMANCE_TABS.find(
-                        (item) => item === value,
-                      );
-                      if (nextTab)
-                        onSearchChange({ tab: nextTab, page: undefined });
-                    }}
-                    actions={
-                      <ExportMenu
-                        actions={["sheets", "csv"]}
-                        onExport={(target) => void handleExport(target)}
-                        busy={isExporting}
-                        disabled={reportQuery.isPlaceholderData}
-                      />
-                    }
-                  >
-                    <TabsTrigger value="striking">
-                      {reportQuery.isPlaceholderData
-                        ? "Striking distance"
-                        : `Striking distance (${report.strikingDistance.length})`}
-                    </TabsTrigger>
-                    <TabsTrigger value="queries">Queries</TabsTrigger>
-                    <TabsTrigger value="pages">Pages</TabsTrigger>
-                    <TabsTrigger value="refresh">Refresh queue</TabsTrigger>
-                  </DataTableTabs>
-                  <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-2">
-                    <Button
-                      type="button"
-                      variant={showFilters ? "secondary" : "ghost"}
-                      size="sm"
-                      aria-expanded={showFilters}
-                      aria-controls="search-performance-filters"
-                      onClick={() => setShowFilters((current) => !current)}
-                      title="Toggle table filters"
-                    >
-                      <SlidersHorizontal data-icon="inline-start" />
-                      Filters
-                      {filterCount > 0 ? (
-                        <Badge size="sm">{filterCount}</Badge>
-                      ) : null}
-                    </Button>
-                    {reportQuery.isFetching && !reportQuery.isPending ? (
-                      <Spinner className="size-4 text-muted-foreground" />
-                    ) : null}
-                    <SearchPerformanceSelects
-                      search={search}
-                      countries={report.countries}
-                      reportRange={report.range}
-                      onSearchChange={onSearchChange}
-                    />
-                  </div>
-
-                  {showFilters ? filtersPanel : null}
-                  {reportQuery.isPlaceholderData ? (
-                    <div className="p-8 text-sm" role="status">
-                      Loading matching results…
-                    </div>
-                  ) : tab === "striking" ? (
-                    <StrikingDistanceTable
-                      projectId={projectId}
-                      rows={report.strikingDistance}
-                      page={page}
-                      pageSize={pageSize}
-                      onPageChange={(nextPage) =>
-                        onSearchChange({ page: nextPage })
-                      }
-                      onPageSizeChange={(size) =>
-                        onSearchChange({ page: undefined, size })
-                      }
-                      isFiltered={filterCount > 0}
-                      onClearFilters={resetFilters}
-                    />
-                  ) : tab === "refresh" ? (
-                    <div className="p-4">
-                      <ContentRefreshQueue
-                        projectId={projectId}
-                        rows={report.strikingDistance}
-                      />
-                    </div>
-                  ) : (
-                    <DimensionSection
-                      projectId={projectId}
-                      tableQuery={tableQuery}
-                      keyLabel={tab === "queries" ? "Query" : "Page"}
-                      page={page}
-                      pageSize={pageSize}
-                      onPageChange={(nextPage) =>
-                        onSearchChange({ page: nextPage })
-                      }
-                      onPageSizeChange={(size) =>
-                        onSearchChange({ page: undefined, size })
-                      }
-                      isFiltered={filterCount > 0}
-                      onClearFilters={resetFilters}
-                    />
-                  )}
-                </div>
+                  <SlidersHorizontal data-icon="inline-start" />
+                  Filters
+                  {filterCount > 0 ? (
+                    <Badge size="sm">{filterCount}</Badge>
+                  ) : null}
+                </Button>
+                {reportQuery.isFetching && !reportQuery.isPending ? (
+                  <Spinner className="size-4 text-muted-foreground" />
+                ) : null}
+                <SearchPerformanceSelects
+                  search={search}
+                  countries={report.countries}
+                  reportRange={report.range}
+                  onSearchChange={onSearchChange}
+                />
               </div>
-            </details>
+
+              {showFilters ? filtersPanel : null}
+              {reportQuery.isPlaceholderData ? (
+                <div className="p-8 text-sm" role="status">
+                  Loading matching results…
+                </div>
+              ) : tab === "striking" ? (
+                <StrikingDistanceTable
+                  projectId={projectId}
+                  rows={report.strikingDistance}
+                  page={page}
+                  pageSize={pageSize}
+                  onPageChange={(nextPage) =>
+                    onSearchChange({ page: nextPage })
+                  }
+                  onPageSizeChange={(size) =>
+                    onSearchChange({ page: undefined, size })
+                  }
+                  isFiltered={filterCount > 0}
+                  onClearFilters={resetFilters}
+                />
+              ) : tab === "refresh" ? (
+                <div className="p-4">
+                  <ContentRefreshQueue
+                    projectId={projectId}
+                    rows={report.strikingDistance}
+                  />
+                </div>
+              ) : (
+                <DimensionSection
+                  projectId={projectId}
+                  tableQuery={tableQuery}
+                  keyLabel={tab === "queries" ? "Query" : "Page"}
+                  page={page}
+                  pageSize={pageSize}
+                  onPageChange={(nextPage) =>
+                    onSearchChange({ page: nextPage })
+                  }
+                  onPageSizeChange={(size) =>
+                    onSearchChange({ page: undefined, size })
+                  }
+                  isFiltered={filterCount > 0}
+                  onClearFilters={resetFilters}
+                />
+              )}
+            </div>
           </>
         )}
 

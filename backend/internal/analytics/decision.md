@@ -44,20 +44,3 @@ Preserve: enable recognition only after required consent. The host consent manag
 Click capture stores a bounded event label, source path and normalized HTTP(S) destination host/path. No destination query, fragment, credentials or ad ID is retained. Configured outbound links emit one click, and unconfigured outbound links use `outbound_click`; JavaScript buttons may declare `data-uplumo-destination`. Other custom events retain their semantics. Observed arrivals count clicks with a different pageview at the same host/path and tab session within 30 minutes, possibly just beyond the report boundary. This is temporal association, not proof the click caused navigation; external activity, new-tab arrivals and old events stay unknown. Reporting is paged (1–100 rows, page 1–1000), at most 366 UTC days, with a 10-second read timeout; tenant middleware remains mandatory. The collection body is bounded at 8 KiB to accommodate the three bounded URL fields.
 
 Trace: `journey.go`, `repository.go`, `handler.go`, `httpapi/tracker.js`, migration 35, `journey_test.go`, mounted HTTP tests and frontend `scripts/tracker.test.ts`. RLS/no public policies and public/client grant revocation protect browser registry and the existing event tables now carrying these fields. Frontend query caching uses project/date keys and a 60-second stale window; there is no new server cache or paid provider. Verification and rollout details: `AUDIENCE_DESTINATIONS.txt`.
-
-## Tracking reliability and explicit intelligence source
-
-- **Decision:** initialize one tracker per site/document and observe replaceState
-  navigation as well as pushState/popstate. Analytics offers separate first-party
-  tracking and connected Google intelligence views; the default remains tracking.
-- **Why:** regressions reproduced duplicate pageviews/clicks for repeated snippets
-  and missing pageviews on replaceState navigation. The UI also needed a concrete
-  way to check received data without claiming a remote instrumentation audit.
-- **Preserve:** same session on SPA navigation, no hit on state-only/hash changes,
-  privacy checks before storage/collection, event/pageview deduplication, recognition
-  consent and existing payload/retention/rate limits. No new third-party request,
-  provider purchase, tracking payload field or database migration. Confirmed
-  outcomes still require explicitly emitted success events.
-- **Trace:** `backend/internal/httpapi/tracker.js`, frontend `scripts/tracker.test.ts`
-  (both bugs failed before fixes), `AnalyticsWorkspace.tsx`, `TrackingStatusCard.tsx`.
-  Received-day labels refer only to stored data in the chosen UTC report.

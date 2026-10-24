@@ -1,7 +1,21 @@
 import { SectionHeader } from "@/client/components/PageHeader";
 import { IndexNowCard } from "@/client/features/indexnow/IndexNowCard";
+import { SearchGrowthPanel } from "./SearchGrowthPanel";
 import { SearchPerformanceIndexing } from "./SearchPerformanceIndexing";
 import type { Report } from "./SearchPerformanceColumns";
+
+export function GrowthAnalysisDisclosure({ projectId }: { projectId: string }) {
+  return (
+    <details className="rounded-xl border border-border bg-card p-4">
+      <summary className="cursor-pointer font-medium">
+        Connect search performance to business outcomes · GSC + GA4
+      </summary>
+      <div className="mt-4">
+        <SearchGrowthPanel key={projectId} projectId={projectId} />
+      </div>
+    </details>
+  );
+}
 
 export function SearchIndexingTools({
   projectId,

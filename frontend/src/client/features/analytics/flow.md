@@ -43,10 +43,3 @@ from the already-loaded summary. It adds zero API/provider requests. Its action
 opens Tracking code or jumps to the existing visitor-action section. The native
 report disclosure changes visibility only; children retain their existing query
 keys, scopes and call boundaries. Opening it does not buy provider work.
-
-Analytics route -> URL-backed Website tracking / SEO intelligence switch.
-Website tracking keeps existing scoped queries; Check received data explicitly
-refreshes the selected summary. SEO intelligence uses the shared combined Google
-analysis, independently dated and cached; it never combines first-party events
-with GA4 outcomes or runs AI on opening. Tracker initialization is once per site
-per document; pushState, replaceState and popstate share URL-change deduplication.

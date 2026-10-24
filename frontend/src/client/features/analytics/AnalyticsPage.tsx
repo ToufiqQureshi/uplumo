@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { TrackingStatusCard } from "./TrackingStatusCard";
 import { AnalyticsOverview } from "./AnalyticsOverview";
 import { useQuery } from "@tanstack/react-query";
 import { Code } from "lucide-react";
@@ -94,11 +93,6 @@ export function AnalyticsPage({
           Understand where visits come from, what gets read, and which actions
           get recorded.
         </p>
-        <TrackingStatusCard
-          summary={summary}
-          onCheck={() => void summaryQuery.refetch()}
-          checking={summaryQuery.isFetching}
-        />
         {summaryQuery.isPending ? (
           <DashboardSkeleton />
         ) : summaryQuery.isError && !summary ? (

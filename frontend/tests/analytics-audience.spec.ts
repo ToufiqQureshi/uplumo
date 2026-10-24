@@ -100,7 +100,7 @@ test("daily audience and destination counts render with scoped paging and option
   page,
 }) => {
   const requests = await installAnalytics(page);
-  await page.goto("/p/e2e-project/analytics?view=traffic");
+  await page.goto("/p/e2e-project/analytics");
   await expect(
     page.getByRole("region", { name: "Traffic overview" }),
   ).toBeVisible();
@@ -167,7 +167,7 @@ for (const width of [320, 390]) {
   }) => {
     await page.setViewportSize({ width, height: 844 });
     await installAnalytics(page);
-    await page.goto("/p/e2e-project/analytics?view=traffic");
+    await page.goto("/p/e2e-project/analytics");
     await expect(
       page.getByRole("heading", { name: "Button and link destinations" }),
     ).toBeVisible();
@@ -190,7 +190,7 @@ test("destination errors do not hide the daily audience report", async ({
   page,
 }) => {
   await installAnalytics(page, true);
-  await page.goto("/p/e2e-project/analytics?view=traffic");
+  await page.goto("/p/e2e-project/analytics");
   await page
     .getByText("Explore audience, campaigns and page journeys", { exact: true })
     .click();

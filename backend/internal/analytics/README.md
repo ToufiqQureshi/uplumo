@@ -92,10 +92,3 @@ Optional browser recognition (`data-recognition="true"`) uses a 180-day site-key
 `GET /api/v1/projects/{projectId}/analytics/summary?from&to` adds `audience` rows: `date`, `newBrowsers`, `returningBrowsers`, `unknownPageviews`. `GET /api/v1/projects/{projectId}/analytics/clicks?from&to&page&limit` returns `rows` (`page`, `name`, `host`, `path`, `type`, `clicks`, `visitorDays`, `arrivals`) and `hasMore`. Both require session/project access. Dates are inclusive UTC days, at most 366. Click pages are 1–100 rows, page 1–1000; UI uses 20 rows and project/date-keyed one-minute TanStack caching. No new server cache or paid call.
 
 Collector additions are optional `b` (32 lowercase-hex browser ID), `c` (click boolean), `x` (absolute HTTP(S) destination without credentials). Clicks require event/session/pageview IDs. Configured clicks and automatic outbound links share the same deduplicated event record. Destination query strings/fragments are stripped; JavaScript buttons can specify `data-uplumo-destination`. Internal arrivals are matching later same-tab pageviews within 30 minutes, not proof of causation. External subsequent activity is unavailable.
-
-The tracker ignores a repeated install of the same site key in one document.
-SPA pushState/replaceState/popstate navigation records changed URLs once;
-state-only and fragment-only changes do not add pageviews. `scripts/tracker.test.ts`
-executes the served script and checks these behaviors alongside privacy/session
-regressions. Analytics keeps its first-party tracking report separate from the
-connected GSC/GA4 intelligence view.

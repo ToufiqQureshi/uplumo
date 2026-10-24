@@ -33,14 +33,3 @@ Audience recognition, campaign/session acquisition, geography, devices and page
 journeys remain available in an expandable section. A summary refresh failure
 shows an error alongside the last loaded data. AI attribution describes available
 signals without promising conversion uplift or recovery of all direct traffic.
-
-## Tracking and intelligence views
-
-`AnalyticsWorkspace.tsx` preserves Website tracking as the default and exposes
-SEO intelligence as a URL-backed `view=intelligence` tab. The shared
-`search-performance/SearchGrowthPanel` uses connected GSC/GA4 data with its own
-complete-period analysis scope; first-party tracker totals are never mixed into
-GA4 conversion rates. The Website tracking view retains its 7/30/90-day selector.
-`TrackingStatusCard.tsx` shows the latest recorded pageview **day in the selected
-report**, an explicit stored-data refresh and an installation/test checklist. It
-does not pretend to remotely verify all browser tags, blockers or consent.
