@@ -66,3 +66,16 @@ The IndexNow card (`indexnow/IndexNowCard.tsx`) sits at the bottom of the
 page, shown whether or not Search Console is connected: it works on any
 website and needs no Google connection. Rules live in
 `backend/internal/indexnow/README.md`.
+
+## Performance-first overview
+
+`SearchPerformanceOverview.tsx` shows exact report dates, an absolute click change
+only when a complete comparison exists, and up to three page review candidates
+from `buildContentRefreshQueue`. Candidate metrics cover qualifying query rows,
+not all page traffic. Ordering remains observed impressions, not business value
+or a predicted uplift. Review all pages opens the existing Refresh queue tab.
+
+Totals and trend precede the expandable GSC + GA4 business-outcomes panel. Google
+index inspection and IndexNow each have their own expandable section. They retain
+all existing controls and explicit-action boundaries. These sections stay mounted
+when collapsed, preserving loaded results and existing query behavior.
