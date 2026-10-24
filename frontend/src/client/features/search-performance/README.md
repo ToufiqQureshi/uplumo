@@ -2,11 +2,28 @@
 
 Turns first-party Search Console data into a review workflow: compare periods, find pages with queries ranking 5-20, start a focused content draft, and inspect Google's stored index status.
 
+## Owner action workflow
+
+The first screen must provide up to three existing-page review tasks from the
+already loaded GSC report, including the query, observed clicks/impressions,
+position, source dates and a concrete review checklist. GA4 is optional for this
+first value. Rank these candidates by returned impressions, never claimed
+revenue. The editor handoff must preserve the page, queries and evidence instead
+of starting an unrelated article. Connection failures, insufficient data and
+filtered/stale reports must not produce invented opportunities. Detailed reports
+and technical indexing tools remain available for investigation.
+
+The existing combined analysis checks GA4 connection status before offering
+analysis. Business outcomes still require configured and verified events;
+GSC-only candidates cannot establish enquiries, sales or improvement causes.
+
 Read [flow.md](flow.md) for the user workflow and API limits. Search Console opportunities are evidence for review, not a ranking promise or proof that content is stale.
 
 ## Code map
 
 - `SearchPerformancePage.tsx`
+- `SearchActionPlan.tsx` and `SearchActionPlan.test.ts`
+- `SearchPerformanceTools.tsx`
 - `searchPerformanceQueries.ts` and `searchPerformanceApi.ts`
 - `SearchPerformanceTrend.tsx` and `SearchPerformanceIndexing.tsx`
 - `ContentRefreshQueuePanel.tsx` and `contentRefreshQueue.ts`
@@ -14,8 +31,21 @@ Read [flow.md](flow.md) for the user workflow and API limits. Search Console opp
 
 ## Search growth
 
+`SearchActionPlan.tsx` reuses `buildContentRefreshQueue` for the first three
+safe-page review tasks. It carries source-page evidence through the existing
+expiring editor context; it neither fetches nor runs AI. The detailed report
+starts collapsed, and opens for a URL-selected tab, non-default pagination or
+active date/device/country/text filter. User expansion persists across report
+navigation without remounting its tables. `SearchPerformanceTools.tsx` keeps
+stored-index tools in a separate disclosure. The IndexNow card
+keeps its existing placement and engine limitations.
+
 `SearchGrowthPanel.tsx`, `growthApi.ts` and `GrowthEvidencePanel.tsx` expose the
-combined Google-organic GSC/GA4 analysis above the detailed GSC report. Analysis
+combined Google-organic GSC/GA4 analysis below the first tasks. The panel reuses
+the shared `ga4Connection` status query (a local database read, not a Google
+report); missing connections show a direct integration link, and status failures
+show a retry without assuming connectivity. Saved actions remain accessible.
+Analysis
 is explicit and independent of the detailed table's filters: 14/28-day windows,
 optional brand terms, top three review candidates, evidence and one next action.
 Advanced evidence, measurement setup, device rows, saved actions and stored AI

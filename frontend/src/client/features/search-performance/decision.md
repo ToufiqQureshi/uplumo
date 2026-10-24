@@ -7,9 +7,33 @@ in the linked feature READMEs; do not silently change them during a UI refactor.
 
 ## Product and report scope
 
+### Deliver a useful first step before GA4 setup
+
+- **Decision:** show up to three GSC-only page review tasks before the optional
+  business-goal analysis. Reuse `buildContentRefreshQueue`, safe HTTP URLs and
+  the existing editor evidence handoff; expose exact query metrics and dates.
+- **Why:** live inspection found both tested projects had real GSC rows but
+  their primary analysis action stopped at missing GA4. The backend already has
+  findings, baselines and weekly checks; duplicating it does not fix that first
+  experience. Impression ordering selects visibility candidates, not the most
+  commercially valuable pages or proven content defects.
+- **Preserve:** no new report/AI/provider requests, schedule, stored action or
+  site mutation on opening tasks. Query evidence remains incomplete and
+  filter-scoped. Context must be preserved before navigation; storage failure
+  must not open an unrelated draft. GA4 setup and verified goal instrumentation
+  are still required for business-outcome analysis. Connection errors retain a
+  retry, saved actions remain accessible, and no revenue estimate is invented.
+- **Trace:** `SearchActionPlan.tsx`, `SearchGrowthPanel.tsx`,
+  `SearchPerformancePage.tsx`; mounted regression tests and
+  `tests/search-owner-actions.spec.ts`. Detailed reports start collapsed unless
+  URL filters/pagination select an investigation. Expansion persists across tab
+  and pagination changes without remounting table state; stored-index tools have a separate
+  disclosure. Live qualified-lead reconciliation, owner interviews and
+  post-change outcomes are not established by fixture-based tests.
+
 | Decision                                                                                                                | Why                                                                                                                                | Code / related contract                                                                   |
 | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Start with the user's business goal, an explicit analysis action and three next-action candidates.                      | A solo owner needs a useful decision before a large report. More metrics alone do not deliver value.                               | `SearchGrowthPanel.tsx`, `GrowthSettings.tsx`                                             |
+| Start with GSC page tasks; add the business goal through the explicit GA4 analysis when connected.                      | A solo owner needs a useful decision before a large report. More metrics alone do not deliver value.                               | `SearchGrowthPanel.tsx`, `GrowthSettings.tsx`                                             |
 | Keep the detailed GSC report's dates/filters in the URL, and label the growth analysis's independent date/source scope. | Shareable investigation filters must not silently reinterpret a saved GA4 finding.                                                 | `SearchPerformancePage.tsx`, `searchPerformanceQueries.ts`                                |
 | Keep all-event counts, selected-goal session rates, ordered user funnels and AI evidence separately labeled.            | They have different denominators and collection scopes; combining labels can invent business outcomes.                             | `growthApi.ts`, `GrowthPageCard.tsx`, `GrowthFunnel.tsx`                                  |
 | Show measured evidence, possible explanations and a next check; keep missing/limited values explicit.                   | Search averages do not establish why a person did not click, and unavailable data is not measured zero.                            | `GrowthClickDiagnosis.tsx`, backend `ga4/growth_clicks.go`                                |
