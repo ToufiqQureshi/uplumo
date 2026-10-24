@@ -114,10 +114,7 @@ function PublishActions({
     <div className="space-y-3">
       {published ? <PublishedLine publication={publication} /> : null}
       {published && publication.status === "publish" ? (
-        <TrackArticle
-          projectId={projectId}
-          targetKeyword={targetKeyword}
-        />
+        <TrackArticle projectId={projectId} targetKeyword={targetKeyword} />
       ) : null}
       {hasUnsavedChanges ? (
         <p className="text-sm text-muted-foreground">

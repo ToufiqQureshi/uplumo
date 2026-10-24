@@ -101,11 +101,11 @@ func TestAnalyticsEndToEnd(t *testing.T) {
 		anonymous := httptest.NewRecorder()
 		handler.ServeHTTP(anonymous, httptest.NewRequestWithContext(ctx, route.method, target, nil))
 		if anonymous.Code != http.StatusUnauthorized {
-			 t.Fatalf("unprotected analytics route %s: %d", target, anonymous.Code)
+			t.Fatalf("unprotected analytics route %s: %d", target, anonymous.Code)
 		}
 		foreign := api(route.method, "/api/v1/projects/foreign-"+id+route.suffix)
 		if foreign.Code != http.StatusNotFound {
-			 t.Fatalf("foreign analytics route %s: %d", target, foreign.Code)
+			t.Fatalf("foreign analytics route %s: %d", target, foreign.Code)
 		}
 	}
 	sitePath := "/api/v1/projects/" + project + "/analytics/site"

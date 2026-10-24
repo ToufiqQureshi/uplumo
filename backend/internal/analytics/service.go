@@ -87,13 +87,13 @@ type Summary struct {
 
 // CampaignCount is a tagged campaign's visitor-day and session counts.
 type CampaignCount struct {
-	Source      string `json:"source"`
-	Medium      string `json:"medium"`
-	Campaign    string `json:"campaign"`
-	Term        string `json:"term"`
-	Content     string `json:"content"`
-	Visitors    int64  `json:"visitors"`
-	Sessions    int64  `json:"sessions"`
+	Source   string `json:"source"`
+	Medium   string `json:"medium"`
+	Campaign string `json:"campaign"`
+	Term     string `json:"term"`
+	Content  string `json:"content"`
+	Visitors int64  `json:"visitors"`
+	Sessions int64  `json:"sessions"`
 }
 
 // AcquisitionCount is the first known channel of a session.
