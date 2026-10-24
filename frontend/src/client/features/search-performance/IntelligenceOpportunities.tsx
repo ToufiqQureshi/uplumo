@@ -156,11 +156,24 @@ function Opportunity({
   return (
     <article className={`space-y-3 p-5 ${selected ? "bg-violet-500/5" : ""}`}>
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <p className="font-medium">{finding.title}</p>
+        <p className="font-semibold text-foreground">{finding.title}</p>
         <Badge variant="secondary">{page.findings.length} findings</Badge>
       </div>
       <p className="break-all text-xs text-muted-foreground">{page.page}</p>
-      <p className="text-sm">{finding.evidence}</p>
+
+      {/* Measured Evidence & Action Callout */}
+      <div className="rounded-lg border border-border/80 bg-background/60 p-3 space-y-1.5 text-xs">
+        <p className="text-muted-foreground leading-relaxed">
+          <strong className="text-foreground font-medium">
+            Observed Evidence:
+          </strong>{" "}
+          {finding.evidence}
+        </p>
+        <p className="text-violet-700 dark:text-violet-300 font-medium leading-relaxed">
+          💡 <strong>Recommended Decision:</strong> {finding.action}
+        </p>
+      </div>
+
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
         <span>
           {growthCount(page.current.clicks)} clicks
@@ -178,12 +191,13 @@ function Opportunity({
           session outcome rate
         </span>
       </div>
+
       <Button
         variant={selected ? "secondary" : "outline"}
         size="sm"
         onClick={() => onSelect(page.page)}
       >
-        View evidence and next step <ArrowUpRight />
+        View evidence & action plan <ArrowUpRight />
       </Button>
     </article>
   );
