@@ -27,6 +27,54 @@ page you changed. `/api/health` is only process liveness; `/readyz` checks
 Postgres and Redis with bounded timeouts. Railway uses `/readyz` before routing
 traffic to a replacement deployment.
 
+## Staging: test every change before production
+
+Every change goes to staging first, is checked there in a browser, and only
+then goes to production. Staging is a separate Railway environment in the same
+project; it shares nothing with production but the Docker image recipe.
+
+| | Staging | Production |
+| --- | --- | --- |
+| Railway environment | `staging` | `production` |
+| App service | `uplumo-staging` | `uplumo` |
+| URL | `https://uplumo-staging-staging.up.railway.app` | `https://uplumo.com` |
+| Postgres | Railway `Postgres` service in `staging` | Supabase |
+| Redis | Railway `Redis-qkZY` service in `staging` | Railway `Redis` |
+| Razorpay | test-mode keys only, never live | live keys |
+| `PROVIDER_DAILY_LIMIT_USD` | `2` | owner's emergency brake |
+
+Deploy any branch (a PR's head, or `main`) from a separate checkout so local
+work is untouched:
+
+```sh
+git worktree add --detach ../uplumo-staging-deploy origin/<branch>   # once; later: git -C ../uplumo-staging-deploy checkout --detach origin/<branch>
+cd ../uplumo-staging-deploy
+railway up --ci -e staging -s uplumo-staging -m "staging: <branch>"
+```
+
+Then require `/readyz` to return 200 on the staging URL and test the change
+in a browser (sign in with the staging test account). Migrations run on
+staging first, so a broken migration fails there, not on customer data.
+
+Staging variables (names only; values live in Railway):
+
+- Set by reference or generated, do not copy from production:
+  `DATABASE_URL` = `${{Postgres.DATABASE_URL}}`, `REDIS_URL` =
+  `${{Redis-qkZY.REDIS_URL}}`, `BETTER_AUTH_SECRET` (its own random value).
+- Staging values: `PUBLIC_URL` and `BETTER_AUTH_URL` (the staging URL),
+  `STAFF_EMAILS`, `PROVIDER_DAILY_LIMIT_USD`.
+- Copied from production by the owner: `LOOPS_API_KEY` and the three
+  `LOOPS_TRANSACTIONAL_*_ID`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`.
+- Needed before paid features can be tested: Razorpay **test-mode**
+  `RAZORPAY_*` values. The server refuses to start on staging (an https site)
+  if `DATAFORSEO_API_KEY` or the AI model key is set without them.
+
+Known shared state: staging uses the production Loops account, so staging
+sign-ups appear as contacts in the production Loops audience. Google sign-in
+on staging needs the staging callback URLs added to the OAuth client
+(`/api/auth/callback/google`, `/api/gsc/oauth/callback`,
+`/api/ga4/oauth/callback` on the staging URL).
+
 ## 1. Create the project
 
 1. Create the Postgres database in Supabase. In Railway, create a project and add **Redis**.

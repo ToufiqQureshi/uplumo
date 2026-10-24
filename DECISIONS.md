@@ -43,6 +43,10 @@ Last updated: 23 Oct 2026
 
 ## 2. Waiting for the owner
 
+- [ ] **Staging Razorpay test keys:** add test-mode `RAZORPAY_*` values to `staging` / `uplumo-staging` so paid features (and the AI key) can be tested there. Never live keys.
+- [ ] **Staging Google sign-in:** add the three staging callback URLs to the Google OAuth client (listed in `docs/DEPLOY.md`, "Staging").
+- [ ] **Staging Loops:** staging shares the production Loops account; decide whether a separate Loops key is worth it to keep test contacts out of the production audience.
+
 - [ ] **Razorpay live plans:** confirm `RAZORPAY_PLAN_ID_BASIC`, `_PRO`, `_BUSINESS` and `_AGENCY` hold live plan ids whose amounts equal `catalog.go` (Solo ₹999, Growth ₹2,499, Business ₹4,999, Agency ₹9,999).
 - [x] **DataForSEO:** owner confirms current access works (23 Oct). The account-side $2/day limit is deliberate protection while bugs are fixed; preserve it. Earlier 401/40104 logs do not establish current failure.
 - [ ] **Google OAuth data-access verification:** add the scope justification, upload the demo video (YouTube, unlisted), then submit in the Verification Center. Branding is already verified.
@@ -309,3 +313,27 @@ Owner-approved scope: one focused PR adds optional 180-day browser recognition a
 - Confirmed live Data API exposure was closed using the same idempotent SQL committed as migration 42. Afterward: 0 tables without RLS, 0 client grants, trusted-owner reads and HTTP readiness/session checks pass. This emergency Supabase migration does not mark pending Goose versions as applied.
 - Shared worker supervision replaces duplicated restart code and prevents audit/rank queues from permanently stopping after temporary DB errors. Opaque IDs use Go `crypto/rand.Text`; MCP no-op telemetry and frontend fixture bypass code are removed. Successful external MCP tools now persist the actual first-call onboarding milestone.
 - The [launch audit](docs/audits/2026-10-23-launch-readiness.md) records economics assumptions, checks and live acceptance limits.
+
+## Staging environment (23-24 Oct 2026)
+
+- **Decision:** the owner asked for staging so pull requests are tested
+  before production. Railway environment `staging` in project
+  `jubilant-kindness`: service `uplumo-staging`, its own `Postgres` and
+  `Redis-qkZY`, URL `https://uplumo-staging-staging.up.railway.app`, built from
+  the same `Dockerfile` with `railway up`. Variables (names only):
+  `DATABASE_URL` and `REDIS_URL` by Railway reference, a staging-only
+  `BETTER_AUTH_SECRET`, `PUBLIC_URL`, `BETTER_AUTH_URL`, `STAFF_EMAILS`,
+  `PROVIDER_DAILY_LIMIT_USD` = 2, and the owner copied `LOOPS_*` and
+  `GOOGLE_CLIENT_*` from production. The owner's `OPENROUTER_API_KEY` was
+  removed from staging because a live site with an AI key and no Razorpay
+  keys refuses to start (it crashed once with exactly that error).
+- **Why:** merging does not deploy, but deploying untested code to customers
+  who pay real money is the risk. Staging runs migrations and real browser
+  checks first, with no production data and a $2/day provider brake.
+- **Preserve:** staging never gets production `DATABASE_URL`, live Razorpay
+  keys or customer data. A new staging variable is added by name to
+  `docs/DEPLOY.md`. Verified so far on staging: PRs #197 and #198 (audit card
+  shows the real crawl; layout saves and survives reload), with a test
+  account `tech.revmerito+staging@gmail.com`.
+- **Trace:** `docs/DEPLOY.md` ("Staging"), `CLAUDE.md` section 0. Costs about
+  $5-10 a month on Railway. Open items in section 2.
