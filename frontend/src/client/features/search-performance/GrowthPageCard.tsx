@@ -124,18 +124,30 @@ export function GrowthPageCard({
           {report.currency}. Only purchases reported to GA4 are included.
         </p>
       ) : null}
-      {page.findings.map((finding) => (
-        <div key={finding.kind} className="text-sm">
-          <h4 className="font-medium">{finding.title}</h4>
-          <p className="mt-1 text-muted-foreground">{finding.evidence}</p>
-          <p className="mt-1">{finding.action}</p>
-        </div>
-      ))}
+      {/* Recommended Action Plan for Non-Technical Users */}
+      <div className="rounded-lg border border-violet-500/20 bg-violet-500/5 p-4 space-y-3">
+        <h4 className="font-semibold text-sm flex items-center gap-1.5 text-foreground">
+          🎯 Action Plan & Decision Guide for this Page
+        </h4>
+        {page.findings.map((finding) => (
+          <div key={finding.kind} className="text-xs space-y-1">
+            <h4 className="font-medium text-foreground">{finding.title}</h4>
+            <p className="text-muted-foreground">
+              <strong className="text-foreground">Evidence:</strong>{" "}
+              {finding.evidence}
+            </p>
+            <p className="text-violet-700 dark:text-violet-300 font-medium">
+              <strong>What to do:</strong> {finding.action}
+            </p>
+          </div>
+        ))}
+      </div>
+
       <div className="flex flex-wrap gap-2">
         <Button size="sm" variant="outline" onClick={onAnalyst}>
           Create AI improvement brief
         </Button>
-        <Button size="sm" variant="ghost" onClick={openEditor}>
+        <Button size="sm" variant="secondary" onClick={openEditor}>
           Improve this page in editor
         </Button>
       </div>

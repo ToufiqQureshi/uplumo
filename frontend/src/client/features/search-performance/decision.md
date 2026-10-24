@@ -59,24 +59,22 @@ in the linked feature READMEs; do not silently change them during a UI refactor.
   choice, reason, affected code, trade-off and verification/constraints; replace
   superseded statements rather than accumulating contradictory appendices.
 
-## Evidence-led intelligence workspace
+## Evidence-led intelligence workspace and plain-language decision guide
 
-- **Decision:** replace the generic impression-only overview with the existing
-  combined GSC/GA4 analysis as the primary workspace. Show eight scoped metric
-  cards, paged measured findings, page investigations and editable analyst
-  questions. Keep detailed GSC reports accessible with explicit scope.
-- **Why:** the owner requested business insights from both Google sources, with
-  the provided dashboard image as visual direction. Repeated general advice and
-  ranking candidates alone did not answer what changed or where outcomes fell.
-- **Preserve:** the existing server's findings, minimum samples, authorization,
-  report cache, restricted-data suppression and bounded calls. No new paid or
-  automatic Google reads. Cards describe returned/matched pages rather than
-  whole-site totals; rates are weighted and missing values are never zero-filled.
-  A changed match cohort suppresses GA4 deltas. Goal rates never fall back to all
-  key events. AI drafts retain existing credit review and explicit Send.
+- **Decision:** replace generic/technical impression-only views with an executive
+  plain-language decision guide, clear business metric explanations ("What this
+  means" & "Recommended Action"), and structured finding action plans across
+  `IntelligenceMetrics.tsx`, `IntelligenceOpportunities.tsx`, and `GrowthPageCard.tsx`.
+- **Why:** non-technical users looking at GSC and GA4 numbers struggle to understand
+  raw metrics (e.g. CTR, engagement rates, position averages) without actionable
+  business context. An executive decision summary translates numbers into concrete
+  1-2-3 decision steps (Visibility, Conversion Quality, Immediate Action).
+- **Preserve:** existing server findings, authorization, report cache, restricted-data
+  suppression and bounded calls. No new paid or automatic Google reads. Cards describe
+  returned/matched pages rather than whole-site totals; rates are weighted and missing
+  values are never zero-filled. A changed match cohort suppresses GA4 deltas. Goal
+  rates never fall back to all key events. AI drafts retain existing credit review and
+  explicit Send.
 - **Trace:** `SearchGrowthPanel.tsx`, `IntelligenceMetrics.tsx`,
   `intelligenceMetrics.ts`, `IntelligenceOpportunities.tsx`, `GrowthPageCard.tsx`,
-  `SearchPerformancePage.tsx`. Metric regressions cover weighting, missing goals,
-  restricted data, empty reports and comparison coverage. Mounted panel tests
-  cover cached remounts, project isolation and question handoff. No new backend
-  report endpoint, scoring model, indexing guarantee or revenue inference.
+  `SearchPerformancePage.tsx`. Verified with unit tests in `pnpm test` and `pnpm ci:check`.
