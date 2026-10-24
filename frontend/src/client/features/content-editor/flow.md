@@ -37,7 +37,7 @@ The writer selects one of the current unfinished score checks → sidebar stores
 only its ID/mode and draft/topic scope → AI help resolves fresh check evidence →
 an explicit action sends bounded task instructions with the selected passage.
 Preparing a task never generates or inserts content. Published articles link to
-free enquiry evidence and the existing explicit paid-tracking flows.
+the existing explicit paid-tracking flows.
 
 AI rewrite actions require an explicit visual-editor selection within one text
 block and at most 5,000 characters, with no images or other non-text nodes.

@@ -1,7 +1,7 @@
 # Analytics
 
 Uplumo Analytics is a first-party tracker (`/t.js`) and dashboard for
-acquisition, sessions, visible page engagement and selected outcome events.
+acquisition, sessions, visible page engagement and custom events.
 
 ## Flow
 
@@ -14,17 +14,16 @@ acquisition, sessions, visible page engagement and selected outcome events.
 3. **Custom events.** Any element with `data-uplumo-event="Name"` is tracked
    when clicked, with no code (`<button data-uplumo-event="Signup">`). Code
    can call `window.uplumo("Name")`. To count a successful form, booking or
-   purchase, call it only after the action succeeds, then select that event
-   name in Enquiries as the project's goal. A button click is not a confirmed
-   outcome.
+  purchase, call it only after the action succeeds. A button click alone does
+  not confirm a completed outcome.
 4. While a page is visible, cumulative engagement time is upserted every 15
    seconds and on page hide/navigation. Duplicate updates keep the maximum
    duration, so retries do not add time twice. Hidden time is excluded; the
    time up to the moment the page is hidden is kept (`visibleSinceTick` in
    `httpapi/tracker.js`), because `visibilitychange` fires after the page is
    already hidden.
-5. The summary returns visitor-days, sessions, engaged sessions, bounce and
-   goal rates, acquisition channels, tagged campaigns, entry/exit pages,
+5. The summary returns visitor-days, sessions, engaged sessions, bounce rate,
+  acquisition channels, tagged campaigns, entry/exit pages,
    average page/session time, referrers, devices, geography and custom events.
    Landing and exit pages, like campaigns and acquisition, come from the
    whole session: a session that crosses the edge of the range keeps its
@@ -35,9 +34,9 @@ A tab opened by another page starts with a copy of the opener's
 page only (`history.length === 1`, not a reload), so reloads and later pages
 in the same tab stay one session.
 
-An engaged session has at least 10 seconds of visible page time, two
-pageviews, or the selected goal event. Time means the page was visible in the
-browser; it does not prove the visitor was looking at it.
+An engaged session has at least 10 seconds of visible page time or two
+pageviews. Time means the page was visible in the browser; it does not prove
+the visitor was looking at it.
 
 Acquisition reads `utm_source`, `utm_medium`, `utm_campaign`, `utm_term` and
 `utm_content` (each capped at 100 characters) on non-internal pageviews.
@@ -45,8 +44,8 @@ Acquisition reads `utm_source`, `utm_medium`, `utm_campaign`, `utm_term` and
 LinkedIn and Meta click-ID parameter names can supply a platform label when no
 UTM source is present; their values are discarded. This identifies a platform
 signal, not a specific campaign or proof that a Meta click was paid. Other
-query parameters and raw ad click IDs are not stored. Goal rates connect events
-only within the same short session. Do not put personal information in UTM values.
+query parameters and raw ad click IDs are not stored. Do not put personal
+information in UTM values.
 
 ## Tables
 
@@ -80,36 +79,12 @@ only within the same short session. Do not put personal information in UTM value
 If the Analytics page shows no visits, check the Railway HTTP logs for
 `/t.js` and `/collect`: no requests means the snippet is not on the site.
 
-## Enquiry evidence and change baselines
+## Retained historical data
 
-`enquiries.go` and `enquiry_handler.go` serve project-protected
-`/api/v1/projects/{projectId}/analytics/enquiries` routes (contract:
-`backend/api/enquiries.yaml`). Choose one exact custom-event name, such as a
-successful form submission, and emit it only after success. No paid providers
-or third-party event forwarding are used.
-
-- `go_analytics_enquiry_goals` stores one selected event per project.
-  `go_analytics_enquiry_changes` stores at most 100 immutable pre-change
-  baselines/project; latest 20 are listed, older entries reappear as newer ones
-  are deleted. Both cascade on project deletion.
-- Report compares the latest two complete UTC weeks, excludes today, and lists
-  the top 50 paths by visitor-days. Daily salted hashes rotate: counts are
-  visitor-days, never identifiable people. Goal visitors require a matching
-  pageview/hash/path/window; repeated events cannot inflate rates above 100%.
-- A drop flag requires at least 30 visitor-days in each week, 5 earlier goal
-  visitors, traffic within ±20%, and at least a 50% rate decrease. No observed
-  selected event in 28 complete days means verify tracking, never lost leads.
-  These rules surface a hypothesis; they cannot prove a broken form or revenue
-  loss. Flags are calculated on read and displayed in-app, not pushed externally.
-- Saving a change requires a path without query/fragment and a note of 1–500
-  characters. A project lock serializes the cap and request-key replay. Baseline
-  metrics, goal name and seven-day dates are frozen. Comparison uses the first
-  seven complete UTC days after the change date, so today never mixes partial
-  traffic with complete days. Later goal changes cannot rewrite earlier evidence.
-- All reads/writes require existing session/project middleware; baseline ID and
-  project are checked together. Deleting a foreign baseline is a harmless no-op.
-  The endpoint never requests a customer URL or runs a paid check.
-
+The enquiry measurement UI and API have been removed. Migration 00028 is kept
+in migration history, so existing goal and baseline rows are not dropped. New
+code does not read or write those legacy tables; normal Analytics event data
+continues to be collected and reported.
 ## Daily recognition and click destinations
 
 Optional browser recognition (`data-recognition="true"`) uses a 180-day site-keyed localStorage ID after required consent, with only its site-scoped hash/first-seen timestamp stored server-side. Default snippets retain anonymous visitor-days. Daily new/returning recognized browsers and unrecognized pageview coverage are separate measures; old visits cannot be classified. See backend analytics `decision.md` and `AUDIENCE_DESTINATIONS.txt` for precise counting, consent, retention and verification.

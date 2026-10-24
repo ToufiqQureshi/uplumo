@@ -1,6 +1,4 @@
 import { SearchGrowthPanel } from "./SearchGrowthPanel";
-import { SearchActionPlan } from "./SearchActionPlan";
-import { SearchPerformanceTools } from "./SearchPerformanceTools";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
@@ -18,6 +16,8 @@ import { Spinner } from "@/client/components/ui/spinner";
 import { DataTableTabs } from "@/client/components/table/DataTableToolbar";
 import { TabsTrigger } from "@/client/components/ui/tabs";
 import { GoogleConnectionCard } from "@/client/features/integrations/GoogleConnectionCard";
+import { IndexNowCard } from "@/client/features/indexnow/IndexNowCard";
+import { SectionHeader } from "@/client/components/PageHeader";
 import { DimensionSection } from "@/client/features/search-performance/SearchPerformanceDimensionSection";
 import { SearchPerformanceSelects } from "@/client/features/search-performance/SearchPerformanceSelects";
 import { SearchPerformanceLoadingState } from "@/client/features/search-performance/SearchPerformanceLoadingState";
@@ -40,6 +40,7 @@ import { TotalsCards } from "@/client/features/search-performance/SearchPerforma
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { ContentRefreshQueue } from "@/client/features/search-performance/ContentRefreshQueuePanel";
 import { SearchPerformanceTrend } from "@/client/features/search-performance/SearchPerformanceTrend";
+import { SearchPerformanceIndexing } from "@/client/features/search-performance/SearchPerformanceIndexing";
 import { buildContentRefreshQueue } from "@/client/features/search-performance/contentRefreshQueue";
 import {
   exportSearchPerformanceTable,
@@ -50,7 +51,14 @@ import {
   SEARCH_PERFORMANCE_TABS,
   type SearchPerformanceSearch,
   type SearchPerformanceTab,
+  type SearchPerformanceTableDimension,
 } from "@/types/schemas/search-performance";
+
+function tabDimension(
+  tab: SearchPerformanceTab,
+): SearchPerformanceTableDimension {
+  return tab === "pages" ? "page" : "query";
+}
 
 function activeFilterCount(
   search: SearchPerformanceSearch,
@@ -109,18 +117,9 @@ export function SearchPerformancePage({
   const [showFilters, setShowFilters] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const filterCount = activeFilterCount(search, textFilters);
-  const tab: SearchPerformanceTab = search.tab ?? "striking";
+  const tab = search.tab ?? "striking";
   const page = search.page ?? 1;
   const pageSize = search.size ?? SEARCH_PERFORMANCE_DEFAULT_PAGE_SIZE;
-  const reportRequested =
-    tab !== "striking" ||
-    filterCount > 0 ||
-    page > 1 ||
-    pageSize !== SEARCH_PERFORMANCE_DEFAULT_PAGE_SIZE;
-  const [detailsOpen, setDetailsOpen] = useState(reportRequested);
-  useEffect(() => {
-    if (reportRequested) setDetailsOpen(true);
-  }, [reportRequested]);
 
   const filterInput = {
     ...buildFilterInput(search),
@@ -135,7 +134,7 @@ export function SearchPerformancePage({
   });
   const report = reportQuery.data;
   const isTableTab = tab === "queries" || tab === "pages";
-  const dimension = tab === "pages" ? "page" : "query";
+  const dimension = tabDimension(tab);
   const tableQuery = useQuery({
     ...tableQueryOptions(projectId, dimension, page, pageSize, filterInput),
     enabled: report?.connected === true && isTableTab,
@@ -241,8 +240,8 @@ export function SearchPerformancePage({
           <div>
             <h1 className="text-2xl font-semibold">Search Performance</h1>
             <p className="text-sm text-muted-foreground">
-              Choose a page to improve, review the evidence, and track the
-              result.
+              See your site&apos;s clicks, impressions, CTR, and position from
+              Google Search Console.
             </p>
           </div>
           {report?.connected ? (
@@ -270,143 +269,134 @@ export function SearchPerformancePage({
         ) : (
           <>
             {reportQuery.isError ? reportError : null}
-            {!reportQuery.isPlaceholderData ? (
-              <SearchActionPlan
-                projectId={projectId}
-                rows={report.strikingDistance}
-                range={report.range}
-              />
-            ) : (
-              <SearchPerformanceLoadingState />
-            )}
             <SearchGrowthPanel key={projectId} projectId={projectId} />
-            <details
-              open={detailsOpen}
-              onToggle={(event) => setDetailsOpen(event.currentTarget.open)}
-              className="rounded-xl border border-border bg-card"
-            >
-              <summary className="cursor-pointer px-4 py-4 font-medium">
-                Detailed search report and filters
-              </summary>
-              <div className="space-y-4 px-4 pb-4">
-                {reportQuery.isPlaceholderData ? (
-                  <SearchPerformanceLoadingState />
-                ) : (
-                  <TotalsCards report={report} />
-                )}
-                {!reportQuery.isPlaceholderData ? (
-                  <SearchPerformanceTrend report={report} />
+            {reportQuery.isPlaceholderData ? (
+              <SearchPerformanceLoadingState />
+            ) : (
+              <TotalsCards report={report} />
+            )}
+            {!reportQuery.isPlaceholderData ? (
+              <SearchPerformanceTrend report={report} />
+            ) : null}
+            <SearchPerformanceIndexing
+              projectId={projectId}
+              strikingDistance={
+                report?.connected ? report.strikingDistance : []
+              }
+            />
+            <div className="overflow-hidden rounded-xl border border-border bg-card">
+              <DataTableTabs
+                value={tab}
+                onValueChange={(value) => {
+                  const nextTab = SEARCH_PERFORMANCE_TABS.find(
+                    (item) => item === value,
+                  );
+                  if (nextTab)
+                    onSearchChange({ tab: nextTab, page: undefined });
+                }}
+                actions={
+                  <ExportMenu
+                    actions={["sheets", "csv"]}
+                    onExport={(target) => void handleExport(target)}
+                    busy={isExporting}
+                    disabled={reportQuery.isPlaceholderData}
+                  />
+                }
+              >
+                <TabsTrigger value="striking">
+                  {reportQuery.isPlaceholderData
+                    ? "Striking distance"
+                    : `Striking distance (${report.strikingDistance.length})`}
+                </TabsTrigger>
+                <TabsTrigger value="queries">Queries</TabsTrigger>
+                <TabsTrigger value="pages">Pages</TabsTrigger>
+                <TabsTrigger value="refresh">Refresh queue</TabsTrigger>
+              </DataTableTabs>
+              <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-2">
+                <Button
+                  type="button"
+                  variant={showFilters ? "secondary" : "ghost"}
+                  size="sm"
+                  aria-expanded={showFilters}
+                  aria-controls="search-performance-filters"
+                  onClick={() => setShowFilters((current) => !current)}
+                  title="Toggle table filters"
+                >
+                  <SlidersHorizontal data-icon="inline-start" />
+                  Filters
+                  {filterCount > 0 ? (
+                    <Badge size="sm">{filterCount}</Badge>
+                  ) : null}
+                </Button>
+                {reportQuery.isFetching && !reportQuery.isPending ? (
+                  <Spinner className="size-4 text-muted-foreground" />
                 ) : null}
-                <div className="overflow-hidden rounded-xl border border-border bg-card">
-                  <DataTableTabs
-                    value={tab}
-                    onValueChange={(value) => {
-                      const nextTab = SEARCH_PERFORMANCE_TABS.find(
-                        (item) => item === value,
-                      );
-                      if (nextTab)
-                        onSearchChange({ tab: nextTab, page: undefined });
-                    }}
-                    actions={
-                      <ExportMenu
-                        actions={["sheets", "csv"]}
-                        onExport={(target) => void handleExport(target)}
-                        busy={isExporting}
-                        disabled={reportQuery.isPlaceholderData}
-                      />
-                    }
-                  >
-                    <TabsTrigger value="striking">
-                      {reportQuery.isPlaceholderData
-                        ? "Striking distance"
-                        : `Striking distance (${report.strikingDistance.length})`}
-                    </TabsTrigger>
-                    <TabsTrigger value="queries">Queries</TabsTrigger>
-                    <TabsTrigger value="pages">Pages</TabsTrigger>
-                    <TabsTrigger value="refresh">Refresh queue</TabsTrigger>
-                  </DataTableTabs>
-                  <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-2">
-                    <Button
-                      type="button"
-                      variant={showFilters ? "secondary" : "ghost"}
-                      size="sm"
-                      aria-expanded={showFilters}
-                      aria-controls="search-performance-filters"
-                      onClick={() => setShowFilters((current) => !current)}
-                      title="Toggle table filters"
-                    >
-                      <SlidersHorizontal data-icon="inline-start" />
-                      Filters
-                      {filterCount > 0 ? (
-                        <Badge size="sm">{filterCount}</Badge>
-                      ) : null}
-                    </Button>
-                    {reportQuery.isFetching && !reportQuery.isPending ? (
-                      <Spinner className="size-4 text-muted-foreground" />
-                    ) : null}
-                    <SearchPerformanceSelects
-                      search={search}
-                      countries={report.countries}
-                      reportRange={report.range}
-                      onSearchChange={onSearchChange}
-                    />
-                  </div>
-
-                  {showFilters ? filtersPanel : null}
-                  {reportQuery.isPlaceholderData ? (
-                    <div className="p-8 text-sm" role="status">
-                      Loading matching results…
-                    </div>
-                  ) : tab === "striking" ? (
-                    <StrikingDistanceTable
-                      projectId={projectId}
-                      rows={report.strikingDistance}
-                      page={page}
-                      pageSize={pageSize}
-                      onPageChange={(nextPage) =>
-                        onSearchChange({ page: nextPage })
-                      }
-                      onPageSizeChange={(size) =>
-                        onSearchChange({ page: undefined, size })
-                      }
-                      isFiltered={filterCount > 0}
-                      onClearFilters={resetFilters}
-                    />
-                  ) : tab === "refresh" ? (
-                    <div className="p-4">
-                      <ContentRefreshQueue
-                        projectId={projectId}
-                        rows={report.strikingDistance}
-                      />
-                    </div>
-                  ) : (
-                    <DimensionSection
-                      projectId={projectId}
-                      tableQuery={tableQuery}
-                      keyLabel={tab === "queries" ? "Query" : "Page"}
-                      page={page}
-                      pageSize={pageSize}
-                      onPageChange={(nextPage) =>
-                        onSearchChange({ page: nextPage })
-                      }
-                      onPageSizeChange={(size) =>
-                        onSearchChange({ page: undefined, size })
-                      }
-                      isFiltered={filterCount > 0}
-                      onClearFilters={resetFilters}
-                    />
-                  )}
-                </div>
+                <SearchPerformanceSelects
+                  search={search}
+                  countries={report.countries}
+                  reportRange={report.range}
+                  onSearchChange={onSearchChange}
+                />
               </div>
-            </details>
+
+              {showFilters ? filtersPanel : null}
+              {reportQuery.isPlaceholderData ? (
+                <div className="p-8 text-sm" role="status">
+                  Loading matching results…
+                </div>
+              ) : tab === "striking" ? (
+                <StrikingDistanceTable
+                  projectId={projectId}
+                  rows={report.strikingDistance}
+                  page={page}
+                  pageSize={pageSize}
+                  onPageChange={(nextPage) =>
+                    onSearchChange({ page: nextPage })
+                  }
+                  onPageSizeChange={(size) =>
+                    onSearchChange({ page: undefined, size })
+                  }
+                  isFiltered={filterCount > 0}
+                  onClearFilters={resetFilters}
+                />
+              ) : tab === "refresh" ? (
+                <div className="p-4">
+                  <ContentRefreshQueue
+                    projectId={projectId}
+                    rows={report.strikingDistance}
+                  />
+                </div>
+              ) : (
+                <DimensionSection
+                  projectId={projectId}
+                  tableQuery={tableQuery}
+                  keyLabel={tab === "queries" ? "Query" : "Page"}
+                  page={page}
+                  pageSize={pageSize}
+                  onPageChange={(nextPage) =>
+                    onSearchChange({ page: nextPage })
+                  }
+                  onPageSizeChange={(size) =>
+                    onSearchChange({ page: undefined, size })
+                  }
+                  isFiltered={filterCount > 0}
+                  onClearFilters={resetFilters}
+                />
+              )}
+            </div>
           </>
         )}
 
+        {/* IndexNow needs no Search Console connection and works on any
+            website, so it shows whether or not Google is connected. */}
         {reportQuery.isPending ? null : (
-          <SearchPerformanceTools
-            projectId={projectId}
-            rows={report?.connected ? report.strikingDistance : undefined}
-          />
+          <section id="indexnow" className="max-w-2xl space-y-3 pt-4">
+            <SectionHeader
+              title="Request indexing on Bing and other engines (IndexNow)"
+              hint="Works on any website, WordPress or not. Google does not use IndexNow: for Google, use URL Inspection in Search Console."
+            />
+            <IndexNowCard projectId={projectId} />
+          </section>
         )}
       </div>
     </div>

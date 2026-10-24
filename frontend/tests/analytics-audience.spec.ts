@@ -27,9 +27,6 @@ async function installAnalytics(page: Page, failClicks = false) {
           bounceRate: 0.5,
           totalEngagementMs: 280000,
           avgEngagementMs: 2000,
-          goalEventName: "lead",
-          conversionSessions: 7,
-          conversionRate: 0.05,
           series: [{ date, visitors: 120, pageviews: 200 }],
           audience: [
             {

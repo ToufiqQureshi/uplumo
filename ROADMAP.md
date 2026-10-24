@@ -179,14 +179,13 @@ Secrets go into Railway variables only, never into the repo or chat.
 - Whether billing rows are kept when an account is erased (tax records). See
   `backend/internal/gdpr/README.md`.
 
-## Editorial and enquiry measurement
+## Editorial measurement
 
 - **Built:** three prioritized editorial tasks with current evidence handed to
   the existing writer only after an explicit action; duplicate brief headings
-  disabled; published articles link to saved AI/rank/enquiry measurement.
-- **Built:** Missed Enquiries Finder and in-app Lead Flow Guard using first-party
-  events, instrumentation/sample caveats, immutable pre-change baselines and the
-  first complete post-change week. No external alert delivery or revenue claim.
+  disabled; published articles link to saved AI and rank measurement.
+- **Removed:** Missed Enquiries Finder and Lead Flow Guard at the owner's
+  request. Existing Analytics tracking and its event history remain available.
 
 ## Search growth analyst
 

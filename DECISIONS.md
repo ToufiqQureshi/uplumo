@@ -132,11 +132,7 @@ Google Cloud project `agentproject-473109`:
 - Reuse Go/Postgres jobs and the existing credit ledger. Paid features share workspace credits; only the global/provider emergency brakes remain. No subscription prices or grants are changed.
 - Credit-pack commercial terms require an explicit `BILLING_TOPUP_PACKS` configuration; no default pack price or new production configuration is activated by these PRs.
 
-- Owner requested two improvement PRs including the content editor and a paid
-  product differentiator. The second implements evidence → editorial fix →
-  enquiry measurement, reusing existing analytics and writing services. It adds
-  no plan-price change, new paid provider, automatic publishing or externally
-  delivered alerts. Competitor feature overlap is acknowledged in the PR.
+- The content editor and paid product differentiator shipped without plan-price changes, new paid providers, automatic publishing or external alerts. The owner later removed the enquiry measurement feature; first-party Analytics and GSC/GA4 integrations remain available.
 
 ## Search Growth scope and maintenance decisions
 
@@ -233,7 +229,7 @@ Owner-approved scope: one focused PR adds optional 180-day browser recognition a
   (`AppShell.tsx`): Traffic (Analytics, Search Performance), AI Visibility
   (Tracker, Brand Lookup, Prompt Explorer), Keywords (Research, Saved),
   Competitors (Domain Overview, Backlinks), Setup (Context, Agent setup).
-  "New" stays only on AI Visibility and Missed Enquiries Finder.
+  "New" stays only on AI Visibility.
 - **Why:** owner feedback that 17 rows with five "New" badges felt crowded
   and jargon-heavy for small-business users. Tabs link to the existing routes
   instead of rebuilding pages, which needs no redirects and no page rewrite.

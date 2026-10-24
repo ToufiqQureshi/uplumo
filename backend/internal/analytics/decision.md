@@ -27,13 +27,11 @@ Postgres analytics tables; Redis daily salt/rate-limit counters; no paid SEO pro
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.
 
-## Enquiry interpretation
+## Retained enquiry measurement data
 
-Use complete equal UTC windows and matched pageview/event visitor-days so clicks
-and partial days cannot create spurious conversion lifts. Keep the selected
-goal in every immutable change snapshot; changing settings must not change what
-an old edit measured. Baselines use the transaction connection while holding the
-project lock to avoid pool starvation under concurrent saves.
+The enquiry measurement API and UI were retired. Keep migration 00028 and its
+tables so deployed customer goals and baselines remain preserved; no active code
+reads or writes them. Analytics collection and custom event reporting continue.
 
 ## Daily browser recognition and click destinations
 

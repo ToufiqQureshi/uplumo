@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Button } from "@/client/components/ui/button";
@@ -10,7 +10,6 @@ import {
   CardTitle,
 } from "@/client/components/ui/card";
 import { QueryError } from "@/client/components/QueryState";
-import { googleConnectionOptions } from "@/client/features/integrations/googleProviders";
 import { saveAnalystDraft } from "@/client/features/sam/analystDraft";
 import { growthAnalystPrompt } from "./growthBrief";
 import { analyzeGrowth, type GrowthPage } from "./growthApi";
@@ -21,11 +20,6 @@ import { GrowthActions } from "./GrowthActions";
 import { GrowthEvidencePanel } from "./GrowthEvidencePanel";
 
 export function SearchGrowthPanel({ projectId }: { projectId: string }) {
-  const connection = useQuery({
-    ...googleConnectionOptions("ga4", projectId),
-    retry: false,
-  });
-  const canAnalyze = connection.data?.connected === true;
   const [settings, setSettings] = useState<GrowthSettingsValue>({
     brands: "",
     goalEvent: "",
@@ -81,63 +75,30 @@ export function SearchGrowthPanel({ projectId }: { projectId: string }) {
       <CardHeader className="border-b py-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <CardTitle>Prioritize by enquiries and track results</CardTitle>
+            <CardTitle>Turn search traffic into useful outcomes</CardTitle>
             <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-              Add your tracked business goal to the search evidence. Save a
-              change, then check what happened after 14 or 28 complete days.
+              Search Console shows how people find you. GA4 shows what happens
+              after they arrive. Find your next action from both.
             </p>
           </div>
-          {canAnalyze ? (
-            <Button
-              disabled={analysis.isPending}
-              onClick={() => analysis.mutate()}
-            >
-              {analysis.isPending
-                ? "Analyzing…"
-                : report
-                  ? "Refresh analysis"
-                  : "Find opportunities"}
-            </Button>
-          ) : null}
+          <Button
+            disabled={analysis.isPending}
+            onClick={() => analysis.mutate()}
+          >
+            {analysis.isPending
+              ? "Analyzing…"
+              : report
+                ? "Refresh analysis"
+                : "Find opportunities"}
+          </Button>
         </div>
-        {canAnalyze ? (
-          <GrowthSettings
-            projectId={projectId}
-            settings={settings}
-            onChange={setSettings}
-          />
-        ) : null}
+        <GrowthSettings
+          projectId={projectId}
+          settings={settings}
+          onChange={setSettings}
+        />
       </CardHeader>
       <CardContent className="space-y-4 pt-4">
-        {connection.isPending ? (
-          <p role="status" className="text-sm text-muted-foreground">
-            Checking your GA4 connection…
-          </p>
-        ) : null}
-        {connection.isError ? (
-          <QueryError
-            error={connection.error}
-            fallback="Could not check your GA4 connection."
-            onRetry={() => void connection.refetch()}
-            isRetrying={connection.isFetching}
-          />
-        ) : null}
-        {connection.isSuccess && !canAnalyze ? (
-          <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">
-              The Search Console tasks above work without GA4. Connect the
-              matching Analytics property to add tracked enquiries or purchases.
-              Event setup alone does not verify a lead or sale.
-            </p>
-            <Link
-              to="/p/$projectId/settings/integrations"
-              params={{ projectId }}
-              className="text-sm font-medium underline underline-offset-4"
-            >
-              Connect GA4 to prioritize by enquiries
-            </Link>
-          </div>
-        ) : null}
         {analysis.isError ? (
           <>
             <QueryError
@@ -153,11 +114,10 @@ export function SearchGrowthPanel({ projectId }: { projectId: string }) {
             </Link>
           </>
         ) : null}
-        {canAnalyze && !report && !analysis.isError ? (
+        {!report && !analysis.isError ? (
           <p className="text-sm text-muted-foreground">
-            Choose a goal, then find opportunities. Analysis uses Google organic
-            data and no AI credits. Findings are review candidates, not verified
-            causes or promised results.
+            Connect GSC and GA4, then find opportunities. We will show evidence
+            and possible explanations, with one next action per finding.
           </p>
         ) : null}
         {report ? (

@@ -41,7 +41,6 @@ import { Route as AppPProjectIdBrandLookupRouteImport } from './routes/_app/p/$p
 import { Route as AppPProjectIdContentEditorRouteImport } from './routes/_app/p/$projectId/content-editor'
 import { Route as AppPProjectIdContextRouteImport } from './routes/_app/p/$projectId/context'
 import { Route as AppPProjectIdDomainRouteImport } from './routes/_app/p/$projectId/domain'
-import { Route as AppPProjectIdEnquiriesRouteImport } from './routes/_app/p/$projectId/enquiries'
 import { Route as AppPProjectIdKeywordsRouteImport } from './routes/_app/p/$projectId/keywords'
 import { Route as AppPProjectIdPromptExplorerRouteImport } from './routes/_app/p/$projectId/prompt-explorer'
 import { Route as AppPProjectIdPromptTrackingRouteImport } from './routes/_app/p/$projectId/prompt-tracking'
@@ -222,11 +221,6 @@ const AppPProjectIdDomainRoute = AppPProjectIdDomainRouteImport.update({
   path: '/domain',
   getParentRoute: () => AppPProjectIdRouteRoute,
 } as any)
-const AppPProjectIdEnquiriesRoute = AppPProjectIdEnquiriesRouteImport.update({
-  id: '/enquiries',
-  path: '/enquiries',
-  getParentRoute: () => AppPProjectIdRouteRoute,
-} as any)
 const AppPProjectIdKeywordsRoute = AppPProjectIdKeywordsRouteImport.update({
   id: '/keywords',
   path: '/keywords',
@@ -360,7 +354,6 @@ export interface FileRoutesByFullPath {
   '/p/$projectId/content-editor': typeof AppPProjectIdContentEditorRoute
   '/p/$projectId/context': typeof AppPProjectIdContextRoute
   '/p/$projectId/domain': typeof AppPProjectIdDomainRoute
-  '/p/$projectId/enquiries': typeof AppPProjectIdEnquiriesRoute
   '/p/$projectId/keywords': typeof AppPProjectIdKeywordsRoute
   '/p/$projectId/prompt-explorer': typeof AppPProjectIdPromptExplorerRoute
   '/p/$projectId/prompt-tracking': typeof AppPProjectIdPromptTrackingRoute
@@ -408,7 +401,6 @@ export interface FileRoutesByTo {
   '/p/$projectId/content-editor': typeof AppPProjectIdContentEditorRoute
   '/p/$projectId/context': typeof AppPProjectIdContextRoute
   '/p/$projectId/domain': typeof AppPProjectIdDomainRoute
-  '/p/$projectId/enquiries': typeof AppPProjectIdEnquiriesRoute
   '/p/$projectId/keywords': typeof AppPProjectIdKeywordsRoute
   '/p/$projectId/prompt-explorer': typeof AppPProjectIdPromptExplorerRoute
   '/p/$projectId/prompt-tracking': typeof AppPProjectIdPromptTrackingRoute
@@ -460,7 +452,6 @@ export interface FileRoutesById {
   '/_app/p/$projectId/content-editor': typeof AppPProjectIdContentEditorRoute
   '/_app/p/$projectId/context': typeof AppPProjectIdContextRoute
   '/_app/p/$projectId/domain': typeof AppPProjectIdDomainRoute
-  '/_app/p/$projectId/enquiries': typeof AppPProjectIdEnquiriesRoute
   '/_app/p/$projectId/keywords': typeof AppPProjectIdKeywordsRoute
   '/_app/p/$projectId/prompt-explorer': typeof AppPProjectIdPromptExplorerRoute
   '/_app/p/$projectId/prompt-tracking': typeof AppPProjectIdPromptTrackingRoute
@@ -512,7 +503,6 @@ export interface FileRouteTypes {
     | '/p/$projectId/content-editor'
     | '/p/$projectId/context'
     | '/p/$projectId/domain'
-    | '/p/$projectId/enquiries'
     | '/p/$projectId/keywords'
     | '/p/$projectId/prompt-explorer'
     | '/p/$projectId/prompt-tracking'
@@ -560,7 +550,6 @@ export interface FileRouteTypes {
     | '/p/$projectId/content-editor'
     | '/p/$projectId/context'
     | '/p/$projectId/domain'
-    | '/p/$projectId/enquiries'
     | '/p/$projectId/keywords'
     | '/p/$projectId/prompt-explorer'
     | '/p/$projectId/prompt-tracking'
@@ -611,7 +600,6 @@ export interface FileRouteTypes {
     | '/_app/p/$projectId/content-editor'
     | '/_app/p/$projectId/context'
     | '/_app/p/$projectId/domain'
-    | '/_app/p/$projectId/enquiries'
     | '/_app/p/$projectId/keywords'
     | '/_app/p/$projectId/prompt-explorer'
     | '/_app/p/$projectId/prompt-tracking'
@@ -870,13 +858,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPProjectIdDomainRouteImport
       parentRoute: typeof AppPProjectIdRouteRoute
     }
-    '/_app/p/$projectId/enquiries': {
-      id: '/_app/p/$projectId/enquiries'
-      path: '/enquiries'
-      fullPath: '/p/$projectId/enquiries'
-      preLoaderRoute: typeof AppPProjectIdEnquiriesRouteImport
-      parentRoute: typeof AppPProjectIdRouteRoute
-    }
     '/_app/p/$projectId/keywords': {
       id: '/_app/p/$projectId/keywords'
       path: '/keywords'
@@ -1064,7 +1045,6 @@ interface AppPProjectIdRouteRouteChildren {
   AppPProjectIdContentEditorRoute: typeof AppPProjectIdContentEditorRoute
   AppPProjectIdContextRoute: typeof AppPProjectIdContextRoute
   AppPProjectIdDomainRoute: typeof AppPProjectIdDomainRoute
-  AppPProjectIdEnquiriesRoute: typeof AppPProjectIdEnquiriesRoute
   AppPProjectIdKeywordsRoute: typeof AppPProjectIdKeywordsRoute
   AppPProjectIdPromptExplorerRoute: typeof AppPProjectIdPromptExplorerRoute
   AppPProjectIdPromptTrackingRoute: typeof AppPProjectIdPromptTrackingRoute
@@ -1088,7 +1068,6 @@ const AppPProjectIdRouteRouteChildren: AppPProjectIdRouteRouteChildren = {
   AppPProjectIdContentEditorRoute: AppPProjectIdContentEditorRoute,
   AppPProjectIdContextRoute: AppPProjectIdContextRoute,
   AppPProjectIdDomainRoute: AppPProjectIdDomainRoute,
-  AppPProjectIdEnquiriesRoute: AppPProjectIdEnquiriesRoute,
   AppPProjectIdKeywordsRoute: AppPProjectIdKeywordsRoute,
   AppPProjectIdPromptExplorerRoute: AppPProjectIdPromptExplorerRoute,
   AppPProjectIdPromptTrackingRoute: AppPProjectIdPromptTrackingRoute,

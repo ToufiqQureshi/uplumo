@@ -12,7 +12,6 @@ import {
 } from "./growthApi";
 import { takeAnalystDraft } from "@/client/features/sam/analystDraft";
 import { readSearchContext } from "@/client/features/content-editor/searchContext";
-import { getGa4Connection } from "@/client/features/integrations/ga4ConnectionsApi";
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -29,13 +28,6 @@ vi.mock("./growthApi", async (original) => ({
   listGrowthActions: vi.fn(),
   saveGrowthAction: vi.fn(),
 }));
-vi.mock(
-  "@/client/features/integrations/ga4ConnectionsApi",
-  async (original) => ({
-    ...(await original<object>()),
-    getGa4Connection: vi.fn(),
-  }),
-);
 
 function fixture(): GrowthReport {
   return {
@@ -112,9 +104,6 @@ async function mount() {
       ),
     ),
   );
-  await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 0));
-  });
 }
 async function click(text: string) {
   const button = [...container.querySelectorAll("button")].find((b) =>
@@ -134,18 +123,6 @@ beforeEach(() => {
   vi.mocked(analyzeGrowth).mockResolvedValue(fixture());
   vi.mocked(listGrowthActions).mockResolvedValue([]);
   vi.mocked(saveGrowthAction).mockResolvedValue({ id: "action-a" });
-  vi.mocked(getGa4Connection).mockResolvedValue({
-    connected: true,
-    canManage: true,
-    currentUserHasGrant: true,
-    googleOAuthConfigured: true,
-    propertyId: "properties/123",
-    propertyDisplayName: "Example site",
-    propertyTimeZone: "UTC",
-    propertyCurrencyCode: "USD",
-    connectedByEmail: null,
-    connectedAt: null,
-  });
 });
 afterEach(async () => {
   if (root) await act(async () => root.unmount());
@@ -154,43 +131,6 @@ afterEach(async () => {
 });
 
 describe("Search growth action boundaries", () => {
-  it("keeps connection-check failures visible without offering an unverified analysis", async () => {
-    vi.mocked(getGa4Connection).mockRejectedValue(
-      new Error("connection unavailable"),
-    );
-    await mount();
-    expect(container.textContent).toContain("connection unavailable");
-    expect(
-      [...container.querySelectorAll("button")].some((b) =>
-        b.textContent?.includes("Find opportunities"),
-      ),
-    ).toBe(false);
-    expect(analyzeGrowth).not.toHaveBeenCalled();
-  });
-  it("offers connection setup instead of an analysis that cannot run without GA4", async () => {
-    vi.mocked(getGa4Connection).mockResolvedValue({
-      connected: false,
-      canManage: true,
-      currentUserHasGrant: false,
-      googleOAuthConfigured: true,
-      propertyId: null,
-      propertyDisplayName: null,
-      propertyTimeZone: null,
-      propertyCurrencyCode: null,
-      connectedByEmail: null,
-      connectedAt: null,
-    });
-    await mount();
-    expect(container.textContent).toContain(
-      "Connect GA4 to prioritize by enquiries",
-    );
-    expect(
-      [...container.querySelectorAll("button")].some((b) =>
-        b.textContent?.includes("Find opportunities"),
-      ),
-    ).toBe(false);
-    expect(analyzeGrowth).not.toHaveBeenCalled();
-  });
   it("loads no Google report or AI action on mount and keeps missing metrics unavailable", async () => {
     await mount();
     expect(analyzeGrowth).not.toHaveBeenCalled();

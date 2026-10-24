@@ -185,10 +185,8 @@ TanStack Query/Router. `EditorPanels.tsx` contains the shared toolbar and previe
 - BriefPanel disables adding a question heading when that exact normalized
   heading already exists. This is a duplicate-heading guard, not an assertion
   that the article answers the question semantically.
-- After WordPress publication, the sidebar links to saved AI question tracking,
-  rank tracking and enquiry evidence with a clean page path. Before another edit,
-  save a measurement baseline there; new articles need data before a comparison
-  means anything. Opening any follow-up makes no paid check or site change.
+- After WordPress publication, the sidebar links to saved AI question tracking
+  and rank tracking. Opening either link makes no paid check or site change.
 
 ## Search Console handoff
 

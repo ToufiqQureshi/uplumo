@@ -107,9 +107,6 @@ const summary = {
   bounceRate: 1 / 3,
   totalEngagementMs: 120_000,
   avgEngagementMs: 40_000,
-  goalEventName: "Signup",
-  conversionSessions: 1,
-  conversionRate: 1 / 3,
   audience: [
     {
       date: "2026-10-07",

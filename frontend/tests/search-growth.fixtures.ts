@@ -61,49 +61,7 @@ const report = {
   ga4PageCount: 1,
 };
 
-function connectionFixture(connected: boolean) {
-  return {
-    connected,
-    canManage: true,
-    currentUserHasGrant: true,
-    googleOAuthConfigured: true,
-    propertyId: connected ? "properties/123" : null,
-    propertyDisplayName: connected ? "Example site" : null,
-    propertyTimeZone: connected ? "UTC" : null,
-    propertyCurrencyCode: connected ? "USD" : null,
-    connectedByEmail: null,
-    connectedAt: null,
-  };
-}
-
-function tableFixture(input: unknown) {
-  if (
-    typeof input !== "object" ||
-    input === null ||
-    !("dimension" in input) ||
-    (input.dimension !== "page" && input.dimension !== "query")
-  )
-    throw new Error("Expected a search table dimension");
-  return {
-    connected: true,
-    dimension: input.dimension,
-    page: 1,
-    pageSize: 25,
-    hasNextPage: false,
-    totalCount: 1,
-    rows: [
-      {
-        ...metrics,
-        key: input.dimension === "page" ? pageEvidence.page : "booking guide",
-      },
-    ],
-  };
-}
-
-export async function installGrowthFixtures(
-  page: Page,
-  { ga4Connected = true } = {},
-) {
+export async function installGrowthFixtures(page: Page) {
   const requests: string[] = [];
   const paid: string[] = [];
   let saved = false;
@@ -164,8 +122,6 @@ export async function installGrowthFixtures(
         languageCode: "en",
         createdAt: now,
       };
-    else if (path.endsWith("/ga4/connection/status"))
-      body = connectionFixture(ga4Connected);
     else if (path.endsWith("/gsc/search-performance/report"))
       body = {
         connected: true,
@@ -178,14 +134,9 @@ export async function installGrowthFixtures(
         totals: metrics,
         prevTotals: metrics,
         daily: [{ date: range.startDate, clicks: 5, impressions: 100 }],
-        strikingDistance: pageEvidence.queries.map((query) => ({
-          ...query,
-          page: pageEvidence.page,
-        })),
+        strikingDistance: [],
         countries: [],
       };
-    else if (path.endsWith("/gsc/search-performance/table"))
-      body = tableFixture(route.request().postDataJSON());
     else if (path.endsWith("/ga4/growth/report")) {
       growthInputs.push(route.request().postDataJSON());
       body = report;

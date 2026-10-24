@@ -565,7 +565,6 @@ func TestSummarizeSessionsCampaignsAndLandingPages(t *testing.T) {
 	ctx := context.Background()
 	f := newFixture(ctx, t)
 	s := f.addSite(ctx, t, "acme.com")
-	f.exec(ctx, t, `INSERT INTO go_analytics_enquiry_goals (project_id, event_name) VALUES ($1, 'lead')`, s.project)
 	d1 := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
 
 	send := func(ts time.Time, h Hit) {
@@ -602,9 +601,9 @@ func TestSummarizeSessionsCampaignsAndLandingPages(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Summarize() error = %v", err)
 	}
-	if got.Pageviews != 6 || got.Sessions != 4 || got.EngagedSessions != 3 || got.ConversionSessions != 1 || got.GoalEventName != "lead" {
-		t.Errorf("sessions = %d pageviews, %d sessions, %d engaged, %d converted, goal %q; want 6, 4, 3, 1, lead",
-			got.Pageviews, got.Sessions, got.EngagedSessions, got.ConversionSessions, got.GoalEventName)
+	if got.Pageviews != 6 || got.Sessions != 4 || got.EngagedSessions != 3 {
+		t.Errorf("sessions = %d pageviews, %d sessions, %d engaged; want 6, 4, 3",
+			got.Pageviews, got.Sessions, got.EngagedSessions)
 	}
 	if got.BounceRate != 0.25 {
 		t.Errorf("bounce rate = %v, want 1/4", got.BounceRate)
@@ -618,18 +617,17 @@ func TestSummarizeSessionsCampaignsAndLandingPages(t *testing.T) {
 		t.Errorf("exits = %+v\nwant %+v", got.Exits, wantExits)
 	}
 	wantCampaigns := []CampaignCount{
-		{Source: "news", Medium: "email", Campaign: "oct", Visitors: 1, Sessions: 1, Conversions: 1},
 		{Source: "ads", Campaign: "early", Visitors: 1, Sessions: 1},
+		{Source: "news", Medium: "email", Campaign: "oct", Visitors: 1, Sessions: 1},
 	}
 	if !slices.Equal(got.Campaigns, wantCampaigns) {
 		t.Errorf("campaigns = %+v\nwant %+v", got.Campaigns, wantCampaigns)
 	}
-	var sessions, conversions int64
+	var sessions int64
 	for _, row := range got.AcquisitionChannels {
 		sessions += row.Sessions
-		conversions += row.Conversions
 	}
-	if sessions != 4 || conversions != 1 {
-		t.Errorf("acquisition = %+v, want 4 sessions and 1 conversion in all", got.AcquisitionChannels)
+	if sessions != 4 {
+		t.Errorf("acquisition = %+v, want 4 sessions in all", got.AcquisitionChannels)
 	}
 }
