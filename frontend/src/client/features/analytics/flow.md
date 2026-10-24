@@ -35,3 +35,11 @@ Optional browser recognition (`data-recognition="true"`) uses a 180-day site-key
 `GET /api/v1/projects/{projectId}/analytics/summary?from&to` adds `audience` rows: `date`, `newBrowsers`, `returningBrowsers`, `unknownPageviews`. `GET /api/v1/projects/{projectId}/analytics/clicks?from&to&page&limit` returns `rows` (`page`, `name`, `host`, `path`, `type`, `clicks`, `visitorDays`, `arrivals`) and `hasMore`. Both require session/project access. Dates are inclusive UTC days, at most 366. Click pages are 1–100 rows, page 1–1000; UI uses 20 rows and project/date-keyed one-minute TanStack caching. No new server cache or paid call.
 
 Collector additions are optional `b` (32 lowercase-hex browser ID), `c` (click boolean), `x` (absolute HTTP(S) destination without credentials). Clicks require event/session/pageview IDs. Configured clicks and automatic outbound links share the same deduplicated event record. Destination query strings/fragments are stripped; JavaScript buttons can specify `data-uplumo-destination`. Internal arrivals are matching later same-tab pageviews within 30 minutes, not proof of causation. External subsequent activity is unavailable.
+
+## Overview and secondary reports
+
+The overview derives leaders, event totals, AI referrals and measurement warnings
+from the already-loaded summary. It adds zero API/provider requests. Its action
+opens Tracking code or jumps to the existing visitor-action section. The native
+report disclosure changes visibility only; children retain their existing query
+keys, scopes and call boundaries. Opening it does not buy provider work.

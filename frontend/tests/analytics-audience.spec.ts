@@ -102,6 +102,15 @@ test("daily audience and destination counts render with scoped paging and option
   const requests = await installAnalytics(page);
   await page.goto("/p/e2e-project/analytics");
   await expect(
+    page.getByRole("region", { name: "Traffic overview" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Daily new and returning" }),
+  ).toBeHidden();
+  await page
+    .getByText("Explore audience, campaigns and page journeys", { exact: true })
+    .click();
+  await expect(
     page.getByRole("heading", { name: "Daily new and returning" }),
   ).toBeVisible();
   const daily = page.getByRole("region", { name: "Daily audience table" });
@@ -182,6 +191,9 @@ test("destination errors do not hide the daily audience report", async ({
 }) => {
   await installAnalytics(page, true);
   await page.goto("/p/e2e-project/analytics");
+  await page
+    .getByText("Explore audience, campaigns and page journeys", { exact: true })
+    .click();
   await expect(
     page.getByRole("heading", { name: "Daily new and returning" }),
   ).toBeVisible();

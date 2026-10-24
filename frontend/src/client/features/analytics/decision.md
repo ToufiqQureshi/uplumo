@@ -28,3 +28,21 @@ Why: existing page engagement, source/campaign attribution and event counts alre
 Preserve: recognition is off in the default snippet; optional setup explains 180-day first-party storage and host-managed consent. No UI/content is injected on customer websites. Historic visits remain unclassified. External destinations show no arrival/success claim; internal arrival means only an observed matching same-tab pageview within 30 minutes. Tables scroll inside their cards on mobile; daily rows expand from the latest seven days. Click pages are bounded at 20 groups and cached by project/date for one minute with existing TanStack patterns. Error states retain available data and expose retry.
 
 Trace: `AudienceJourneyCards.tsx`, `AnalyticsPage.tsx`, `TrackingCodeCard.tsx`, `analyticsApi.ts`, API regressions, tracker regressions and `tests/analytics-audience.spec.ts`. Backend semantics and retention are defined in `backend/internal/analytics/decision.md`; full verification handover lives in its `AUDIENCE_DESTINATIONS.txt`.
+
+## Lead with observed activity and measurement gaps
+
+- **Decision:** put a compact traffic overview before the statistics, keep visitor
+  actions in the main flow, and group secondary audience/acquisition reports in
+  an expandable section. Surface failed refreshes beside cached data.
+- **Why:** the live page showed one pageview with zero sessions and repeated
+  event names, surrounded by empty reports. Owners needed an explanation and a
+  setup action before detailed counting caveats.
+- **Preserve:** no new requests or data collection, no event-name merging, no
+  inferred leads/revenue, no relabeling visitor-days as unique people. AI referrals
+  remain distinct from visibility and do not establish conversion performance.
+  Existing scoped queries, consent settings, destinations and all reports remain.
+- **Trace:** `AnalyticsOverview.tsx`, `AnalyticsPage.tsx`, `AnalyticsCards.tsx`;
+  `AnalyticsOverview.test.tsx` covers missing measurement, leader selection,
+  case inconsistencies and outcome labels. Audience browser regressions open the
+  secondary disclosure before inspecting the existing report. Visual browser
+  acceptance must be recorded separately from unit/type checks.

@@ -133,10 +133,9 @@ export function AiTrafficCard({
     >
       <div className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          People who find you through ChatGPT and other AI assistants usually
-          arrive ready to act, so they often convert better than search
-          visitors. We also catch AI visits that other tools file as
-          &ldquo;Direct&rdquo;.
+          Visits attributed to AI assistants from available referral and
+          campaign signals. Unidentified visits cannot reliably be assigned to
+          an assistant.
         </p>
         {aiVisitors === 0 ? (
           <EmptyState
