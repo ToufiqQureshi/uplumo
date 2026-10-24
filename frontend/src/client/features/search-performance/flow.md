@@ -61,8 +61,13 @@ Button actions retain their existing endpoints and call counts. Journey step
 inputs submit the same event-name array; changing viewport only switches result
 presentation between mobile metric cards and desktop tables, without refetching.
 
-The performance overview reuses the already-returned report and refresh grouping;
-zero additional Google, paid-provider or AI requests. Review all switches the
-URL-backed table to Refresh queue and scrolls to the report. External review links
-accept only HTTP(S). Disclosure changes are presentation-only: they do not run an
-analysis, inspect a URL, enable checks, submit indexing or send an AI draft.
+## Intelligence workspace
+
+Analytics SEO intelligence and Search Performance share `SearchGrowthPanel`.
+Explicit analysis uses the existing <=5 standard report reads (+ optional goal
+metadata), <=25 expanded reads and server cache. A disabled TanStack query caches
+by project and full analysis input; remount/focus/reconnect do not initiate reads.
+Metric cards, ten-page finding lists and selecting a page add zero calls.
+Analyst questions append to the existing project-scoped editable SAM draft;
+Send retains normal server metering. Detailed GSC report reads retain their
+independent filter/date scope. All findings remain observational evidence.

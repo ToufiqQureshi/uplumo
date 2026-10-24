@@ -1,5 +1,8 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { Sparkles, Search, BarChart3 } from "lucide-react";
+import { IntelligenceMetrics } from "./IntelligenceMetrics";
+import { IntelligenceOpportunities } from "./IntelligenceOpportunities";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Button } from "@/client/components/ui/button";
@@ -29,39 +32,40 @@ export function SearchGrowthPanel({ projectId }: { projectId: string }) {
   });
   const { brands, goalEvent, days, comparison, expanded } = settings;
   const [queryKind, setQueryKind] = useState("all");
-  const [showAll, setShowAll] = useState(false);
-  const [pageNumber, setPageNumber] = useState(0);
+  const [selectedPage, setSelectedPage] = useState("");
   const navigate = useNavigate();
-  const analysis = useMutation({
-    mutationFn: () => {
-      const end = new Date();
-      end.setUTCDate(end.getUTCDate() - 4);
-      const start = new Date(end);
-      start.setUTCDate(start.getUTCDate() - days + 1);
-      return analyzeGrowth(projectId, {
-        startDate: start.toISOString().slice(0, 10),
-        endDate: end.toISOString().slice(0, 10),
-        goalEvent,
-        comparison,
-        expanded,
-        brandTerms: brands
-          .split(",")
-          .map((x) => x.trim())
-          .filter(Boolean),
-      });
-    },
+  const end = new Date();
+  end.setUTCDate(end.getUTCDate() - 4);
+  const start = new Date(end);
+  start.setUTCDate(start.getUTCDate() - days + 1);
+  const input = {
+    startDate: start.toISOString().slice(0, 10),
+    endDate: end.toISOString().slice(0, 10),
+    goalEvent,
+    comparison,
+    expanded,
+    brandTerms: brands
+      .split(",")
+      .map((term) => term.trim())
+      .filter(Boolean),
+  };
+  const analysis = useQuery({
+    queryKey: ["search-intelligence", projectId, input],
+    queryFn: () => analyzeGrowth(projectId, input),
+    enabled: false,
     retry: false,
-    onSuccess: () => {
-      setShowAll(false);
-      setPageNumber(0);
-    },
+    staleTime: 10 * 60_000,
   });
   const report = analysis.data;
   const pages = report?.pages.filter((page) => page.findings.length > 0) ?? [];
-  function openAnalyst(page?: GrowthPage) {
+  function openAnalyst(page?: GrowthPage, question?: string) {
     if (!report) return;
     try {
-      saveAnalystDraft(projectId, growthAnalystPrompt(report, page));
+      saveAnalystDraft(
+        projectId,
+        growthAnalystPrompt(report, page) +
+          (question ? `\n\nMy question: ${question}` : ""),
+      );
     } catch {
       toast.error(
         "Your browser could not save the analyst draft. Allow tab storage and try again.",
@@ -71,32 +75,67 @@ export function SearchGrowthPanel({ projectId }: { projectId: string }) {
     void navigate({ to: "/p/$projectId/sam", params: { projectId } });
   }
   return (
-    <Card className="gap-0">
-      <CardHeader className="border-b py-4">
+    <Card className="gap-0 overflow-hidden border-violet-500/15 bg-violet-500/[0.025]">
+      <CardHeader className="border-b border-border bg-gradient-to-r from-violet-500/10 to-transparent py-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <CardTitle>Turn search traffic into useful outcomes</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <Sparkles className="size-5 text-violet-500" /> SEO Intelligence
+              Hub
+            </CardTitle>
             <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-              Search Console shows how people find you. GA4 shows what happens
-              after they arrive. Find your next action from both.
+              Your Google visibility, visitor outcomes and page-specific
+              evidence in one workspace.
             </p>
           </div>
           <Button
-            disabled={analysis.isPending}
-            onClick={() => analysis.mutate()}
+            disabled={analysis.isFetching}
+            onClick={() => {
+              setSelectedPage("");
+              void analysis.refetch();
+            }}
           >
-            {analysis.isPending
+            {analysis.isFetching
               ? "Analyzing…"
               : report
                 ? "Refresh analysis"
                 : "Find opportunities"}
           </Button>
         </div>
-        <GrowthSettings
-          projectId={projectId}
-          settings={settings}
-          onChange={setSettings}
-        />
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="flex min-w-0 items-center gap-3 rounded-lg border border-border bg-card p-3">
+            <Search className="size-5 shrink-0 text-violet-500" />
+            <div className="min-w-0 text-sm">
+              <p className="font-medium">Google Search Console</p>
+              <p className="break-all text-xs text-muted-foreground">
+                {report
+                  ? report.siteUrl
+                  : "Connection checked when analysis runs"}
+              </p>
+            </div>
+          </div>
+          <div className="flex min-w-0 items-center gap-3 rounded-lg border border-border bg-card p-3">
+            <BarChart3 className="size-5 shrink-0 text-blue-500" />
+            <div className="min-w-0 text-sm">
+              <p className="font-medium">Google Analytics 4</p>
+              <p className="break-all text-xs text-muted-foreground">
+                {report
+                  ? `${report.propertyId} · Google organic sessions`
+                  : "Use your connected GA4 property"}
+              </p>
+            </div>
+          </div>
+        </div>
+        <details className="mt-3 text-sm">
+          <summary className="cursor-pointer font-medium">
+            Choose goal and comparison
+          </summary>
+          <GrowthSettings
+            projectId={projectId}
+            settings={settings}
+            onChange={setSettings}
+          />
+        </details>
       </CardHeader>
       <CardContent className="space-y-4 pt-4">
         {analysis.isError ? (
@@ -116,8 +155,10 @@ export function SearchGrowthPanel({ projectId }: { projectId: string }) {
         ) : null}
         {!report && !analysis.isError ? (
           <p className="text-sm text-muted-foreground">
-            Connect GSC and GA4, then find opportunities. We will show evidence
-            and possible explanations, with one next action per finding.
+            Run an analysis to find the pages losing search traffic, changes in
+            organic outcome rates and performing pages with room to grow. Google
+            data only; no AI credits used. Choose a registered success event for
+            goal-specific insights.
           </p>
         ) : null}
         {report ? (
@@ -139,60 +180,52 @@ export function SearchGrowthPanel({ projectId }: { projectId: string }) {
               AI opens an editable draft in SAM. Review its credit hint and
               press Send to run it.
             </p>
-            {pages.length === 0 ? (
-              <p className="rounded-lg border border-border p-4 text-sm">
-                No strong opportunities met the evidence thresholds in this
-                report. This does not mean your site has no issues; review
-                coverage and tracking before drawing conclusions.
+            <p className="text-xs text-muted-foreground">
+              Analysis saved {new Date(report.generatedAt).toLocaleString()}.
+              Refresh analysis to check again.
+            </p>
+            {report.truncated ? (
+              <p
+                role="status"
+                className="rounded-lg border border-border bg-card p-3 text-sm"
+              >
+                Source coverage is limited. Findings cover returned rows only;
+                review Data coverage before treating this as a complete site
+                analysis.
               </p>
             ) : null}
-            {(showAll
-              ? pages.slice(pageNumber * 10, (pageNumber + 1) * 10)
-              : pages.slice(0, 3)
-            ).map((page) => (
-              <GrowthPageCard
-                key={`${report.id}:${page.page}`}
-                projectId={projectId}
-                report={report}
-                page={page}
-                queryKind={report.brandTerms.length ? queryKind : "all"}
-                onAnalyst={() => openAnalyst(page)}
-              />
-            ))}
-            {pages.length > 3 ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowAll(!showAll)}
-              >
-                {showAll
-                  ? "Show top 3"
-                  : `Browse ${pages.length} opportunities, 10 at a time`}
-              </Button>
-            ) : null}
-            {showAll ? (
-              <div className="flex flex-wrap items-center gap-2 text-sm">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={pageNumber === 0}
-                  onClick={() => setPageNumber((n) => n - 1)}
-                >
-                  Previous opportunities
-                </Button>
-                <span>
-                  Page {pageNumber + 1} of {Math.ceil(pages.length / 10)}
-                </span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={(pageNumber + 1) * 10 >= pages.length}
-                  onClick={() => setPageNumber((n) => n + 1)}
-                >
-                  Next opportunities
-                </Button>
-              </div>
-            ) : null}
+            <IntelligenceMetrics report={report} />
+            <IntelligenceOpportunities
+              key={report.id}
+              report={report}
+              selected={selectedPage || pages[0]?.page || ""}
+              onSelect={(page) => {
+                setSelectedPage(page);
+                document
+                  .getElementById("growth-evidence")
+                  ?.scrollIntoView({ block: "start" });
+              }}
+              onAnalyst={(question) => openAnalyst(undefined, question)}
+            />
+            {(() => {
+              const page =
+                pages.find((item) => item.page === selectedPage) ?? pages[0];
+              return page ? (
+                <section id="growth-evidence" className="scroll-mt-4 space-y-3">
+                  <h3 className="text-lg font-semibold">
+                    Investigate this page
+                  </h3>
+                  <GrowthPageCard
+                    key={`${report.id}:${page.page}`}
+                    projectId={projectId}
+                    report={report}
+                    page={page}
+                    queryKind={report.brandTerms.length ? queryKind : "all"}
+                    onAnalyst={() => openAnalyst(page)}
+                  />
+                </section>
+              ) : null;
+            })()}
             <details className="rounded-lg border border-border p-3 text-sm">
               <summary className="cursor-pointer">
                 Data coverage and query filters

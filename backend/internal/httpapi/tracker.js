@@ -6,6 +6,11 @@
   var site = script && script.getAttribute("data-site");
   if (!site || nav.doNotTrack === "1" || window.doNotTrack === "1" || nav.globalPrivacyControl) return;
 
+  // Installing a tag twice must not attach a second set of navigation/click handlers.
+  var installed = window.__uplumoTrackerSites || (window.__uplumoTrackerSites = Object.create(null));
+  if (installed[site]) return;
+  installed[site] = true;
+
   var endpoint = new URL("/collect", script.src).href;
   var sessionKey = "uplumo-session:" + site;
   var session = null;
@@ -207,6 +212,12 @@
   history.pushState = function () {
     var from = last;
     pushState.apply(this, arguments);
+    startPage(from, false);
+  };
+  var replaceState = history.replaceState;
+  history.replaceState = function () {
+    var from = last;
+    replaceState.apply(this, arguments);
     startPage(from, false);
   };
   addEventListener("popstate", function () { startPage(last, false); });

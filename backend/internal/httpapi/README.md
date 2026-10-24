@@ -13,3 +13,7 @@ This is an internal developer/AI-agent guide, not customer-facing product copy. 
 ## API/trigger
 
 All routes are registered here or by feature `Mount` functions.
+
+`tracker.js` initializes once per site key/document and observes pushState,
+replaceState and popstate, with URL deduplication. Browser-DOM regressions live
+in `frontend/scripts/tracker.test.ts`; no Go handler/API schema changes.

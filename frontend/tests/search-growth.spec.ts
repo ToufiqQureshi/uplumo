@@ -9,21 +9,14 @@ test("search growth stays explicit and carries evidence through save, analyst an
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/p/e2e-project/search-performance");
   await expect(
-    page.getByRole("region", { name: "Search overview" }),
+    page.getByText("SEO Intelligence Hub", { exact: true }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Find opportunities" }),
-  ).toBeHidden();
-  await page
-    .getByText("Connect search performance to business outcomes · GSC + GA4", {
-      exact: true,
-    })
-    .click();
   const analyze = page.getByRole("button", { name: "Find opportunities" });
   await expect(analyze).toBeVisible();
   expect(requests.filter((p) => p.endsWith("/ga4/growth/report"))).toHaveLength(
     0,
   );
+  await page.getByText("Choose goal and comparison", { exact: true }).click();
   await page.getByRole("button", { name: "Load my GA4 goals" }).click();
   await page
     .getByLabel("What matters to your business?")
@@ -120,7 +113,7 @@ test("search growth stays explicit and carries evidence through save, analyst an
   ).toBeVisible();
   expect(paid).toEqual([]);
   await page.screenshot({
-    path: "/workspace/search-growth-desktop.png",
+    path: test.info().outputPath("search-intelligence-desktop.png"),
     fullPage: true,
   });
   await page.setViewportSize({ width: 390, height: 844 });
@@ -128,7 +121,7 @@ test("search growth stays explicit and carries evidence through save, analyst an
     page.getByRole("button", { name: "Refresh analysis" }),
   ).toBeVisible();
   await page.screenshot({
-    path: "/workspace/search-growth-mobile.png",
+    path: test.info().outputPath("search-intelligence-mobile.png"),
     fullPage: true,
   });
   await page
@@ -140,11 +133,6 @@ test("search growth stays explicit and carries evidence through save, analyst an
   await expect(page.getByText("Related queries: booking guide")).toBeVisible();
   expect(paid).toEqual([]);
   await page.goto("/p/e2e-project/search-performance");
-  await page
-    .getByText("Connect search performance to business outcomes · GSC + GA4", {
-      exact: true,
-    })
-    .click();
   await page.getByRole("button", { name: "Find opportunities" }).click();
   await page
     .getByRole("button", { name: "Create AI improvement brief" })
@@ -171,12 +159,6 @@ for (const width of [320, 390]) {
     const { paid, requests } = await installGrowthFixtures(page);
     await page.setViewportSize({ width, height: 844 });
     await page.goto("/p/e2e-project/search-performance");
-    await page
-      .getByText(
-        "Connect search performance to business outcomes · GSC + GA4",
-        { exact: true },
-      )
-      .click();
     await page.getByRole("button", { name: "Find opportunities" }).click();
     await page
       .getByText("Investigate tracking, devices and AI citations", {
@@ -245,5 +227,50 @@ for (const width of [320, 390]) {
       )
       .toBe(true);
     expect(paid).toEqual([]);
+  });
+}
+
+for (const width of [390, 1280]) {
+  test(`Analytics intelligence uses connected evidence and cached tab return at ${width}px`, async ({
+    page,
+  }) => {
+    const { requests, paid } = await installGrowthFixtures(page);
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/p/e2e-project/analytics?view=intelligence");
+    await expect(
+      page.getByText("SEO Intelligence Hub", { exact: true }),
+    ).toBeVisible();
+    expect(
+      requests.filter((path) => path.endsWith("/ga4/growth/report")),
+    ).toHaveLength(0);
+    await page.getByRole("button", { name: "Find opportunities" }).click();
+    await expect(
+      page.getByRole("region", {
+        name: "Combined search and business metrics",
+      }),
+    ).toContainText("200");
+    await expect(
+      page.getByText("Your next best actions", { exact: true }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Tracking", exact: true }).click();
+    await page
+      .getByRole("button", { name: "SEO insights", exact: true })
+      .click();
+    await expect(
+      page.getByText("Your next best actions", { exact: true }),
+    ).toBeVisible();
+    expect(
+      requests.filter((path) => path.endsWith("/ga4/growth/report")),
+    ).toHaveLength(1);
+    expect(paid).toEqual([]);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: test.info().outputPath(`analytics-intelligence-${width}.png`),
+      fullPage: true,
+    });
   });
 }

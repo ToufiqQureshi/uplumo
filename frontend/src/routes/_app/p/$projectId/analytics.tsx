@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-import { AnalyticsPage } from "@/client/features/analytics/AnalyticsPage";
+import { AnalyticsWorkspace } from "@/client/features/analytics/AnalyticsWorkspace";
 
 const searchSchema = z.object({
+  view: z.enum(["intelligence", "traffic"]).optional().catch(undefined),
   days: z.union([z.literal(7), z.literal(30), z.literal(90)]).catch(30),
 });
 
@@ -13,13 +14,16 @@ export const Route = createFileRoute("/_app/p/$projectId/analytics")({
 
 function AnalyticsRoute() {
   const { projectId } = Route.useParams();
-  const { days } = Route.useSearch();
+  const { days, view } = Route.useSearch();
   const navigate = Route.useNavigate();
   return (
-    <AnalyticsPage
+    <AnalyticsWorkspace
       projectId={projectId}
       days={days}
-      onDaysChange={(next) => void navigate({ search: { days: next } })}
+      view={view ?? "traffic"}
+      onChange={(update) =>
+        void navigate({ search: (previous) => ({ ...previous, ...update }) })
+      }
     />
   );
 }

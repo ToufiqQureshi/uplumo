@@ -124,7 +124,7 @@ export function GrowthPageCard({
           {report.currency}. Only purchases reported to GA4 are included.
         </p>
       ) : null}
-      {page.findings.slice(0, 1).map((finding) => (
+      {page.findings.map((finding) => (
         <div key={finding.kind} className="text-sm">
           <h4 className="font-medium">{finding.title}</h4>
           <p className="mt-1 text-muted-foreground">{finding.evidence}</p>
@@ -145,12 +145,6 @@ export function GrowthPageCard({
           Query evidence and save action
         </summary>
         <div className="mt-3 space-y-3">
-          {page.findings.slice(1).map((finding) => (
-            <p key={finding.kind} className="text-xs text-muted-foreground">
-              <strong>{finding.title}:</strong> {finding.evidence}{" "}
-              {finding.action}
-            </p>
-          ))}
           {queries.length ? (
             <ul className="space-y-1 text-xs">
               {queries.map((q) => (
