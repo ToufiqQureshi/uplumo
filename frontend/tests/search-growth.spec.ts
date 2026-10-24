@@ -8,6 +8,17 @@ test("search growth stays explicit and carries evidence through save, analyst an
     await installGrowthFixtures(page);
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/p/e2e-project/search-performance");
+  await expect(
+    page.getByRole("region", { name: "Search overview" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Find opportunities" }),
+  ).toBeHidden();
+  await page
+    .getByText("Connect search performance to business outcomes · GSC + GA4", {
+      exact: true,
+    })
+    .click();
   const analyze = page.getByRole("button", { name: "Find opportunities" });
   await expect(analyze).toBeVisible();
   expect(requests.filter((p) => p.endsWith("/ga4/growth/report"))).toHaveLength(
@@ -129,6 +140,11 @@ test("search growth stays explicit and carries evidence through save, analyst an
   await expect(page.getByText("Related queries: booking guide")).toBeVisible();
   expect(paid).toEqual([]);
   await page.goto("/p/e2e-project/search-performance");
+  await page
+    .getByText("Connect search performance to business outcomes · GSC + GA4", {
+      exact: true,
+    })
+    .click();
   await page.getByRole("button", { name: "Find opportunities" }).click();
   await page
     .getByRole("button", { name: "Create AI improvement brief" })
@@ -155,6 +171,12 @@ for (const width of [320, 390]) {
     const { paid, requests } = await installGrowthFixtures(page);
     await page.setViewportSize({ width, height: 844 });
     await page.goto("/p/e2e-project/search-performance");
+    await page
+      .getByText(
+        "Connect search performance to business outcomes · GSC + GA4",
+        { exact: true },
+      )
+      .click();
     await page.getByRole("button", { name: "Find opportunities" }).click();
     await page
       .getByText("Investigate tracking, devices and AI citations", {
