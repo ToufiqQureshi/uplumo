@@ -67,15 +67,25 @@ page, shown whether or not Search Console is connected: it works on any
 website and needs no Google connection. Rules live in
 `backend/internal/indexnow/README.md`.
 
-## Performance-first overview
+## SEO Intelligence Hub
 
-`SearchPerformanceOverview.tsx` shows exact report dates, an absolute click change
-only when a complete comparison exists, and up to three page review candidates
-from `buildContentRefreshQueue`. Candidate metrics cover qualifying query rows,
-not all page traffic. Ordering remains observed impressions, not business value
-or a predicted uplift. Review all pages opens the existing Refresh queue tab.
+`SearchGrowthPanel.tsx` is the primary workspace on Search Performance and the
+SEO intelligence view in Analytics. It replaces the impression-only generic
+advice overview. A user explicitly runs the existing bounded Google-organic
+analysis; TanStack Query retains the result by project, dates, goal, brand terms
+and coverage. Reopening a view reads the cached report without another request.
+Changing settings selects a different cache key and requires another explicit run.
 
-Totals and trend precede the expandable GSC + GA4 business-outcomes panel. Google
-index inspection and IndexNow each have their own expandable section. They retain
-all existing controls and explicit-action boundaries. These sections stay mounted
-when collapsed, preserving loaded results and existing query behavior.
+`IntelligenceMetrics.tsx` and `intelligenceMetrics.ts` summarize **returned pages**,
+not whole-property totals. GA4 summaries cover matched landing pages only. Rates
+are weighted by sessions, absent/restricted values stay unavailable, and GA4
+deltas require an unchanged matched-page cohort. Incomplete previous GSC coverage
+suppresses comparison. All-event counts remain separate from a selected goal rate.
+
+`IntelligenceOpportunities.tsx` lists ten server-ranked finding pages at a time.
+Select a page for its full findings, query evidence, diagnosis, editor handoff and
+saved baseline. Suggested analyst questions open scoped editable SAM drafts; no
+AI call runs before Send. No arbitrary health/confidence score or keyword-revenue
+attribution is shown. Detailed GSC totals/trend/table use their own date/filter
+scope in an expandable report, opened for explicit table tabs/filters. Indexing
+controls remain independent explicit actions.

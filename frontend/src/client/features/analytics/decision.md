@@ -46,3 +46,20 @@ Trace: `AudienceJourneyCards.tsx`, `AnalyticsPage.tsx`, `TrackingCodeCard.tsx`, 
   case inconsistencies and outcome labels. Audience browser regressions open the
   secondary disclosure before inspecting the existing report. Visual browser
   acceptance must be recorded separately from unit/type checks.
+
+## Tracking reliability and explicit intelligence source
+
+- **Decision:** initialize one tracker per site/document and observe replaceState
+  navigation as well as pushState/popstate. Analytics offers separate first-party
+  tracking and connected Google intelligence views; the default remains tracking.
+- **Why:** regressions reproduced duplicate pageviews/clicks for repeated snippets
+  and missing pageviews on replaceState navigation. The UI also needed a concrete
+  way to check received data without claiming a remote instrumentation audit.
+- **Preserve:** same session on SPA navigation, no hit on state-only/hash changes,
+  privacy checks before storage/collection, event/pageview deduplication, recognition
+  consent and existing payload/retention/rate limits. No new third-party request,
+  provider purchase, tracking payload field or database migration. Confirmed
+  outcomes still require explicitly emitted success events.
+- **Trace:** `backend/internal/httpapi/tracker.js`, frontend `scripts/tracker.test.ts`
+  (both bugs failed before fixes), `AnalyticsWorkspace.tsx`, `TrackingStatusCard.tsx`.
+  Received-day labels refer only to stored data in the chosen UTC report.
