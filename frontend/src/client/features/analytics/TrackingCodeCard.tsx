@@ -54,8 +54,8 @@ export function TrackingCodeCard({ projectId }: { projectId: string }) {
         <p className="text-muted-foreground">
           To count a successful lead, booking or order, call{" "}
           <code>window.uplumo(&quot;LeadSubmitted&quot;)</code> only after your
-          server confirms success, then choose that event as the goal in
-          Enquiries. A button click by itself is not a conversion.
+          server confirms success. A button click alone does not confirm a
+          completed lead or order.
         </p>
         <label className="flex items-start gap-2 rounded-lg border border-border p-3">
           <input

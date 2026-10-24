@@ -19,7 +19,5 @@ drafts to it. Rules, limits and errors live in
   never cached or read back.
 - Errors from the customer's own site (`site_unreachable`, `site_error`, both 502) keep the server's message, so the customer sees what WordPress said.
 
-After a successful live publication, PublishToSite offers saved AI tracking,
-rank tracking and an enquiry measurement link with the published URL's path.
-These links do not collect paid data or change the site. Enquiry baselines are
-recorded explicitly in Analytics before the writer's next change.
+After a successful live publication, PublishToSite offers saved AI tracking and
+rank tracking. These links do not collect paid data or change the site.

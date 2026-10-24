@@ -40,7 +40,6 @@ type Deps struct {
 
 // Mount registers analytics routes on mux.
 func Mount(mux *http.ServeMux, d Deps) {
-	mountEnquiries(mux, d)
 	mux.Handle("GET /api/v1/projects/{projectId}/analytics/clicks", d.WithSession(d.WithProjectAccess(clicksHandler(d.Logger, d.Service))))
 	mux.HandleFunc("POST /collect", collect(d.Logger, d.Service, d.TrustedProxyCIDRs))
 	mux.HandleFunc("OPTIONS /collect", collectPreflight)

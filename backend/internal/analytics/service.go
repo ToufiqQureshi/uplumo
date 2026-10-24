@@ -82,13 +82,10 @@ type Summary struct {
 	BounceRate          float64            `json:"bounceRate"`
 	TotalEngagementMS   int64              `json:"totalEngagementMs"`
 	AvgEngagementMS     int64              `json:"avgEngagementMs"`
-	GoalEventName       string             `json:"goalEventName"`
-	ConversionSessions  int64              `json:"conversionSessions"`
-	ConversionRate      float64            `json:"conversionRate"`
 	Audience            []AudienceDay      `json:"audience"`
 }
 
-// CampaignCount is a tagged campaign's visitor-day, session and goal counts.
+// CampaignCount is a tagged campaign's visitor-day and session counts.
 type CampaignCount struct {
 	Source      string `json:"source"`
 	Medium      string `json:"medium"`
@@ -97,14 +94,12 @@ type CampaignCount struct {
 	Content     string `json:"content"`
 	Visitors    int64  `json:"visitors"`
 	Sessions    int64  `json:"sessions"`
-	Conversions int64  `json:"conversions"`
 }
 
-// AcquisitionCount is the first known channel of a session and its goal count.
+// AcquisitionCount is the first known channel of a session.
 type AcquisitionCount struct {
-	Channel     string `json:"channel"`
-	Sessions    int64  `json:"sessions"`
-	Conversions int64  `json:"conversions"`
+	Channel  string `json:"channel"`
+	Sessions int64  `json:"sessions"`
 }
 
 // EventCount is how often a custom event happened and for how many visitors.

@@ -159,7 +159,7 @@ function Dashboard({
   return (
     <div className="space-y-6">
       <Card>
-        <CardContent className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
+        <CardContent className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
           <StatTile
             label="Visitors"
             value={formatCount(summary.visitors)}
@@ -185,19 +185,6 @@ function Dashboard({
             value={summary.sessions > 0 ? formatShare(summary.bounceRate) : "—"}
             hint={`${formatCount(summary.engagedSessions)} engaged sessions`}
           />
-          <StatTile
-            label={summary.goalEventName ? "Goal completions" : "Goal not set"}
-            value={
-              summary.goalEventName
-                ? formatCount(summary.conversionSessions)
-                : "—"
-            }
-            hint={
-              summary.goalEventName
-                ? `${formatShare(summary.conversionRate)} of sessions`
-                : "Set in Enquiries"
-            }
-          />
         </CardContent>
       </Card>
       <DailyAudienceCard days={summary.audience} />
@@ -213,14 +200,8 @@ function Dashboard({
       </div>
       <div className="grid gap-6 lg:grid-cols-2">
         <ChannelsCard channels={summary.channels} />
-        <AcquisitionPerformanceCard
-          rows={summary.acquisitionChannels}
-          goalEventName={summary.goalEventName}
-        />
-        <CampaignPerformanceCard
-          campaigns={summary.campaigns}
-          goalEventName={summary.goalEventName}
-        />
+        <AcquisitionPerformanceCard rows={summary.acquisitionChannels} />
+        <CampaignPerformanceCard campaigns={summary.campaigns} />
         <CountriesCard projectId={projectId} range={range} />
         <CountListCard
           title="Top pages"
@@ -286,7 +267,7 @@ function Dashboard({
 function DashboardSkeleton() {
   return (
     <div className="space-y-6" aria-busy>
-      <SkeletonStatGrid count={6} className="md:grid-cols-3 xl:grid-cols-6" />
+      <SkeletonStatGrid count={5} className="md:grid-cols-3 xl:grid-cols-5" />
       <div className="grid gap-6 lg:grid-cols-3">
         <Skeleton className="h-80 lg:col-span-2" />
         <Skeleton className="h-80" />

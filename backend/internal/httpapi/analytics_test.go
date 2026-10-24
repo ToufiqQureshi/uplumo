@@ -96,23 +96,17 @@ func TestAnalyticsEndToEnd(t *testing.T) {
 	}
 	for _, route := range []struct{ method, suffix string }{
 		{http.MethodGet, "/analytics/clicks?from=2026-10-20&to=2026-10-20"},
-		{http.MethodGet, "/analytics/enquiries"}, {http.MethodPost, "/analytics/enquiries/goal"}, {http.MethodPost, "/analytics/enquiries/changes"}, {http.MethodGet, "/analytics/enquiries/changes/example"}, {http.MethodPost, "/analytics/enquiries/changes/example/delete"},
 	} {
 		target := "/api/v1/projects/" + project + route.suffix
 		anonymous := httptest.NewRecorder()
 		handler.ServeHTTP(anonymous, httptest.NewRequestWithContext(ctx, route.method, target, nil))
 		if anonymous.Code != http.StatusUnauthorized {
-			t.Fatalf("unprotected enquiry route %s: %d", target, anonymous.Code)
+			 t.Fatalf("unprotected analytics route %s: %d", target, anonymous.Code)
 		}
 		foreign := api(route.method, "/api/v1/projects/foreign-"+id+route.suffix)
 		if foreign.Code != http.StatusNotFound {
-			t.Fatalf("foreign enquiry route %s: %d", target, foreign.Code)
+			 t.Fatalf("foreign analytics route %s: %d", target, foreign.Code)
 		}
-	}
-	var enquiryReport analytics.EnquiryReport
-	decode(t, api(http.MethodGet, "/api/v1/projects/"+project+"/analytics/enquiries"), http.StatusOK, &enquiryReport)
-	if enquiryReport.EventName != "" || len(enquiryReport.Pages) != 0 {
-		t.Fatal("unconfigured goal invented evidence", enquiryReport)
 	}
 	sitePath := "/api/v1/projects/" + project + "/analytics/site"
 

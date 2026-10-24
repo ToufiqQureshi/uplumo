@@ -35,12 +35,6 @@ const projectNavItems = [
     badge: "New",
   },
   {
-    to: "/p/$projectId/enquiries" as const,
-    label: "Missed Enquiries Finder",
-    icon: TrendingUp,
-    badge: "New",
-  },
-  {
     to: "/p/$projectId" as const,
     label: "Dashboard",
     icon: LayoutDashboard,
@@ -208,8 +202,7 @@ export function getProjectNavItem(
 
 // Grouped by the job the user came to do, in plain words for owners who are
 // not SEO experts. Related pages share one row and switch with tabs, so the
-// sidebar fits one screen. Only the two lead features carry "New", so the
-// badge still draws the eye.
+// sidebar fits one screen.
 export function getProjectNavGroups(projectId: string): NavGroup[] {
   const item = (path: ProjectNavPath) => getProjectNavItem(projectId, path);
 
@@ -221,7 +214,6 @@ export function getProjectNavGroups(projectId: string): NavGroup[] {
     {
       label: "Customers & traffic",
       items: [
-        item("/p/$projectId/enquiries"),
         tabbedItem("Traffic", ChartNoAxesCombined, [
           item("/p/$projectId/analytics"),
           item("/p/$projectId/search-performance"),
