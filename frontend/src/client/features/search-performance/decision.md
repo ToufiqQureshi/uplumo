@@ -9,7 +9,7 @@ in the linked feature READMEs; do not silently change them during a UI refactor.
 
 | Decision                                                                                                                | Why                                                                                                                                | Code / related contract                                                                   |
 | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Start with measured search change and page candidates; keep goal-led analysis in an expandable section.                 | A solo owner needs a useful decision before a large report. More metrics alone do not deliver value.                               | `SearchGrowthPanel.tsx`, `GrowthSettings.tsx`                                             |
+| Start with the user's business goal, an explicit analysis action and three next-action candidates.                      | A solo owner needs a useful decision before a large report. More metrics alone do not deliver value.                               | `SearchGrowthPanel.tsx`, `GrowthSettings.tsx`                                             |
 | Keep the detailed GSC report's dates/filters in the URL, and label the growth analysis's independent date/source scope. | Shareable investigation filters must not silently reinterpret a saved GA4 finding.                                                 | `SearchPerformancePage.tsx`, `searchPerformanceQueries.ts`                                |
 | Keep all-event counts, selected-goal session rates, ordered user funnels and AI evidence separately labeled.            | They have different denominators and collection scopes; combining labels can invent business outcomes.                             | `growthApi.ts`, `GrowthPageCard.tsx`, `GrowthFunnel.tsx`                                  |
 | Show measured evidence, possible explanations and a next check; keep missing/limited values explicit.                   | Search averages do not establish why a person did not click, and unavailable data is not measured zero.                            | `GrowthClickDiagnosis.tsx`, backend `ga4/growth_clicks.go`                                |
@@ -59,19 +59,14 @@ in the linked feature READMEs; do not silently change them during a UI refactor.
   choice, reason, affected code, trade-off and verification/constraints; replace
   superseded statements rather than accumulating contradictory appendices.
 
-## Show value before configuration
+## Restore the report before the generic overview
 
-- **Decision:** lead with report dates, absolute click movement, three page review
-  candidates, totals and the trend. Move combined goal-led analysis, stored-index
-  inspection and IndexNow into labeled disclosures. Keep every existing workflow.
-- **Why:** the live first viewport was dominated by configuration while a 19.9%
-  click decline and 311 candidate query rows were buried. Existing report data can
-  provide immediate review candidates without requiring GA4 or another request.
-- **Preserve:** candidates reuse the existing impression-sorted refresh grouping;
-  they do not predict revenue, establish causes or promise rankings. Show partial
-  row coverage and unavailable comparisons. Independent GA4 scope, URL filters,
-  exports, explicit paid actions and safe external links stay unchanged.
-- **Trace:** `SearchPerformanceOverview.tsx`, `SearchPerformancePage.tsx`,
-  `SearchPerformanceOverview.test.tsx`; browser regressions explicitly open the
-  business-outcomes disclosure before exercising the original analysis flow.
-  Browser visual acceptance is separate from unit/type validation.
+- **Decision:** restore the Search Performance layout before PR #203 and remove
+  its Pages worth reviewing cards and repeated advice.
+- **Why:** the owner rejected these generic recommendations and requested the
+  preceding report experience. The removed advice was static copy, not AI output.
+- **Preserve:** existing Google data, filters, combined analysis, explicit AI
+  actions, credit controls and unrelated Analytics changes.
+- **Trace:** restore `SearchPerformancePage.tsx` and `tests/search-growth.spec.ts`
+  from the parent of #203; remove `SearchPerformanceOverview.tsx` and
+  `SearchPerformanceTools.tsx`. No backend or database changes.

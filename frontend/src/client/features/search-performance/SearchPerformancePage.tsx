@@ -1,8 +1,4 @@
-import { SearchPerformanceOverview } from "./SearchPerformanceOverview";
-import {
-  GrowthAnalysisDisclosure,
-  SearchIndexingTools,
-} from "./SearchPerformanceTools";
+import { SearchGrowthPanel } from "./SearchGrowthPanel";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
@@ -20,6 +16,8 @@ import { Spinner } from "@/client/components/ui/spinner";
 import { DataTableTabs } from "@/client/components/table/DataTableToolbar";
 import { TabsTrigger } from "@/client/components/ui/tabs";
 import { GoogleConnectionCard } from "@/client/features/integrations/GoogleConnectionCard";
+import { IndexNowCard } from "@/client/features/indexnow/IndexNowCard";
+import { SectionHeader } from "@/client/components/PageHeader";
 import { DimensionSection } from "@/client/features/search-performance/SearchPerformanceDimensionSection";
 import { SearchPerformanceSelects } from "@/client/features/search-performance/SearchPerformanceSelects";
 import { SearchPerformanceLoadingState } from "@/client/features/search-performance/SearchPerformanceLoadingState";
@@ -42,6 +40,7 @@ import { TotalsCards } from "@/client/features/search-performance/SearchPerforma
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { ContentRefreshQueue } from "@/client/features/search-performance/ContentRefreshQueuePanel";
 import { SearchPerformanceTrend } from "@/client/features/search-performance/SearchPerformanceTrend";
+import { SearchPerformanceIndexing } from "@/client/features/search-performance/SearchPerformanceIndexing";
 import { buildContentRefreshQueue } from "@/client/features/search-performance/contentRefreshQueue";
 import {
   exportSearchPerformanceTable,
@@ -241,8 +240,8 @@ export function SearchPerformancePage({
           <div>
             <h1 className="text-2xl font-semibold">Search Performance</h1>
             <p className="text-sm text-muted-foreground">
-              See what changed in Google Search and choose which pages to
-              improve next.
+              See your site&apos;s clicks, impressions, CTR, and position from
+              Google Search Console.
             </p>
           </div>
           {report?.connected ? (
@@ -270,30 +269,22 @@ export function SearchPerformancePage({
         ) : (
           <>
             {reportQuery.isError ? reportError : null}
+            <SearchGrowthPanel key={projectId} projectId={projectId} />
             {reportQuery.isPlaceholderData ? (
               <SearchPerformanceLoadingState />
             ) : (
-              <>
-                <SearchPerformanceOverview
-                  report={report}
-                  onReviewPages={() => {
-                    onSearchChange({ tab: "refresh", page: undefined });
-                    document
-                      .getElementById("search-details")
-                      ?.scrollIntoView({ block: "start" });
-                  }}
-                />
-                <TotalsCards report={report} />
-              </>
+              <TotalsCards report={report} />
             )}
             {!reportQuery.isPlaceholderData ? (
               <SearchPerformanceTrend report={report} />
             ) : null}
-            <GrowthAnalysisDisclosure projectId={projectId} />
-            <div
-              id="search-details"
-              className="scroll-mt-4 overflow-hidden rounded-xl border border-border bg-card"
-            >
+            <SearchPerformanceIndexing
+              projectId={projectId}
+              strikingDistance={
+                report?.connected ? report.strikingDistance : []
+              }
+            />
+            <div className="overflow-hidden rounded-xl border border-border bg-card">
               <DataTableTabs
                 value={tab}
                 onValueChange={(value) => {
@@ -396,11 +387,16 @@ export function SearchPerformancePage({
           </>
         )}
 
+        {/* IndexNow needs no Search Console connection and works on any
+            website, so it shows whether or not Google is connected. */}
         {reportQuery.isPending ? null : (
-          <SearchIndexingTools
-            projectId={projectId}
-            rows={report?.connected ? report.strikingDistance : undefined}
-          />
+          <section id="indexnow" className="max-w-2xl space-y-3 pt-4">
+            <SectionHeader
+              title="Request indexing on Bing and other engines (IndexNow)"
+              hint="Works on any website, WordPress or not. Google does not use IndexNow: for Google, use URL Inspection in Search Console."
+            />
+            <IndexNowCard projectId={projectId} />
+          </section>
         )}
       </div>
     </div>

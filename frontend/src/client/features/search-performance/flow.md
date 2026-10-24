@@ -60,9 +60,3 @@ Investigation navigation opens one topic at a time and does not fetch by itself.
 Button actions retain their existing endpoints and call counts. Journey step
 inputs submit the same event-name array; changing viewport only switches result
 presentation between mobile metric cards and desktop tables, without refetching.
-
-The performance overview reuses the already-returned report and refresh grouping;
-zero additional Google, paid-provider or AI requests. Review all switches the
-URL-backed table to Refresh queue and scrolls to the report. External review links
-accept only HTTP(S). Disclosure changes are presentation-only: they do not run an
-analysis, inspect a URL, enable checks, submit indexing or send an AI draft.
