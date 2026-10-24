@@ -4,7 +4,7 @@
 
 ## User and request flow
 
-1. User selects the GSC property, calendar date range, search type, device, country and query/page filters. Date and filter state stays in the URL so the view is shareable.
+1. The connected report shows up to three existing-page review tasks first, from the already returned GSC rows. The user can open the source page or carry its query evidence and date range to the editor without AI calls or publishing. The detailed report and stored-index tools are separate disclosures; a URL-selected tab or active filter opens the detailed report. Users select calendar dates, search type, device, country and query/page filters there; state stays in the URL.
 2. `searchPerformanceQueries.ts` keys requests by the full filter set and `searchPerformanceApi.ts` calls Go GSC routes.
 3. Go verifies project access and selected property, validates dates and filters, and runs up to four bounded Search Analytics reads (three when no full prior period is available inside the 16-month history). Results include current totals, an optional period comparison, daily trend, country rows and up to 1,000 returned query-page rows.
 4. The page groups those returned rows into striking-distance and content-refresh candidates. Candidate pages can be opened for review, or the strongest query can seed a new Content Editor draft. This does not call AI, publish, or change the site.
@@ -13,6 +13,7 @@
 ## Implementation map
 
 - `SearchPerformancePage.tsx`
+- `SearchActionPlan.tsx`
 - `searchPerformanceQueries.ts`
 - `searchPerformanceApi.ts`
 - `backend/internal/gsc/performance.go`
@@ -35,6 +36,11 @@ The queue reuses the report's query-page rows; it makes no extra Search Console 
 - URL inspection is an explicitly clicked read-only call, capped at 10 URLs per request.
 
 The independent Search Growth panel invokes `ga4/growth/report` only on click.
+It first reuses `googleConnectionOptions("ga4", projectId)` to read connection
+status. Missing GA4 offers the integration link instead of an impossible analysis;
+a status failure is not treated as a missing connection. Neither state prevents
+GSC-only tasks or access to previously saved actions. No provider report or goal
+discovery runs merely to check connection status.
 Saving an action records its server report ID, page and note; the backend owns
 the metric baseline. Mark applied starts a fixed post-change observation window.
 Daily click averages permit 14/28-day comparison with the labeled baseline.
