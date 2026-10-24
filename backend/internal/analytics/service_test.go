@@ -617,8 +617,8 @@ func TestSummarizeSessionsCampaignsAndLandingPages(t *testing.T) {
 		t.Errorf("exits = %+v\nwant %+v", got.Exits, wantExits)
 	}
 	wantCampaigns := []CampaignCount{
-		{Source: "news", Medium: "email", Campaign: "oct", Visitors: 1, Sessions: 1},
 		{Source: "ads", Campaign: "early", Visitors: 1, Sessions: 1},
+		{Source: "news", Medium: "email", Campaign: "oct", Visitors: 1, Sessions: 1},
 	}
 	if !slices.Equal(got.Campaigns, wantCampaigns) {
 		t.Errorf("campaigns = %+v\nwant %+v", got.Campaigns, wantCampaigns)
