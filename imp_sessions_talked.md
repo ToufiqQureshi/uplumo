@@ -17,6 +17,17 @@ feelings, business calls, priorities, corrections. Read it after
 
 ---
 
+## 25 Oct 2026: credits audit result (Claude, PR #208)
+
+- Owner said "haan" to the credits audit and asked first "isse mujhe kya
+  milega?" — he wants a plain yes/no on "loss me jayenge?", not a report.
+- **Answer given:** loss risk low today: $4.24 provider spend, all charged
+  back at 1.28x; 9/9 deliberate code breaks caught by tests.
+- **Open for him:** customer is shown "about 372 credits" for a Brand Lookup
+  but can be charged up to 2,240. Decide: show the max, or cap the charge.
+  Also confirm the 3 `active` subscriptions are his own/test accounts.
+- Next in order: DataForSEO audit.
+
 ## 25 Oct 2026: "Dar lagta hai" — vision reset (Claude, PR #208)
 
 - **Feeling:** "Ab dar lagta hai. Kuch samajh nahi aa raha ki hum value de
