@@ -25,6 +25,22 @@ So Uplumo answers three questions, in this order, for every customer:
 Question 3 is the product. Questions 1 and 2 are data any tool can buy; the
 "why" and the "what to do next" is where Uplumo wins.
 
+## 1a. Who, the goal, and what comes next (owner, 25 Oct 2026)
+
+- **Customer:** Indian businesses, small to big. Copy, UI and pricing are
+  written for them.
+- **Goal now:** the first **10 paying customers**. Judge every task by
+  "does this help get or keep one of those 10?"
+- **Order of work** (one PR each; do not jump ahead without the owner):
+  1. Credits audit: shown cost == charged cost, under retries, double
+     clicks, races and provider failures.
+  2. DataForSEO audit: real paid calls per click vs. each `flow.md`.
+  3. Build Q3, "why not cited, and what to fix" (section 5, "The biggest
+     gap").
+  4. Then wiring, test-strength and code-size audits (section 5 list).
+- **Stop list:** no new feature, page or provider outside this order. Ideas
+  go to the owner as a proposal, not as code.
+
 ## 2. What "value" means to him
 
 > "Generic same GSC aur GA4 dene se kya hoga? Kuch valuable cheez jisse user
@@ -67,6 +83,12 @@ plain answers.
   one-line meaning.
 - Lead with the answer, then the one or two things he must decide.
 - Say "I don't know yet, here is how I'll check" instead of guessing.
+- **When his "haan" is needed:** before anything that touches money,
+  credits, providers, data, UI, or adds a feature. Typos, doc fixes and a
+  small bug fix inside the current task can go ahead; mention them after.
+- **Top of every PR, 3 Hinglish lines for him:** kya badla; kitni paid
+  calls / credits pe asar; kaunsa test todke dekha ki bug pakadta hai.
+- Record important talks in `imp_sessions_talked.md` (see that file).
 - He is one person running the whole company. He has no paying customers yet
   (25 Oct 2026). Protect his money and his time first.
 
