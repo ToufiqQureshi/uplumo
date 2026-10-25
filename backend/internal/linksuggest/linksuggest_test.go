@@ -69,11 +69,22 @@ func TestMatchKeepsUnicodeAnchors(t *testing.T) {
 	}
 }
 
-func TestUniqueWordsKeepsHindiVowelMarks(t *testing.T) {
-	got := uniqueWords("हिंदी गाइड")
-	want := []string{"हिंदी", "गाइड"}
-	if !slices.Equal(got, want) {
-		t.Fatalf("Hindi words split at vowel marks: got %q, want %q", got, want)
+func TestUniqueWords(t *testing.T) {
+	for _, test := range []struct {
+		text string
+		want []string
+	}{
+		{"हिंदी गाइड", []string{"हिंदी", "गाइड"}},
+		{"SEO, seo! THE guide 42 x", []string{"seo", "guide", "42"}},
+		{"हिंदी की हिंदी गाइड!", []string{"हिंदी", "की", "गाइड"}},
+		{"the a hai --", nil},
+		{"", nil},
+	} {
+		t.Run(test.text, func(t *testing.T) {
+			if got := uniqueWords(test.text); !slices.Equal(got, test.want) {
+				t.Fatalf("uniqueWords(%q) = %q, want %q", test.text, got, test.want)
+			}
+		})
 	}
 }
 

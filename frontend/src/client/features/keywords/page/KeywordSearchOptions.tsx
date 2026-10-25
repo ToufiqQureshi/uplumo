@@ -14,7 +14,7 @@ import {
   type KeywordMode,
 } from "@/client/features/keywords/keywordResearchTypes";
 import { isLabsLocationCode } from "@/client/features/keywords/locations";
-import type { KeywordResearchControllerState } from "./types";
+import type { KeywordResearchControllerState } from "../state/useKeywordResearchController";
 
 type Props = {
   controller: KeywordResearchControllerState;

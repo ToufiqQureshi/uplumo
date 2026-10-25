@@ -31,9 +31,11 @@ import {
   ContentEditorSidePanel,
   type EditorTab,
 } from "./ContentEditorSidePanel";
-import { isArticleContentWithinLimit } from "./content-limits";
-import { sameDraft } from "./draft-save";
-import { primaryTargetTopic } from "./target-topics";
+import {
+  isArticleContentWithinLimit,
+  sameDraft,
+  primaryTargetTopic,
+} from "./draft";
 
 const blankDraft: ContentDraftInput = {
   title: "",

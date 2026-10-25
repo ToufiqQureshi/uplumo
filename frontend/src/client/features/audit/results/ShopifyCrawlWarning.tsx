@@ -12,7 +12,7 @@ import {
   AlertTitle,
 } from "@/client/components/ui/alert";
 import { Button } from "@/client/components/ui/button";
-import type { AuditResultsData } from "@/client/features/audit/results/types";
+import type { AuditResultsData } from "@/client/features/audit/auditApi";
 import { extractHostname } from "@/client/features/audit/shared";
 import { startAudit } from "@/client/features/audit/auditApi";
 import { listCrawlerCredentials } from "@/client/features/crawler-access/crawlerAccessApi";

@@ -7,7 +7,7 @@ Read [flow.md](flow.md) for the request path and [decision.md](decision.md) for 
 ## Code map
 
 - `launch/useLaunchController.ts`
-- `auditApi.ts`
+- `auditApi.ts` (response schemas and inferred result types)
 - `AuditDetail.tsx`
 - `backend/internal/audit/handler.go`
 - `backend/internal/audit/runner.go`

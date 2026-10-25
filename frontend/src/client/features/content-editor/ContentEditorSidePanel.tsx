@@ -6,7 +6,7 @@ import { LinkSuggestionsCard, PublishTabPanel } from "./FreeSeoPublishCards";
 import { ScorePanel } from "./ScorePanel";
 import { PublishToSite } from "@/client/features/site-publishing/PublishToSite";
 import { WriterAssistant } from "./WriterAssistant";
-import { primaryTargetTopic } from "./target-topics";
+import { primaryTargetTopic } from "./draft";
 import type { ContentDraftSummary, SearchBrief } from "./contentEditorApi";
 import type { ContentDraftInput, EditorMode, ScoreCheck } from "./scoring";
 

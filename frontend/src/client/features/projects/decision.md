@@ -16,3 +16,10 @@ Creates, switches, updates, archives/restores projects and manages shared projec
 
 - `projectApi.test.ts`
 - `project-context/EditableListSection.test.ts`
+
+## Keep project types and queries with their owners
+
+- **Decision:** Infer `ProjectSummary` with Zod's `z.infer` and derive `ProjectMarket` with TypeScript `Pick` in `projectApi.ts`; keep `useProjectMarket` with `projectsQueryOptions` in `projectQueries.ts`.
+- **Why:** A handwritten response type repeated the schema, and separate tiny type/hook modules added navigation without another responsibility.
+- **Preserve:** Response validation, query keys, archived-list invalidation and unresolved-market behavior. No endpoint, authorization or provider-call changes.
+- **Trace:** `projectApi.ts`, `projectQueries.ts`, existing project API and mounted AI/keyword query regressions; frontend type and unused-code checks.

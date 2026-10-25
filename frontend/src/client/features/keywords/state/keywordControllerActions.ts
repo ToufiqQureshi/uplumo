@@ -5,11 +5,11 @@ import { exportRows } from "@/client/lib/exportRows";
 import { captureClientEvent } from "@/client/lib/posthog";
 import type { KeywordResearchRow } from "@/types/keywords";
 import type { SaveKeywordsInput } from "@/types/schemas/keywords";
+import { serpFeatureLabels } from "@/client/features/keywords/components/SerpFeatureBadges";
 import {
-  serpFeatureLabels,
   type SortDir,
   type SortField,
-} from "@/client/features/keywords/components";
+} from "@/client/features/keywords/components/DisplayPrimitives";
 import type {
   KeywordMode,
   ResultLimit,

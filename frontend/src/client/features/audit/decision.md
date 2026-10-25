@@ -33,3 +33,10 @@ Starts an asynchronous crawl and presents technical SEO findings, crawl progress
 - **Why:** Review caught a second results alert that contradicted launch capabilities; legacy flags could also make false execution claims.
 - **Preserve:** Existing audit data stays unchanged. Keep failed-page evidence and explicit limitations; guidance must describe actions users can actually take.
 - **Trace:** `results/RenderingWarnings.tsx`, `shared.tsx`, their callers and `RenderingWarnings.test.ts` (both cases failed before fixing the copy).
+
+## Import result types from the API contract
+
+- **Decision:** Import `AuditResultsData` directly from `auditApi.ts` and remove the forwarding-only `results/types.ts`.
+- **Why:** The extra module only re-exported the same type; the API schema remains its single owner.
+- **Preserve:** All result fields, warning behavior and request/crawl boundaries; this is a type-import cleanup.
+- **Trace:** Result components and exports, `RenderingWarnings.test.ts`, frontend type checking and existing audit regressions.

@@ -12,7 +12,7 @@ import {
   getLanguageCode,
   getLanguageOptions,
 } from "@/client/features/keywords/locations";
-import type { ProjectMarket } from "@/client/features/projects/types";
+import type { ProjectMarket } from "@/client/features/projects/projectApi";
 
 /**
  * The project's default market: country plus the language served for it.

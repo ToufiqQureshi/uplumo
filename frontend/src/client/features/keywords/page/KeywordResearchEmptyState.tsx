@@ -3,7 +3,7 @@ import { Globe, Search } from "lucide-react";
 import { EmptyState } from "@/client/components/EmptyState";
 import { RecentSearches } from "@/client/components/RecentSearches";
 import { LOCATIONS } from "@/client/features/keywords/utils";
-import type { KeywordResearchControllerState } from "./types";
+import type { KeywordResearchControllerState } from "../state/useKeywordResearchController";
 
 type Props = {
   controller: KeywordResearchControllerState;

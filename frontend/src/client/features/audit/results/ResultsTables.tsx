@@ -13,7 +13,7 @@ import {
   extractPathname,
   LighthouseScoreBadge,
 } from "@/client/features/audit/shared";
-import type { AuditResultsData } from "@/client/features/audit/results/types";
+import type { AuditResultsData } from "@/client/features/audit/auditApi";
 import {
   countActiveFilters,
   PerformanceFilterBar,

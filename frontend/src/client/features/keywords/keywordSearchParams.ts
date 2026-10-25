@@ -1,4 +1,7 @@
-import type { SortDir, SortField } from "@/client/features/keywords/components";
+import type {
+  SortDir,
+  SortField,
+} from "@/client/features/keywords/components/DisplayPrimitives";
 import type {
   KeywordMode,
   ResultLimit,

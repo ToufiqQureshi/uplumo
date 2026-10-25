@@ -309,3 +309,10 @@ Owner-approved scope: one focused PR adds optional 180-day browser recognition a
 - Confirmed live Data API exposure was closed using the same idempotent SQL committed as migration 42. Afterward: 0 tables without RLS, 0 client grants, trusted-owner reads and HTTP readiness/session checks pass. This emergency Supabase migration does not mark pending Goose versions as applied.
 - Shared worker supervision replaces duplicated restart code and prevents audit/rank queues from permanently stopping after temporary DB errors. Opaque IDs use Go `crypto/rand.Text`; MCP no-op telemetry and frontend fixture bypass code are removed. Successful external MCP tools now persist the actual first-call onboarding milestone.
 - The [launch audit](docs/audits/2026-10-23-launch-readiness.md) records economics assumptions, checks and live acceptance limits.
+
+## Direct shared query-client imports
+
+- **Decision:** Import the shared `queryClient` directly from `frontend/src/client/tanstack-db/queryClient.ts` and remove its one-line `index.ts` re-export.
+- **Why:** The forwarding file added a second path to the same singleton.
+- **Preserve:** One shared cache, existing mutation toasts, freshness/retention and paid-query retry safeguards.
+- **Trace:** Updated imports, `queryClient.test.ts`, frontend checks and suite.

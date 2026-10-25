@@ -177,7 +177,7 @@ Shared task envelope version/status/message/time/cost/count/id/path/request echo
 
 ### Evidence
 
-Implementations: `backend/internal/keywords/{research_provider.go,research.go,research_serp.go}`; `frontend/src/client/features/keywords/{keywordsApi.ts,page/KeywordResearchTable.tsx,page/KeywordResearchResults.tsx,components/KeywordUi.tsx,components/DisplayPrimitives.tsx,components/SerpAnalysisCard.tsx,state/keywordControllerActions.ts}`; `frontend/src/types/keywords.ts`.
+Implementations: `backend/internal/keywords/{research_provider.go,research.go,research_serp.go}`; `frontend/src/client/features/keywords/{keywordsApi.ts,page/KeywordResearchTable.tsx,page/KeywordResearchResults.tsx,components/DisplayPrimitives.tsx,components/SerpAnalysisCard.tsx,state/keywordControllerActions.ts}`; `frontend/src/types/keywords.ts`.
 
 Earlier live test: 138 **stored normalized backend rows** matched displayed volume/CPC/competition/difficulty/intent. That did not prove raw provider fields were preserved. Synthetic provider fixtures prove selected mapper behavior; they do not substitute for a live raw-response-to-render comparison.
 

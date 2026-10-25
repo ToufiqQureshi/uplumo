@@ -1,5 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
-import { queryClient } from "@/client/tanstack-db";
+import { queryClient } from "@/client/tanstack-db/queryClient";
 import { listSamMessages, listSamSessions } from "@/client/features/sam/samApi";
 
 export const samSessionsQueryOptions = (projectId: string) =>

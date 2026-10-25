@@ -10,7 +10,7 @@ import {
   toggleIntentFilter,
 } from "@/client/features/keywords/keywordResearchTypes";
 import { INTENT_LABELS } from "@/client/features/keywords/components/IntentBadge";
-import type { KeywordResearchControllerState } from "./types";
+import type { KeywordResearchControllerState } from "../state/useKeywordResearchController";
 
 type FiltersForm = KeywordResearchControllerState["filtersForm"];
 

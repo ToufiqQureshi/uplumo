@@ -53,3 +53,6 @@ refusal, keeps the already-billed summary (empty trend,
 Cancellation during cache/project preparation is rechecked before detaching
 paid work. Active callers retain cache-outage fallback; existing shared work
 can finish for other waiters. See the cancellation decision and regressions.
+
+Domain/URL canonicalization, including `NormalizeProjectDomain` for project
+creation, lives in `target.go`.

@@ -9,7 +9,7 @@ import {
   domainSearchSchema,
 } from "@/types/schemas/domain";
 import { getDomainRouteState } from "@/client/features/domain/domainRouteState";
-import { useProjectMarket } from "@/client/features/projects/useProjectMarket";
+import { useProjectMarket } from "@/client/features/projects/projectQueries";
 
 const DEFAULT_DOMAIN_SEARCH = {
   domain: "",

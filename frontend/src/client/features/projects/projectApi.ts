@@ -16,6 +16,12 @@ const projectSchema = z.object({
   createdAt: z.string(),
 });
 
+export type ProjectSummary = z.infer<typeof projectSchema>;
+export type ProjectMarket = Pick<
+  ProjectSummary,
+  "locationCode" | "languageCode"
+>;
+
 type ProjectInput<T> = { data: T };
 
 export async function getProjects() {

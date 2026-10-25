@@ -94,3 +94,10 @@ Use the package tests next to the source files in `README.md`. For changes cross
 - **Trace:** `service.go`, `TestOverviewKeepsTheBilledSummaryWhenCreditsCannotCoverHistory`, existing history-error and persistence regressions. One summary provider call covers the tested repeated visit.
 
 Provider rejection fixtures include explicit zero cost and task path: missing billing metadata represents an uncertain purchase, not a confirmed free rejection. `TestProviderErrorIsNotRetried` still requires one request and the upstream error classification.
+
+## Keep domain normalization together
+
+- **Decision:** Define `NormalizeProjectDomain` in `target.go` with the target normalizer it delegates to; remove the single-function `project_domain.go`.
+- **Why:** One validation responsibility no longer requires a separate file.
+- **Preserve:** Exact hostname/IDNA/public-suffix validation, callers, errors and all paid/cached request behavior.
+- **Trace:** `target.go`, existing target/project and backlink service regressions.

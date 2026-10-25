@@ -32,29 +32,20 @@ var stopwords = map[string]struct{}{
 func uniqueWords(text string) []string {
 	var words []string
 	seen := map[string]struct{}{}
-	start := -1
-	runes := []rune(strings.ToLower(text))
 	// Keep combining marks with their base letters, so Hindi vowel signs do
 	// not split a word into unrelated fragments.
-	for i, r := range append(runes, ' ') {
-		isWord := isWordRune(r)
-		switch {
-		case isWord && start < 0:
-			start = i
-		case !isWord && start >= 0:
-			word := string(runes[start:i])
-			start = -1
-			if utf8.RuneCountInString(word) >= 2 {
-				if _, stop := stopwords[word]; stop {
-					continue
-				}
-				if _, dup := seen[word]; dup {
-					continue
-				}
-				seen[word] = struct{}{}
-				words = append(words, word)
-			}
+	for word := range strings.FieldsFuncSeq(strings.ToLower(text), func(r rune) bool { return !isWordRune(r) }) {
+		if utf8.RuneCountInString(word) < 2 {
+			continue
 		}
+		if _, stop := stopwords[word]; stop {
+			continue
+		}
+		if _, dup := seen[word]; dup {
+			continue
+		}
+		seen[word] = struct{}{}
+		words = append(words, word)
 	}
 	return words
 }

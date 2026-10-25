@@ -21,7 +21,10 @@ import {
   type ResultLimit,
 } from "@/client/features/keywords/keywordResearchTypes";
 import type { KeywordResearchRow } from "@/types/keywords";
-import type { SortDir, SortField } from "@/client/features/keywords/components";
+import type {
+  SortDir,
+  SortField,
+} from "@/client/features/keywords/components/DisplayPrimitives";
 import {
   buildKeywordSearchKey,
   getNextSortParams,
@@ -315,3 +318,7 @@ export function useKeywordResearchController(
     SERP_PAGE_SIZE,
   };
 }
+
+export type KeywordResearchControllerState = ReturnType<
+  typeof useKeywordResearchController
+>;

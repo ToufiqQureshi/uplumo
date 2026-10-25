@@ -46,6 +46,12 @@ actions. All data comes from the Go keywords API.
 Contract: `backend/api/keywords.yaml`; response shapes in
 `keywordsApi.ts` (Zod) mirror `backend/internal/keywords`.
 
+## Component structure
+
+`components/DisplayPrimitives.tsx` owns overview statistics and the trend chart.
+Import SERP cards and badges directly from their component files; controller
+state types are inferred beside `state/useKeywordResearchController.ts`.
+
 ## Rules that must never break
 
 - Response validation through `apiRequest` + Zod: a drifted server shape is an

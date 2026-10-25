@@ -17,7 +17,7 @@ import {
   archiveProject,
   updateProject,
 } from "@/client/features/projects/projectApi";
-import type { ProjectSummary } from "./types";
+import type { ProjectSummary } from "./projectApi";
 
 export function ProjectGeneralSettings({ projectId }: { projectId: string }) {
   const projectsQuery = useQuery(projectsQueryOptions());

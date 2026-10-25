@@ -101,7 +101,7 @@ provider bound needs a separate contract review.
 
 ## Growth investigations
 
-`growth_rows.go` adds a separate internal bounded pagination path for explicit
+`growth_rows.go` owns `GetGrowthRows` and the exact-page `GetFilteredPageRows` read. It adds a separate internal bounded pagination path for explicit
 GSC/GA4 analysis: standard 1,000 rows or expanded 5,000, in 1,000-row pages, final
 Web data only. Existing reports and exports keep their original limits.
 

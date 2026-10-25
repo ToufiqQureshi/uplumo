@@ -11,12 +11,12 @@ import {
   useDataTable,
   useSelectionAnchor,
 } from "@/client/components/table/DataTable";
+import { IntentBadge } from "@/client/features/keywords/components/IntentBadge";
+import { SerpFeatureBadges } from "@/client/features/keywords/components/SerpFeatureBadges";
 import {
-  IntentBadge,
-  SerpFeatureBadges,
   type SortDir,
   type SortField,
-} from "@/client/features/keywords/components";
+} from "@/client/features/keywords/components/DisplayPrimitives";
 import { SortableHeader } from "@/client/components/table/SortableHeader";
 import { ScoreBadge } from "@/client/components/table/ScoreBadge";
 import { formatNumber } from "@/client/features/keywords/utils";

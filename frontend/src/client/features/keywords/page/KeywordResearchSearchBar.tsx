@@ -13,7 +13,7 @@ import {
 } from "@/client/components/ui/input-group";
 import { KeywordAreaField, LocalVolumeCostNote } from "./KeywordAreaField";
 import { KeywordSearchOptions } from "./KeywordSearchOptions";
-import type { KeywordResearchControllerState } from "./types";
+import type { KeywordResearchControllerState } from "../state/useKeywordResearchController";
 import { CreditCostHint } from "@/client/features/billing/credits/CreditCostHint";
 
 type Props = {
