@@ -26,7 +26,7 @@ import {
   SERP_LANGUAGE_OPTIONS,
   getIsoCountryCode,
 } from "@/shared/keyword-locations";
-import type { ProjectMarket } from "@/client/features/projects/types";
+import type { ProjectMarket } from "@/client/features/projects/projectApi";
 import { QueryError } from "@/client/components/QueryState";
 import { Spinner } from "@/client/components/Spinner";
 import { getFieldError } from "@/client/lib/forms";

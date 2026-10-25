@@ -25,7 +25,14 @@ still required before claiming live Google reporting works for a customer.
 
 ## One active date-window implementation
 
-- **Decision:** Remove unused `ResolveDateRange`, `PreviousPeriod` and month-subtraction helpers and their exclusive tests; retain `DateRange`.
+- **Decision:** Remove unused `ResolveDateRange`, `PreviousPeriod` and month-subtraction helpers and their exclusive tests, including the unused `DateRange` type.
 - **Why:** Production routes use the validated implementation in `performance.go`. Keeping a second, unreachable algorithm and tests hid drift.
 - **Preserve:** Live date presets, history floor, comparison semantics, authorization and Google quotas remain unchanged.
-- **Trace:** `dates.go`, `performance.go`, `performance_test.go`; production deadcode scan identified the removed functions.
+- **Trace:** `performance.go`, `performance_test.go`; production deadcode scan identified the removed functions, and repository references confirmed `DateRange` was unused.
+
+## Keep bounded growth reads together
+
+- **Decision:** Move `GetFilteredPageRows` into `growth_rows.go` beside `GetGrowthRows`; remove the standalone helper file and unused date-type file.
+- **Why:** Related growth evidence reads share one implementation location, and the date type had no callers.
+- **Preserve:** All date/URL validation, selected-property scope, provider limits, errors and request counts.
+- **Trace:** `growth_rows.go`, `performance.go`, existing growth/performance tests and Go compilation/race checks. No live Google request is made during verification.

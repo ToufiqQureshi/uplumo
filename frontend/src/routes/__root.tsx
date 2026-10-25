@@ -17,7 +17,7 @@ import { NotFound } from "@/client/components/NotFound";
 import { TooltipProvider } from "@/client/components/ui/tooltip";
 import { useSession } from "@/lib/auth-client";
 import { Toaster } from "sonner";
-import { queryClient } from "@/client/tanstack-db";
+import { queryClient } from "@/client/tanstack-db/queryClient";
 import { showCreditsUsed } from "@/client/features/billing/credits/creditsUsedToast";
 import { getActiveOrganizationId } from "@/lib/auth-session";
 

@@ -5,7 +5,7 @@ import {
   exportPages,
   exportPerformance,
 } from "@/client/features/audit/results/export";
-import type { AuditResultsData } from "@/client/features/audit/results/types";
+import type { AuditResultsData } from "@/client/features/audit/auditApi";
 import { isLighthouseFailure } from "@/client/features/audit/results/AuditResultsTableFilterLogic";
 import {
   IssuesView,

@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { RenderingWarnings } from "./RenderingWarnings";
-import type { AuditResultsData } from "./types";
+import type { AuditResultsData } from "../auditApi";
 
 function results(renderJavaScript: boolean): AuditResultsData {
   return {

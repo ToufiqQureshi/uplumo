@@ -1,4 +1,4 @@
-import type { AuditResultsData } from "@/client/features/audit/results/types";
+import type { AuditResultsData } from "@/client/features/audit/auditApi";
 import type { PageFetchClass } from "@/shared/audit-fetch-class";
 
 export type PageRow = AuditResultsData["pages"][number];

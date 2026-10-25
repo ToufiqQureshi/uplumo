@@ -15,7 +15,7 @@ import {
 import { ArticleEditor } from "./visual-editor/ArticleEditor";
 import { validateImage } from "./visual-editor/image-input";
 import { PreviewDialog } from "./visual-editor/PreviewDialog";
-import { MAX_TARGET_TOPICS, parseTargetTopics } from "./target-topics";
+import { MAX_TARGET_TOPICS, parseTargetTopics } from "./draft";
 
 type ArticleComposerProps = {
   draft: ContentDraftInput;

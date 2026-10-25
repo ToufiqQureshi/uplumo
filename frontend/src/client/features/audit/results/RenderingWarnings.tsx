@@ -4,7 +4,7 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@/client/components/ui/alert";
-import type { AuditResultsData } from "@/client/features/audit/results/types";
+import type { AuditResultsData } from "@/client/features/audit/auditApi";
 
 /** Report notices about JavaScript: app shells, and pages a render missed. */
 export function RenderingWarnings({ data }: { data: AuditResultsData }) {

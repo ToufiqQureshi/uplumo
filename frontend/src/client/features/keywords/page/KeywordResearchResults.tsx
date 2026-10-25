@@ -6,8 +6,8 @@ import {
 import {
   AreaTrendChart,
   OverviewStats,
-  SerpAnalysisCard,
-} from "@/client/features/keywords/components";
+} from "@/client/features/keywords/components/DisplayPrimitives";
+import { SerpAnalysisCard } from "@/client/features/keywords/components/SerpAnalysisCard";
 import type { KeywordResearchRow } from "@/types/keywords";
 import { ExportMenu } from "@/client/components/ExportMenu";
 import { Alert, AlertDescription } from "@/client/components/ui/alert";
@@ -23,7 +23,7 @@ import {
   DataTableFilterToggle,
   DataTableToolbar,
 } from "@/client/components/table/DataTableToolbar";
-import type { KeywordResearchControllerState } from "./types";
+import type { KeywordResearchControllerState } from "../state/useKeywordResearchController";
 import {
   FilterIntentSelect,
   FilterRangeInputs,

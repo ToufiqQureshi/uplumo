@@ -74,3 +74,10 @@ Researches seed terms and SERP results for a project market, with location selec
 - **Why:** Runtime test flags bypassed the actual API/schema/replay path and hid defects.
 - **Preserve:** One explicit research action uses the existing Go transport; isolated browser tests buy no live task. A unit regression confirms an old fixture flag cannot bypass fetch.
 - **Trace:** `keywordsApi.ts`, `keywordsGoApi.test.ts`, navigation fixtures and Playwright checks.
+
+## Direct component imports and colocated display helpers
+
+- **Decision:** Keep overview statistics and trend display in `components/DisplayPrimitives.tsx`, import components directly, and define the inferred controller state beside `useKeywordResearchController`. Remove forwarding-only modules.
+- **Why:** Two export layers and a separate type-only forwarding file added paths without behavior; direct imports keep unrelated SERP components out of the import path.
+- **Preserve:** All displayed/exported data, controller behavior, query identity and paid-call counts. No retry, billing or provider logic changes.
+- **Trace:** `components/DisplayPrimitives.tsx`, `state/useKeywordResearchController.ts`, updated callers, existing keyword delivery/cache/API tests and frontend checks.

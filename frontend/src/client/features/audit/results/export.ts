@@ -1,4 +1,4 @@
-import type { AuditResultsData } from "@/client/features/audit/results/types";
+import type { AuditResultsData } from "@/client/features/audit/auditApi";
 import { getIssueDescriptor } from "@/shared/audit-issues";
 import type { CsvValue } from "@/client/lib/csv";
 import { exportRows } from "@/client/lib/exportRows";

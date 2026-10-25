@@ -6,7 +6,7 @@ import {
   DEFAULT_LOCATION_CODE,
   isLabsLocationCode,
 } from "@/client/features/keywords/locations";
-import type { ProjectMarket } from "@/client/features/projects/types";
+import type { ProjectMarket } from "@/client/features/projects/projectApi";
 import {
   EMPTY_DOMAIN_FILTERS,
   type DomainActiveTab,

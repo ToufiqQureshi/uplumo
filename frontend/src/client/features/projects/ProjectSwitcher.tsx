@@ -18,7 +18,7 @@ import {
 import { Button } from "@/client/components/ui/button";
 import { Separator } from "@/client/components/ui/separator";
 import { Skeleton } from "@/client/components/ui/skeleton";
-import type { ProjectSummary } from "./types";
+import type { ProjectSummary } from "./projectApi";
 
 const SEARCH_THRESHOLD = 8;
 

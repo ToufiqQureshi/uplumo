@@ -19,3 +19,10 @@ Search Console reads, audit tables, Redis cache; no paid SEO provider.
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.
+
+## Standard-library word splitting
+
+- **Decision:** Use `strings.FieldsFuncSeq` instead of a manual rune-index tokenizer in `text.go`.
+- **Why:** The Go standard-library iterator already splits on the existing word-boundary predicate without building an intermediate rune array.
+- **Preserve:** Unicode letters/digits/combining marks, first-seen ordering, two-rune minimum, case folding and stopword/deduplication rules. Source bounds, project scope, cache identity and free-only computation remain unchanged.
+- **Trace:** `text.go`, Unicode/tokenization and matching regressions in `linksuggest_test.go`, package race tests. No live Google lookup is needed for this local refactor.

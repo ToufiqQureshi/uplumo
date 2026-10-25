@@ -7,7 +7,8 @@ Read [flow.md](flow.md) for the request path and [decision.md](decision.md) for 
 ## Code map
 
 - `ProjectSwitcher.tsx`
-- `projectApi.ts`
+- `projectApi.ts` (Zod response schema and inferred project/market types)
+- `projectQueries.ts` (shared query options and market hook)
 - `project-context/ProjectContextPage.tsx`
 - `projectContextApi.ts`
 - `backend/internal/projects`

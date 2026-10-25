@@ -62,3 +62,10 @@ Browser fixtures live in `frontend/tests/content-editor.fixtures.ts` so request/
 - **Why:** The editor intentionally preserves newer in-memory edits with its sent-snapshot comparison. Stale tests failed before reaching the business assertions.
 - **Preserve:** AI double-click sends one keyed request; typing/autosave buys nothing; delayed responses never erase newer writing; failed autosave does not loop.
 - **Trace:** `tests/content-editor.spec.ts`, existing save-snapshot unit checks and browser suite. Runtime editor behavior is unchanged.
+
+## One module for pure draft utilities
+
+- **Decision:** Keep title/preview, save-snapshot comparison, UTF-8 size validation and target-topic helpers in `draft.ts`, with their existing assertions together in `draft.test.ts`. Reuse the preview-title fallback and installed Remeda `uniqueBy` for topics.
+- **Why:** Four small modules fragmented operations on the same draft; the title fallback and case-insensitive deduplication repeated existing logic.
+- **Preserve:** Newer typing survives delayed saves; the size limit counts UTF-8 bytes; topic order/case and the five-topic cap remain. Typing and parsing start no API, AI or publish action.
+- **Trace:** `draft.ts`, `draft.test.ts`, editor imports and the full frontend suite. These local checks do not establish live save/provider acceptance.

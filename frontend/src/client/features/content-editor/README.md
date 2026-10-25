@@ -6,6 +6,7 @@ and answer-readiness checks are local editorial guidance; they do not query
 Google or predict rankings.
 
 Draft state and save/open/delete actions live in `ContentEditorPage.tsx`;
+`draft.ts` holds the pure draft utilities and their limits.
 `useLinkedDraft.ts` handles URL-selected loading and unsaved navigation through
 TanStack Query/Router. `EditorPanels.tsx` contains the shared toolbar and preview.
 
@@ -98,7 +99,8 @@ TanStack Query/Router. `EditorPanels.tsx` contains the shared toolbar and previe
 - Save, reopen and delete operations are project-scoped. Draft lists and draft
   details use TanStack Query; opening the same draft again while its cache is
   fresh reuses the cached response. The shared query client keeps in-memory
-  query data for five minutes. A full browser reload clears that cache and
+  query data for one hour (five-minute freshness). A full browser reload clears
+  that cache and
   fetches the selected saved draft from its `draft` URL parameter. Only the
   opaque draft ID enters the URL; article content stays in server storage and
   the current in-memory editor. A refused autosave pauses for that unchanged
@@ -157,7 +159,7 @@ TanStack Query/Router. `EditorPanels.tsx` contains the shared toolbar and previe
 - Do not describe readiness checks as Google's ranking algorithm or a ranking
   guarantee. Do not require a target keyword density, fixed word count, or
   fixed title/meta length.
-- Keep article content below the API's 150,000-character editor limit.
+- Keep article content within the API's 150,000-byte editor limit.
 - Configure `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and
   `SUPABASE_CONTENT_IMAGE_BUCKET` on the backend. Create that bucket as public
   and restrict its allowed MIME type to `image/webp` with a 1 MB object-size

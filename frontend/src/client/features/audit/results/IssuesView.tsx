@@ -6,7 +6,7 @@ import {
   ISSUE_SEVERITY_ORDER,
   type IssueSeverity,
 } from "@/shared/audit-issues";
-import type { AuditResultsData } from "@/client/features/audit/results/types";
+import type { AuditResultsData } from "@/client/features/audit/auditApi";
 import { SeverityBadge } from "@/client/features/audit/shared";
 import { EmptyState } from "@/client/components/EmptyState";
 import { Button } from "@/client/components/ui/button";

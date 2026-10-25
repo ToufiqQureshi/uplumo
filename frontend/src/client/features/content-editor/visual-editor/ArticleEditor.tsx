@@ -3,7 +3,7 @@ import { EditorContent, useEditor, type Editor } from "@tiptap/react";
 import { BubbleMenu, FloatingMenu } from "@tiptap/react/menus";
 import { useEffect, useRef, useState } from "react";
 import { Textarea } from "@/client/components/ui/textarea";
-import { isArticleContentWithinLimit } from "../content-limits";
+import { isArticleContentWithinLimit } from "../draft";
 import { useEditorSession } from "../editor-session";
 import { BlockMenu, BubbleBar, LinkPanel } from "./EditorMenus";
 import { EditorToolbar } from "./EditorToolbar";

@@ -73,7 +73,7 @@ vi.mock("@/client/hooks/usePromptExplorerSearchHistory", () => ({
 const projectMarket = vi.hoisted(() => ({
   value: undefined as { locationCode: number } | undefined,
 }));
-vi.mock("@/client/features/projects/useProjectMarket", () => ({
+vi.mock("@/client/features/projects/projectQueries", () => ({
   useProjectMarket: () => projectMarket.value,
 }));
 vi.mock("@/client/hooks/useBrandLookupSearchHistory", () => ({

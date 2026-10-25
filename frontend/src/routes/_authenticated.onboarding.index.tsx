@@ -11,7 +11,7 @@ import {
   restoreOnboardingAnswers,
 } from "@/client/features/onboarding/onboardingModel";
 import { captureClientEvent } from "@/client/lib/posthog";
-import { queryClient } from "@/client/tanstack-db";
+import { queryClient } from "@/client/tanstack-db/queryClient";
 import { useSession } from "@/lib/auth-client";
 import { saveOnboardingAnswers } from "@/client/features/onboarding/onboardingApi";
 

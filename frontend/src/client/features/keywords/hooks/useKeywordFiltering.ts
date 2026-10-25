@@ -6,7 +6,10 @@ import {
   parseIntentFilter,
   type KeywordFilterValues,
 } from "@/client/features/keywords/keywordResearchTypes";
-import type { SortDir, SortField } from "@/client/features/keywords/components";
+import type {
+  SortDir,
+  SortField,
+} from "@/client/features/keywords/components/DisplayPrimitives";
 import { groupSharedVolumeRows } from "@/client/features/keywords/groupSharedVolumeRows";
 
 export function applyKeywordFiltersAndSort(params: {

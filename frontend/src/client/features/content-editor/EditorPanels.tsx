@@ -4,11 +4,7 @@ import { useState, type ReactNode } from "react";
 import { Button } from "@/client/components/ui/button";
 import type { ContentDraftSummary } from "./contentEditorApi";
 import type { ContentDraftInput } from "./scoring";
-import {
-  titleForDraft,
-  searchPreviewTitle,
-  searchPreviewUrl,
-} from "./editor-display";
+import { titleForDraft, searchPreviewTitle, searchPreviewUrl } from "./draft";
 
 const reminderStorageKey = (projectId: string) =>
   `uplumo:content-editor:writer-reminder:${projectId}`;

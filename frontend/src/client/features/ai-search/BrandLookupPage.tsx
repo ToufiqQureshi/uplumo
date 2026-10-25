@@ -22,7 +22,7 @@ import {
   parseCompetitorList,
 } from "@/types/schemas/ai-search";
 import { detectTarget } from "@/shared/targetDetection";
-import { useProjectMarket } from "@/client/features/projects/useProjectMarket";
+import { useProjectMarket } from "@/client/features/projects/projectQueries";
 import {
   DEFAULT_LOCATION_CODE,
   getLanguageCode,
