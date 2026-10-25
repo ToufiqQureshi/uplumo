@@ -6,5 +6,6 @@ over- or under-engineering, check what already exists, think through what a
 change can cost the business), the read map, the repo layout, how to write Go
 and tests, the checks to run before a push, and how to work with the owner.
 There is one source of truth so the rules cannot drift.
+Then read **`FOUNDER.md`**: the owner's vision, his worries and the product map.
 
 Feature status and priority: `ROADMAP.md`. Product reasoning: `docs/PRODUCT.md`.
