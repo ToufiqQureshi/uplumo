@@ -82,7 +82,7 @@ func (r Repository) Get(ctx context.Context, projectID, id string) (Metadata, er
 func (r Repository) GetHTML(ctx context.Context, projectID, id string) (Metadata, string, error) {
 	var item Metadata
 	var html string
-	err := scanMetadataWithHTML(r.DB.QueryRow(ctx, `SELECT `+metadataColumns+`, html FROM reports WHERE project_id=$1 AND id=$2`, projectID, id), &item, &html)
+	err := scanMetadataWithHTML(r.DB.QueryRow(ctx, `SELECT `+metadataColumns+`, html, builder_definition FROM reports WHERE project_id=$1 AND id=$2`, projectID, id), &item, &html)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Metadata{}, "", ErrNotFound
 	}
@@ -117,7 +117,7 @@ func (r Repository) OrganizationBytes(ctx context.Context, organizationID string
 
 // Insert stores a report and its HTML document.
 func (r Repository) Insert(ctx context.Context, item Metadata, html string) error {
-	_, err := r.DB.Exec(ctx, `INSERT INTO reports (`+metadataColumns+`, html) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`, item.ID, item.ProjectID, item.Title, item.Summary, item.Skill, item.TemplateID, item.CreatedBy, item.CreatedByUserID, item.SizeBytes, item.ShareToken, item.SharedAt, item.CreatedAt, item.UpdatedAt, html)
+	_, err := r.DB.Exec(ctx, `INSERT INTO reports (`+metadataColumns+`, html, builder_definition) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`, item.ID, item.ProjectID, item.Title, item.Summary, item.Skill, item.TemplateID, item.CreatedBy, item.CreatedByUserID, item.SizeBytes, item.ShareToken, item.SharedAt, item.CreatedAt, item.UpdatedAt, html, item.Definition)
 	if err != nil {
 		return fmt.Errorf("insert report: %w", err)
 	}
@@ -126,7 +126,7 @@ func (r Repository) Insert(ctx context.Context, item Metadata, html string) erro
 
 // Update replaces a report and its HTML document.
 func (r Repository) Update(ctx context.Context, item Metadata, html string) error {
-	tag, err := r.DB.Exec(ctx, `UPDATE reports SET title=$3, summary=$4, html=$5, skill=$6, template_id=$7, size_bytes=$8, updated_at=$9 WHERE project_id=$1 AND id=$2`, item.ProjectID, item.ID, item.Title, item.Summary, html, item.Skill, item.TemplateID, item.SizeBytes, item.UpdatedAt)
+	tag, err := r.DB.Exec(ctx, `UPDATE reports SET title=$3, summary=$4, html=$5, skill=$6, template_id=$7, size_bytes=$8, updated_at=$9, builder_definition=$10 WHERE project_id=$1 AND id=$2`, item.ProjectID, item.ID, item.Title, item.Summary, html, item.Skill, item.TemplateID, item.SizeBytes, item.UpdatedAt, item.Definition)
 	if err != nil {
 		return fmt.Errorf("update report: %w", err)
 	}
@@ -239,7 +239,7 @@ func scanMetadata(row scanner, item *Metadata) error {
 	return row.Scan(&item.ID, &item.ProjectID, &item.Title, &item.Summary, &item.Skill, &item.TemplateID, &item.CreatedBy, &item.CreatedByUserID, &item.SizeBytes, &item.ShareToken, &item.SharedAt, &item.CreatedAt, &item.UpdatedAt)
 }
 func scanMetadataWithHTML(row scanner, item *Metadata, html *string) error {
-	return row.Scan(&item.ID, &item.ProjectID, &item.Title, &item.Summary, &item.Skill, &item.TemplateID, &item.CreatedBy, &item.CreatedByUserID, &item.SizeBytes, &item.ShareToken, &item.SharedAt, &item.CreatedAt, &item.UpdatedAt, html)
+	return row.Scan(&item.ID, &item.ProjectID, &item.Title, &item.Summary, &item.Skill, &item.TemplateID, &item.CreatedBy, &item.CreatedByUserID, &item.SizeBytes, &item.ShareToken, &item.SharedAt, &item.CreatedAt, &item.UpdatedAt, html, &item.Definition)
 }
 func scanTemplate(row scanner, item *Template) error {
 	return row.Scan(&item.ID, &item.ProjectID, &item.Name, &item.Description, &item.Instructions, &item.CreatedBy, &item.CreatedByUserID, &item.CreatedAt, &item.UpdatedAt)

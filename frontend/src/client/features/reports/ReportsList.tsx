@@ -31,7 +31,7 @@ export function ReportsList({
       <EmptyState
         icon={FileText}
         title="No reports yet"
-        description="Write a report yourself or ask your connected AI assistant to save its work here."
+        description="Create a visual report with your data, or write a report from your notes. Saved reports appear here."
       />
     );
   }

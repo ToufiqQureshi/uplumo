@@ -1,6 +1,7 @@
 package reports
 
 import (
+	"encoding/json"
 	"errors"
 	"time"
 )
@@ -44,19 +45,21 @@ func fail(code, message string) error { return &Error{Code: code, Message: messa
 
 // Metadata describes a saved report without its HTML document.
 type Metadata struct {
-	ID              string  `json:"id"`
-	ProjectID       string  `json:"projectId"`
-	Title           string  `json:"title"`
-	Summary         string  `json:"summary"`
-	Skill           *string `json:"skill"`
-	TemplateID      *string `json:"templateId"`
-	CreatedBy       string  `json:"createdBy"`
-	CreatedByUserID string  `json:"createdByUserId"`
-	SizeBytes       int     `json:"sizeBytes"`
-	ShareToken      *string `json:"shareToken"`
-	SharedAt        *string `json:"sharedAt"`
-	CreatedAt       string  `json:"createdAt"`
-	UpdatedAt       string  `json:"updatedAt"`
+	// Definition contains private editor state, never public report content.
+	Definition      json.RawMessage `json:"-"`
+	ID              string          `json:"id"`
+	ProjectID       string          `json:"projectId"`
+	Title           string          `json:"title"`
+	Summary         string          `json:"summary"`
+	Skill           *string         `json:"skill"`
+	TemplateID      *string         `json:"templateId"`
+	CreatedBy       string          `json:"createdBy"`
+	CreatedByUserID string          `json:"createdByUserId"`
+	SizeBytes       int             `json:"sizeBytes"`
+	ShareToken      *string         `json:"shareToken"`
+	SharedAt        *string         `json:"sharedAt"`
+	CreatedAt       string          `json:"createdAt"`
+	UpdatedAt       string          `json:"updatedAt"`
 }
 
 // Template is a reusable project report template.

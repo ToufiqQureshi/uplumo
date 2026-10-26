@@ -13,7 +13,68 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/pgdb"
+	"github.com/toufiqqureshi/uplumo/backend/internal/reports"
 )
+
+func TestReportBuilderPrivateDefinitionPersistence(t *testing.T) {
+	ctx := t.Context()
+	pool := openFresh(ctx, t)
+	if err := Migrate(ctx, pool); err != nil {
+		t.Fatal(err)
+	}
+	for _, query := range []string{
+		`INSERT INTO organization(id,name,slug,created_at) VALUES ('report-org','Test','report-org',now())`,
+		`INSERT INTO projects(id,organization_id,name) VALUES ('report-project','report-org','Test')`,
+	} {
+		if _, err := pool.Exec(ctx, query); err != nil {
+			t.Fatal(err)
+		}
+	}
+	repo := reports.Repository{DB: pool}
+	svc := &reports.Service{Store: repo}
+	in := reports.SaveInput{ProjectID: "report-project", OrganizationID: "report-org", Title: "Private report", Summary: "Visible results", HTML: "<html><body>Visible</body></html>", Definition: []byte(`{"version":1,"private":"customer-source-data"}`)}
+	saved, err := svc.Save(ctx, in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	item, _, err := svc.GetWithHTML(ctx, in.ProjectID, saved.ReportID)
+	if err != nil || !strings.Contains(string(item.Definition), "customer-source-data") {
+		t.Fatalf("private data lost: %+v, %v", item, err)
+	}
+	in.ReportID = saved.ReportID
+	in.Definition = []byte(`{"version":1,"private":"updated-source"}`)
+	if _, err := svc.Save(ctx, in); err != nil {
+		t.Fatal(err)
+	}
+	item, _, err = svc.GetWithHTML(ctx, in.ProjectID, saved.ReportID)
+	if err != nil || !strings.Contains(string(item.Definition), "updated-source") {
+		t.Fatalf("edit not persisted: %+v, %v", item, err)
+	}
+	metadata, err := svc.Get(ctx, in.ProjectID, saved.ReportID)
+	if err != nil || len(metadata.Definition) != 0 {
+		t.Fatalf("editor data exposed through metadata: %+v, %v", metadata, err)
+	}
+	shared, err := svc.Share(ctx, in.ProjectID, saved.ReportID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	public, err := svc.GetShared(ctx, *shared.ShareToken)
+	if err != nil || len(public.Definition) != 0 || strings.Contains(public.HTML, "source") {
+		t.Fatalf("private data exposed in share: %+v, %v", public, err)
+	}
+	if _, _, err := svc.GetWithHTML(ctx, "other-project", saved.ReportID); err == nil {
+		t.Fatal("cross-project source read succeeded")
+	}
+	// Legacy/manual writers can still save and read a report without editor state.
+	in.Definition = nil
+	if _, err := svc.Save(ctx, in); err != nil {
+		t.Fatal(err)
+	}
+	item, _, err = svc.GetWithHTML(ctx, in.ProjectID, saved.ReportID)
+	if err != nil || len(item.Definition) != 0 {
+		t.Fatalf("legacy save failed: %+v, %v", item, err)
+	}
+}
 
 // Even a Data API role granted table privileges must not read or alter
 // server-owned evidence. The migration owner still needs normal write access.

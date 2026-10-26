@@ -141,7 +141,7 @@ func (d Deps) getReport(w http.ResponseWriter, r *http.Request) {
 			d.writeError(w, r, err)
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, map[string]any{"report": metadata, "html": html})
+		httpx.WriteJSON(w, http.StatusOK, map[string]any{"report": metadata, "html": html, "definition": metadata.Definition})
 		return
 	}
 	metadata, err := d.Service.Get(r.Context(), r.PathValue("projectId"), in.ReportID)
@@ -156,12 +156,13 @@ func (d Deps) saveReport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var in struct {
-		ReportID   string  `json:"reportId"`
-		Title      string  `json:"title"`
-		Summary    string  `json:"summary"`
-		HTML       string  `json:"html"`
-		Skill      *string `json:"skill"`
-		TemplateID *string `json:"templateId"`
+		Definition json.RawMessage `json:"definition"`
+		ReportID   string          `json:"reportId"`
+		Title      string          `json:"title"`
+		Summary    string          `json:"summary"`
+		HTML       string          `json:"html"`
+		Skill      *string         `json:"skill"`
+		TemplateID *string         `json:"templateId"`
 	}
 	if !decodeBody(w, r, &in) {
 		return
@@ -180,7 +181,7 @@ func (d Deps) saveReport(w http.ResponseWriter, r *http.Request) {
 	if label == "" {
 		label = "Workspace member"
 	}
-	result, err := d.Service.Save(r.Context(), SaveInput{ProjectID: r.PathValue("projectId"), OrganizationID: orgID, ReportID: in.ReportID, Title: in.Title, Summary: in.Summary, HTML: in.HTML, Skill: in.Skill, TemplateID: in.TemplateID, CreatedBy: label, CreatedByUserID: user.ID})
+	result, err := d.Service.Save(r.Context(), SaveInput{Definition: in.Definition, ProjectID: r.PathValue("projectId"), OrganizationID: orgID, ReportID: in.ReportID, Title: in.Title, Summary: in.Summary, HTML: in.HTML, Skill: in.Skill, TemplateID: in.TemplateID, CreatedBy: label, CreatedByUserID: user.ID})
 	if err != nil {
 		d.writeError(w, r, err)
 		return

@@ -68,7 +68,9 @@ export async function installGrowthFixtures(page: Page) {
   let monitorEnabled = false;
   const growthInputs: unknown[] = [];
   const chatModes: unknown[] = [];
-  await page.addInitScript(() => localStorage.setItem("sam-beta-opt-in", "1"));
+  await page.addInitScript(() => {
+    if (window.top === window) localStorage.setItem("sam-beta-opt-in", "1");
+  });
   await page.route("**/api/**", async (route: Route) => {
     const path = new URL(route.request().url()).pathname;
     requests.push(path);
