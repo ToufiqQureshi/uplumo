@@ -42,3 +42,10 @@ event. Shared configuration and opt-outs live in the backend site `decision.md`.
 - **Why:** Unused price conversion implied an unavailable service and duplicated a stale pricing path.
 - **Preserve:** No active catalog, checkout, rank-tracking estimate, credit settlement or plan price changes.
 - **Trace:** Shared `billing.ts`; audit launch decision; frontend type, unused-code and test checks.
+
+## Show the maximum next to expensive credit costs
+
+- **Decision:** `CreditCostHint` adds "(at most N)" and `useConfirmedCost` titles its dialog "Use about N credits (at most M)?" when the usage response carries `maxCredits`.
+- **Why:** Brand Lookup and Prompt Explorer can charge several times their typical cost; the owner chose to show the most a click can cost before it runs.
+- **Preserve:** The maximum comes only from the server (`backend/internal/billing/costs.go`), never computed in the browser; without it the hint and dialog read as before. See `backend/internal/billing/decision.md`.
+- **Trace:** `credits/CreditCostHint.tsx`, `credits/useConfirmedCost.tsx`, `usageApi.ts` schema and their tests.

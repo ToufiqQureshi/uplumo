@@ -23,9 +23,10 @@ export function useConfirmedCost(
 ): { request: (run: () => void) => void; dialog: ReactNode } {
   const { data: usage } = useBillingUsage();
   const [pending, setPending] = useState<(() => void) | null>(null);
-  const credits =
-    usage?.costs.find((c) => c.feature === feature && c.action === action)
-      ?.credits ?? 0;
+  const cost = usage?.costs.find(
+    (c) => c.feature === feature && c.action === action,
+  );
+  const credits = cost?.credits ?? 0;
   const asks =
     usage !== undefined &&
     creditLevel(usage) !== "not_charged" &&
@@ -38,7 +39,9 @@ export function useConfirmedCost(
 
   const dialog = pending ? (
     <ConfirmDialog
-      title={`Use about ${formatCredits(credits)} credits?`}
+      title={`Use about ${formatCredits(credits)} credits${
+        cost?.maxCredits ? ` (at most ${formatCredits(cost.maxCredits)})` : ""
+      }?`}
       confirmLabel="Continue"
       onClose={() => setPending(null)}
       onConfirm={() => {
@@ -49,7 +52,10 @@ export function useConfirmedCost(
     >
       This {what} uses about {formatCredits(credits)} credits
       {usage ? ` of your ${formatCredits(usage.balanceCredits)} left` : ""}. You
-      are charged the real cost of the data, which can be a little more or less.
+      are charged the real cost of the data
+      {cost?.maxCredits
+        ? `, never more than ${formatCredits(cost.maxCredits)} credits.`
+        : ", which can be a little more or less."}
     </ConfirmDialog>
   ) : null;
 

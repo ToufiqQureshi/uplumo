@@ -37,6 +37,30 @@ func TestTypicalCostHintsAreNotBelowWhatALiveClickBilled(t *testing.T) {
 	}
 }
 
+// The maximum shown before an AI visibility action is its worst-case hold, so
+// a customer is never charged more than the screen said.
+func TestAIVisibilityMaximumIsTheWorstCaseHold(t *testing.T) {
+	want := map[string]int64{
+		ActionBrandLookup:    CreditsForUSD(dataforseo.BrandLookupCeilingUSD(2, true)),
+		ActionPromptExplorer: CreditsForUSD(dataforseo.PromptExplorerCeilingUSD(4, true)),
+	}
+	for _, cost := range ActionCosts() {
+		if cost.Feature != spend.AIVisibility {
+			if cost.MaxCredits != 0 {
+				t.Errorf("%s shows a maximum of %d credits; only AI visibility sets one", cost.Feature, cost.MaxCredits)
+			}
+			continue
+		}
+		if cost.MaxCredits != want[cost.Action] || cost.MaxCredits <= cost.Credits {
+			t.Errorf("%s max = %d credits, want %d and above the typical %d", cost.Action, cost.MaxCredits, want[cost.Action], cost.Credits)
+		}
+		delete(want, cost.Action)
+	}
+	if len(want) != 0 {
+		t.Fatalf("missing AI visibility actions: %v", want)
+	}
+}
+
 func TestRankTrackingTypicalCostUsesThePublishedTop30QueuedRate(t *testing.T) {
 	for _, cost := range ActionCosts() {
 		if cost.Feature == spend.RankTracking {

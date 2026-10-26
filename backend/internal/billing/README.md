@@ -98,7 +98,9 @@ two customers cannot block or reuse the other's reservation.
 
 Monthly credits are shown on the public pricing page beside each plan's
 included tools and limits. The app shows the balance in Billing and estimated
-costs next to paid actions. `internal/site` reads the grant from the plan
+costs next to paid actions; Brand Lookup and Prompt Explorer also show their
+maximum (`maxCredits`, the worst-case hold), so a customer sees the most a click
+can cost. `internal/site` reads the grant from the plan
 catalog, so pricing cannot drift from the amount awarded after payment.
 
 ## The spend guard
