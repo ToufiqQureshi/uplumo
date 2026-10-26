@@ -112,6 +112,25 @@ const siteName = (domain: string) =>
     .find((label) => LISTING_SITES.has(label) || COMMUNITY_SITES.has(label)) ??
   "";
 
+// A Google Maps place link is the business's Google Business Profile: the
+// listing that matters most for a local business.
+const GOOGLE_PROFILE = "Google Business Profile";
+const isGoogleMaps = (url: URL) =>
+  /(^|\.)google\.[a-z.]+$/.test(url.hostname) &&
+  (url.hostname.startsWith("maps.") || url.pathname.startsWith("/maps"));
+
+/** Drops tracking parameters (utm_source=chatgpt.com) so links read cleanly. */
+function cleanURL(raw: string) {
+  const url = new URL(raw);
+  url.search = new URLSearchParams(
+    [...url.searchParams].filter(([key]) => !key.startsWith("utm_")),
+  ).toString();
+  url.hash = "";
+  return url.toString();
+}
+
+const answersText = (n: number) => (n === 1 ? "1 answer" : `${n} answers`);
+
 const isOwn = (domain: string, own: string) =>
   bare(domain) === own || bare(domain).endsWith(`.${own}`);
 
@@ -172,14 +191,17 @@ export function whyNotCited(
       if (!c.domain || seen.has(c.url)) continue;
       seen.add(c.url);
       const name = siteName(c.domain);
-      if (LISTING_SITES.has(name)) {
+      if (isGoogleMaps(new URL(c.url))) {
+        bump(listings, GOOGLE_PROFILE);
+        listingAnswers.add(answer.id);
+      } else if (LISTING_SITES.has(name)) {
         bump(listings, bare(c.domain));
         listingAnswers.add(answer.id);
       } else if (COMMUNITY_SITES.has(name)) {
         bump(community, bare(c.domain));
         communityAnswers.add(answer.id);
       } else {
-        bump(competitorPages, c.url);
+        bump(competitorPages, cleanURL(c.url));
         bump(competitorPrompts, answer.prompt);
         competitorAnswers.add(answer.id);
       }
@@ -192,13 +214,16 @@ export function whyNotCited(
     gaps.push({
       kind: "listings",
       title: "AI trusts listing and review sites you are not winning on",
-      detail: `In ${listingAnswers.size} answers AI linked to ${sites.join(", ")} instead of your site. Get listed there with the same name, address and phone as your website, and ask happy customers for reviews.`,
+      detail: `In ${answersText(listingAnswers.size)} AI linked to ${sites.join(", ")} instead of your site. Get listed there with the same name, address and phone as your website, and ask happy customers for reviews.`,
       evidence: sites,
       answers: listingAnswers.size,
       action: {
         kind: "external",
         label: `Open ${sites[0]}`,
-        href: `https://${sites[0]}`,
+        href:
+          sites[0] === GOOGLE_PROFILE
+            ? "https://business.google.com/"
+            : `https://${sites[0]}`,
       },
     });
   }
@@ -207,7 +232,7 @@ export function whyNotCited(
     gaps.push({
       kind: "competitor_pages",
       title: "Other websites have a page that answers the question; you do not",
-      detail: `In ${competitorAnswers.size} answers AI cited these pages. Write one page that answers "${prompt}" better: direct answer first, prices, location and an FAQ.`,
+      detail: `In ${answersText(competitorAnswers.size)} AI cited these pages. Write one page that answers "${prompt}" better: direct answer first, prices, location and an FAQ.`,
       evidence: top(competitorPages, 5),
       answers: competitorAnswers.size,
       action: {
@@ -222,7 +247,7 @@ export function whyNotCited(
     gaps.push({
       kind: "named_not_linked",
       title: "AI knows your name but has no page of yours to link",
-      detail: `In ${namedNotLinked} answers AI named you without linking your site. Give it a page to cite: a clear answer to "${prompt}" on your own site.`,
+      detail: `In ${answersText(namedNotLinked)} AI named you without linking your site. Give it a page to cite: a clear answer to "${prompt}" on your own site.`,
       evidence: top(namedPrompts, 3),
       answers: namedNotLinked,
       action: {
@@ -237,7 +262,7 @@ export function whyNotCited(
     gaps.push({
       kind: "not_named",
       title: "AI recommends other businesses by name",
-      detail: `In ${notNamed} answers AI recommended ${names.slice(0, 3).join(", ")} and never named you. Compare yourself with them on your site, and track them as competitors to see when that changes.`,
+      detail: `In ${answersText(notNamed)} AI recommended ${names.slice(0, 3).join(", ")} and never named you. Compare yourself with them on your site, and track them as competitors to see when that changes.`,
       evidence: names,
       answers: notNamed,
       action: { kind: "track", label: "Track these competitors" },
@@ -248,7 +273,7 @@ export function whyNotCited(
     gaps.push({
       kind: "community",
       title: "AI quotes what people say on community sites",
-      detail: `In ${communityAnswers.size} answers AI linked to ${sites.join(", ")}. Answer real questions there and post short videos or guides that mention your business.`,
+      detail: `In ${answersText(communityAnswers.size)} AI linked to ${sites.join(", ")}. Answer real questions there and post short videos or guides that mention your business.`,
       evidence: sites,
       answers: communityAnswers.size,
       action: {
