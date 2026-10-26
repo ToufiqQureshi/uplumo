@@ -31,13 +31,13 @@ Question 3 is the product. Questions 1 and 2 are data any tool can buy; the
   written for them.
 - **Goal now:** the first **10 paying customers**. Judge every task by
   "does this help get or keep one of those 10?"
-- **Order of work** (one PR each; do not jump ahead without the owner):
-  1. Credits audit: shown cost == charged cost, under retries, double
-     clicks, races and provider failures.
-  2. DataForSEO audit: real paid calls per click vs. each `flow.md`.
-  3. Build Q3, "why not cited, and what to fix" (section 5, "The biggest
-     gap").
-  4. Then wiring, test-strength and code-size audits (section 5 list).
+- **Order of work** (one PR each; do not jump ahead without the owner).
+  Status 26 Oct; `ROADMAP.md` "Next up" is the live list:
+  1. ✅ Credits audit (#208).
+  2. ✅ DataForSEO audit (#209).
+  3. 🔨 Q3, "why not cited, and what to fix": first version shipped
+     (#219, #222; Site Audit AI-readiness checks #220, #223, #227).
+  4. ✅ Wiring, test-strength and code-size audit (#211).
 - **Stop list:** no new feature, page or provider outside this order. Ideas
   go to the owner as a proposal, not as code.
 
@@ -98,39 +98,40 @@ Sidebar groups from `frontend/src/client/navigation/items.ts`. "Paid" = calls
 a billed provider (DFS = DataForSEO, LLM = OpenRouter). "Vision fit": how much
 the page serves the three questions in section 1.
 
-| Sidebar → page                                                               | What it does today                                                                                  | Backend package                                                 | Paid     | Vision fit                                      |
-| ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | -------- | ----------------------------------------------- |
-| Home → Dashboard                                                             | Overview of the project                                                                             | `dashboardoverview`, `activation`                               | no       | Should lead with "are you cited, and why not"   |
-| Home → SAM assistant                                                         | Chat assistant over project data                                                                    | `sam`                                                           | LLM      | **Core** for "why / what next" if fed real data |
-| Customers & traffic → Traffic (Analytics, Search Perf.)                      | Own analytics script + GA4 + Search Console reports                                                 | `analytics`, `ga4`, `gsc`, `google`                             | no       | Low today: mirrors GSC/GA4, no "why it dropped" |
-| Customers & traffic → AI Visibility (Tracker, Brand Lookup, Prompt Explorer) | Is the brand mentioned/cited, which pages AI cites, brands named alongside, one prompt across 4 AIs | `aisearch`                                                      | DFS      | **Core** (answers Q1 and Q2; Q3 "why" missing)  |
-| Your website → Site Audit                                                    | Crawl and technical checks                                                                          | `audit`, `crawleraccess`                                        | no       | Supports Q3 (technical reasons not cited)       |
-| Your website → Rank Tracking                                                 | Google positions for tracked keywords                                                               | `ranktracking`                                                  | DFS      | Medium                                          |
-| Your website → Content Editor                                                | Write, score, AI-assist, publish to WordPress                                                       | `contenteditor`, `sitepublish`, `linksuggest`, `contentauthors` | DFS, LLM | Supports "fix it" step of Q3                    |
-| Research → Keywords (Research, Saved)                                        | Keyword volume, difficulty, ideas                                                                   | `keywords`                                                      | DFS      | Low (commodity data)                            |
-| Research → Competitors (Domain, Backlinks)                                   | Competitor domain and backlink data                                                                 | `domain`, `backlinks`                                           | DFS      | Medium: could explain "why they're cited"       |
-| Reports & setup → Reports                                                    | Project reports                                                                                     | `reports`                                                       | no       | Low                                             |
-| Reports & setup → Setup (Context, Agent setup)                               | Project context; MCP access for outside agents                                                      | `projectcontext`, `mcp`, `apikeys`                              | via MCP  | Context feeds SAM; MCP is a side feature        |
-| Billing                                                                      | Plans, Razorpay subscription, credits                                                               | `billing`, `razorpay`, `plans`                                  | money    | Must be correct before any growth               |
-| Help                                                                         | Support page                                                                                        | `site`                                                          | no       |                                                 |
+| Sidebar → page                                                               | What it does today                                                                                  | Backend package                                                 | Paid     | Vision fit                                              |
+| ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | -------- | ------------------------------------------------------- |
+| Home → Dashboard                                                             | Overview of the project                                                                             | `dashboardoverview`, `activation`                               | no       | Should lead with "are you cited, and why not"           |
+| Home → SAM assistant                                                         | Chat assistant over project data                                                                    | `sam`                                                           | LLM      | **Core** for "why / what next" if fed real data         |
+| Customers & traffic → Traffic (Analytics, Search Perf.)                      | Own analytics script + GA4 + Search Console reports                                                 | `analytics`, `ga4`, `gsc`, `google`                             | no       | Now says what changed, why and what to fix (#225, #226) |
+| Customers & traffic → AI Visibility (Tracker, Brand Lookup, Prompt Explorer) | Is the brand mentioned/cited, which pages AI cites, brands named alongside, one prompt across 4 AIs | `aisearch`                                                      | DFS      | **Core** (Q1, Q2, and Q3 v1 via `WhyNotCitedCard`)      |
+| Your website → Site Audit                                                    | Crawl and technical checks                                                                          | `audit`, `crawleraccess`                                        | no       | Supports Q3 (technical reasons not cited)               |
+| Your website → Rank Tracking                                                 | Google positions for tracked keywords                                                               | `ranktracking`                                                  | DFS      | Medium                                                  |
+| Your website → Content Editor                                                | Write, score, AI-assist, publish to WordPress                                                       | `contenteditor`, `sitepublish`, `linksuggest`, `contentauthors` | DFS, LLM | Supports "fix it" step of Q3                            |
+| Research → Keywords (Research, Saved)                                        | Keyword volume, difficulty, ideas                                                                   | `keywords`                                                      | DFS      | Low (commodity data)                                    |
+| Research → Competitors (Domain, Backlinks)                                   | Competitor domain and backlink data                                                                 | `domain`, `backlinks`                                           | DFS      | Medium: could explain "why they're cited"               |
+| Reports & setup → Reports                                                    | Project reports                                                                                     | `reports`                                                       | no       | Low                                                     |
+| Reports & setup → Setup (Context, Agent setup)                               | Project context; MCP access for outside agents                                                      | `projectcontext`, `mcp`, `apikeys`                              | via MCP  | Context feeds SAM; MCP is a side feature                |
+| Billing                                                                      | Plans, Razorpay subscription, credits                                                               | `billing`, `razorpay`, `plans`                                  | money    | Must be correct before any growth                       |
+| Help                                                                         | Support page                                                                                        | `site`                                                          | no       |                                                         |
 
 Size today: about 65k lines of Go, 76k lines of frontend, 51k lines of tests,
 354 Markdown files (~20k lines), 42 backend packages, 28 frontend features.
 
-### The biggest gap
+### Q3, "why not you, and what to fix"
 
-AI Visibility already buys the data for Q1 and Q2 (mentions, cited pages,
-`brandsAlongside`, `sourceSites`). Nothing yet turns it into **Q3: "why not
-you, and what to fix"**, which would combine those citations with Site Audit,
-the cited competitor pages and content gaps. That is the most valuable next
-feature, and most other pages should feed it or step back.
+First version shipped: `WhyNotCitedCard` (AI Visibility) explains, from a
+tracker check's saved answers and at no credit cost, which listing sites,
+competitor pages and community sites AI used instead, each with one action
+(`frontend/src/client/features/ai-search/README.md`). Site Audit adds AI
+readiness checks (AI crawler access, `llms.txt`, business schema, Q&A
+content, phone consistency). This is the core product: grow it before
+anything else.
 
-### Not yet verified (open audits, one PR each, owner picks the order)
+### Audits done (dated files in `docs/audits/`)
 
-1. Credits: shown cost == charged cost for every paid action, including
-   retries, double clicks and provider failures.
-2. DataForSEO: real calls per click vs. the counts in each `flow.md`.
-3. Frontend ↔ backend wiring: every screen's API call has a working route
-   and every route has a caller (or a reason, e.g. MCP).
-4. Tests: mutation check on billing, credits, tenancy and paid-call tests.
-5. Code and docs size: what can be deleted with no behavior change.
+1. Credits (2026-10-25): production spend fully charged back; 9/9
+   deliberate breaks caught.
+2. DataForSEO (2026-10-26): no runaway buying; one "paid, never shown" bug
+   fixed.
+3. Wiring, tests, size (2026-10-26): every screen reaches a route; one dead
+   route removed; size follows features, not dead code.

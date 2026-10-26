@@ -17,6 +17,17 @@ feelings, business calls, priorities, corrections. Read it after
 
 ---
 
+## 26 Oct 2026 (evening): "Saare docs outdated" (Claude, PR #231)
+
+- Owner: "Saare docs outdated hain. Razorpay test nahi, live mode pe hai.
+  Docs kaam ke saath update nahi hue." He expects docs to change in the same
+  PR as the work, every time.
+- Found: Razorpay docs already say live; the real staleness was that ~20 PRs
+  merged on 26 Oct (audits, max credits, "why not cited" v1, Search
+  Performance/Analytics) while `README`, `FOUNDER`, `ROADMAP`, `PRODUCT`,
+  `WEEKLY` still said "not built". All five fixed in #231.
+- Not done yet: a line-by-line check of the ~300 feature docs against code.
+
 ## 26 Oct 2026: header light-mode access (Codex)
 
 - Owner asked to add light mode in the header to the existing PR.
@@ -72,6 +83,17 @@ feelings, business calls, priorities, corrections. Read it after
   real DataForSEO money; pause or weekly?
 - An agent's `git stash pop` mistake pulled another agent's stash into the
   tree; restored on his go. Stash `keyword field-delivery WIP` is intact.
+
+## 26 Oct 2026: "Docs update kyu nahi kiye?" (Claude)
+
+- Owner merged #208, then was upset: "Itna baat kiya, phir bhi docs update
+  nahi kiye. `FOUNDER.md` me likha, lekin kaam docs? Kaun karega sab sahi?"
+- **Lesson for every agent:** writing a rule is not doing the work. When the
+  vision or order changes, update `docs/PRODUCT.md`, `ROADMAP.md` and
+  `docs/WEEKLY.md` in the same PR, without being asked.
+- Fixed in the follow-up PR: those three now match `FOUNDER.md`.
+- He also asked to "deploy": #208 was docs only, and this session has no
+  Railway access, so nothing was deployed.
 
 ## 25 Oct 2026: credits audit result (Claude, PR #208)
 

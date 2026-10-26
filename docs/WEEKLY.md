@@ -3,6 +3,33 @@
 One short section per week (Saturday to Friday), newest first, last 8 weeks.
 Read the latest week first; rules are in `CLAUDE.md` section 7.
 
+## 24–30 Oct 2026 (in progress, updated 26 Oct)
+
+**Merged:**
+
+- Vision and audits: #208 (`FOUNDER.md`, `imp_sessions_talked.md`, credits
+  audit), #209 (DataForSEO audit; AI Overview answers paid and never shown,
+  fixed), #211 (wiring/tests/size audit, one dead route removed), #217
+  (owner's 26 Oct decisions).
+- Why not cited and AI readiness: #219, #221, #222, #220, #223, #227, #224.
+- Value on existing pages: #197, #198, #214 (dashboard), #202–#205, #225
+  (Search Performance: what changed, why, what to fix), #204, #226
+  (Analytics).
+- Money safety: #210 (max credits shown), #216 (saved reports never rebought
+  without a click). CI: #212 (four Go test shards), #215 (paid-call browser
+  tests). Content: #218 (Ubersuggest review), #230 (10 guides, theme menu).
+
+**Decisions:** customer = Indian businesses, small to big; goal = first 10
+paying customers; show max credits; hold only the typical cost and charge
+the actual (not built); test workspace tracker stays daily.
+
+**Money:** production provider spend $4.24 (DataForSEO $4.17), all from the
+owner's 3 test workspaces, fully charged back.
+
+**Docs changed:** `FOUNDER.md`, `imp_sessions_talked.md`, `docs/PRODUCT.md`,
+`ROADMAP.md`, `README.md`, `CLAUDE.md`, `AGENTS.md`, `DECISIONS.md`, three
+audits.
+
 ## 17–23 Oct 2026 (updated 23 Oct; week closes Friday 23 Oct)
 
 **Production:** Owner confirmed Razorpay live keys, so working subscriptions
@@ -30,8 +57,7 @@ checks; see `docs/audits/2026-10-23-launch-readiness.md`.
   after Redis expiry; tenant scope and age limits remain, incomplete backlinks
   results do not replace a complete snapshot.
 - Rank and provider correctness: #193 removes a false weekly setup blocker and
-  sets MCP depth 10; #194 bills valid empty SERP 40102 and refunds invalid-field
-  40501.
+  sets MCP depth 10; #194 bills valid empty SERP 40102 and refunds invalid-field 40501.
 
 **Owner decisions:** Solo ₹999 / Growth ₹2,499 / Business ₹4,999 / Agency
 ₹9,999; no per-workspace daily credit cap; Local SEO removed; IndexNow is paid;

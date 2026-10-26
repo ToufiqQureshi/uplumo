@@ -32,23 +32,23 @@ its $2/day account cap. See `docs/audits/2026-10-23-launch-readiness.md`.
 
 ## Launch checklist
 
-| Item                                                                                                   | Status                                                  |
-| ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------- |
-| Railway deploy, domain, `www` redirect                                                                 | ✅                                                      |
-| Sign-up, email verification, password reset, Google sign-in                                            | ✅                                                      |
-| `support@uplumo.com` (Cloudflare forwards it)                                                          | ✅                                                      |
-| Loops email: verify and reset working; invitation template made, not tested                            | 🔨                                                      |
-| Public pages: landing, pricing, about, contact, terms, privacy, refunds, shipping                      | ✅                                                      |
-| Razorpay account approved (KYC)                                                                        | ✅                                                      |
-| Razorpay live keys in Railway                                                                          | ✅                                                      |
-| Live Razorpay plan IDs match the catalog (Business included)                                             | 🔨 all four variables present; live terms pending                            |
-| Razorpay live renewal and one-click cancel confirmed on a real subscription                            | ⏳                                                      |
-| One-click cancel (`POST /api/v1/billing/cancel`, "Cancel <plan>" on Billing)                           | ✅ built, not yet run against Razorpay                  |
-| DataForSEO key in production (keywords, rank tracking, backlinks, AI visibility answer 503 without it) | ✅ owner confirms working 23 Oct; intentional $2/day cap       |
-| Google OAuth app verification (Search Console and Analytics scopes)                                    | ⏳                                                      |
-| Live usage shown to the customer (credits on Billing, cost next to paid actions)                       | ✅ built                                                |
-| Spend guard: credits held before every paid lookup and AI call; provider-wide emergency brake           | ✅ built                                                |
-| Lawyer review of the legal pages                                                                       | ⏳                                                      |
+| Item                                                                                                   | Status                                                   |
+| ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------- |
+| Railway deploy, domain, `www` redirect                                                                 | ✅                                                       |
+| Sign-up, email verification, password reset, Google sign-in                                            | ✅                                                       |
+| `support@uplumo.com` (Cloudflare forwards it)                                                          | ✅                                                       |
+| Loops email: verify and reset working; invitation template made, not tested                            | 🔨                                                       |
+| Public pages: landing, pricing, about, contact, terms, privacy, refunds, shipping                      | ✅                                                       |
+| Razorpay account approved (KYC)                                                                        | ✅                                                       |
+| Razorpay live keys in Railway                                                                          | ✅                                                       |
+| Live Razorpay plan IDs match the catalog (Business included)                                           | 🔨 all four variables present; live terms pending        |
+| Razorpay live renewal and one-click cancel confirmed on a real subscription                            | ⏳                                                       |
+| One-click cancel (`POST /api/v1/billing/cancel`, "Cancel <plan>" on Billing)                           | ✅ built, not yet run against Razorpay                   |
+| DataForSEO key in production (keywords, rank tracking, backlinks, AI visibility answer 503 without it) | ✅ owner confirms working 23 Oct; intentional $2/day cap |
+| Google OAuth app verification (Search Console and Analytics scopes)                                    | ⏳                                                       |
+| Live usage shown to the customer (credits on Billing, cost next to paid actions)                       | ✅ built                                                 |
+| Spend guard: credits held before every paid lookup and AI call; provider-wide emergency brake          | ✅ built                                                 |
+| Lawyer review of the legal pages                                                                       | ⏳                                                       |
 
 ## What is built
 
@@ -110,10 +110,21 @@ This is a shortlist for product discovery, not a claim that competitors lack the
 
 ## Next up
 
-1. Verify live plan IDs (Business included), then confirm subscription, renewal
-   and cancel flows in Razorpay and reconcile them with the dashboard.
-2. Walk through every page on production as a real user and fix what breaks.
-3. Let a customer change plan from Billing.
+Owner's order (25 Oct 2026, `FOUNDER.md` section 1a). New features wait.
+
+1. ✅ Credits audit (#208). F1: max credits shown before Brand Lookup and
+   Prompt Explorer (#210). F5: the 3 active subscriptions are the owner's
+   test accounts.
+2. ✅ DataForSEO audit (#209, `docs/audits/2026-10-26-dataforseo-audit.md`).
+3. 🔨 "Why not cited, and what to fix": v1 shipped (#219, #222, Site Audit
+   AI readiness #220, #223, #227). Grow this next.
+4. ✅ Wiring, test-strength and code-size audit (#211).
+5. ⏳ Hold only the typical cost, charge the actual cost; Uplumo absorbs a
+   shortfall (owner, 26 Oct, `DECISIONS.md`). Not built.
+
+Still open from before: verify live Razorpay plan IDs and the
+subscribe/renew/cancel flow; walk every production page as a real user;
+let a customer change plan from Billing.
 
 ## Owner actions
 
@@ -166,6 +177,10 @@ Secrets go into Railway variables only, never into the repo or chat.
   (`STAFF_EMAILS`).
 
 ## Open decisions for the owner
+
+- The test workspace's daily AI Overview tracker costs about $5.7/month of
+  real DataForSEO spend: keep daily (owner, 26 Oct: "stays daily") or revisit
+  once paying customers arrive.
 
 - The typical costs on Billing (`backend/internal/billing/costs.go`) are from
   published prices; check them against the first real DataForSEO and

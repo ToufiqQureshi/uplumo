@@ -1,21 +1,23 @@
 # Uplumo
 
-SEO and AI-search platform, live at <https://uplumo.com>: keyword research,
-rank tracking, site audits, backlinks, white-label client reports, and
-analytics that shows which AI assistants (ChatGPT, Perplexity, Gemini, Claude,
-Copilot) send you visitors.
+Live at <https://uplumo.com>. Uplumo tells a business whether AI assistants
+(ChatGPT, Google AI Overviews, Gemini, Perplexity, Claude) cite its site, who
+they cite instead, and why not, with what to fix. Around that: site audits,
+rank tracking, keyword and competitor research, analytics with AI-referral
+detection, and white-label reports. Vision and priorities: `FOUNDER.md`.
 
 Proprietary software. See [`LICENSE`](./LICENSE).
 
 ## Where things live
 
-| Path                     | What                                                             |
-| ------------------------ | ---------------------------------------------------------------- |
-| `backend/`               | Go server: API, public pages, analytics ingest, billing, MCP     |
-| `frontend/`              | React + TypeScript app (Vite, static SPA)                        |
-| `docs/`                  | Product brief, local setup, deploy guide, dated audits           |
-| `CLAUDE.md`, `AGENTS.md` | Rules for coding agents and contributors                         |
-| `ROADMAP.md`             | What is built, what is next, what the owner still has to decide  |
+| Path                     | What                                                            |
+| ------------------------ | --------------------------------------------------------------- |
+| `backend/`               | Go server: API, public pages, analytics ingest, billing, MCP    |
+| `frontend/`              | React + TypeScript app (Vite, static SPA)                       |
+| `docs/`                  | Product brief, local setup, deploy guide, dated audits          |
+| `CLAUDE.md`, `AGENTS.md` | Rules for coding agents and contributors                        |
+| `FOUNDER.md`             | Owner's vision, worries, priorities and the product map         |
+| `ROADMAP.md`             | What is built, what is next, what the owner still has to decide |
 
 Each feature has its own `README.md` next to its code, under
 `backend/internal/<feature>/` and `frontend/src/client/features/<feature>/`.
@@ -30,7 +32,7 @@ Each feature has its own `README.md` next to its code, under
 ## Hosting
 
 Production runs on Railway: one Go server that also serves the built React
-app, with Postgres and Redis. The root `Dockerfile` builds both. Cloudflare
+app, with Railway Redis and a Supabase Postgres database. The root `Dockerfile` builds both. Cloudflare
 sits in front for DNS and forwards `support@uplumo.com`. Payments go through
 Razorpay, transactional email through Loops, SEO data through DataForSEO on
 Uplumo's own account (customers never bring their own keys).

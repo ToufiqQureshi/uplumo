@@ -55,7 +55,7 @@ Last updated: 25 Oct 2026
 - [ ] **WordPress (revmerito.com):** add the 2 `.htaccess` lines on Hostinger (the host drops the Authorization header), then connect with a real application password (24 characters).
 - [ ] **Railway GitHub auto-deploy** is broken: Railway shows "Could not load branches". Reconnect GitHub in Railway Account Settings → Connections. Until then, deploy with `railway up` (see `docs/DEPLOY.md`).
 - [ ] Mark the 2 GitGuardian incidents from PR #122 as false positives.
-- [ ] Codex PR 2 (SERP briefs and credits) and PR 3 (AI actions) still have to be built.
+- [x] Codex PR 2 (SERP briefs and credits) and PR 3 (AI actions): built (`contenteditor/brief.go`, `contenteditor/writer.go`).
 
 ## 3. Keys and settings in Railway (names only)
 
@@ -342,3 +342,17 @@ Owner-approved scope: one focused PR adds optional 180-day browser recognition a
 - **Why:** These specs fail when a page load, reload, typing, autosave or double click buys provider work, but no CI job ran them, so a regression could ship. Owner asked for it on 26 Oct.
 - **Preserve:** No real provider is called (routes are mocked). The other specs stay local-only until they are needed; the job uses the runner's Chrome (the config's default `chrome` channel).
 - **Trace:** `.github/workflows/ci.yml`; all 14 tests in these specs passed locally in about 3 minutes. Agent/CI rule change: called out in the PR.
+
+## Product docs follow the founder brief (26 October)
+
+- **Decision:** `docs/PRODUCT.md` now leads with the AI-citation vision and lists "why not cited, and what to fix" as feature 0; `ROADMAP.md` "Next up" follows the owner's order with each item's status and PR; `docs/WEEKLY.md` has the 24–30 Oct week.
+- **Why:** After #208 the owner found these three still described the old all-in-one SEO plan, so an agent reading them would build against the wrong vision.
+- **Preserve:** `FOUNDER.md` is the source for vision and order; `PRODUCT.md` and `ROADMAP.md` link to it instead of repeating it. Update all three together when the owner changes direction.
+- **Trace:** `docs/PRODUCT.md`, `ROADMAP.md`, `docs/WEEKLY.md`, `imp_sessions_talked.md`.
+
+## Repo-wide docs match what shipped (26 October, later)
+
+- **Decision:** `README.md`, `FOUNDER.md`, `ROADMAP.md`, `docs/PRODUCT.md` and `docs/WEEKLY.md` now state what merged on 24–26 Oct: all three audits done, max credits shown (#210), "why not cited" v1 shipped (#219, #222), Search Performance and Analytics explain changes (#225, #226). `README.md` says Postgres is Supabase, not Railway.
+- **Why:** Several agents merged work the same day without updating these files, so the owner found them describing a state that no longer existed.
+- **Preserve:** Every PR that ships an item named in `FOUNDER.md` section 1a or `ROADMAP.md` "Next up" updates its status there in the same PR.
+- **Trace:** the five files above; merged PR list from `git log origin/main` (24–26 Oct).
