@@ -7,9 +7,15 @@ includes is in `backend/internal/plans/catalog.go`.
 
 ## What Uplumo is
 
-An all-in-one SEO + AI-search platform that has to beat Semrush and Ahrefs
-on the things users actually complain about, and not by cloning their
-feature count.
+Uplumo tells an Indian business, small to big, three things: **is my site
+cited by AI** (ChatGPT, Google AI Overviews, Gemini, Perplexity, Claude),
+**who is cited instead**, and **why not me, and what do I fix**. The third
+answer is the product; every other page feeds it or steps back. The owner's
+own words, worries and current goal (first 10 paying customers) are in
+`FOUNDER.md`.
+
+It has to beat Semrush and Ahrefs on the things users actually complain
+about, not by cloning their feature count.
 
 Part of the codebase is derived from an MIT-licensed project (see
 `LICENSE-OPENSEO-MIT`). That code is a **starting point, not the
@@ -42,6 +48,10 @@ These are the complaints we exist to fix (2026 research):
 
 Full list and status: `ROADMAP.md`.
 
+0. **"Why not cited, and what to fix"** (not built): joins AI Visibility's
+   cited pages and competitors with Site Audit and content gaps into a
+   ranked fix list. This is the next feature after the credits and
+   DataForSEO audits (`FOUNDER.md` section 1a).
 1. **Uplumo Analytics**: our own privacy-friendly tracker (GA4/PostHog
    style) with first-class **AI traffic detection** for ChatGPT,
    Perplexity, Gemini, Claude and Copilot, including recovery of the

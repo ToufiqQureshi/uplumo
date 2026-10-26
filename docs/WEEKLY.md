@@ -3,6 +3,22 @@
 One short section per week (Saturday to Friday), newest first, last 8 weeks.
 Read the latest week first; rules are in `CLAUDE.md` section 7.
 
+## 24–30 Oct 2026 (in progress, updated 26 Oct)
+
+**Merged:** #208: `FOUNDER.md` (owner vision, worries, priorities, product
+map), `imp_sessions_talked.md` (important owner talks), credits audit.
+`CLAUDE.md` and `AGENTS.md` now make every agent read both files.
+
+**Decisions:** customer = Indian businesses, small to big; goal = first 10
+paying customers; order = credits audit → DataForSEO audit → "why not cited"
+feature → other audits; no new features until then.
+
+**Money:** credits audit found production provider spend of $4.24 fully
+charged back; open owner decision on charges above the shown cost (F1).
+
+**Docs changed:** `FOUNDER.md`, `imp_sessions_talked.md`, `docs/PRODUCT.md`,
+`ROADMAP.md`, `CLAUDE.md`, `AGENTS.md`, `DECISIONS.md`, credits audit.
+
 ## 17–23 Oct 2026 (updated 23 Oct; week closes Friday 23 Oct)
 
 **Production:** Owner confirmed Razorpay live keys, so working subscriptions
@@ -30,8 +46,7 @@ checks; see `docs/audits/2026-10-23-launch-readiness.md`.
   after Redis expiry; tenant scope and age limits remain, incomplete backlinks
   results do not replace a complete snapshot.
 - Rank and provider correctness: #193 removes a false weekly setup blocker and
-  sets MCP depth 10; #194 bills valid empty SERP 40102 and refunds invalid-field
-  40501.
+  sets MCP depth 10; #194 bills valid empty SERP 40102 and refunds invalid-field 40501.
 
 **Owner decisions:** Solo ₹999 / Growth ₹2,499 / Business ₹4,999 / Agency
 ₹9,999; no per-workspace daily credit cap; Local SEO removed; IndexNow is paid;

@@ -57,6 +57,17 @@ feelings, business calls, priorities, corrections. Read it after
 - An agent's `git stash pop` mistake pulled another agent's stash into the
   tree; restored on his go. Stash `keyword field-delivery WIP` is intact.
 
+## 26 Oct 2026: "Docs update kyu nahi kiye?" (Claude)
+
+- Owner merged #208, then was upset: "Itna baat kiya, phir bhi docs update
+  nahi kiye. `FOUNDER.md` me likha, lekin kaam docs? Kaun karega sab sahi?"
+- **Lesson for every agent:** writing a rule is not doing the work. When the
+  vision or order changes, update `docs/PRODUCT.md`, `ROADMAP.md` and
+  `docs/WEEKLY.md` in the same PR, without being asked.
+- Fixed in the follow-up PR: those three now match `FOUNDER.md`.
+- He also asked to "deploy": #208 was docs only, and this session has no
+  Railway access, so nothing was deployed.
+
 ## 25 Oct 2026: credits audit result (Claude, PR #208)
 
 - Owner said "haan" to the credits audit and asked first "isse mujhe kya

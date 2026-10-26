@@ -342,3 +342,10 @@ Owner-approved scope: one focused PR adds optional 180-day browser recognition a
 - **Why:** These specs fail when a page load, reload, typing, autosave or double click buys provider work, but no CI job ran them, so a regression could ship. Owner asked for it on 26 Oct.
 - **Preserve:** No real provider is called (routes are mocked). The other specs stay local-only until they are needed; the job uses the runner's Chrome (the config's default `chrome` channel).
 - **Trace:** `.github/workflows/ci.yml`; all 14 tests in these specs passed locally in about 3 minutes. Agent/CI rule change: called out in the PR.
+
+## Product docs follow the founder brief (26 October)
+
+- **Decision:** `docs/PRODUCT.md` now leads with the AI-citation vision and lists "why not cited, and what to fix" as feature 0; `ROADMAP.md` "Next up" follows the owner's order and lists credits-audit F1/F5 as open owner decisions; `docs/WEEKLY.md` has the 24–30 Oct week.
+- **Why:** After #208 the owner found these three still described the old all-in-one SEO plan, so an agent reading them would build against the wrong vision.
+- **Preserve:** `FOUNDER.md` is the source for vision and order; `PRODUCT.md` and `ROADMAP.md` link to it instead of repeating it. Update all three together when the owner changes direction.
+- **Trace:** `docs/PRODUCT.md`, `ROADMAP.md`, `docs/WEEKLY.md`, `imp_sessions_talked.md`.
