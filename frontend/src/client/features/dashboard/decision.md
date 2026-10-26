@@ -66,3 +66,10 @@ Combines project onboarding state, audit/backlink summaries and GA4 overview car
 - **Why:** The owner wants the dashboard to answer the product's core question (`FOUNDER.md`): is the site cited, who is cited instead, and what to do. Production checks end `partial` when one engine fails, so the old `completed`-only filter showed an empty card over real data. Goal data was removed from analytics with the Missed Enquiries Finder, which broke the type check after merging `main`.
 - **Preserve:** Opening the dashboard buys nothing: the answers read is a stored GET shared with the tracker page's query key. `dashboard-spend.spec.ts` matches the paid `tracking/run` POST only, not `tracking/runs/{id}` reads. Own-brand citations never count as "cited instead".
 - **Trace:** `aiVisibilityInsight.ts` and its test (partial-run and own-brand mutations both fail it), `InsightCards.tsx`, `dashboardLayout.ts`, `../../../../tests/dashboard-spend.spec.ts`. Not run: the Playwright spec (not in CI) and a check against production data.
+
+## Setup checklist below the cards
+
+- **Decision:** `DashboardOnboarding` ("Get started") renders after the cards, not above them.
+- **Why:** With five open steps it filled the first screen and pushed AI visibility out of view; a returning customer comes for the insights.
+- **Preserve:** The checklist's rules (hidden only when every step is done and none is deferred) are unchanged.
+- **Trace:** `DashboardPage.tsx`.
