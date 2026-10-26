@@ -1,9 +1,20 @@
-import { ArrowDown, ArrowRight, Activity } from "lucide-react";
+import { ArrowDown } from "lucide-react";
 import { Button } from "@/client/components/ui/button";
 import { formatCount } from "@/client/features/search-performance/SearchPerformanceColumns";
 import type { AnalyticsSummary } from "./analyticsApi";
 import { channelRows, displayPath } from "./presentation";
+import { enquiries, mergeEvents, trackingProblem } from "./visitSummary";
 
+const SETUP_STEPS = [
+  "Copy the latest tracking code",
+  "Paste it in your site header (WordPress: one click in Settings)",
+  "Open your site once; this page confirms it",
+];
+
+/**
+ * The top of Analytics: fix tracking first if it is broken, then who visited,
+ * who tried to contact the business, and where they came from.
+ */
 export function AnalyticsOverview({
   summary,
   range,
@@ -13,124 +24,140 @@ export function AnalyticsOverview({
   range: { from: string; to: string };
   onOpenTracking: () => void;
 }) {
+  const problem = trackingProblem(summary);
   const leadingChannel = channelRows(summary.channels)[0];
   let leadingPage = summary.topPages[0];
   for (const page of summary.topPages) {
     if (!leadingPage || page.pageviews > leadingPage.pageviews)
       leadingPage = page;
   }
-  const eventCount = summary.events.reduce(
-    (total, event) => total + event.count,
-    0,
-  );
-  const missingSessions = summary.pageviews > 0 && summary.sessions === 0;
-  const eventNames = summary.events.map((event) => event.name.toLowerCase());
+  const leads = enquiries(summary.events);
+  const merged = mergeEvents(summary.events).filter((row) => row.spellings > 1);
   const aiVisits = summary.aiSources.reduce(
     (total, source) => total + source.visitors,
     0,
   );
-  const inconsistentNames = new Set(eventNames).size < eventNames.length;
+  const rate = summary.visitors
+    ? Math.round((100 * leads.total) / summary.visitors)
+    : 0;
 
   return (
-    <section
-      aria-label="Traffic overview"
-      className="overflow-hidden rounded-xl border border-border bg-card"
-    >
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3 text-xs text-muted-foreground">
-        <span className="flex items-center gap-2">
-          <Activity className="size-4" /> First-party website activity
-        </span>
-        <span>
-          {range.from} – {range.to} · UTC · Today is partial
-        </span>
+    <div className="space-y-4">
+      {problem ? (
+        <section
+          role="status"
+          aria-labelledby="fix-tracking"
+          className="space-y-3 rounded-2xl border border-amber-300 bg-amber-50 p-5 text-amber-950 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100"
+        >
+          <p className="label-mono">Fix this first</p>
+          <h2 id="fix-tracking" className="text-lg font-semibold">
+            Your tracking is only half working: {formatCount(summary.pageviews)}{" "}
+            page views but 0 visits recorded. The numbers below cannot be
+            trusted until this is fixed.
+          </h2>
+          <ol className="grid gap-2 md:grid-cols-3">
+            {SETUP_STEPS.map((step, index) => (
+              <li
+                key={step}
+                className="flex gap-3 rounded-lg bg-background p-3 text-sm text-foreground"
+              >
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-foreground text-xs text-background">
+                  {index + 1}
+                </span>
+                {step}
+              </li>
+            ))}
+          </ol>
+          <Button onClick={onOpenTracking}>Fix tracking in 2 minutes</Button>
+        </section>
+      ) : null}
+
+      <section
+        aria-labelledby="visits-verdict"
+        className="space-y-2 rounded-2xl bg-foreground p-6 text-background"
+      >
+        <p className="label-mono text-background/70">
+          {range.from} – {range.to}
+        </p>
+        <h2
+          id="visits-verdict"
+          className="text-xl leading-snug font-semibold md:text-2xl"
+        >
+          {formatCount(summary.visitors)} people visited.{" "}
+          {leads.total > 0
+            ? `${formatCount(leads.total)} tried to contact you (${leads.rows
+                .slice(0, 2)
+                .map((row) => row.name)
+                .join(", ")}).`
+            : "Nobody tapped WhatsApp, call or a form yet."}
+          {leadingChannel ? ` Most came from ${leadingChannel.label}.` : ""}
+        </h2>
+        <p className="text-sm text-background/80 md:text-base">
+          {leads.total === 0
+            ? "Tag your WhatsApp, call and enquiry buttons so every enquiry is counted."
+            : leadingPage
+              ? `Your most viewed page is ${displayPath(leadingPage.path)}. Make sure its WhatsApp or call button is visible without scrolling.`
+              : "Keep your contact buttons visible on every page."}
+          {aiVisits > 0
+            ? ` AI assistants sent ${formatCount(aiVisits)} visitors.`
+            : ""}
+        </p>
+      </section>
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Tile
+          label="Visitors"
+          value={formatCount(summary.visitors)}
+          hint="People who opened your site"
+        />
+        <Tile
+          label="Enquiries"
+          value={formatCount(leads.total)}
+          hint="WhatsApp, call and form taps"
+        />
+        <Tile
+          label="Enquiry rate"
+          value={`${rate}%`}
+          hint="Visitors who tried to contact you"
+        />
+        <Tile
+          label="From AI assistants"
+          value={formatCount(aiVisits)}
+          hint="ChatGPT, Gemini, Perplexity, Claude"
+        />
       </div>
-      <div className="space-y-5 p-5 md:p-6">
-        <div>
-          <h2 className="text-xl font-semibold">Your traffic at a glance</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {formatCount(summary.pageviews)} pageviews and{" "}
-            {formatCount(eventCount)} recorded custom events in this period.
-            Events are not verified leads or sales.
-          </p>
-        </div>
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="min-w-0 rounded-lg bg-muted/50 p-4">
-            <p className="text-xs font-medium text-muted-foreground">
-              Leading traffic source
-            </p>
-            <p className="mt-1 font-semibold">
-              {leadingChannel?.label ?? "Source unavailable"}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {leadingChannel
-                ? `${formatCount(leadingChannel.visitors)} visitor-days attributed to this source`
-                : "No source attribution recorded for this period."}
-            </p>
-          </div>
-          <div className="min-w-0 rounded-lg bg-muted/50 p-4">
-            <p className="text-xs font-medium text-muted-foreground">
-              Most viewed page
-            </p>
-            <p className="mt-1 break-all font-semibold">
-              {leadingPage ? displayPath(leadingPage.path) : "Page unavailable"}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {leadingPage
-                ? `${formatCount(leadingPage.pageviews)} pageviews · Review the actions visitors take on this page below.`
-                : "No page breakdown recorded for this period."}
-            </p>
-          </div>
-          <div className="min-w-0 rounded-lg bg-muted/50 p-4">
-            <p className="text-xs font-medium text-muted-foreground">
-              AI referrals
-            </p>
-            <p className="mt-1 font-semibold">
-              {formatCount(aiVisits)} visitor-days
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Identified assistant referrals. This does not measure how often AI
-              mentions your site.
-            </p>
-          </div>
-        </div>
-        {missingSessions || inconsistentNames ? (
-          <div className="rounded-lg border border-border p-4" role="status">
-            <p className="font-medium">Check your measurement</p>
-            {missingSessions ? (
-              <p className="mt-1 text-sm text-muted-foreground">
-                Pageviews were received, but no sessions were recorded.
-                Session-based engagement and attribution are unavailable for
-                these visits. Check the installed snippet and test a visit.
-              </p>
-            ) : null}
-            {inconsistentNames ? (
-              <p className="mt-1 text-sm text-muted-foreground">
-                Some event names differ only by letter case. Check your button
-                tags so the same action uses one consistent name. Counts below
-                remain separate.
-              </p>
-            ) : null}
-            <Button
-              className="mt-3"
-              size="sm"
-              variant="outline"
-              onClick={onOpenTracking}
-            >
-              Review tracking setup <ArrowRight />
-            </Button>
-          </div>
-        ) : (
-          <a
-            href="#visitor-actions"
-            className="inline-flex items-center gap-2 text-sm font-medium underline underline-offset-4"
-          >
-            {eventCount > 0
-              ? "Explore recorded visitor actions"
-              : "See how to start measuring visitor actions"}
-            <ArrowDown className="size-4" />
-          </a>
-        )}
-      </div>
-    </section>
+
+      {merged.length > 0 ? (
+        <p className="rounded-lg border p-3 text-sm" role="note">
+          We counted {merged.map((row) => `"${row.name}"`).join(", ")} as one
+          action: the same button was tagged with different capital letters.
+        </p>
+      ) : null}
+
+      <a
+        href="#visitor-actions"
+        className="inline-flex items-center gap-2 text-sm font-medium underline underline-offset-4"
+      >
+        See every page, source and action <ArrowDown className="size-4" />
+      </a>
+    </div>
+  );
+}
+
+function Tile({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+}) {
+  return (
+    <div className="rounded-xl border bg-card p-4">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
+    </div>
   );
 }

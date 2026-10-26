@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { AnalyticsOverview } from "./AnalyticsOverview";
 import type { AnalyticsSummary } from "./analyticsApi";
+import { enquiries, mergeEvents } from "./visitSummary";
 
 function render(overrides: Partial<AnalyticsSummary> = {}) {
   const summary: AnalyticsSummary = {
@@ -35,38 +36,22 @@ function render(overrides: Partial<AnalyticsSummary> = {}) {
   );
 }
 
-describe("traffic overview measurement integrity", () => {
-  it("explains received pageviews without presenting missing sessions as engagement", () => {
+describe("analytics overview", () => {
+  it("puts broken tracking first when page views arrive without visits", () => {
     const html = render();
-    expect(html).toContain("no sessions were recorded");
-    expect(html).toContain("Review tracking setup");
-    expect(html).toContain("Source unavailable");
-    expect(html).toContain("UTC · Today is partial");
+    expect(html).toContain("Fix this first");
+    expect(html).toContain("1 page views but 0 visits recorded");
+    expect(html).toContain("Fix tracking in 2 minutes");
   });
-  it("shows observed actions without converting event counts into leads", () => {
+
+  it("leads with enquiries once tracking works", () => {
     const html = render({
-      sessions: 1,
-      events: [{ name: "whatsapp", count: 3, visitors: 1 }],
-    });
-    expect(html).toContain("3 recorded custom events");
-    expect(html).toContain("Events are not verified leads or sales");
-    expect(html).toContain('href="#visitor-actions"');
-    expect(html).not.toContain("Check your measurement");
-  });
-  it("flags differently cased event names without combining distinct records", () => {
-    const html = render({
-      sessions: 1,
+      visitors: 40,
+      sessions: 50,
       events: [
-        { name: "WhatsApp", count: 1, visitors: 1 },
-        { name: "whatsapp", count: 1, visitors: 1 },
+        { name: "whatsapp", count: 3, visitors: 2 },
+        { name: "scroll_75", count: 30, visitors: 20 },
       ],
-    });
-    expect(html).toContain("differ only by letter case");
-    expect(html).toContain("Counts below remain separate");
-  });
-  it("selects observed leaders independently of response order and keeps AI referrals separate from visibility", () => {
-    const html = render({
-      sessions: 1,
       channels: [
         { channel: "direct", visitors: 1 },
         { channel: "search", visitors: 4 },
@@ -77,10 +62,58 @@ describe("traffic overview measurement integrity", () => {
       ],
       aiSources: [{ source: "chatgpt", visitors: 2 }],
     });
-    expect(html).toContain("Search engines");
+    expect(html).not.toContain("Fix this first");
+    expect(html).toContain(
+      "40 people visited. 3 tried to contact you (whatsapp).",
+    );
+    expect(html).toContain("Most came from Search engines");
     expect(html).toContain("/popular");
-    expect(html).not.toContain("/small");
-    expect(html).toContain("2 visitor-days");
-    expect(html).toContain("does not measure how often AI mentions");
+    expect(html).toContain("AI assistants sent 2 visitors");
+    expect(html).toContain("8%"); // 3 of 40 visitors
+  });
+
+  it("says plainly when nobody enquired", () => {
+    const html = render({ sessions: 1, events: [] });
+    expect(html).toContain("Nobody tapped WhatsApp, call or a form yet.");
+  });
+});
+
+describe("visit summary", () => {
+  it("merges event names that differ only by case and tells the customer", () => {
+    const merged = mergeEvents([
+      { name: "WhatsApp", count: 1, visitors: 1 },
+      { name: "whatsapp", count: 2, visitors: 2 },
+      { name: "form_submit", count: 1, visitors: 1 },
+    ]);
+    expect(merged[0]).toEqual({
+      name: "whatsapp",
+      count: 3,
+      visitors: 2,
+      spellings: 2,
+    });
+    const html = render({
+      sessions: 2,
+      events: [
+        { name: "WhatsApp", count: 1, visitors: 1 },
+        { name: "whatsapp", count: 1, visitors: 1 },
+      ],
+    });
+    expect(html).toContain("as one action");
+  });
+
+  it("counts only contact actions as enquiries", () => {
+    const { total, rows } = enquiries([
+      { name: "WhatsApp click", count: 2, visitors: 2 },
+      { name: "call_now", count: 1, visitors: 1 },
+      { name: "book_now", count: 4, visitors: 3 },
+      { name: "video_play", count: 9, visitors: 9 },
+      { name: "scroll", count: 9, visitors: 9 },
+    ]);
+    expect(total).toBe(7);
+    expect(rows.map((row) => row.name)).toEqual([
+      "book_now",
+      "WhatsApp click",
+      "call_now",
+    ]);
   });
 });
