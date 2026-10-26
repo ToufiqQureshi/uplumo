@@ -25,3 +25,11 @@ the claim or live destination.
 production public pages and the React shell. It respects DNT/GPC, excludes
 authentication routes, and records named signup/pricing/plan-selection clicks.
 See `decision.md` for the measurement boundary and verification.
+
+## Public appearance
+
+Every public page uses the shared header Color theme selector: System, Light or
+Dark. `static/theme.js` loads before CSS and shares `theme-preference` with the
+React app. The light palette is in `templates/base.html`; saved picks survive
+page navigation and reload, and System follows OS changes. No API calls or
+account are needed. A blocked storage write keeps the pick for this document.
