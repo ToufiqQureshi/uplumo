@@ -75,6 +75,8 @@ type DomainTarget = {
   scope?: string;
   locationCode?: number;
   languageCode?: string;
+  /** Answer from cache only; never buy (see paidIntent). */
+  cachedOnly?: boolean;
 };
 type DomainPageRequest = DomainTarget & {
   page: number;
@@ -85,16 +87,26 @@ type DomainPageRequest = DomainTarget & {
   search?: string;
 };
 
+/** The paid-intent key of one domain's reports (see paidIntent). */
+export function domainIntentKey(projectId: string, domain: string) {
+  return `domain:${projectId}:${domain.trim().toLowerCase()}`;
+}
+
 function post<T>(
   endpoint: string,
   schema: z.ZodType<T>,
-  { projectId, ...body }: { projectId: string } & Record<string, unknown>,
+  {
+    projectId,
+    cachedOnly,
+    ...body
+  }: { projectId: string; cachedOnly?: boolean } & Record<string, unknown>,
 ) {
   return apiRequest(
     `/api/v1/projects/${encodeURIComponent(projectId)}/domain/${endpoint}`,
     schema,
     "POST",
     body,
+    { cachedOnly },
   );
 }
 

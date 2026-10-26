@@ -1,5 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { getDomainKeywordsPage } from "@/client/features/domain/domainApi";
+import {
+  domainIntentKey,
+  getDomainKeywordsPage,
+} from "@/client/features/domain/domainApi";
+import { purchaseAllowed } from "@/client/lib/paidIntent";
 import { toNumberOrUndefined } from "@/client/features/domain/utils";
 import type { ResearchScope } from "@/shared/researchScope";
 import type {
@@ -65,6 +69,9 @@ export function useDomainKeywordsQuery(input: DomainKeywordsQueryInput) {
         data: {
           projectId: input.projectId,
           domain: input.domain,
+          cachedOnly: !purchaseAllowed(
+            domainIntentKey(input.projectId, input.domain),
+          ),
           scope: input.scope,
           locationCode: input.locationCode,
           page: input.page,

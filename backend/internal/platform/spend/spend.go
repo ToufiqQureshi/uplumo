@@ -32,7 +32,25 @@ var (
 	ErrPlanLimits = errors.New("workspace data exceeds the active plan limits")
 	// ErrIdempotentReplay means a paid request with this idempotency key was already submitted.
 	ErrIdempotentReplay = errors.New("request was already submitted")
+	// ErrRefreshRequired means the request asked for cached data only and the
+	// answer needed a paid call: the customer must ask to refresh.
+	ErrRefreshRequired = errors.New("saved data expired; refresh to buy it again")
 )
+
+type cachedOnlyContextKey struct{}
+
+// WithCachedOnly marks a request as one the customer did not ask to pay for,
+// such as a page opened from a saved link: it may be answered from cache, but
+// any paid call fails with ErrRefreshRequired.
+func WithCachedOnly(ctx context.Context) context.Context {
+	return context.WithValue(ctx, cachedOnlyContextKey{}, true)
+}
+
+// CachedOnly reports whether ctx forbids paid calls (see WithCachedOnly).
+func CachedOnly(ctx context.Context) bool {
+	only, _ := ctx.Value(cachedOnlyContextKey{}).(bool)
+	return only
+}
 
 // Feature names what the money is spent on. It labels the spend in the
 // ledger, so the Billing screen can show where credits went.
@@ -218,7 +236,7 @@ type Guard interface {
 // Refused reports whether err is the guard refusing the work: no credits,
 // or paid work paused for the day.
 func Refused(err error) bool {
-	return errors.Is(err, ErrIdempotentReplay) || errors.Is(err, ErrNoCredits) || errors.Is(err, ErrPaused) || errors.Is(err, ErrWorkspaceDailyLimit) || errors.Is(err, ErrPlanLimits)
+	return errors.Is(err, ErrIdempotentReplay) || errors.Is(err, ErrNoCredits) || errors.Is(err, ErrPaused) || errors.Is(err, ErrWorkspaceDailyLimit) || errors.Is(err, ErrPlanLimits) || errors.Is(err, ErrRefreshRequired)
 }
 
 const (
@@ -227,6 +245,7 @@ const (
 	dailyMessage      = "You have used today's share of your credits. It resets at 5:30 AM IST, and your monthly credits are safe."
 	planLimitsMessage = "Your workspace is over its current plan limits. Your data is safe; archive sites or remove team members or tracked keywords, then try again."
 	duplicateMessage  = "This request was already submitted. Refresh the page before trying again."
+	refreshMessage    = "The saved report has expired. Refresh it to load fresh data; that uses credits."
 )
 
 // Message is what to tell the customer about a refusal, or "" when err is
@@ -243,14 +262,19 @@ func Message(err error) string {
 		return planLimitsMessage
 	case errors.Is(err, ErrIdempotentReplay):
 		return duplicateMessage
+	case errors.Is(err, ErrRefreshRequired):
+		return refreshMessage
 	}
 	return ""
 }
 
 // WriteHTTPError answers a refused request and reports whether err was one:
-// 402 insufficient_credits, 429 daily_credit_limit, or 503 usage_paused.
+// 402 insufficient_credits, 429 daily_credit_limit, 503 usage_paused, or 409
+// duplicate_request / refresh_required.
 func WriteHTTPError(w http.ResponseWriter, err error) bool {
 	switch {
+	case errors.Is(err, ErrRefreshRequired):
+		httpx.WriteError(w, http.StatusConflict, "refresh_required", refreshMessage)
 	case errors.Is(err, ErrIdempotentReplay):
 		httpx.WriteError(w, http.StatusConflict, "duplicate_request", duplicateMessage)
 	case errors.Is(err, ErrNoCredits):
