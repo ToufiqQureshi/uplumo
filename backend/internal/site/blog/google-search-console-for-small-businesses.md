@@ -2,6 +2,7 @@
 title: Google Search Console for small businesses: a simple guide
 description: Learn how to use Google Search Console to spot search demand, low-click pages and indexing problems without getting lost in reports.
 date: 2026-10-15
+updated: 2026-10-26
 ---
 
 **Short answer:** Google Search Console shows how your pages appear in Google Search: the queries people use, impressions, clicks, click-through rate and average position. Start with the Performance report and Page Indexing report. Use them to choose one practical improvement at a time.
@@ -71,6 +72,25 @@ Share access with a separate account rather than passing around the business own
 ## Make a simple action log
 
 A small spreadsheet is enough: record the date range, country, page, query pattern, clicks, impressions, issue, change and review date. Keep the first version of a title or page copy so you can compare it later. If the page has very few impressions, wait for more data or use customer calls and sales questions as evidence. Avoid treating a tiny change in average position as a business result. The purpose of this log is to connect one observed problem to one change, then check whether qualified visits or enquiries improve.
+
+## A first session in Search Console: one URL, one decision
+
+After verifying ownership, paste a complete important URL into URL Inspection. Record the indexed status, last crawl and Google-selected canonical. If the live test succeeds but the indexed report still reflects an older state, keep those observations separate; a live fetch is not a promise of indexing.
+
+Then open **Performance → Search results**, choose a useful date range and filter to that page. Look at the Queries tab and classify the visible queries:
+
+| Query type | Example for a repair business | Useful interpretation |
+| --- | --- | --- |
+| Brand | Business name | Existing awareness; check correct destination |
+| Buying / booking | “AC repair Jaipur” | Review scope, local relevance and contact path |
+| Research | “AC making noise” | A diagnostic guide may fit better than a generic sales pitch |
+| Unrelated | A service you do not provide | Check why the page is appearing; do not chase irrelevant clicks |
+
+These are illustrative categories, not a verified keyword list. Queries can be hidden for privacy and table totals may not equal chart totals, so do not calculate a supposedly complete brand/non-brand split from only visible rows without that caveat.
+
+Choose the action from the finding. A blocked important page needs an access fix. An indexed page with the wrong search intent needs a content or page-assignment review. A relevant page with visits and no enquiries needs a conversion check. Submitting the sitemap again is not the remedy for all three.
+
+Save the filters with your notes. On the next review, use the same page, market and device before concluding the change helped. Give the owner one sentence: “This page has this problem, here is the evidence, and this is the next action.”
 
 ## FAQ
 

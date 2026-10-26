@@ -17,6 +17,16 @@ feelings, business calls, priorities, corrections. Read it after
 
 ---
 
+## 26 Oct 2026: all-blog usefulness and SEO review (Codex)
+
+- Owner: "Highly informative and valueble content chahiye"; asked to read,
+  verify and improve every current blog and open a PR.
+- Authorized scope: all 50 existing posts, current primary-source research and
+  practical reader value. Preserve published URLs; no ranking guarantee.
+- The preceding public audit found repeated filler, misleading related links
+  and routing defects. This PR handles editorial content; production routing
+  and crawler settings require separate implementation work.
+
 ## 26 Oct 2026 (later): "teeno ek saath complete kar" (Claude)
 
 - Owner wants the three open items done together, reported short.

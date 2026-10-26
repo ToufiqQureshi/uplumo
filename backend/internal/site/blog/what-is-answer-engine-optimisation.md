@@ -1,93 +1,106 @@
 ---
 title: What is answer engine optimisation (AEO)? A guide for small businesses
-description: AEO is how you get your pages quoted by ChatGPT, Perplexity and Google AI Overviews. Learn what it is, how it differs from SEO and seven steps to start.
+description: Understand AEO, GEO and SEO, improve answers with verifiable evidence, and measure mentions, citations and visits without ranking promises.
 date: 2026-10-15
+updated: 2026-10-26
 ---
 
-**Short answer:** answer engine optimisation (AEO) is the practice of shaping your content so that AI assistants such as ChatGPT, Perplexity, Gemini and Google's AI Overviews can understand it, trust it and quote it in their answers. It builds on SEO rather than replacing it: an AI assistant can only cite a page it can find, so the basics of SEO still come first. What AEO adds is a focus on clear questions, direct answers and facts that are easy to quote.
+**Short answer:** Answer engine optimisation (AEO) is a term used for improving how useful information can be discovered, understood and referenced in answer-based search experiences. It overlaps with SEO: clear answers, original evidence, accessible pages and accurate business information help readers in both. AEO does not provide a separate guaranteed ranking system or a special schema that forces AI citations.
 
-![An answer-first page: the question as the heading, a two to three sentence answer, supporting sections, a comparison table and an FAQ](/site/blog/answer-first-page-structure.svg)
+![An answer-first page with a direct answer, supporting evidence, comparison and relevant questions](/site/blog/answer-first-page-structure.svg)
 
-## Why AEO matters for small businesses
+## AEO, GEO and SEO: related work, different measurement
 
-A customer looking for "best CA for GST filing in Pune" or "which accounting software is good for a small shop" may now ask an AI assistant instead of scrolling through ten blue links. The assistant reads several pages and writes one answer, often naming a handful of businesses and linking to their sites.
+“Generative engine optimisation” (GEO) usually refers to visibility in generated answers. AEO can also include direct-answer experiences beyond generative systems. Industry usage varies; define the work and measurement rather than treating the labels as formal platform standards.
 
-That changes the game in two ways:
-
-- **There are fewer spots.** An AI answer might mention three businesses, not ten.
-- **The answer is the first impression.** If the assistant describes your service correctly and links to you, the visitor arrives already half convinced.
-
-Larger brands are not guaranteed those spots. Assistants tend to quote the page that answers the question best, and a focused small business can write that page.
-
-## AEO vs SEO: what is different
-
-| | SEO | AEO |
+| Work | Practical goal | Observable evidence |
 | --- | --- | --- |
-| Goal | Rank a page in search results | Get a page quoted or cited in an AI answer |
-| Unit that wins | The whole page | A passage: an answer, a definition, a list |
-| What helps most | Relevance, links, a fast and crawlable site | Clear questions, direct answers, quotable facts, trust signals |
-| How you measure it | Rankings, clicks, impressions | Mentions and citations in AI answers, visits from AI assistants |
+| SEO | Help relevant people discover useful pages in search | Indexed pages, query impressions, clicks and qualified actions |
+| AEO / GEO | Make accurate useful information available for answer experiences | Defined answer samples, mentions, citations and reported AI feature data |
+| Referral analytics | Understand measured visits after a link is followed | Source signals, landing pages, sessions and verified outcomes |
 
-The two overlap a lot. A well-structured page that answers a question clearly tends to do well in both.
+Google's [AI optimization guidance](https://developers.google.com/search/docs/fundamentals/ai-optimization-guide) explains that its generative Search features rely on core Search systems. Other assistants have their own discovery and retrieval processes. A page missing from Google's index is therefore not proof it is inaccessible to every other assistant, and a Google ranking is not a guaranteed ChatGPT citation.
 
-## Seven steps to start with AEO
+## Begin with a customer task your business can answer
 
-### 1. Collect the questions your customers ask
+A local service business might hear “What should I prepare before an inspection?” A software company might hear “How do I compare these two reports?” Use real calls, support questions and relevant Search Console queries to choose a task.
 
-Write down the questions you hear on phone calls, WhatsApp and in your inbox. Add the questions from Google's "People also ask" box and from the queries in Google Search Console. These are the questions assistants are asked too.
+Inspect the current results in the relevant market and check whether readers need a definition, a tutorial, a comparison or a product page. Do not force every task into an FAQ article. Avoid near-identical city pages or one page per tiny prompt variation when they supply the same generic answer.
 
-### 2. Give each question one page or one section
+For an illustrative repair business, “We are trusted experts” is weak. A guide describing the actual inspection process, what information to send, which faults need a professional and what the service excludes gives readers something they can use. Publish prices, credentials and time estimates only when verified.
 
-Do not hide five answers in one long paragraph. Use the question, or something very close to it, as a heading, then answer it right below.
+## Make the answer complete enough to use
 
-### 3. Answer first, in two or three sentences
+Start with the direct answer, then explain steps, exceptions and how the reader can check the result. Tables help comparisons; code helps implementation tasks; photographs and screenshots help when they provide genuine evidence. No single layout is guaranteed to be quoted.
 
-Put the direct answer at the top, before the background. Assistants and Google's featured snippets usually quote this part. Keep it factual and self-contained: it should still make sense if someone reads only those sentences.
+A practical answer section might contain:
 
-### 4. Use lists and tables for steps and comparisons
+1. The conclusion and when it applies.
+2. The evidence or method supporting it.
+3. A worked example clearly marked as hypothetical unless based on actual documented work.
+4. The limitations and next step.
 
-Steps, prices, features and "X vs Y" comparisons are easier for a machine to extract from a list or table than from prose, and easier for people to read too.
+Avoid asserting that assistants always select the first paragraph or the shortest answer. A clear opening helps people understand the page; selection depends on systems you do not control.
 
-### 5. Show your proof
+## Show who knows the subject and how facts were checked
 
-Assistants prefer sources that look reliable. Add what only you can add:
+Use genuine authorship and relevant reviewer information. Link current original documentation for platform rules. For original numbers, explain the sample, dates, method and limitations. Never invent expert profiles, customer results or statistics to create the appearance of experience.
 
-- your own numbers, results and examples;
-- photos or screenshots of your real work;
-- the author's name and experience, and the date the page was written or updated.
+Keep volatile facts current across the entire page. If a reporting platform adds a channel, correct the introduction, steps and FAQ together. An updated date should reflect a substantive review, not a cosmetic freshness change.
 
-### 6. Keep facts consistent everywhere
+## Make discovery and access deliberate
 
-Your business name, address, phone number, prices and services should match across your website, Google Business Profile and directories. Conflicting details make an assistant less likely to recommend you.
+Keep useful public pages reachable through normal links and use consistent canonical URLs. Return accurate HTTP statuses and make important text accessible without login or unnecessary interaction.
 
-### 7. Make the page easy to crawl
+Review crawler policy by product. OpenAI documents `OAI-SearchBot` for ChatGPT search and `GPTBot` separately for training-related crawling. User-triggered agents are different again. Allowing a crawler does not guarantee a citation, and robots.txt is not protection for private data. See the [crawler comparison guide](/blog/gptbot-vs-oai-searchbot-robots-txt) before changing rules.
 
-If Google cannot crawl and index a page, most assistants cannot use it either. Check that the page:
+Use structured data only when it accurately describes visible content and meets the relevant feature rules. Do not buy a secret “AI schema” package or treat an optional text file as a universal requirement.
 
-- is not blocked in `robots.txt` and has no `noindex` tag;
-- loads quickly on a phone (see our guide to [Core Web Vitals](/blog/core-web-vitals-explained));
-- is linked from other pages on your site and listed in your sitemap.
+## Measure three distinct outcomes
 
-## How to measure AEO
+### 1. Mentions and citations in a defined sample
 
-AEO is harder to measure than rankings, because there is no single results page. Three things to track:
+Keep a stable set of real customer questions. Save the platform, language, available location context, date, full observed answer and cited URLs. Count successful checks and failures separately.
 
-1. **Mentions:** ask the assistants your customers' questions and note whether your brand appears, and how it is described. Do it for the same set of questions every month.
-2. **Citations:** note whether the answer links to your site, and to which page.
-3. **Visits:** measure traffic arriving from AI assistants. Much of it shows up as "Direct" in ordinary analytics; our guide to [finding ChatGPT traffic in Google Analytics](/blog/chatgpt-traffic-google-analytics) explains why and what to do.
+If a fictional brand appears in 3 of 10 successful observations, its **sample mention rate** is 30%. If its domain is linked in 1, its **sample domain citation rate** is 10%. Neither figure is the brand's share of all AI searches. Changing the questions changes the comparison.
 
-Uplumo does all three in one place. AI Visibility (on the Growth plan and above) checks how ChatGPT, Perplexity, Gemini, Google AI Overviews and Claude answer the questions you choose, which brands they mention and which pages they cite. Uplumo Analytics, on every plan, shows the visitors those assistants send you.
+### 2. Reported Google AI feature visibility
+
+Use the documented Search Console generative AI report for supported impressions and dimensions. It does not measure all assistants or expose every prompt. The [AI Overview reporting guide](/blog/track-ai-overview-visibility-search-console) explains the boundaries.
+
+### 3. Measured visits and business outcomes
+
+Use analytics source signals to identify recorded referrals. GA4 currently documents an AI Assistant default channel; Google AI Overviews and AI Mode remain Organic Search in its definitions. Referrers and campaign tags can be missing, so unidentified Direct visits cannot all be reassigned to AI.
+
+Connect measured visits to verified enquiries or sales where your setup and privacy requirements allow. A mention is not a click, and a click is not revenue. Our [AI referral guide](/blog/chatgpt-traffic-google-analytics) covers implementation and limitations.
+
+## How Uplumo can support the work
+
+Uplumo offers AI visibility observations and referral analytics alongside its SEO tools. Review the underlying answers, cited URLs and collection context rather than relying on a single score. Use the existing audit and content workflows to investigate a specific page, then verify the proposed change against the actual evidence. Check [current plans](/pricing) for availability and limits.
+
+The objective is a more useful page and an observable next decision. No platform can promise that a particular edit will produce a citation or a ranking by a fixed date.
 
 ## FAQ
 
-**Is AEO the same as GEO?**
-Mostly. "Generative engine optimisation" (GEO) and AEO are used for the same idea: being chosen by AI systems that generate answers.
-
-**Do I need schema markup for AEO?**
-Structured data such as `FAQPage`, `Article` or `LocalBusiness` helps search engines understand a page, but it does not replace a clear answer in the visible text. Write the answer first, then add markup.
-
 **Does AEO replace SEO?**
-No. Most assistants rely on search indexes to find pages, so the SEO basics still decide whether you are in the running at all.
 
-**How long does it take to work?**
-Assistants pick up new or updated pages at different speeds. Expect weeks rather than days, and track the same questions every month so you can see the trend.
+No. For Google, generative Search is built on Search fundamentals; other answer systems also need accessible reliable information, using their own processes.
+
+**Will FAQ schema make an assistant cite me?**
+
+There is no such guarantee. Markup cannot replace a useful answer or meet a feature's eligibility rules by itself.
+
+**How long does AEO take?**
+
+There is no reliable universal deadline. Discovery, sampling and selection vary by platform; compare consistent observations over time.
+
+**Can a small business compete?**
+
+It can publish specific, verifiable information about tasks it knows well. That is a sensible content strategy, not a promise that size or authority cease to matter.
+
+## Sources
+
+- [Google guidance for generative AI Search](https://developers.google.com/search/docs/fundamentals/ai-optimization-guide)
+- [Google people-first content guidance](https://developers.google.com/search/docs/fundamentals/creating-helpful-content)
+- [OpenAI crawler and user-agent documentation](https://developers.openai.com/api/docs/bots)
+- [Google Analytics channel definitions](https://support.google.com/analytics/answer/9756891)

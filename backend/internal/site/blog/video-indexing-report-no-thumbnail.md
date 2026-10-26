@@ -2,6 +2,7 @@
 title: Video Is Missing from Google: Fix the Video Indexing Report
 description: Check whether the video is watchable, prominent, crawlable and described with accurate metadata before changing your sitemap or schema.
 date: 2026-10-15
+updated: 2026-10-26
 ---
 
 **Short answer:** Google needs to find a watchable video that is prominent on a page, with a crawlable thumbnail and reliable video metadata. Test the actual video page, not just the player embed. Make sure the video is the main content, its files are accessible, and structured data or a video sitemap accurately describes what a visitor can play.
@@ -41,13 +42,39 @@ If many videos share an error, inspect the player and thumbnail template, then v
 
 Re-test a live URL, confirm the video can be found and played, and check the report after Google recrawls. Keep an inventory of page URL, thumbnail, video host, and indexing status.
 
-Keep a simple record for each affected URL: the problem, evidence, change, owner, and review date. This is useful when several teams touch the CMS, hosting, analytics, and content. If the same symptom returns, the record helps you spot the shared template or configuration instead of repeating one-off repairs.
-
 ## Mistakes that make this worse
 
 Do not expect schema alone to make a video eligible or indexed. Do not make a thin page just to hold a player; give viewers a complete, honest experience.
 
-Before changing a live site, save the current configuration and test the change on a small set of representative URLs. If you are unsure whether an action removes content, changes access, or affects checkout, get the developer or site owner to review it first. Fixing the visible symptom while breaking a related page can cost more than the original search issue.
+## Distinguish a watch page from an article with a video
+
+A dedicated watch page makes one video the main reason to visit: the player is prominent, the title describes the video and supporting text helps viewers understand it. A long article with a small demonstration embed can remain useful without qualifying for a video-specific result. “Video is not the main content” is a page-purpose finding, not necessarily a broken player.
+
+For a genuine watch page, verify these assets together:
+
+```text
+Watch URL -> rendered player -> playback resource
+          -> stable thumbnail -> accurate title/date/description
+```
+
+A sample `VideoObject` for a fictional workshop tour might include:
+
+```json
+{
+  "@context": "https://schema.org",
+  "@type": "VideoObject",
+  "name": "A tour of our bicycle repair workshop",
+  "description": "See the inspection area and repair process.",
+  "thumbnailUrl": "https://example.com/media/workshop-thumbnail.jpg",
+  "uploadDate": "2026-10-26T10:00:00+05:30",
+  "duration": "PT2M30S",
+  "contentUrl": "https://example.com/media/workshop-tour.mp4"
+}
+```
+
+Replace every value with real visible video details and use the correct content or player URL fields for your implementation. Do not point `contentUrl` at an ordinary webpage. A hosted embed may require an appropriate `embedUrl` instead. Consult Google's current required and recommended properties before release.
+
+Check that a thumbnail remains accessible after a signed URL would normally expire. A working player in an authenticated session does not establish public access. Validate the page and observe Search Console after crawling; valid markup cannot compensate for an inaccessible thumbnail, unavailable video or page whose main purpose is something else.
 
 ## FAQ
 
@@ -57,14 +84,11 @@ No. The video should meet Google’s indexing criteria and be the primary conten
 
 ## Related Uplumo guides
 
-- [Javascript content not visible to google](/blog/javascript-content-not-visible-to-google)
-- [Google search console sitemap couldnt fetch](/blog/google-search-console-sitemap-couldnt-fetch)
-- [Seo audit that finds real problems](/blog/valid-page-returns-404-to-google)
+- [Google Cannot See Your JavaScript Content? A Debugging Guide](/blog/javascript-content-not-visible-to-google)
+- [Google Search Console Says “Couldn’t Fetch” for Your Sitemap](/blog/google-search-console-sitemap-couldnt-fetch)
+- [SEO audit checklist: find fixes that can help your business](/blog/seo-audit-that-finds-real-problems)
 
 ## Sources
 
 - [Google video SEO best practices](https://developers.google.com/search/docs/appearance/video)
 - [Google video structured data](https://developers.google.com/search/docs/appearance/structured-data/video)
-- [Community video indexing questions](https://support.google.com/webmasters/search?q=video+indexing+no+thumbnail)
-
-This guide is educational, not a promise of rankings or a substitute for checking your own site, data, and platform rules. Google and other search systems decide what they crawl, index, and show.

@@ -2,6 +2,7 @@
 title: SEO Traffic Dropped After a Site Migration? A Recovery Checklist
 description: Trace a post-migration traffic loss by URL, redirects, indexability and templates, then prioritise fixes with a practical recovery checklist.
 date: 2026-10-15
+updated: 2026-10-26
 ---
 
 **Short answer:** After a migration, compare old and new URLs page by page before changing more things. Check redirects, response codes, canonical tags, robots directives, internal links, rendered content, and Search Console indexing. Restore broken one-to-one redirects first; then separate technical migration faults from normal ranking changes.
@@ -41,13 +42,34 @@ If redesign, content rewrite, analytics replacement, and domain move happened to
 
 Re-crawl the old URL sample and confirm one-hop destinations, then inspect representative new URLs in Search Console. Track old and new properties together until old URLs decline and new URLs gain impressions. Compare leads and revenue too; short-term position swings alone do not prove recovery.
 
-Keep a simple record for each affected URL: the problem, evidence, change, owner, and review date. This is useful when several teams touch the CMS, hosting, analytics, and content. If the same symptom returns, the record helps you spot the shared template or configuration instead of repeating one-off repairs.
-
 ## Mistakes that make this worse
 
 Do not blanket-redirect every deleted URL to the new homepage. Do not repeatedly request indexing while a 404, noindex, or wrong canonical remains. Keep the exact launch date and changes in the report.
 
-Before changing a live site, save the current configuration and test the change on a small set of representative URLs. If you are unsure whether an action removes content, changes access, or affects checkout, get the developer or site owner to review it first. Fixing the visible symptom while breaking a related page can cost more than the original search issue.
+## A migration acceptance matrix you can hand to a developer
+
+For each important old URL, record:
+
+```text
+old URL, expected new URL, first response, final response,
+redirect hops, canonical, robots/noindex, content present, internal links updated
+```
+
+Sample at least one URL from each changed route family, not just the homepage. Include assets, a deep product/article path, a slash variant, a parameterized URL and an intentionally deleted page. Include the pages that previously generated qualified leads.
+
+| Finding | Immediate action |
+| --- | --- |
+| Old URL returns 404 but an equivalent new page exists | Add the correct permanent redirect |
+| Old URL reaches an unrelated homepage | Map to the equivalent page or return a genuine missing response |
+| New page is noindex | Remove accidental launch exclusion on intended public pages |
+| New canonical points to staging | Correct the production template and retest samples |
+| New page returns 200 with missing main text | Repair rendering/content delivery before requesting indexing |
+
+Keep the old domain's DNS, TLS certificate and redirect-serving infrastructure working. Ownership alone does not serve redirects when the old HTTPS host's certificate has expired. Google recommends keeping redirects for at least a year, and longer can help people following old links; see its site-move guidance below.
+
+For a domain move, verify the relevant Search Console properties and check whether Change of Address applies. A same-domain path change is not automatically a Change of Address case. Preserve the old-to-new map even after the first checks pass.
+
+Track old and new URLs together to avoid interpreting a decline on the old host as the entire migration result. Reconcile leads and analytics separately from indexing changes, especially when the migration also replaced measurement tags.
 
 ## FAQ
 
@@ -57,14 +79,11 @@ There is no fixed promise. It depends on site size, crawl frequency, redirect qu
 
 ## Related Uplumo guides
 
-- [Website not showing on google](/blog/robots-txt-vs-noindex-pages-still-indexed)
-- [Seo audit that finds real problems](/blog/valid-page-returns-404-to-google)
-- [Google search console for small businesses](/blog/google-search-console-sitemap-couldnt-fetch)
+- [Website not showing on Google? Find and fix the cause](/blog/website-not-showing-on-google)
+- [SEO audit checklist: find fixes that can help your business](/blog/seo-audit-that-finds-real-problems)
+- [Google Search Console for small businesses: a simple guide](/blog/google-search-console-for-small-businesses)
 
 ## Sources
 
 - [Google site moves with URL changes](https://developers.google.com/search/docs/crawling-indexing/site-move-with-url-changes)
 - [Google redirects](https://developers.google.com/search/docs/crawling-indexing/301-redirects)
-- [Community case: migration without redirect plan](https://www.reddit.com/r/TechSEO/comments/1r58qpy/domain_migration_disaster_98_traffic_drop/)
-
-This guide is educational, not a promise of rankings or a substitute for checking your own site, data, and platform rules. Google and other search systems decide what they crawl, index, and show.

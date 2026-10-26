@@ -2,6 +2,7 @@
 title: Old blog post lost traffic? Diagnose before you rewrite it
 description: Find out why an old article lost search clicks, then choose whether to update, combine, redirect or leave it as it is.
 date: 2026-10-15
+updated: 2026-10-26
 ---
 
 **Short answer:** Before rewriting an old blog post, compare its clicks, impressions and queries in Search Console, check whether the search intent changed, and inspect the page for outdated or incomplete advice. Update only what improves the answer; combine or redirect pages only when they truly overlap.
@@ -52,13 +53,26 @@ After the update, check whether the page is accessible and request a recrawl if 
 
 If the page is about a stable topic and remains accurate, a lower click count may reflect changing demand or result layout rather than a content fault. Use evidence before investing in a rewrite.
 
-## Decide whether a redirect is safe
+## Turn a vague refresh into a specific editorial change
 
-A redirect is appropriate when a page has moved or when you have combined it into a closely related replacement. It should take people to the page that answers the same need. Sending a discontinued product page to a generic homepage can be confusing and may not preserve the visitor’s intent.
+Use a change sheet before editing:
 
-Before redirecting, check whether the old URL has useful links, bookmarked visits, enquiries or support value. Save a copy of content that should remain available to customers, and update internal links to point directly to the new destination.
+| Field | Example for a hypothetical analytics guide |
+| --- | --- |
+| Main question | How to identify visits from AI assistants |
+| Decline | Relevant query clicks fell over comparable periods |
+| Verified factual gap | Official channel definitions changed |
+| New value | Current instructions, attribution limits and a reproducible check |
+| Preserved material | Useful source/medium explanation and stable URL |
+| Review evidence | Current official documentation and accurate examples |
 
-If the old article covers a separate question, keep it and improve it instead of folding every related topic into one long page. Good content structure makes it easier for people to find one complete answer.
+A meaningful update corrects the old instructions and removes contradictions throughout the article. Appending a current paragraph while leaving the old false short answer in place still misleads readers. Check the title, description, image labels, FAQ and internal links as well as the main body.
+
+When comparing results, preserve the old query set and look for new relevant queries separately. Otherwise, added impressions for broad low-intent searches can disguise a continued loss on the important task. Also record whether Google has recrawled the updated page before judging its search effect.
+
+For an overlapping article, compare every unique example and incoming link before merging. If the second article serves a distinct troubleshooting need, strengthen the link between them rather than collapsing it into a sprawling general guide.
+
+Set the updated date only after a substantive review like this. A date change, synonym replacement or arbitrary word-count increase is not a refresh strategy. For stable low-demand topics, retaining an accurate concise answer may be the right editorial decision even when it never becomes a high-traffic article.
 
 ## FAQ
 

@@ -2,80 +2,96 @@
 title: How to track AI Overview visibility in Search Console
 description: Use Google Search Console to review available AI search performance data, compare it with organic results and choose a useful next action.
 date: 2026-10-15
+updated: 2026-10-26
 ---
 
-**Short answer:** Use the generative AI performance report in Search Console when it is available for your property to review visibility in Google’s AI Search features. Compare the pages and queries it surfaces with your regular Search performance, then improve the page that best answers a real customer question. Reporting availability and detail can change.
+**Short answer:** Use Search Console's **Generative AI performance report (Search)** to inspect reported impressions for Google AI Overviews and AI Mode. Its documented breakdowns are Pages, Countries, Dates and Devices, with supported search-type filters. Examine queries and clicks separately in ordinary Search performance; do not present those ordinary query rows as a dedicated AI-only query report.
 
 ![A measurement loop from AI search visibility to page review and a tracked improvement](/site/blog/ai-overview-measurement.svg)
 
-## Start with the report you actually have
+## What the current Google report measures
 
-Open Search Console for the verified property and look for the generative AI performance report. Google has introduced reporting for impressions in generative AI features on Search, including AI Overviews and AI Mode. Report availability, coverage and details may vary as the feature rolls out.
+Google's [report documentation](https://support.google.com/webmasters/answer/16984139?hl=en) says the insights rolled out worldwide on 31 August 2026. A report can still be absent when the site has insufficient impressions in the supported features. Review eligibility and actual data rather than assuming the rollout simply has not reached your country.
 
-Do not assume that data from every experiment or every assistant is included. Search Console reports Google Search activity; it is not a universal tracker for ChatGPT, Perplexity or every AI product.
+The documented report includes **impressions** in AI Overviews and AI Mode, excluding Search Labs experiments. It is not a complete citation log across assistants and does not report ChatGPT or Perplexity referrals.
 
-## Read the data as a signal, not a full citation count
+| Data source | What to use it for | What it does not establish |
+| --- | --- | --- |
+| Generative AI performance report | Reported Google AI feature impressions and supported breakdowns | Every prompt, exact answer text or cross-assistant citation |
+| Ordinary Search Performance | Google clicks, queries, pages and other documented metrics | AI-only attribution for every query row |
+| Analytics | Measured sessions, sources and site actions | A visit from every displayed citation |
+| Prompt-monitoring sample | Answers and sources observed under a defined test | Share of all AI searches or proof of revenue |
 
-Review the pages and queries surfaced by the report. Ask:
+Keep the source name on every chart. An impression, a citation sample, a visit and a sale are different observations.
 
-- Which pages appear in the report, and what question might they answer?
-- Do those pages have accurate, complete and current information?
-- Are impressions changing over a useful date range?
-- Do clicks or enquiries from those pages change too?
-- Do the report’s dimensions cover the exact question you want to answer?
+## Inspect one page and one market first
 
-An impression is not proof that an individual reader saw a particular answer or that the page earned a citation in another assistant.
+1. Choose the correct verified property and a complete date range.
+2. Open the generative AI report and record its total impressions.
+3. Use the **Pages** tab to identify the relevant final/canonical URL.
+4. Review the supported country and device breakdowns for the question you are investigating.
+5. Save the filters and export date so the next comparison uses the same definition.
 
-## Compare visibility with the next action
+Google documents Pages, Countries, Dates and Devices; it does not document a dedicated Queries tab in this report. The supported search-type choices distinguish text-based and multimodal Web searches. They are not a switch that reveals every original prompt or separates every assistant.
 
-Use the normal Performance report to check clicks, queries and landing pages. Use analytics or sales records for enquiries and purchases. If a page gets AI feature impressions but few visits, improve the value and clarity of the page for someone who does click. If search impressions fall, inspect demand, indexing and query relevance before rewriting everything.
+Data is generally assigned to the canonical URL. Property-level and URL-level aggregation can produce different chart and table totals, so do not add row counts blindly and accuse the report of missing impressions. Recent data can be preliminary, and daily reporting uses Pacific Time.
 
-Create a simple monthly note with the date range, affected URLs, observations, changes and open questions. This avoids reporting a single fluctuation as a trend.
+## Compare with ordinary queries without inventing attribution
 
-## Improve the page, not the dashboard
+Open **Performance → Search results** separately and filter to the same page and a comparable period. Inspect queries, clicks and impressions to understand the page's broader search relevance. If a guide receives AI feature impressions and ordinary clicks, you cannot assume every click came from an AI Overview or associate an ordinary query row with a specific generated answer.
 
-The report is useful only when it leads to better information. Update factual errors, explain complex terms, cite original sources, add first-hand examples and link to the relevant service page. Keep the answer clear and visible to people.
+For a hypothetical guide, a report might show more AI feature impressions while measured site visits stay flat. Possible explanations include people receiving enough information in the answer, changes in the page/query mix or normal variation. The totals alone cannot identify the cause.
 
-Google’s guidance does not call for a special AI-only file or secret schema. Follow standard Search requirements, make pages crawlable, and publish people-first information. Do not create many near-duplicate pages to target every variation of a prompt.
+Review the actual page: does it solve a task worth clicking through to complete? A useful worksheet, original comparison, detailed procedure or verified example can add value beyond a short summary. Do not hide the answer to force a click or manufacture extra pages for each prompt variation.
 
-## Include limits in client reporting
+## Investigate a missing report
 
-When explaining results to a client, show exactly which report and date range you used. Separate Google AI feature data from referrals from other assistants. Do not promise that a single content change caused a visibility increase unless your evidence supports that conclusion.
+Check the correct property, available impressions and the current documentation. If important pages are not indexed or eligible for snippets, resolve that before treating the missing report as a dashboard bug. Use URL Inspection to distinguish live access from Google's indexed state.
 
-See [how to get cited in AI search](/blog/get-cited-in-ai-search-results), [how to identify AI referrals](/blog/chatgpt-traffic-google-analytics) and [how to use Search Console](/blog/google-search-console-for-small-businesses).
+If there is too little data, record **not available**. Do not fill the gap with a third-party visibility score that looks like a Google metric. Continue improving page accuracy and access, then review after enough real data accumulates. A sitemap can help discovery, but it cannot create impressions or guarantee inclusion.
 
-## A reporting template for clients
+## A client report that keeps the sources separate
 
-For each report, show the property, country, date range and exact Search Console report used. Separate AI feature impressions from clicks and from visits in analytics. Then list the affected pages, the visible query themes and the changes made during that period.
+Use the following outline:
 
-Use a note such as “Search Console reported impressions for Google AI Search features during this period; the report does not measure all AI assistants or guarantee that an individual page was cited.” This keeps the report useful without overstating what the data means.
+```text
+Property / canonical page:
+Date range, country, device and search-type filters:
+Google AI feature impressions and source report:
+Ordinary Search clicks and query themes, separately labelled:
+Assistant referral sessions and source definition:
+Qualified enquiries or sales, with measurement limits:
+Page changes made and the next review:
+```
 
-If the report is unavailable for a property or has too little data, write “not available” instead of filling the gap with a third-party estimate that looks precise. The client can still review crawlability, page accuracy and customer questions while data coverage grows.
+For prompt sampling, also record the prompt, platform/model where known, language, available location context, date, successful observations and failures. Do not change the prompt set between months without explaining it. Do not sum its citation counts with Search Console impressions.
 
-## Separate data sources in the report
+## Improve the source page and check the next outcome
 
-If you use a third-party visibility tracker alongside Search Console, label each source and its method. A tracker may sample prompts on set dates; Search Console measures Google Search features. Neither source represents all searches or every generated answer.
+Google's [AI optimization guidance](https://developers.google.com/search/docs/fundamentals/ai-optimization-guide) emphasizes useful, distinctive content grounded in ordinary Search practices. Fix wrong facts, show evidence readers can check, explain limitations and keep the main content publicly accessible. Special markup cannot guarantee selection.
 
-For a fair monthly comparison, keep the prompts, location, language, date range and page set as consistent as possible. Record when any of them changes. A different prompt set can make a visibility score move even when the website did not.
-
-Use a note for unavailable data and report what the team did instead, such as reviewing page accuracy or fixing an indexing issue. This gives a client a useful next step without pretending that a dashboard has complete coverage.
+Use the [citation comparison workflow](/blog/get-cited-in-ai-search-results) to review an actual answer sample, the [AI traffic guide](/blog/chatgpt-traffic-google-analytics) for visits and the [SEO client report worksheet](/blog/seo-client-report-template-that-proves-progress) for business reporting.
 
 ## FAQ
 
-**Does the report show citations from ChatGPT?**
+**Does this report show ChatGPT citations?**
 
-No. It reports on generative AI features in Google Search, not every assistant.
+No. It covers the documented Google Search generative AI features.
 
-**Can a sitemap improve AI Overview visibility?**
+**Can I identify the exact AI query from its ordinary Search Performance row?**
 
-A sitemap helps Google discover preferred URLs, but it does not guarantee indexing or an AI feature appearance.
+Not from that row alone. Keep the reports' documented dimensions and attribution limits clear.
 
-**How often should I check the report?**
+**Does no report mean my brand never appears in AI?**
 
-Monthly is a sensible start for a small site. Compare similar date ranges and investigate meaningful changes.
+No. Insufficient reported impressions or other data/eligibility limits are not a complete statement about all assistants.
+
+**How often should a small business review it?**
+
+A monthly review with stable filters is a reasonable routine; investigate meaningful changes with enough data rather than daily noise.
 
 ## Sources
 
-- [Google Search Central: AI optimisation guide](https://developers.google.com/search/docs/fundamentals/ai-optimization-guide)
 - [Google Search Console: generative AI performance report](https://support.google.com/webmasters/answer/16984139?hl=en)
-- [Google: build and submit a sitemap](https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap)
+- [Google Search Central: AI optimization guide](https://developers.google.com/search/docs/fundamentals/ai-optimization-guide)
+- [Google: Search Performance report](https://support.google.com/webmasters/answer/17010961?hl=en)

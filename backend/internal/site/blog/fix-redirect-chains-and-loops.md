@@ -2,6 +2,7 @@
 title: How to Find and Fix Redirect Chains and Loops
 description: Trace redirect hops, loops, and outdated targets with browser and crawler checks, then update links so visitors and crawlers reach the right page.
 date: 2026-10-15
+updated: 2026-10-26
 ---
 
 **Short answer:** A redirect chain happens when one URL points through multiple redirects before reaching the final page; a loop never reaches a destination. Test the full response path, then update the first redirect and internal links to point directly at the final relevant URL. Keep redirects only where users or old links still need them.
@@ -41,13 +42,39 @@ Test a sample of high-traffic URLs plus every rule family after deployment. Conf
 
 Save before-and-after status paths for representative URLs. The final page should return 200, old permanent URLs should reach it in one hop, and internal links/sitemaps should use the final address. Monitor crawl errors and conversions for changed URLs.
 
-Keep a simple record for each affected URL: the problem, evidence, change, owner, and review date. This is useful when several teams touch the CMS, hosting, analytics, and content. If the same symptom returns, the record helps you spot the shared template or configuration instead of repeating one-off repairs.
-
 ## Mistakes that make this worse
 
 Do not remove redirects blindly: old backlinks, bookmarks, and indexed URLs may still rely on them. Avoid chains of “temporary” redirects as a substitute for deciding the proper destination.
 
-Before changing a live site, save the current configuration and test the change on a small set of representative URLs. If you are unsure whether an action removes content, changes access, or affects checkout, get the developer or site owner to review it first. Fixing the visible symptom while breaking a related page can cost more than the original search issue.
+## Inspect a redirect chain with a real GET request
+
+Replace the example with your own public URL:
+
+```sh
+curl -sS -L --max-redirs 10 -D - -o /dev/null 'http://example.com/old-service'
+```
+
+This prints response headers for each followed hop while discarding the body. Use a GET request because some servers handle HEAD differently. A spoofed user-agent or successful local request does not reproduce a verified Googlebot crawl.
+
+An illustrative chain might be:
+
+```text
+http://example.com/old-service     301 -> https://example.com/old-service
+https://example.com/old-service   301 -> https://example.com/services/new-service
+https://example.com/services/new-service   200
+```
+
+For a permanent move, configure the old URL to reach the final relevant destination directly where practical. Test both the redirect and the destination; a one-hop redirect ending at a blank 200 page is still broken.
+
+| Test case | Expected outcome |
+| --- | --- |
+| Old published slug | Permanent redirect to equivalent current content |
+| Canonical URL | Full page with 200, without a further redirect |
+| Slash or host variant | Consistent normalization |
+| URL with a required campaign parameter | Measurement data preserved where appropriate |
+| Arbitrary missing slug | Real 404 rather than redirect to homepage |
+
+If two systems disagree about HTTPS, a proxy may redirect to HTTP while the app redirects back to HTTPS. Inspect forwarded-protocol settings and rules at both layers rather than adding a third redirect plugin. For temporary experiments or moves, choose an appropriate temporary redirect instead of declaring every route permanent.
 
 ## FAQ
 
@@ -57,14 +84,11 @@ No. Prioritise loops, broken destinations, high-value pages, and long chains tha
 
 ## Related Uplumo guides
 
-- [Seo site migration traffic drop checklist](/blog/seo-site-migration-traffic-drop-checklist)
-- [Google chose different canonical how to fix](/blog/google-chose-different-canonical-how-to-fix)
-- [Seo audit that finds real problems](/blog/valid-page-returns-404-to-google)
+- [SEO Traffic Dropped After a Site Migration? A Recovery Checklist](/blog/seo-site-migration-traffic-drop-checklist)
+- [Google Chose a Different Canonical: How to Fix the URL](/blog/google-chose-different-canonical-how-to-fix)
+- [SEO audit checklist: find fixes that can help your business](/blog/seo-audit-that-finds-real-problems)
 
 ## Sources
 
 - [Google redirects and Search](https://developers.google.com/search/docs/crawling-indexing/301-redirects)
 - [Google crawl budget guidance](https://developers.google.com/crawling/docs/crawl-budget)
-- [Community question about chains and migration](https://www.reddit.com/r/TechSEO/search/?q=redirect%20chain&restrict_sr=1)
-
-This guide is educational, not a promise of rankings or a substitute for checking your own site, data, and platform rules. Google and other search systems decide what they crawl, index, and show.

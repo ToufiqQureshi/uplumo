@@ -2,6 +2,7 @@
 title: Ecommerce product pages not ranking? Fix these basics
 description: Help shoppers and search engines understand your products with clear descriptions, crawlable categories, accurate data and useful images.
 date: 2026-10-15
+updated: 2026-10-26
 ---
 
 **Short answer:** If product pages are not appearing in Search, first check that Google can crawl and index the URLs. Then improve the category structure, write accurate product details, handle variants and out-of-stock items clearly, and use real product data where it applies.
@@ -59,6 +60,24 @@ A product page that attracts search visits but does not sell may have a purchase
 Review customer questions and returns. If people keep asking whether an item fits a certain model, add the compatibility details to the product page. If returns happen because photos or dimensions are unclear, fix those details. Better product information can help customers even if it does not change rankings.
 
 For stores with hundreds of products, test one category and a small sample of product pages before changing templates everywhere. Compare indexing and orders so you can catch template mistakes early.
+
+## Decide whether the query needs a category or a product
+
+Imagine a store selling water bottles. These are different search tasks:
+
+| Query | Likely useful destination | What it should answer |
+| --- | --- | --- |
+| “insulated water bottles” | Category or comparison page | Available options and meaningful differences |
+| “750 ml steel bottle screw cap” | Relevant filtered category or specific product | Capacity, material and closure compatibility |
+| Exact brand and model name | Product page | Exact item, price, availability and purchase conditions |
+
+Inspect the current results in your market before assigning a page. Do not make every individual product target the broad category phrase. A product page can be excellent and still be the wrong page type for a broad comparison query.
+
+For one product, gather information a copied supplier description usually omits: measured dimensions, empty weight, package contents, compatibility, care instructions, genuine photographs and warranty exclusions. Verify each fact against the actual item. If the product is not leakproof, do not turn “spill resistant” into “100% leakproof” for a stronger headline.
+
+Review a small sample across your main templates: a normal in-stock item, an item with variants, a temporary stock-out and a retired item. Check the page, selected variant, structured data and checkout together. A size selection that changes the displayed price while markup still describes another variant creates a factual mismatch.
+
+If the page is indexed but earns irrelevant impressions, fix the page-query assignment. If it gets relevant visits but no orders, test stock, shipping cost, delivery timing and checkout. These two problems require different work; adding another paragraph of keywords solves neither.
 
 ## FAQ
 

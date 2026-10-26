@@ -2,6 +2,7 @@
 title: Search impressions are up but clicks are down: how to diagnose it
 description: Use Search Console to find why impressions rose while clicks fell, separate ranking and demand changes, and choose a fix based on the affected pages.
 date: 2026-10-17
+updated: 2026-10-26
 ---
 
 **Short answer:** In Google Search Console, compare the same dates and filters, then split the change by query, page, country, device and search appearance. More impressions with fewer clicks can mean your pages appeared more often for lower positions or broader searches, while the searches that used to bring visitors lost rank or demand. Find the segment that changed before rewriting titles.
@@ -64,7 +65,7 @@ Before treating the chart as a ranking problem, rule out measurement issues:
 - Compare the same countries, devices and date lengths.
 - Check whether a site migration, canonical change, noindex tag or robots rule affected the page.
 - Review the Pages indexing report for affected URLs.
-- Compare Search Console clicks with GA4 organic sessions, remembering they measure different things. Search Console counts search-result clicks; Analytics counts recorded visits after the page loads. Consent choices, blocked scripts and time zones can create gaps. See Google's [comparison of Search Console and Analytics](https://support.google.com/webmasters/answer/10269533?hl=en).
+- Compare Search Console clicks with GA4 organic sessions, remembering they measure different things. Search Console counts search-result clicks; Analytics counts recorded visits after the page loads. Consent choices, blocked scripts and time zones can create gaps. See Google's [comparison of Search Console and Analytics](https://developers.google.com/search/docs/monitor-debug/google-analytics-search-console).
 
 If the problem is a sitemap or crawl issue, use our [sitemap “couldn't fetch” troubleshooting guide](/blog/google-search-console-sitemap-couldnt-fetch). For a confirmed broad decline after a Google update, follow the evidence-first [core update diagnosis plan](/blog/google-core-update-organic-traffic-drop).
 
@@ -87,8 +88,26 @@ This keeps the work focused. A fall in one high-value query deserves a different
 
 Act quickly if important pages return errors, disappear from indexing, point to the wrong canonical URL or have broken tracking. For normal ranking and CTR movement, first collect enough comparable data to see a repeatable pattern. Avoid daily title edits: they make it harder to tell what helped.
 
+## A worked example: higher visibility can hide lost valuable clicks
+
+These are invented numbers to demonstrate the calculation:
+
+| Query group | Earlier impressions | Earlier clicks | Later impressions | Later clicks |
+| --- | --- | --- | --- | --- |
+| Service + location | 1,000 | 80 | 800 | 48 |
+| Broad informational | 500 | 10 | 2,200 | 22 |
+| Total | 1,500 | 90 | 3,000 | 70 |
+
+Total impressions doubled, but clicks fell from 90 to 70. Overall CTR fell from `90 / 1,500 = 6%` to `70 / 3,000 ≈ 2.33%`. The broad group gained 12 clicks; the service group lost 32. Rewriting every title because of the total CTR would ignore the actual business problem.
+
+Next, filter the service query group by page, country and device. Check whether its positions declined, Google chose another landing page, or the search result layout changed. The table identifies **where** the loss occurred; it does not prove **why** it happened.
+
+Keep query-group definitions stable. If using a regex filter, check examples manually so a broad word does not capture unrelated searches. Search Console hides some queries for privacy and applies reporting limits, so visible query rows are not always a complete partition of the chart's total. Use page-level totals for reconciliation and label query-group coverage when it is incomplete.
+
+If the service group's position is stable but clicks decline, compare the same market's current result presentation and demand before editing copy. If the landing page is technically broken, repair it first. The right action comes from the segmented evidence, not from a universal “good CTR” benchmark.
+
 ## Sources
 
 - [Google Search Console Performance report](https://support.google.com/webmasters/answer/17010961?hl=en)
 - [How Google Search works](https://developers.google.com/search/docs/fundamentals/how-search-works)
-- [Search Console and Google Analytics differences](https://support.google.com/webmasters/answer/10269533?hl=en)
+- [Search Console and Google Analytics differences](https://developers.google.com/search/docs/monitor-debug/google-analytics-search-console)

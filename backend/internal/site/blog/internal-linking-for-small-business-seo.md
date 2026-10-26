@@ -2,6 +2,7 @@
 title: Internal links for SEO: help customers find key pages
 description: Use clear internal links to connect your services, guides and important pages, improve navigation and help search engines discover content.
 date: 2026-10-15
+updated: 2026-10-26
 ---
 
 **Short answer:** Internal links connect pages on the same website. Use them to help customers reach the next useful page and help search engines discover important content. Link from relevant pages with descriptive words, and make sure key pages are not hidden or several clicks away.
@@ -60,19 +61,38 @@ A service page might link to a pricing guide and booking page. A blog can link t
 
 When a page is retired, search your site for links pointing to the old URL and update them. Redirects help visitors and crawlers, but clean internal links reduce unnecessary hops and make the website easier to maintain.
 
-## Keep links useful as the business changes
+## Map five pages before changing the navigation
 
-When a service is added, removed or renamed, review the homepage, menus, relevant guides and older blog posts. A common small business problem is that a new service page exists but no visitor can find it. A second problem is old articles sending people to a retired offer.
+For a hypothetical AC repair company, a useful path could be:
 
-Check links after a site redesign too. Navigation changes can accidentally remove routes to important pages. A simple crawl or manual review of the main customer journey will catch many of these issues.
+```text
+Homepage -> AC repair service -> Request a visit
+Noise troubleshooting guide -> AC repair service
+Repair cost guide -> AC repair service
+AC repair service -> Repair cost guide
+```
 
-Use a small, stable set of page types: core services, locations, guides, about and contact. Connect them where it helps a customer move from learning to choosing, but avoid forcing every guide to link to every service.
+The informational guide helps the reader understand a problem; the service page explains the professional offer. Those are related but different intents. The link should appear where it helps: “If the noise continues, see what our inspection service includes,” rather than a forced sales link after every paragraph.
 
-## Do not confuse links with navigation clutter
+Build a small inventory:
 
-A page can have many links and still be hard to use if they all point to similar destinations. Group links by the task a visitor wants to complete. Put the most important service or booking path where a customer expects to find it, and use related guides as supporting routes.
+| Destination | Relevant incoming page | Anchor describes | Response |
+| --- | --- | --- | --- |
+| Main service | Homepage service section | Actual service and area | Final 200 URL |
+| Cost guide | Service pricing section | Factors affecting the estimate | Final 200 URL |
+| Booking / contact | Main service | What the visitor can request | Working action |
 
-For a small site, a quick manual map is enough: homepage to main services, service page to booking or quote, guide to related service, and all important pages to contact details. For a large site, a crawler can help, but have a person review whether the links make sense.
+A page listed only in an XML sitemap can still be hard for customers to find. Conversely, a crawler reporting zero incoming links may have missed a script-generated menu or excluded a crawl section. Verify the page manually before declaring it orphaned.
+
+Use ordinary crawlable anchors for navigation:
+
+```html
+<a href="/services/ac-repair">AC repair service and inspection process</a>
+```
+
+A button that navigates only through JavaScript can be less discoverable. Also check that the anchor's label matches the actual destination. Fixing a misleading link to a different guide matters more than changing “read more” to a keyword phrase while leaving the wrong destination in place.
+
+After a redirect or merge, update incoming links to the final URL and test them. Keep useful older redirects for visitors arriving from external links and bookmarks.
 
 ## FAQ
 

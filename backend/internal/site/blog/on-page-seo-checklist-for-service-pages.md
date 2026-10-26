@@ -2,6 +2,7 @@
 title: On-page SEO checklist for service pages
 description: Use this simple on-page SEO checklist to make service pages clearer for customers and easier for search engines to understand.
 date: 2026-10-15
+updated: 2026-10-26
 ---
 
 **Short answer:** On-page SEO means improving the visible content and page elements so people and search engines can understand the page. Start with one clear service, a descriptive title and heading, helpful sections, useful links, accessible images and a working contact action.
@@ -55,13 +56,24 @@ Then open the HTML or your SEO tool to check the page title, canonical URL and i
 
 Do not add structured data just to fill a score. Use markup only when it describes information visible on the page and follows current guidelines. Test changes on a sample before applying them site-wide.
 
-## Review the page as a customer would
+## A pass/fail sheet for one service page
 
-Ask someone who does not know the business to spend two minutes on the page. Ask them to tell you the service, area, price process and next step. If they need to hunt for the phone number or cannot tell whether the business handles their problem, the page needs a clearer opening.
+Use the checks below on the published URL, not only the CMS editor:
 
-Then compare the search result with the page. A title that says “emergency repair” should lead to a page that explains how to request urgent work. A result that promises a free estimate should not open a page that hides the estimate process. This match builds trust and helps customers self-select.
+| Check | Pass evidence | Failure to fix |
+| --- | --- | --- |
+| Search intent | The page helps book or evaluate the named service | A DIY guide disguised as a service offer |
+| Title and H1 | Both describe the same real service | Generic title or unsupported urgency claim |
+| Scope | Included work, exclusions and service area are clear | Visitor must call to learn basic eligibility |
+| Proof | Real process, credentials or permitted project evidence | Unexplained logos or invented testimonials |
+| Access | Full page loads without login; intended index directives | Accidental noindex or empty server response |
+| Contact | A test request reaches the correct recipient | Button click counted despite form failure |
 
-A useful on-page review is not a score chase. It is a short check of clarity, evidence, navigation, accessibility and measurement on the pages that matter most.
+For a hypothetical repair page, replace “Quality solutions for modern living” with a factual opening such as: “We inspect and repair split AC units in [actual service area]. Share the model and symptoms to request a visit.” Add timing or pricing only when the business can honor it.
+
+In source HTML, check the title, canonical and robots directive. In the rendered page, check the visible promise and contact journey. Neither view replaces the other: a correct canonical does not make an unusable form work, and a beautiful page can still be accidentally excluded from indexing.
+
+Use FAQ sections for genuine buyer questions that belong on the page. Do not add unrelated questions to lengthen the article or assume FAQ markup guarantees a rich result. Keep a screenshot or saved copy of the old wording, the changed URL and a test-enquiry receipt. That creates a reviewable record of what improved rather than another untraceable “SEO score” increase.
 
 ## FAQ
 

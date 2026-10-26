@@ -2,7 +2,7 @@
 title: SEO Client Report: Show Work, Evidence, Leads and Next Steps
 description: Build a client report that connects search performance to business outcomes, explains data limits, and assigns clear actions for the next period.
 date: 2026-10-15
-updated: 2026-10-17
+updated: 2026-10-26
 ---
 
 **Short answer:** Lead with the business question, the evidence, what changed, what happened, and the next action. Separate outcomes you can measure—qualified leads, calls, revenue—from intermediate signals such as impressions and rankings. Show the source, date range, market, and caveats so a client can understand both progress and uncertainty.
@@ -42,32 +42,33 @@ List the next three actions, owner, due date, and how success will be measured. 
 
 Before sending, reconcile totals, inspect conversion events, compare with the previous report, and confirm every chart has a definition and source. Ask a non-SEO colleague to explain the recommended next action in plain language.
 
-Keep a simple record for each affected URL: the problem, evidence, change, owner, and review date. This is useful when several teams touch the CMS, hosting, analytics, and content. If the same symptom returns, the record helps you spot the shared template or configuration instead of repeating one-off repairs.
-
 ## Mistakes that make this worse
 
 Do not promise fixed rankings or bury declines under vanity metrics. Do not attribute every lead to SEO without a defensible tracking method.
 
-Before changing a live site, save the current configuration and test the change on a small set of representative URLs. If you are unsure whether an action removes content, changes access, or affects checkout, get the developer or site owner to review it first. Fixing the visible symptom while breaking a related page can cost more than the original search issue.
+## Copyable monthly report worksheet
 
-## A copy-ready report outline
+Paste this CSV into a spreadsheet and replace the blank values with verified account data. It intentionally contains no invented client performance:
 
-Use one page for the summary, then attach detail only where it changes a decision:
+```csv
+section,metric,current_period,comparison_period,source,definition_or_limit,next_action
+Outcomes,Qualified enquiries,,,CRM,Exclude spam and duplicates,
+Outcomes,Closed-won revenue,,,CRM,State currency and attribution model,
+Search,Google Web clicks,,,Search Console,Same property country device and dates,
+Search,Relevant query impressions,,,Search Console,Visible queries may be incomplete,
+Website,Google organic sessions,,,GA4,Sessions are not Search Console clicks,
+Delivery,Changes completed,,,Release log,Link actual affected URLs,
+Next work,Priority task,,,Owner and due date,State evidence and acceptance check,
+```
 
-1. **Goal:** “Increase qualified enquiries for [service] in [market].”
-2. **Outcome:** leads, calls or sales recorded, with source and date range.
-3. **Search evidence:** clicks, impressions and queries for the pages tied to that goal.
-4. **Work completed:** specific page or technical change, date, and reason.
-5. **What changed:** compare a fair period and name any limitations.
-6. **Next action:** task, owner, due date and the signal that will show progress.
+Add a short explanation above the sheet: goal, result, uncertainty and the decision needed. Put technical detail behind links or in an appendix when it helps verification.
 
-Example: “We clarified the commercial AC repair page on 3 September and added response-area details. Search Console shows 18 more clicks over the following 28 days than the preceding 28 days. The call log has 4 enquiries tagged to organic search; two became quotes. This is an encouraging early signal, but the period is too short to attribute all change to the page edit.”
+For a hypothetical service business, the report might show 15 enquiries but only 6 within the service area, with 4 duplicates and 5 unrelated requests. The useful outcome is 6 qualified enquiries, not an unqualified headline of “15 leads.” Record the qualification rule and apply it consistently in both periods.
 
-### Keep the evidence honest
+Keep work delivered separate from effects observed. “We fixed three redirect rules” is a verified delivery statement when backed by tests. “Relevant clicks rose afterward” is an observation. “The redirects caused all new sales” requires much stronger attribution evidence.
 
-State whether numbers are clicks, sessions, leads or closed revenue. Search Console clicks are not GA4 sessions; Analytics can miss visits due to consent, blockers or scripts. Do not add traffic estimates from different SEO tools together or claim that a rank change caused revenue without evidence. Google's [guide to Search Console and Analytics](https://support.google.com/webmasters/answer/10269533?hl=en) explains why reports differ.
+Use percentages only alongside counts and an appropriate denominator. If one month has 1 enquiry and the next has 2, a 100% increase is mathematically correct but provides little evidence of a durable trend. Explain sample size rather than hiding it behind a green arrow.
 
-Attach a short “what changed” note to each report. If results declined, show what was checked and what the evidence says; a clear diagnosis builds more trust than a green arrow without context. For a concise investigation of confusing clicks and impressions, use our [Search Console worksheet](/blog/search-console-impressions-clicks-down). For an owner-friendly monthly cadence, use the [30-day SEO plan](/blog/seo-30-day-plan-small-business).
 ## FAQ
 
 **Should an SEO client report include keyword rankings?**
@@ -76,14 +77,11 @@ They can help explain visibility, especially by location, but pair them with imp
 
 ## Related Uplumo guides
 
-- [Ga4 vs search console organic clicks mismatch](/blog/ga4-vs-search-console-organic-clicks-mismatch)
-- [Seo client seo roi long sales cycle](/blog/seo-client-seo-roi-long-sales-cycle)
-- [Daily keyword rank fluctuations how to report](/blog/daily-keyword-rank-fluctuations-how-to-report)
+- [Why GA4 and Search Console Organic Numbers Do Not Match](/blog/ga4-vs-search-console-organic-clicks-mismatch)
+- [How to Measure SEO ROI When Sales Take Months](/blog/seo-client-seo-roi-long-sales-cycle)
+- [Daily Keyword Rankings Jump Around: What to Track and When to Act](/blog/daily-keyword-rank-fluctuations-how-to-report)
 
 ## Sources
 
 - [Google Search Console performance report](https://support.google.com/webmasters/answer/7576553)
 - [Google Analytics conversion events](https://support.google.com/analytics/answer/9267568)
-- [Community reporting discussion](https://www.reddit.com/r/SEO/search/?q=SEO%20client%20reporting%20rankings&restrict_sr=1)
-
-This guide is educational, not a promise of rankings or a substitute for checking your own site, data, and platform rules. Google and other search systems decide what they crawl, index, and show.

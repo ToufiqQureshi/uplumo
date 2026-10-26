@@ -2,7 +2,7 @@
 title: How to get your business cited in AI search answers
 description: Make your business information clear and trustworthy so search systems can understand your pages, while measuring citations without false promises.
 date: 2026-10-15
-updated: 2026-10-17
+updated: 2026-10-26
 ---
 
 **Short answer:** No one can guarantee that ChatGPT, Google AI Overviews or another assistant will cite a business. You can make your site easier to discover and understand: answer a clear question, show first-hand proof, keep business facts consistent, earn legitimate mentions and measure what each platform exposes.
@@ -45,22 +45,6 @@ Be cautious if an agency promises “guaranteed ChatGPT rankings”, a fixed cit
 
 For more context, read [the AEO basics guide](/blog/what-is-answer-engine-optimisation), [how to find AI referrals in analytics](/blog/chatgpt-traffic-google-analytics) and [our people-first content brief](/blog/seo-content-brief-for-small-business).
 
-## Make facts easy to confirm across the web
-
-Keep the business name, address, phone, services and opening details consistent on the official site and public profiles. For a service business, explain who provides the work and how customers can verify qualifications. For product companies, publish current product information, support details and clear policies.
-
-When other trusted organisations mention the business, those references can help a person confirm that it exists and does what it says. Earn those mentions through real work, partnerships and useful information. Do not seed fake comments or ask staff to pretend to be independent customers.
-
-If an assistant describes your business incorrectly, record the prompt, answer, date and cited URLs. Fix inaccurate information on your own pages first, then look for outdated third-party listings. One isolated answer is a clue to investigate, not proof that every customer sees the same result.
-
-## Build an answer that still helps without an AI mention
-
-A guide should be worth reading even if no search engine cites it. Include a direct answer, explain the steps, state where the answer may change and offer a way to verify important details. Link to original documentation when describing platform rules or technical requirements.
-
-Avoid publishing dozens of near-identical pages for prompts such as “best agency in Austin”, “best agency in Dallas” and “best agency in Denver” if the company serves only one place or has nothing useful to say about those markets. Thin pages can hurt trust with both customers and reviewers.
-
-If another company is cited, compare the source pages. It may have more specific information, clearer proof or a stronger match to the question. Improve the missing information rather than copying the competitor’s wording.
-
 ## A practical page review for AI and regular search
 
 Pick one page that answers a real customer question and review it as a reader:
@@ -78,6 +62,23 @@ Do not add special “AI schema” or create hundreds of thin question pages to 
 Record the prompt, platform, date, country or language, answer and any cited URL. Repeat a small, stable set over time and label the results as samples: assistants can produce different answers for similar prompts. A mention is not a click, and an unlinked brand mention is not a referral visit. Compare this qualitative observation with Search Console clicks, site visits and qualified leads rather than presenting a citation count as revenue.
 
 Keep citations easy for a reader to verify. Our guide to [Search Console and click changes](/blog/search-console-impressions-clicks-down) helps establish the search baseline; the [SEO report template](/blog/seo-client-report-template-that-proves-progress) shows how to report uncertainty without overselling it. Google also warns against scaled pages made mainly to manipulate rankings in its [spam policies](https://developers.google.com/search/docs/essentials/spam-policies).
+## Compare a cited source with your page, question by question
+
+Choose one genuine customer question and save a dated answer sample with its platform, language and available location context. Open the cited pages and compare what a reader can verify:
+
+| Question | Evidence to look for | Useful improvement |
+| --- | --- | --- |
+| Is the answer specific? | Exact service, use case, eligibility or product facts | Add the missing decision detail |
+| Can the facts be checked? | Named source, date, method or business policy | Link the original source and explain scope |
+| Does the page demonstrate experience? | Original measurements, process or permitted project evidence | Add material your team can substantiate |
+| Is the information accessible? | Public readable page with working resources | Repair the actual access or rendering issue |
+
+For a hypothetical accounting firm, “We provide GST services” does not answer “What documents should I prepare before a consultation?” A qualified reviewer could publish the firm's actual intake checklist, explain which items depend on the case and state when advice requires a consultation. Avoid inventing tax requirements to make the answer look complete.
+
+Keep **mention rate** and **citation rate** separate. If your brand is mentioned in 3 of 10 successful sampled answers, that sample's mention rate is 30%. If your domain is linked in 1, the domain citation rate is 10%. Report failed checks separately; changing the prompt set changes the denominator and makes periods harder to compare. These are sample rates, not your share of all AI searches.
+
+After improving a page, repeat the same sample conditions and check relevant referral visits and qualified enquiries. A new citation is evidence of that observed answer; it is not proof that the page edit caused the change or that every user receives it.
+
 ## FAQ
 
 **Does FAQ schema make ChatGPT cite my page?**

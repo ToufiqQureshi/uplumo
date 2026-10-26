@@ -2,6 +2,7 @@
 title: Google Cannot See Your JavaScript Content? A Debugging Guide
 description: Check initial HTML, rendered output, blocked scripts, links and client-side errors to find why important JavaScript content is missing from Google.
 date: 2026-10-15
+updated: 2026-10-26
 ---
 
 **Short answer:** Compare the page’s initial HTML with Google’s rendered HTML in URL Inspection. Make the main text, links, title, and canonical available consistently; unblock required scripts and APIs; and fix render errors. For pages where search visibility matters, server-side rendering or static rendering can reduce dependence on a later rendering step.
@@ -41,13 +42,31 @@ Use a live URL inspection and an independent mobile check. Verify title, canonic
 
 Save a rendered HTML sample from before and after the change. Confirm the primary content and crawlable links appear without user login, the page returns a stable 200, and there are no critical console or API failures.
 
-Keep a simple record for each affected URL: the problem, evidence, change, owner, and review date. This is useful when several teams touch the CMS, hosting, analytics, and content. If the same symptom returns, the record helps you spot the shared template or configuration instead of repeating one-off repairs.
-
 ## Mistakes that make this worse
 
 Do not add dynamic rendering as a first response without checking Google’s current JavaScript guidance; it is described as a workaround. Do not serve search engines content that materially differs from people’s content.
 
-Before changing a live site, save the current configuration and test the change on a small set of representative URLs. If you are unsure whether an action removes content, changes access, or affects checkout, get the developer or site owner to review it first. Fixing the visible symptom while breaking a related page can cost more than the original search issue.
+## Compare three versions of the same page
+
+| Version | How to inspect | What it tells you |
+| --- | --- | --- |
+| Initial server HTML | View source or a GET request | Content delivered before scripts run |
+| Your rendered page | Browser DOM and network panel | Whether scripts and APIs work in your session |
+| Google's live rendered test | URL Inspection output | What the inspection service can currently render |
+
+A difference is a diagnostic clue. Initial HTML can be sparse while Google renders the page correctly; sparse source alone does not prove the page cannot rank. Equally, a successful local DOM is not enough if the main API returns an error to logged-out visitors.
+
+Fetch the initial response for a public example:
+
+```sh
+curl -sS 'https://example.com/service' -o /tmp/service-source.html
+```
+
+Search the saved file for a distinctive sentence from the main answer, the title and important links. If missing, investigate whether the content is intentionally client-rendered. Then use the rendered inspection output to determine whether it actually appears there. Do not simply switch frameworks because one sentence is absent from source.
+
+Test a real route directly in a new session, not only by navigating from the homepage. Client routing can hide an origin 404 on deep links. Also test a nonexistent route: an SPA fallback that returns the same empty 200 shell for every URL is a separate status-handling defect.
+
+Pay special attention to an initial `noindex` removed by JavaScript. Google may skip rendering after encountering noindex, so relying on scripts to undo it is unsafe for pages intended to be indexed. Return consistent index directives and the appropriate HTTP status from the server.
 
 ## FAQ
 
@@ -57,14 +76,11 @@ Google can process JavaScript, but rendering can take time and may fail. Test th
 
 ## Related Uplumo guides
 
-- [Website not showing on google](/blog/robots-txt-vs-noindex-pages-still-indexed)
-- [Core web vitals explained](/blog/core-web-vitals-explained)
-- [Seo audit that finds real problems](/blog/valid-page-returns-404-to-google)
+- [Website not showing on Google? Find and fix the cause](/blog/website-not-showing-on-google)
+- [Core Web Vitals explained: what LCP, INP and CLS mean for your site](/blog/core-web-vitals-explained)
+- [SEO audit checklist: find fixes that can help your business](/blog/seo-audit-that-finds-real-problems)
 
 ## Sources
 
 - [Google JavaScript SEO basics](https://developers.google.com/search/docs/crawling-indexing/javascript/javascript-seo-basics)
 - [Google fix JavaScript search problems](https://developers.google.com/search/docs/crawling-indexing/javascript/fix-search-javascript)
-- [Community JavaScript SEO questions](https://www.reddit.com/r/TechSEO/search/?q=javascript%20rendering&restrict_sr=1)
-
-This guide is educational, not a promise of rankings or a substitute for checking your own site, data, and platform rules. Google and other search systems decide what they crawl, index, and show.

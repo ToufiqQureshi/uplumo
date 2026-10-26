@@ -2,6 +2,7 @@
 title: Google Manual Action for Unnatural Links: What to Do Before Disavowing
 description: Read the exact Search Console notice, document link removal attempts, use disavow only when justified, and submit a clear reconsideration request.
 date: 2026-10-15
+updated: 2026-10-26
 ---
 
 **Short answer:** Open the Manual Actions report and read the exact issue and scope. Identify links that violate Google’s spam policies, try to remove or qualify paid/manipulative links, and document your work. Use the disavow tool only when the situation meets Google’s criteria; then request reconsideration with a clear account of what changed.
@@ -41,13 +42,37 @@ After submission, check the report for status updates. Continue preventing manip
 
 The Manual Actions report should show the action removed or provide a response. Separately monitor search performance and link acquisition. A removed action does not guarantee rankings return to a previous position.
 
-Keep a simple record for each affected URL: the problem, evidence, change, owner, and review date. This is useful when several teams touch the CMS, hosting, analytics, and content. If the same symptom returns, the record helps you spot the shared template or configuration instead of repeating one-off repairs.
-
 ## Mistakes that make this worse
 
 Do not submit the same vague reconsideration request repeatedly. Do not bulk-disavow every external link or pay a vendor promising instant removal.
 
-Before changing a live site, save the current configuration and test the change on a small set of representative URLs. If you are unsure whether an action removes content, changes access, or affects checkout, get the developer or site owner to review it first. Fixing the visible symptom while breaking a related page can cost more than the original search issue.
+## Prepare evidence a reviewer can understand
+
+Use one row per reviewed placement or acquisition pattern:
+
+| Field | What to record |
+| --- | --- |
+| Source and destination | Exact linking page and your linked URL |
+| Why it violates policy | Paid followed placement, controlled network or another documented practice |
+| Action | Removed, appropriately qualified, removal requested or inaccessible |
+| Evidence | Dated response, screenshot or current link check |
+| Prevention | Contract, access or acquisition process changed |
+
+Do not publish this sheet if it contains private correspondence. Summarize the work accurately in your reconsideration request and supply evidence through the appropriate process.
+
+If disavow is justified, the file is a plain UTF-8 or ASCII `.txt` file. A fictional syntax example is:
+
+```text
+# Illustrative entries only; do not upload this example
+https://links.example/paid-placement
+domain:network.example
+```
+
+Each entry belongs on its own line with no explanation appended. A URL entry targets that page; `domain:` covers the named domain or subdomain. Do not try to disavow an entire folder using a domain entry.
+
+**An upload replaces the property's existing disavow list.** Download and review any current list before preparing a replacement, preserve still-justified entries, and check the correct supported property. Google's tool does not support Domain properties, so follow the current instructions for the appropriate URL-prefix property.
+
+A reconsideration summary should identify the cause, the schemes stopped, what was removed or qualified, the links that could not be removed and the prevention steps. Use actual dates and counts from your review. A generic apology or an invented “100% cleaned” claim is less useful than an honest documented account.
 
 ## FAQ
 
@@ -57,15 +82,12 @@ Usually not based on a third-party score alone. Google recommends using the tool
 
 ## Related Uplumo guides
 
-- [Ethical backlinks for small business](/blog/google-manual-action-unnatural-links-recovery)
-- [Japanese seo hack spam urls recovery](/blog/japanese-seo-hack-spam-urls-recovery)
-- [Google search console for small businesses](/blog/google-search-console-sitemap-couldnt-fetch)
+- [Ethical backlinks for small businesses: a practical guide](/blog/ethical-backlinks-for-small-business)
+- [Japanese SEO Spam Pages Appeared on Your Site? A Recovery Checklist](/blog/japanese-seo-hack-spam-urls-recovery)
+- [Google Search Console for small businesses: a simple guide](/blog/google-search-console-for-small-businesses)
 
 ## Sources
 
 - [Google disavow links guidance](https://support.google.com/webmasters/answer/2648487)
 - [Google manual actions report](https://support.google.com/webmasters/answer/9044175)
 - [Google link spam policies](https://developers.google.com/search/docs/essentials/spam-policies)
-- [Community manual action example](https://support.google.com/webmasters/thread/17028375/manual-action-issue)
-
-This guide is educational, not a promise of rankings or a substitute for checking your own site, data, and platform rules. Google and other search systems decide what they crawl, index, and show.

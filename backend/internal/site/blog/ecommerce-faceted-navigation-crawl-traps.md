@@ -2,6 +2,7 @@
 title: Ecommerce Filters Creating Thousands of URLs? Control Faceted Crawling
 description: Map filter URL patterns, protect valuable landing pages, and reduce low-value crawl paths without blocking products shoppers need to discover.
 date: 2026-10-15
+updated: 2026-10-26
 ---
 
 **Short answer:** First separate filter combinations that help shoppers or deserve search traffic from endless combinations that add no unique value. Keep valuable category/filter pages crawlable and internally linked; manage low-value parameter patterns with a deliberate URL and crawl policy. Do not blanket-block all filters before checking whether Google needs those URLs to discover products.
@@ -41,13 +42,27 @@ Test a small category first. Check logs, product discovery, indexed URLs, and va
 
 Compare crawl requests by parameter family, server load, product discovery, and Search Console indexing after rollout. Maintain a list of allowed SEO landing pages and excluded filter patterns so new filters follow the same rules.
 
-Keep a simple record for each affected URL: the problem, evidence, change, owner, and review date. This is useful when several teams touch the CMS, hosting, analytics, and content. If the same symptom returns, the record helps you spot the shared template or configuration instead of repeating one-off repairs.
-
 ## Mistakes that make this worse
 
 Robots.txt controls crawling, not guaranteed deindexing. Canonical tags are hints and may not prevent crawling. Do not canonical every filter page to the unfiltered category if the filter page is a useful distinct result.
 
-Before changing a live site, save the current configuration and test the change on a small set of representative URLs. If you are unsure whether an action removes content, changes access, or affects checkout, get the developer or site owner to review it first. Fixing the visible symptom while breaking a related page can cost more than the original search issue.
+## Build a URL policy before writing a blocking rule
+
+For an illustrative footwear store, these URLs have different purposes:
+
+| URL pattern | Reader value | Possible policy |
+| --- | --- | --- |
+| `/running-shoes/` | Main category | Crawlable, indexable, linked from navigation |
+| `/waterproof-running-shoes/` | Curated category with stable stock and distinct demand | Indexable if it earns its own useful page |
+| `/running-shoes/?sort=price` | Same inventory in another order | Avoid promoting as an independent search landing page |
+| `/running-shoes/?colour=blue&size=9&sort=price` | Narrow shopping state | Manage crawl paths if no search landing-page purpose |
+| Impossible facet combination | No matching inventory or valid selection | Return a genuine 404 for invalid/no-result combinations as appropriate |
+
+A canonical can express a preferred duplicate, but it does not prevent Google from requesting every generated URL. If the goal is to reduce requests to disposable filters, the crawl paths themselves need attention. Conversely, a robots block prevents Google reading a newly added noindex on that URL. Decide whether you need **deindexing** or **crawl reduction** before combining controls.
+
+Test parameter order: `?size=9&colour=blue` and `?colour=blue&size=9` should not create unbounded duplicate states. Also test repeated parameters, unlimited price ranges and pagination beyond the last page. Keep meaningful pagination crawlable so products beyond the first screen remain discoverable.
+
+Before rollout, save a sample from each URL family, then measure actual verified crawler requests and important product discovery. A crawler finding 50,000 possible links demonstrates URL expansion; it does not by itself prove Google is spending its time on all of them. Use server evidence to establish that part.
 
 ## FAQ
 
@@ -57,14 +72,11 @@ No. Keep useful curated pages eligible; manage repetitive combinations based on 
 
 ## Related Uplumo guides
 
-- [Ecommerce product pages not ranking](/blog/out-of-stock-product-pages-seo)
-- [Robots txt vs noindex pages still indexed](/blog/robots-txt-vs-noindex-pages-still-indexed)
-- [Google search console sitemap couldnt fetch](/blog/google-search-console-sitemap-couldnt-fetch)
+- [Ecommerce product pages not ranking? Fix these basics](/blog/ecommerce-product-pages-not-ranking)
+- [Robots.txt vs Noindex: Why a Blocked URL Can Still Appear in Google](/blog/robots-txt-vs-noindex-pages-still-indexed)
+- [Google Search Console Says “Couldn’t Fetch” for Your Sitemap](/blog/google-search-console-sitemap-couldnt-fetch)
 
 ## Sources
 
 - [Google faceted navigation crawling guidance](https://developers.google.com/crawling/docs/faceted-navigation)
 - [Google ecommerce URL structure](https://developers.google.com/search/docs/specialty/ecommerce/designing-a-url-structure-for-ecommerce-sites)
-- [Community question: facet crawl budget](https://www.reddit.com/r/TechSEO/search/?q=faceted%20navigation%20crawl%20budget&restrict_sr=1)
-
-This guide is educational, not a promise of rankings or a substitute for checking your own site, data, and platform rules. Google and other search systems decide what they crawl, index, and show.

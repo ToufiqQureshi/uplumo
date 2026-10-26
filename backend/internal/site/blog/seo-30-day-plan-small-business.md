@@ -2,6 +2,7 @@
 title: A realistic 30-day SEO plan for a small business
 description: A practical four-week SEO plan for a busy small business: fix blockers, improve one valuable page, strengthen local trust and measure enquiries.
 date: 2026-10-17
+updated: 2026-10-26
 ---
 
 **Short answer:** A useful 30-day SEO plan does not try to “do everything.” First fix anything stopping search engines or customers from using the site. Then improve one page tied to a real business goal, make the business information trustworthy, and set up a simple way to measure enquiries. The plan below assumes a few focused hours each week.
@@ -81,6 +82,25 @@ Use this weekly log:
 | 4 | Review results and choose the next task | Baseline and comparison recorded | Qualified leads, not rank alone |
 
 SEO rarely produces a reliable promise of results in 30 days. Search engines need to crawl changes, demand changes over time, and leads depend on the offer and market too. The goal of this month is a better page, fewer avoidable blockers and a clear next decision.
+
+## A realistic time budget and definition of done
+
+This illustrative allocation totals about 12 focused hours; adjust it to your site's condition rather than treating it as a ranking package.
+
+| Week | Suggested time | Deliverable you can verify |
+| --- | --- | --- |
+| 1 | 3 hours | Baseline saved, one important URL inspected, contact path tested |
+| 2 | 4 hours | One buyer-focused page improved with verified business details |
+| 3 | 3 hours | Relevant internal links corrected and genuine public business facts checked |
+| 4 | 2 hours | Same-page review with enquiries, open issues and next task |
+
+If the website has a major access, security or booking failure, the repair may consume the entire first month. That is still useful work. Publishing four blog posts while the contact form loses enquiries is not a better outcome.
+
+For an example local repair business, the chosen page could be the real AC repair service page. Ask the owner for the actual service area, inspection process, fee conditions and the questions callers ask most. Publish only confirmed details and test a request from a phone. Link a relevant existing maintenance guide to the service page where professional help is appropriate.
+
+At day 30, evaluate completed work separately from search outcomes. You can verify that a wrong canonical was corrected or a form submission arrived. You cannot promise Google has already recrawled, reassessed and promoted the page. If traffic is too small for a useful rate comparison, report counts and customer feedback rather than a large percentage based on one lead.
+
+Pick the following month's task from the largest remaining evidenced constraint: access, relevance, trust or conversion. The plan should produce a repeatable decision process rather than an endless checklist of low-impact tasks.
 
 ## Sources
 

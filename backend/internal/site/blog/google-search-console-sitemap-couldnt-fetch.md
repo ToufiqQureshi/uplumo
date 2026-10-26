@@ -2,7 +2,7 @@
 title: Google Search Console Says “Couldn’t Fetch” for Your Sitemap
 description: Check sitemap access, response headers, XML validity, robots rules and URL consistency to solve a Search Console fetch error.
 date: 2026-10-15
-updated: 2026-10-17
+updated: 2026-10-26
 ---
 
 **Short answer:** Open the exact submitted sitemap URL without a login, confirm it returns a stable 200 with valid XML, and check CDN, robots, redirects, and host consistency. Then inspect the reported error details in Search Console and resubmit after the actual cause is fixed. A valid XML file on your laptop does not prove Googlebot can fetch the public URL.
@@ -42,31 +42,39 @@ After the fetch succeeds, use Page Indexing and URL Inspection to diagnose indiv
 
 Record the submitted URL, response code, last-modified date, child maps, and Search Console status. Recheck after processing and investigate page-level indexing separately.
 
-Keep a simple record for each affected URL: the problem, evidence, change, owner, and review date. This is useful when several teams touch the CMS, hosting, analytics, and content. If the same symptom returns, the record helps you spot the shared template or configuration instead of repeating one-off repairs.
-
 ## Mistakes that make this worse
 
 Do not keep re-submitting an unchanged file when Google cannot fetch it. Do not include URLs because they exist in the CMS; only include preferred, useful, indexable URLs.
 
-Before changing a live site, save the current configuration and test the change on a small set of representative URLs. If you are unsure whether an action removes content, changes access, or affects checkout, get the developer or site owner to review it first. Fixing the visible symptom while breaking a related page can cost more than the original search issue.
+## Check the public response rather than the filename
 
-## A five-minute sitemap check
+Run a GET request against your exact submitted URL:
 
-Copy the exact URL shown in Search Console, including its protocol and path. Open it in a private browser window and check each step:
+```sh
+curl -sS -D /tmp/sitemap-headers.txt \
+  -o /tmp/sitemap.xml 'https://example.com/sitemap.xml'
+```
 
-1. The response is successful and stable, not a login page, challenge page, or HTML error that happens to return status 200.
-2. The response body is XML and lists canonical URLs that you want indexed. A sitemap is a discovery hint, not an indexing command.
-3. Every sitemap listed inside a sitemap index can also be fetched publicly.
-4. URLs use the correct HTTPS host and do not redirect to a different version of the site.
-5. The robots.txt file does not block the sitemap or the pages it lists.
+Inspect both files. A body beginning with a login form or a JavaScript challenge is not a sitemap even if the URL ends in `.xml` and the response says 200. Do not assume a correct content type proves the body is valid.
 
-If the page works for you but Search Console still reports an error, compare the exact URL, user agent handling, CDN rules and response headers. A browser success does not prove that every crawler request gets the same response. Check server or CDN logs around Google's reported fetch time before changing DNS or disabling security.
+For an XML URL set, the structure should look like this illustrative example:
 
-### What to send your developer
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://example.com/services</loc>
+    <lastmod>2026-10-26</lastmod>
+  </url>
+</urlset>
+```
 
-Share the sitemap URL, Search Console error text, time of the last fetch, response status, response content type and one affected URL. This is much more actionable than “Google can't see my site.” Avoid repeatedly resubmitting an unchanged file; fix the response first, then let Google retry or submit once.
+Use your real modification dates; do not stamp every URL with today's date on every request. Encode special characters correctly, including `&amp;` in XML URLs that contain `&`.
 
-If only a few pages are missing, inspect those URLs in the Pages report instead of rebuilding a working sitemap. Google's [crawling and indexing troubleshooting guide](https://developers.google.com/search/docs/crawling-indexing/troubleshoot-crawling-errors) explains how to investigate fetch failures. For a sudden site-wide visibility change, our [Search Console click diagnosis](/blog/search-console-impressions-clicks-down) helps separate crawl issues from ranking or demand changes.
+Google's documented limit is 50,000 URLs or 50 MB uncompressed per sitemap. Use a sitemap index with accessible child maps for larger sets. A compressed file must still be valid after decompression; a tiny `.gz` can exceed the uncompressed limit.
+
+If public GET requests succeed but Google's last fetch failed, inspect logs around that timestamp. A later successful browser request cannot explain an earlier timeout. Check the exact host, child file, status and deployment version, then resubmit after fixing a demonstrated failure. “Success” in Sitemaps confirms processing, not that every listed page is indexed.
+
 ## FAQ
 
 **Does “Couldn’t fetch” mean none of my pages are indexed?**
@@ -75,14 +83,12 @@ No. It means Google had trouble reading the submitted sitemap. Pages may be foun
 
 ## Related Uplumo guides
 
-- [Website not showing on google](/blog/robots-txt-vs-noindex-pages-still-indexed)
-- [Robots txt vs noindex pages still indexed](/blog/robots-txt-vs-noindex-pages-still-indexed)
-- [Seo site migration traffic drop checklist](/blog/seo-site-migration-traffic-drop-checklist)
+- [Website not showing on Google? Find and fix the cause](/blog/website-not-showing-on-google)
+- [Robots.txt vs Noindex: Why a Blocked URL Can Still Appear in Google](/blog/robots-txt-vs-noindex-pages-still-indexed)
+- [SEO Traffic Dropped After a Site Migration? A Recovery Checklist](/blog/seo-site-migration-traffic-drop-checklist)
 
 ## Sources
 
 - [Google sitemap overview](https://developers.google.com/search/docs/crawling-indexing/sitemaps/overview)
+- [Google sitemap format and size requirements](https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap)
 - [Google Search Console sitemap report](https://support.google.com/webmasters/answer/7451001)
-- [Community case: sitemap could not fetch](https://www.reddit.com/r/TechSEO/comments/1j3tlq9/why_the_sitemap_couldnt_fetch/)
-
-This guide is educational, not a promise of rankings or a substitute for checking your own site, data, and platform rules. Google and other search systems decide what they crawl, index, and show.

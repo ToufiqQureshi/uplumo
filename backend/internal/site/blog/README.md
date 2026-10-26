@@ -25,8 +25,8 @@ starting, and the tests fail first, so a broken post never reaches the site.
 
    | Field         | Required | Rule                                                                   |
    | ------------- | -------- | ---------------------------------------------------------------------- |
-   | `title`       | yes      | Up to 70 characters (longer is cut off in Google). Main keyword first. |
-   | `description` | yes      | 50 to 160 characters. Shown under the title in Google.                 |
+   | `title`       | yes      | Up to 70 characters, the parser's editorial limit. Describe the task accurately. |
+   | `description` | yes      | 50 to 160 characters, the parser's editorial range. Google may choose a different snippet. |
    | `date`        | yes      | `YYYY-MM-DD`, the publish date.                                        |
    | `updated`     | no       | `YYYY-MM-DD`, set it when you change a post a lot.                     |
    | `author`      | no       | Defaults to "Uplumo team".                                             |
@@ -40,22 +40,42 @@ starting, and the tests fail first, so a broken post never reaches the site.
    Editing on github.com works: open this folder, "Add file" → "Create new
    file".
 
-## Writing posts that rank
+## Write a complete answer to a real task
 
-- **One search intent per post.** Pick the question a reader typed, put that
-  keyword in the title, the first paragraph and one `##` heading.
-- **Answer first.** The first two or three sentences answer the question
-  directly; AI assistants and featured snippets quote that part.
-- **Structure:** `##` sections a reader can scan, short paragraphs, lists
-  and tables for steps and comparisons, a short FAQ at the end.
-- **Show it is real:** your own numbers, screenshots and examples from
-  the markets you serve, such as India and the United States. Thin, generic or copied text does not rank.
-- **Link** to 2–3 other Uplumo posts or pages, and to sources you cite.
-- **Length:** as long as the answer needs. Most guides land at 1,000–2,000
-  words.
-- **Publish steadily** (one or two posts a week beats ten at once) and
-  update old posts with `updated:` instead of writing near-duplicates.
-- After a post is live, ask Google to index it in Search Console (URL
-  inspection → "Request indexing"). The sitemap is already submitted at
-  `https://uplumo.com/sitemap.xml`.
+- **Define the intent.** Identify the reader, situation and decision. A
+  troubleshooting guide, buying checklist and product page have different jobs.
+  Use natural descriptive titles; no keyword-density or heading quota.
+- **Answer early, then demonstrate.** Give the conclusion and its scope before
+  the background. Include the topic-specific asset the task needs: annotated
+  code, a reproducible diagnostic, a decision table or a copyable worksheet.
+  Explain expected output, exceptions and how to verify the next step.
+- **Verify facts.** Read current primary documentation for platform rules and
+  reporting behavior. Link the source near volatile or consequential claims.
+  Distinguish live tests from indexed state, observations from causes, and
+  mentions/impressions from visits, qualified leads and revenue.
+- **Use honest evidence.** Label invented numbers and scenarios as hypothetical.
+  Never invent customer results, first-hand tests, screenshots, authors or
+  credentials. Product claims must match the current code and plan catalog;
+  link `/pricing` rather than duplicating changing plan prices and limits.
+- **Remove repetition.** No shared filler paragraphs or generic safety sections
+  pasted into unrelated guides. Keep warnings specific to the actual action.
+  Length follows the task; do not pad to a word count or a publishing cadence.
+- **Maintain useful links.** Open the intended destination, check that the label
+  describes it, avoid self-links and prefer canonical URLs. A valid HTTP status
+  alone does not prove a source supports the claim. Cite documentation directly
+  rather than generic forum search results as evidence of platform behavior.
+- **Review the whole post.** Check title, description, opening, examples, image
+  labels, FAQ and sources for contradictions. Preserve published filenames and
+  original dates; use `updated:` for a substantive review, not cosmetic freshness.
+- **Verify rendering.** Run the site package tests for parsing, metadata, sitemap,
+  assets and link destinations. Review rendered tables and fenced examples too.
+  These checks cannot certify editorial accuracy or future rankings.
+- **Measure after release.** Inspect important URLs in Search Console after
+  deployment; request recrawl where useful. The site serves `/sitemap.xml`, but
+  processing, indexing, rankings and AI citations are not guaranteed. Never claim
+  sitemap submission or Search Console status without actually checking it.
+
+Primary guidance: [Google's people-first content questions](https://developers.google.com/search/docs/fundamentals/creating-helpful-content),
+[SEO Starter Guide](https://developers.google.com/search/docs/fundamentals/seo-starter-guide)
+and [generative AI Search guidance](https://developers.google.com/search/docs/fundamentals/ai-optimization-guide).
 

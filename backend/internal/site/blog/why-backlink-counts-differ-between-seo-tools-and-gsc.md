@@ -2,6 +2,7 @@
 title: Why Your Backlink Counts Differ in Google and SEO Tools
 description: Compare backlink reports by source, discovery coverage, URL scope, freshness and deduplication before acting on conflicting link totals.
 date: 2026-10-15
+updated: 2026-10-26
 ---
 
 **Short answer:** Different backlink systems crawl different parts of the web and update on different schedules, so their link totals are not expected to match. Check the property scope, source pages, target URLs, canonical domain, and last-seen dates. Use the reports to discover examples and patterns—not as a single exact count of every live link.
@@ -41,13 +42,26 @@ For trend reports, use the same source and settings over time. Report newly foun
 
 Keep an export snapshot and a small manually checked sample. Explain whether the report counts pages, domains, or URLs, and only claim a trend when scope and tool settings stayed stable. If an important referrer disappears, open the source page directly, confirm whether the link still exists and resolves, and note any redirect or canonical change before recording it as lost.
 
-Keep a simple record for each affected URL: the problem, evidence, change, owner, and review date. This is useful when several teams touch the CMS, hosting, analytics, and content. If the same symptom returns, the record helps you spot the shared template or configuration instead of repeating one-off repairs.
-
 ## Mistakes that make this worse
 
 Do not submit a disavow file to reconcile different counts. Do not judge a site’s authority by one vendor’s score or assume every unrecognized link is harmful.
 
-Before changing a live site, save the current configuration and test the change on a small set of representative URLs. If you are unsure whether an action removes content, changes access, or affects checkout, get the developer or site owner to review it first. Fixing the visible symptom while breaking a related page can cost more than the original search issue.
+## Compare links, pages and domains without mixing them
+
+Imagine three links on one partner page pointing to the same product. A tool counting raw link elements can report 3; a report deduplicating source-to-target page relationships can report 1; the referring-domain count is also 1. None of those figures answers exactly the same question.
+
+Use a sample reconciliation table:
+
+| Source page | Target page | Live link found? | Attribute | Reported by | Last checked |
+| --- | --- | --- | --- | --- | --- |
+| Partner guide | Current product | Yes / no | Followed, nofollow or sponsored | GSC / tool names | Date |
+| Old directory listing | Retired service | Yes / no | Actual observed value | GSC / tool names | Date |
+
+Check the rendered source page where necessary and follow the target's redirects. A link to an old HTTP URL may still lead to your current HTTPS content, while different reports group it under different target versions. Do not erase that relationship while normalizing exports.
+
+If a tool labels a link “lost,” open the source and check whether it disappeared, moved, changed URL or simply has not been recrawled. A “new” link can mean newly discovered by that index, not newly created by the publisher. Keep those definitions in client reports.
+
+Search Console's Links report is a useful sample rather than a complete live inventory. Disavowed links can remain in it, so a continuing listing does not prove a disavow upload failed. Likewise, a missing link does not establish Google ignored it for ranking. Use the reports to find and verify useful examples; do not infer a manual penalty from mismatched totals.
 
 ## FAQ
 
@@ -57,14 +71,11 @@ No public backlink index is guaranteed to contain every link. Use each source fo
 
 ## Related Uplumo guides
 
-- [Ethical backlinks for small business](/blog/google-manual-action-unnatural-links-recovery)
-- [Google manual action unnatural links recovery](/blog/google-manual-action-unnatural-links-recovery)
-- [Seo client report template that proves progress](/blog/seo-client-report-template-that-proves-progress)
+- [Ethical backlinks for small businesses: a practical guide](/blog/ethical-backlinks-for-small-business)
+- [Google Manual Action for Unnatural Links: What to Do Before Disavowing](/blog/google-manual-action-unnatural-links-recovery)
+- [SEO Client Report: Show Work, Evidence, Leads and Next Steps](/blog/seo-client-report-template-that-proves-progress)
 
 ## Sources
 
 - [Google Search Console Links report](https://support.google.com/webmasters/answer/9049606)
 - [Google disavow guidance](https://support.google.com/webmasters/answer/2648487)
-- [Community discussion: backlink tool differences](https://www.reddit.com/r/SEO/search/?q=backlink%20counts%20different%20tools&restrict_sr=1)
-
-This guide is educational, not a promise of rankings or a substitute for checking your own site, data, and platform rules. Google and other search systems decide what they crawl, index, and show.

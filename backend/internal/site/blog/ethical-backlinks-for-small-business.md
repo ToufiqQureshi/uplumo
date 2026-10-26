@@ -2,6 +2,7 @@
 title: Ethical backlinks for small businesses: a practical guide
 description: Earn relevant links through useful resources, local partnerships and real expertise, while avoiding paid link schemes and spam.
 date: 2026-10-15
+updated: 2026-10-26
 ---
 
 **Short answer:** A small business can earn useful backlinks by creating something worth referencing, contributing real expertise, supporting local organisations and asking partners to link to the right page. Avoid buying links, mass directory submissions and fake guest posts designed only to change rankings.
@@ -67,6 +68,23 @@ For a new business, there may be only a few sensible opportunities. That is norm
 Choose one useful resource customers already need and improve it. Share it with a small group of real partners who can help it reach the right audience. Ask for feedback before asking for a link. If the resource is not useful enough for a partner to share, make it more practical rather than sending more messages.
 
 You can also look for mentions of your business that do not link to your site. Contact the publisher politely, confirm the business details and ask whether a link would help readers find the official page. They are free to decline.
+
+## Evaluate an opportunity without an authority-score shortcut
+
+Use this checklist on the actual page where a link would appear:
+
+| Question | Encouraging evidence | Reason to decline |
+| --- | --- | --- |
+| Does the audience overlap? | Local customers or relevant industry readers | Unrelated topics and a page selling arbitrary links |
+| Is there an editorial reason? | Your guide answers a question the publisher covers | A guaranteed followed link sold as a ranking package |
+| Can the relationship be described honestly? | Membership, contribution or disclosed sponsorship | Requirement to conceal payment or pretend independence |
+| Does the destination help? | A useful resource or correct official business page | An unrelated sales URL with forced anchor text |
+
+Sponsoring a genuine local event is not the same as buying a link to manipulate Search. Any paid placement should be disclosed and its link qualified appropriately, such as with `rel="sponsored"` or `nofollow`, following [Google's link qualification guidance](https://developers.google.com/search/docs/crawling-indexing/qualify-outbound-links). Treat the audience and relationship as the benefit, rather than purchasing ranking credit.
+
+For broken-link outreach, verify the original context before suggesting your page. A plumbing cost guide is not an equivalent replacement for a building-code document merely because both mention pipes. Explain the fit and let the editor decide.
+
+Keep the tracking modest: publisher, relevant page, relationship, date, destination, referral visits and genuine enquiries. A newly discovered link may be old, and a tool's higher domain score is not proof that outreach generated sales. If a resource earns no links, ask whether it solves a real problem before increasing the outreach volume.
 
 ## FAQ
 

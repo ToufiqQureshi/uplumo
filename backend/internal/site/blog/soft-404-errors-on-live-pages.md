@@ -2,6 +2,7 @@
 title: Soft 404 on a Live Page? Find the Empty or Misleading Response
 description: Fix Search Console soft 404s by checking page content, status codes, product states, templates and rendered output for URLs that look empty.
 date: 2026-10-15
+updated: 2026-10-26
 ---
 
 **Short answer:** A soft 404 is a URL that returns a success response but looks like a missing or empty page. Check the exact URL Google inspected, its rendered content, and the HTTP status. If the page is truly gone, return a real 404/410; if it should exist, restore substantive content and useful navigation before requesting another crawl.
@@ -41,13 +42,34 @@ If many URLs are affected, identify the component returning empty content and te
 
 Re-run live URL Inspection and confirm the page returns the correct status and displays useful content. Validate a sample of URLs from each template, then monitor the Page Indexing report for recrawls.
 
-Keep a simple record for each affected URL: the problem, evidence, change, owner, and review date. This is useful when several teams touch the CMS, hosting, analytics, and content. If the same symptom returns, the record helps you spot the shared template or configuration instead of repeating one-off repairs.
-
 ## Mistakes that make this worse
 
 Do not redirect every soft 404 to a category or homepage. A redirect is appropriate only when a close replacement exists. Do not request validation until the underlying response is fixed.
 
-Before changing a live site, save the current configuration and test the change on a small set of representative URLs. If you are unsure whether an action removes content, changes access, or affects checkout, get the developer or site owner to review it first. Fixing the visible symptom while breaking a related page can cost more than the original search issue.
+## Test a valid URL and an invalid URL side by side
+
+Use GET requests against your own public routes:
+
+```sh
+curl -sS -D /tmp/valid-headers.txt -o /tmp/valid.html \
+  'https://example.com/service'
+curl -sS -D /tmp/missing-headers.txt -o /tmp/missing.html \
+  'https://example.com/this-page-does-not-exist'
+```
+
+The valid route should contain the promised content with an appropriate success status. The missing route should return a genuine missing response, usually 404, even if its page includes your logo, navigation and helpful links. Branding does not require a 200 status.
+
+Also test a slash variant of the valid page. A known equivalent variant should follow your canonical URL policy; returning a generic application shell with 200 can obscure a routing failure. Compare source and rendered content, because a JavaScript fallback may display differently from the initial response.
+
+| Actual situation | Suitable response |
+| --- | --- |
+| Permanently deleted content, no replacement | 404/410 with helpful navigation |
+| Content moved to a close equivalent | Appropriate redirect to that page |
+| Temporary server outage | Suitable temporary server-error response, not a fake success |
+| Product temporarily out of stock but useful details remain | Useful 200 page with accurate availability |
+| Backend failure creates a blank valid page | Repair the failure and return truthful status during failure |
+
+A short page is not automatically a soft 404; the page's purpose and Google's assessment matter. Do not pad an unavailable template with 1,000 words to hide the missing item. First determine whether the page should exist and what useful information belongs there, then inspect Google's reported result after recrawling.
 
 ## FAQ
 
@@ -57,14 +79,11 @@ No. A true 404 returns an error status for missing content; a soft 404 usually r
 
 ## Related Uplumo guides
 
-- [Out of stock product pages seo](/blog/out-of-stock-product-pages-seo)
-- [Javascript content not visible to google](/blog/javascript-content-not-visible-to-google)
-- [Website not showing on google](/blog/robots-txt-vs-noindex-pages-still-indexed)
+- [Out of Stock Products: Keep, Redirect or Remove the Page?](/blog/out-of-stock-product-pages-seo)
+- [Google Cannot See Your JavaScript Content? A Debugging Guide](/blog/javascript-content-not-visible-to-google)
+- [Website not showing on Google? Find and fix the cause](/blog/website-not-showing-on-google)
 
 ## Sources
 
 - [Google troubleshooting crawling errors](https://developers.google.com/search/docs/crawling-indexing/troubleshoot-crawling-errors)
 - [Google technical requirements](https://developers.google.com/search/docs/essentials/technical)
-- [Community soft 404 questions](https://support.google.com/webmasters/search?q=soft+404+live+page)
-
-This guide is educational, not a promise of rankings or a substitute for checking your own site, data, and platform rules. Google and other search systems decide what they crawl, index, and show.

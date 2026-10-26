@@ -2,6 +2,7 @@
 title: Google Shows the Wrong Language Page? Fix Hreflang Step by Step
 description: Diagnose wrong country or language URLs with reciprocal hreflang checks, self-canonicals, localized content, and Search Console evidence.
 date: 2026-10-15
+updated: 2026-10-26
 ---
 
 **Short answer:** Use separate crawlable URLs for language or regional versions and connect equivalent pages with valid, reciprocal hreflang annotations. Each version should usually canonicalize to itself, include return links to its alternates, and contain real localized content. Then test URL pairs and confirm the pages are eligible for indexing.
@@ -41,13 +42,39 @@ Validate source HTML and inspect each version in Search Console. Fix missing ret
 
 Keep a tested page-pair sheet with source URL, alternate URLs, response code, canonical, hreflang values, and last checked date. Watch country-filtered impressions and landing pages; different rankings by country are normal and not a guaranteed error.
 
-Keep a simple record for each affected URL: the problem, evidence, change, owner, and review date. This is useful when several teams touch the CMS, hosting, analytics, and content. If the same symptom returns, the record helps you spot the shared template or configuration instead of repeating one-off repairs.
-
 ## Mistakes that make this worse
 
 Hreflang is not a ranking boost or translation tool. Avoid using `en` as a substitute for actual US/India targeting when users need different regional offers.
 
-Before changing a live site, save the current configuration and test the change on a small set of representative URLs. If you are unsure whether an action removes content, changes access, or affects checkout, get the developer or site owner to review it first. Fixing the visible symptom while breaking a related page can cost more than the original search issue.
+## A reciprocal HTML example for India and the United States
+
+Suppose two real regional pages serve equivalent offers with localized details. On the India page, the head can contain:
+
+```html
+<link rel="canonical" href="https://example.com/en-in/service">
+<link rel="alternate" hreflang="en-IN"
+      href="https://example.com/en-in/service">
+<link rel="alternate" hreflang="en-US"
+      href="https://example.com/en-us/service">
+```
+
+On the United States page, use the **same alternate set**, but a self-canonical for that page:
+
+```html
+<link rel="canonical" href="https://example.com/en-us/service">
+<link rel="alternate" hreflang="en-IN"
+      href="https://example.com/en-in/service">
+<link rel="alternate" hreflang="en-US"
+      href="https://example.com/en-us/service">
+```
+
+These are example URLs, not pages to copy verbatim. Use fully qualified final URLs. `en-IN` means English for India; `hi` is Hindi. A country alone is not a language code. Google uses page content to determine language, so changing the tag without translating the content does not turn an English page into Hindi.
+
+Check the response and reciprocal annotations on **both** URLs. A link from India to the US without the US return link can be ignored. A canonical from the US page back to India also sends a consolidation signal that may conflict with the intended separation.
+
+Use `x-default` for a suitable unmatched-language fallback, such as a real selector page; it is not required for every pair. Do not add hreflang for regional pages that do not exist or redirect every visitor away before they can access them.
+
+If the business has only one English page and one offer worldwide, do not create country copies merely to add these tags. First establish whether distinct regional information benefits customers.
 
 ## FAQ
 
@@ -57,14 +84,11 @@ If you maintain distinct regional URLs for equivalent content, hreflang can help
 
 ## Related Uplumo guides
 
-- [Google chose different canonical how to fix](/blog/google-chose-different-canonical-how-to-fix)
-- [Seo site migration traffic drop checklist](/blog/seo-site-migration-traffic-drop-checklist)
-- [Keyword research for local businesses](/blog/rank-tracker-results-differ-from-google)
+- [Google Chose a Different Canonical: How to Fix the URL](/blog/google-chose-different-canonical-how-to-fix)
+- [SEO Traffic Dropped After a Site Migration? A Recovery Checklist](/blog/seo-site-migration-traffic-drop-checklist)
+- [SEO content brief: plan a useful article before writing](/blog/seo-content-brief-for-small-business)
 
 ## Sources
 
 - [Google localized versions guide](https://developers.google.com/search/docs/specialty/international/localized-versions)
 - [Google multi-regional site guide](https://developers.google.com/search/docs/advanced/crawling/managing-multi-regional-sites)
-- [Community questions about wrong language results](https://support.google.com/webmasters/search?q=wrong+language+hreflang)
-
-This guide is educational, not a promise of rankings or a substitute for checking your own site, data, and platform rules. Google and other search systems decide what they crawl, index, and show.

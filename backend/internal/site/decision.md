@@ -49,6 +49,29 @@ a PR for these tags; that exception does not change the normal PR workflow.
 
 Embedded/site templates, markdown blog content, plan catalog, static assets.
 
+## Task-specific blog evidence and current reporting facts
+
+- **Decision:** Review all 50 published posts in place, preserve slugs and original
+  publication dates, and set substantive modification dates. Replace shared body
+  filler with topic-specific diagnostics, decision matrices, code and copyable
+  worksheets. Repair misleading related-link labels/destinations and remove
+  generic community search links used as factual support.
+- **Why:** The public audit found identical body paragraphs across 29 guides,
+  misdirected related links and outdated reporting claims. GA4 now documents an
+  AI Assistant default channel; Google AI Search reporting does not expose a
+  dedicated query dimension in the documented report. Unsupported attribution
+  recovery and guaranteed citation claims mislead readers.
+- **Preserve:** No fabricated customer evidence, expert identity, screenshots or
+  ranking deadlines. Hypothetical figures are labelled. Missing attribution is
+  not recoverable by a channel label; sampled mentions are not all-market share.
+  Product capabilities and plan facts must remain grounded in code/catalog.
+  This content-only change adds no provider calls, billing behavior, route or
+  production crawler-policy change.
+- **Trace:** `blog/*.md`, editorial checks in `blog/README.md`; existing
+  `blog_test.go` and `site_test.go` validate startup, metadata, sitemap and local
+  destinations. External-source responses and prose require separate review;
+  automated host validation cannot certify accuracy or ranking outcomes.
+
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.

@@ -2,6 +2,7 @@
 title: SEO content brief: plan a useful article before writing
 description: Give a writer a clear audience, search intent, evidence, outline and next action so a blog post answers a real customer problem.
 date: 2026-10-15
+updated: 2026-10-26
 ---
 
 **Short answer:** A useful SEO content brief tells a writer who the reader is, what question the page must answer, what evidence is available and what action the reader may take next. It prevents generic articles that use the keyword but leave the real problem unsolved.
@@ -76,13 +77,28 @@ This outline answers the reader's decision without pretending every project cost
 
 This is how a content brief protects both the reader and the business: it defines what the page can say, what it cannot promise, and who needs to check it.
 
-## Give the writer room to be useful
+## A filled brief for a troubleshooting article
 
-A brief should guide the work without forcing every post into the same template. A simple customer question may need a short answer and a few steps; a complicated buying decision may need a detailed comparison and examples. Tell the writer which parts are required and which can be omitted if there is no evidence.
+This is an illustrative brief for “Why is my website not showing on Google?”
 
-Ask a subject expert to check names, numbers, safety instructions, service limits and promises. Keep a source list so a reviewer can verify facts quickly. If a claim cannot be verified, remove it or qualify it clearly.
+| Brief field | Specific instruction |
+| --- | --- |
+| Reader | Business owner who can access Search Console but cannot diagnose indexing |
+| Main task | Distinguish not indexed from indexed but not ranking |
+| Opening answer | Inspect the exact URL before changing content |
+| Required decision branches | Unknown URL, blocked/noindex, duplicate canonical, crawled-not-indexed |
+| Evidence | Current official docs, exact status definitions, clearly labelled examples |
+| Practical asset | Issue-to-action table and a reproducible public-response check |
+| Exclusions | No indexing deadline, fabricated recovery story or repeated submission advice |
+| Next useful page | Detailed guide matching the diagnosed problem |
 
-The best brief is short enough to use and specific enough to prevent generic output. It should make the job easier for the writer and the final page more useful for the reader.
+Ask the writer to show what the reader should observe after each step. “Check technical SEO” is vague; “inspect the URL and record its crawl status and Google-selected canonical” can be followed and reviewed.
+
+Maintain a claim ledger for volatile facts: statement, source URL, checked date and scope. When a tool changes its UI or a platform launches a report, update the actual instructions, FAQ and description together. Do not append a correction while leaving the old claim in the introduction.
+
+Before publishing, have the reviewer attempt the workflow. Does the article supply enough information to complete the task without guessing? Are example results explicitly hypothetical? Does the page add a decision table, tested procedure, original evidence or useful explanation beyond a paraphrase of official documentation?
+
+Do not set a mandatory word count or force the exact keyword into every heading. Assign the reader's task and evidence requirements; let the necessary detail determine the length.
 
 ## FAQ
 

@@ -2,6 +2,7 @@
 title: SEO audit checklist: find fixes that can help your business
 description: Use this practical SEO audit checklist to find crawling, page, local and conversion problems, then prioritise fixes by customer impact.
 date: 2026-10-15
+updated: 2026-10-26
 ---
 
 **Short answer:** A useful SEO audit finds problems that stop customers or search engines from reaching important pages, then ranks those problems by impact and effort. Start with crawl and indexing, review service pages and local details, test the mobile journey, and connect search data to enquiries.
@@ -53,17 +54,32 @@ A report should say what the issue is in plain words, which URLs are affected, w
 
 For focused fixes, use [the website indexing guide](/blog/website-not-showing-on-google), [the on-page checklist](/blog/on-page-seo-checklist-for-service-pages) and [the traffic-to-lead checklist](/blog/seo-website-traffic-no-leads).
 
-## Turn findings into an action plan
-
-For every finding, answer four questions: what page is affected, what evidence proves the problem, who can fix it, and how will the team know it worked? A technical issue may need a developer; a service-page gap may need the business owner; a tracking gap may need whoever controls analytics.
-
-Put urgent customer failures at the top: broken booking flow, wrong phone number, blocked sales page or a form that loses enquiries. Next handle crawl and indexing issues affecting important pages. After that, improve content and local details. Minor warnings on low-value pages can wait.
-
-Share a short summary with the person who will approve the work. If they cannot tell which three tasks matter most, the audit needs clearer priorities. A long spreadsheet is useful only when someone can act on it.
-
 ## Verify each fix after release
 
 After a change goes live, test the page as a customer: open it on mobile, follow the link, submit the form or booking request, and confirm the right person receives it. For indexing changes, inspect the URL and monitor the relevant Search Console report; a recrawl or ranking change may take time and is not guaranteed. Record the release date and the metric you expect to change. If the expected improvement does not appear, check whether the fix reached every affected template and whether the original diagnosis was correct before adding more changes.
+
+## Write an actionable finding, not a tool warning
+
+A useful ticket contains a reproducible symptom and an acceptance check. For example:
+
+```text
+Issue: Main service page's slash variant returns an empty 200 response.
+Affected example: /services/ac-repair/
+Evidence: GET response status, saved HTML and comparison with /services/ac-repair.
+Impact: Visitors/crawlers can receive an empty page at a known URL variant.
+Action: Normalize the known variant to the canonical page.
+Acceptance: Variant redirects once to full 200 content; arbitrary missing paths return 404.
+```
+
+This is an illustrative ticket, not a claim about the reader's site. It gives a developer a specific behavior to reproduce and a clear way to close the issue.
+
+Sample by page type and state: homepage, core service, category, product, article, pagination, stock-out and missing URL. For each, compare the HTTP response, important source content and rendered visitor journey. One successful homepage request does not establish that all routes work.
+
+Separate **confirmed defects**, **content opportunities** and **unverified hypotheses** in the report. “Form submits but no email arrives” is reproducible. “Guide needs a worked example” is an editorial assessment. “A core update caused the decline” needs additional evidence. Presenting all three as equally proven wastes the owner's time.
+
+Prioritize by affected business value, scope and certainty, with effort shown separately. Ten thousand duplicate warnings from an unimportant filter may be less urgent than one broken page responsible for most qualified enquiries. Do not multiply an arbitrary severity score into a supposedly precise revenue forecast.
+
+Close the audit loop after release: retest representative URLs, confirm the change reached production, record any remaining failures and monitor the relevant Search Console status after recrawling.
 
 ## FAQ
 
