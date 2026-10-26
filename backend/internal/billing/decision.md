@@ -72,3 +72,10 @@ Use the package tests next to the source files in `README.md`. For changes cross
 - **Why:** PR review found that a failed post-call ReserveFor could lose both provider expense and a recoverable charge. Remove that separate charging loop rather than duplicate recovery.
 - **Preserve:** Normal reservations still require positive amounts; postpaid shortfalls charge only available credits, staff top-ups remain counted, and spend is committed once with settlement. Rollback retains outcome rows.
 - **Trace:** `settlement_recovery_test.go` injects balance-update failure, observes a durable known cost, then reconciles twice to one 26-credit charge and one $0.02 spend. The test failed before the fix.
+
+## Credits audit: no behavior change, open owner decision on shown vs. charged
+
+- **Decision:** No code change. The audit (`docs/audits/2026-10-25-credits-audit.md`) confirms holds, settlement, replay refusal, failed-task refunds, budget caps, the daily brake and the balance locks are each caught by a test when broken, and production spend is fully charged back. It leaves one owner decision open: the charge is capped at the hold, not at the "about N" hint.
+- **Why:** The owner asked whether credits are deducted correctly. A Brand Lookup shows about 372 credits but can hold up to 2,240 (US, competitors), which both permits a higher charge than shown and refuses customers whose balance covers the real cost.
+- **Preserve:** Until the owner decides, keep the hold as the only charge cap, keep the dialog's "can be a little more or less" disclosure, and do not lower ceilings below a provider's published price.
+- **Trace:** `costs.go`, `spendguard.go`, `../aisearch/service.go` (`loadBrandLookup` hold), `../platform/dataforseo/client.go`; mutation results in the audit file.

@@ -5,7 +5,7 @@ on the owner. Feature status lives in `ROADMAP.md`, history in git.
 **No secret values here, only variable names.** Agents: keep this file and
 update it when the owner decides something or a Railway variable changes.
 
-Last updated: 23 Oct 2026
+Last updated: 25 Oct 2026
 
 ---
 
@@ -61,11 +61,11 @@ Last updated: 23 Oct 2026
 | `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `PUBLIC_URL`                        | set                                                                         | Login and links                                                              |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`                                   | set                                                                         | Google login, Search Console, GA4                                            |
 | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`          | set (**live**, 22 Oct)                                                      | Billing                                                                      |
-| `RAZORPAY_PLAN_ID_BASIC`, `_PRO`, `_AGENCY`                                  | set; presence verified 23 Oct; terms checked at release                                            | Monthly plans; each live plan amount must equal `catalog.go` (Agency ₹9,999) |
-| `RAZORPAY_PLAN_ID_BUSINESS`                                                  | set; presence verified 23 Oct; terms checked at release                      | Business ₹4,999 monthly plan; without it Business cannot be bought           |
+| `RAZORPAY_PLAN_ID_BASIC`, `_PRO`, `_AGENCY`                                  | set; presence verified 23 Oct; terms checked at release                     | Monthly plans; each live plan amount must equal `catalog.go` (Agency ₹9,999) |
+| `RAZORPAY_PLAN_ID_BUSINESS`                                                  | set; presence verified 23 Oct; terms checked at release                     | Business ₹4,999 monthly plan; without it Business cannot be bought           |
 | `LOOPS_API_KEY` + 3 `LOOPS_TRANSACTIONAL_*_ID`                               | set                                                                         | Email                                                                        |
 | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_CONTENT_IMAGE_BUCKET` | set (14 Oct)                                                                | Content editor images (`content-images` bucket)                              |
-| `DATAFORSEO_API_KEY`                                                         | **set 14 Oct**                                                              | SEO data; owner confirms working 23 Oct; intentional $2/day cap                                    |
+| `DATAFORSEO_API_KEY`                                                         | **set 14 Oct**                                                              | SEO data; owner confirms working 23 Oct; intentional $2/day cap              |
 | `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`                                     | set                                                                         | AI writing and assistant                                                     |
 | `PAGESPEED_API_KEY`                                                          | **set 15 Oct**                                                              | Lighthouse in Site Audit (free, 200 checks per workspace per day)            |
 | `CRUX_API_KEY`                                                               | **set 15 Oct** (same key)                                                   | Real-visitor Core Web Vitals                                                 |
@@ -309,3 +309,11 @@ Owner-approved scope: one focused PR adds optional 180-day browser recognition a
 - Confirmed live Data API exposure was closed using the same idempotent SQL committed as migration 42. Afterward: 0 tables without RLS, 0 client grants, trusted-owner reads and HTTP readiness/session checks pass. This emergency Supabase migration does not mark pending Goose versions as applied.
 - Shared worker supervision replaces duplicated restart code and prevents audit/rank queues from permanently stopping after temporary DB errors. Opaque IDs use Go `crypto/rand.Text`; MCP no-op telemetry and frontend fixture bypass code are removed. Successful external MCP tools now persist the actual first-call onboarding milestone.
 - The [launch audit](docs/audits/2026-10-23-launch-readiness.md) records economics assumptions, checks and live acceptance limits.
+
+## Founder brief for every agent (25 October)
+
+- **Decision:** Add root `FOUNDER.md` with the owner's vision (is the site cited by AI, who is cited instead, why not and what to fix), his standing worries (paid-call waste, credit accuracy, bloat, half-wired features, tests that cannot fail, security, scale) and a one-table product map. `CLAUDE.md`, `AGENTS.md` and `docs/INDEX.md` make it required reading at session start.
+- **Why:** The owner kept getting work that did not match what he wanted, and no agent could see the vision behind the rules. One file, read every session, carries it.
+- **Preserve:** `CLAUDE.md` stays the rulebook; `FOUNDER.md` holds vision and the map only. Agents restate what they will build and wait for the owner's yes before coding. Update the map when a sidebar page, its backend package or its paid provider changes.
+- **Owner answers (same day):** customer = Indian businesses, small to big; goal = first 10 paying customers; work order = credits audit → DataForSEO audit → "why not cited" feature → remaining audits; new features wait. Root `imp_sessions_talked.md` records important owner talks; every agent reads it and adds an entry before a session ends.
+- **Trace:** `FOUNDER.md`, `imp_sessions_talked.md`, `CLAUDE.md` sections 1 and 6, `AGENTS.md`, `docs/INDEX.md`. The map's "Not yet verified" list is not an audit result: credits, DataForSEO call counts, wiring and test strength are still unchecked.
