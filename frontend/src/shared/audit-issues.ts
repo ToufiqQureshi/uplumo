@@ -256,6 +256,22 @@ export const AUDIT_ISSUE_TYPES = {
     howToFix:
       "Add links from higher-level pages (hubs, category pages, navigation) to flatten the path to this page.",
   },
+  "ai-crawlers-blocked": {
+    severity: "warning",
+    title: "AI assistants are blocked from reading the site",
+    explanation:
+      "robots.txt tells these AI crawlers not to read your home page. An assistant that cannot read your site cannot quote or link it in its answers.",
+    howToFix:
+      "Remove the Disallow rules for these user agents in robots.txt (or add Allow: / for them). Blocking the search agents (OAI-SearchBot, ChatGPT-User, PerplexityBot, Claude-SearchBot) stops those assistants from linking your pages; blocking only training agents (GPTBot, ClaudeBot, Google-Extended) is a choice, not an error. Also check that your firewall or CDN bot protection does not block them.",
+  },
+  "missing-llms-txt": {
+    severity: "info",
+    title: "No llms.txt file",
+    explanation:
+      "llms.txt is a short text file that tells AI assistants which pages matter most. It is optional and only some assistants read it today.",
+    howToFix:
+      "Add a plain-text /llms.txt that lists your most important pages with one line each (what the page answers). It is optional and few assistants read it yet, so do this after the AI crawler and content fixes.",
+  },
 } as const satisfies Record<string, AuditIssueDescriptor>;
 
 export const ISSUE_SEVERITY_ORDER: Record<IssueSeverity, number> = {
