@@ -17,6 +17,23 @@ feelings, business calls, priorities, corrections. Read it after
 
 ---
 
+## 26 Oct 2026: money rules, refresh, "why not cited" (Claude)
+
+- **Money rule (his words):** "jitna kharcha ha utna hi kaato… hold ki kya
+  zaroorat ha?" Approved ("haa"): hold only the typical cost (~372 for Brand
+  Lookup, not the 2,240 worst case), charge the actual cost; if it exceeds
+  the balance, Uplumo absorbs the rest (~₹50 worst case). PR pending.
+- "unnessery data for seo ko call nai karna": saved reports never rebuy
+  without a click (Refresh/Retry). PR #216.
+- Test workspace's daily AI tracker **stays daily**: "test account me use
+  karra hu taaki pura app bug free banau".
+- Paid-call browser test must run in CI: PR #215.
+- Next feature: "Site AI pe cite kyu nahi ho rahi" must be made ready.
+- Reviews PRs one by one, wants to know what each is before merge; "tests
+  brake nai hone chahiye"; "jaldi karna bhai time nai ha".
+- Merged + deployed today: #197, #198 (AI card shows who is cited instead),
+  #208, #209. Waiting for him: #210–#216.
+
 ## 26 Oct 2026: owner answers, DataForSEO audit (Claude)
 
 - Owner: "max dikhao" — show the maximum credits before a paid action
