@@ -45,6 +45,8 @@ const (
 	IssueNoindexPage                  IssueType = "noindex-page"
 	IssueCanonicalizedPage            IssueType = "canonicalized-page"
 	IssueDeepPage                     IssueType = "deep-page"
+	IssueAICrawlersBlocked            IssueType = "ai-crawlers-blocked"
+	IssueMissingLLMsTxt               IssueType = "missing-llms-txt"
 )
 
 // issueDescriptor is the server-side part of an issue descriptor: the severity
@@ -87,6 +89,8 @@ var issueRegistry = map[IssueType]issueDescriptor{
 	IssueNoindexPage:                  {SeverityInfo, "Page is noindex"},
 	IssueCanonicalizedPage:            {SeverityInfo, "Canonicalized to another URL"},
 	IssueDeepPage:                     {SeverityInfo, "Page is deep in the site structure"},
+	IssueAICrawlersBlocked:            {SeverityWarning, "AI assistants are blocked from reading the site"},
+	IssueMissingLLMsTxt:               {SeverityInfo, "No llms.txt file"},
 }
 
 // severityOf returns the severity for an issue type, defaulting to warning so a
@@ -136,6 +140,8 @@ var issueRemediation = map[IssueType]string{
 	IssueType("noindex-page"):                   "If this page should rank, remove the noindex directive. If it's intentional (admin, thank-you, filter pages), no action is needed.",
 	IssueType("canonicalized-page"):             "If this page should rank on its own, set its canonical to itself. Otherwise no action is needed.",
 	IssueType("deep-page"):                      "Add links from higher-level pages (hubs, category pages, navigation) to flatten the path to this page.",
+	IssueAICrawlersBlocked:                      "Remove the Disallow rules for these user agents in robots.txt (or add Allow: / for them). Blocking the search agents (OAI-SearchBot, ChatGPT-User, PerplexityBot, Claude-SearchBot) stops those assistants from linking your pages; blocking only training agents (GPTBot, ClaudeBot, Google-Extended) is a choice, not an error. Also check that your firewall or CDN bot protection does not block them.",
+	IssueMissingLLMsTxt:                         "Add a plain-text /llms.txt that lists your most important pages with one line each (what the page answers). It is optional and few assistants read it yet, so do this after the AI crawler and content fixes.",
 }
 
 // DescribeIssueType returns the descriptor for a known audit issue type.

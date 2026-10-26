@@ -119,6 +119,10 @@ func (r *Runner) run(ctx, jobCtx context.Context, job JobPayload) error {
 	discoverer := discoverer{guard: r.guard, client: r.guard.NewClient(0), access: access, now: r.now}
 	seedURLs, robotsText := discoverer.DiscoverURLs(ctx, origin, maxPages, access)
 	robots := parseRobotsTxt(origin, robotsText)
+	aiIssues := aiAccessIssues(origin, robotsText, discoverer.hasLLMsTxt(ctx, origin))
+	if err := r.repo.InsertIssues(ctx, job.AuditID, aiIssues); err != nil {
+		return err
+	}
 
 	pagesCrawled, err := r.crawl(ctx, job, origin, seedURLs, robots, maxPages)
 	if err != nil {

@@ -418,8 +418,9 @@ function IssueDetails({ detailsJson }: { detailsJson: string | null }) {
     <span className="text-xs text-muted-foreground truncate">
       {entries
         .map(([key, value]) => {
+          // Redirect hops are a path; other lists (blocked AI crawlers) are not.
           const rendered = Array.isArray(value)
-            ? value.join(" → ")
+            ? value.join(key === "hops" ? " → " : ", ")
             : String(value);
           return `${key}: ${rendered}`;
         })

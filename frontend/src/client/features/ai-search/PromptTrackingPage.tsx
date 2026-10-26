@@ -5,6 +5,7 @@ import { PageHeader } from "@/client/components/PageHeader";
 import { TrackingForm } from "./TrackingForm";
 import { AiVisibilityGuide } from "./AiVisibilityGuide";
 import { MarkdownAnswer } from "./components/MarkdownAnswer";
+import { WhyNotCitedCard } from "./components/WhyNotCitedCard";
 
 const ENGINE_LABELS: Record<string, string> = {
   chat_gpt: "ChatGPT",
@@ -46,6 +47,7 @@ export function PromptTrackingPage({ projectId }: { projectId: string }) {
       : false,
   });
   const summary = summarizeTracking(answers.data ?? []);
+  const selectedRun = state.data?.runs.find((r) => r.id === runId);
   const finished =
     state.data?.runs.filter((r) => r.status === "completed") ?? [];
   const [latest, previous] = finished;
@@ -113,6 +115,7 @@ export function PromptTrackingPage({ projectId }: { projectId: string }) {
           conversations.
         </p>
       ) : null}
+      <div id="tracker-setup" />
       <TrackingForm
         key={JSON.stringify(state.data.configuration)}
         projectId={projectId}
@@ -177,6 +180,13 @@ export function PromptTrackingPage({ projectId }: { projectId: string }) {
           </p>
         ) : null}
       </section>
+      {answers.data && selectedRun ? (
+        <WhyNotCitedCard
+          projectId={projectId}
+          answers={answers.data}
+          ownDomain={selectedRun.configuration.domain}
+        />
+      ) : null}
       {runId ? (
         <section className="space-y-4 rounded-xl border p-5">
           <div className="flex items-center justify-between">

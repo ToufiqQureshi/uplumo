@@ -73,3 +73,10 @@ Combines project onboarding state, audit/backlink summaries and GA4 overview car
 - **Why:** With five open steps it filled the first screen and pushed AI visibility out of view; a returning customer comes for the insights.
 - **Preserve:** The checklist's rules (hidden only when every step is done and none is deferred) are unchanged.
 - **Trace:** `DashboardPage.tsx`.
+
+## AI card shows the main reason AI skips you
+
+- **Decision:** When the latest check has a reason from `whyNotCited`, the AI visibility card shows "Main reason: ..." and "See why and fix it" (to the tracker's `#why-not-cited`) instead of the generic next step.
+- **Why:** A number (Cited 0%) without a reason gave the owner nothing to act on.
+- **Preserve:** Reads the same saved answers query; no new request or credits. `aiNextStep` remains the fallback when there is no reason.
+- **Trace:** `InsightCards.tsx`; logic and tests in `../ai-search/whyNotCited.ts`.

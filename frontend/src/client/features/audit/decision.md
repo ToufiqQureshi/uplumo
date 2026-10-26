@@ -33,3 +33,10 @@ Starts an asynchronous crawl and presents technical SEO findings, crawl progress
 - **Why:** Review caught a second results alert that contradicted launch capabilities; legacy flags could also make false execution claims.
 - **Preserve:** Existing audit data stays unchanged. Keep failed-page evidence and explicit limitations; guidance must describe actions users can actually take.
 - **Trace:** `results/RenderingWarnings.tsx`, `shared.tsx`, their callers and `RenderingWarnings.test.ts` (both cases failed before fixing the copy).
+
+## Issue detail lists
+
+- **Decision:** `IssueDetails` joins list values with commas, except redirect `hops`, which keep arrows.
+- **Why:** The new `ai-crawlers-blocked` issue lists crawler names; arrows would read as a path.
+- **Preserve:** Details stay plain text from the issue's JSON; nothing is fetched.
+- **Trace:** `results/IssuesView.tsx`; backend decision in `backend/internal/audit/decision.md`.
