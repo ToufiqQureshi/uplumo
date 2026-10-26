@@ -157,7 +157,6 @@ type Deps struct {
 	// Reports owns project report documents, templates, and sharing.
 	Reports                 *reports.Service
 	PublicURL               *url.URL
-	DataForSEOConfigured    bool
 	OpenRouterConfigured    bool
 	ContentWriterConfigured bool
 	Credits                 *billing.CreditLedgerService
@@ -250,9 +249,6 @@ func NewHandler(d Deps) http.Handler {
 	}
 	team.Mount(mux, d.Team, withSession)
 	crawleraccess.Mount(mux, d.CrawlerAccess, withSession, func(next http.Handler) http.Handler { return requireProjectAccess(d.Logger, d.Auth, next) })
-	mux.Handle("GET /api/v1/config/seo-api-key-status", withSession(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		httpx.WriteJSON(w, http.StatusOK, map[string]bool{"configured": d.DataForSEOConfigured})
-	})))
 	mux.Handle("GET /api/v1/config/content-writer-status", withSession(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		configured := d.ContentWriterConfigured
 		message := ""
