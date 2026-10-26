@@ -67,6 +67,16 @@ describe("useConfirmedCost", () => {
     expect(container.textContent).toContain("Use about 909 credits?");
   });
 
+  it("shows the most the action can charge when the server sends it", () => {
+    usageState.data = {
+      ...usage,
+      costs: [{ ...usage.costs[0], maxCredits: 2240 }],
+    };
+    expect(mount("brand_lookup").container.textContent).toContain(
+      "Use about 909 credits (at most 2,240)?",
+    );
+  });
+
   it("runs a cheap action at once", () => {
     const { run, container } = mount("prompt_explorer");
     expect(run).toHaveBeenCalledOnce();
