@@ -25,21 +25,21 @@ code before you trust this section.
 
 ## 1. What to read, and when
 
-| You are about to...                      | Read first                                                               |
-| ---------------------------------------- | ------------------------------------------------------------------------ |
-| Do anything                              | This file, then the latest week in `docs/WEEKLY.md`                      |
-| Choose, scope or prioritise a feature    | `docs/PRODUCT.md`, `ROADMAP.md`                                          |
-| Check what the owner already decided     | `DECISIONS.md` (decisions, Railway variable names, open asks)            |
-| Touch a feature's code                   | Its `README.md` → `flow.md` → `decision.md`, then tests and API contract |
-| Add or change a table                    | `backend/internal/database/README.md`                                    |
-| Add or change an HTTP endpoint           | `backend/api/<feature>.yaml` if it exists, the feature README            |
-| Run it locally                           | `docs/LOCAL_DEVELOPMENT.md`                                              |
-| Deploy, or change a production setting   | `docs/DEPLOY.md`                                                         |
-| Change email (Loops)                     | `backend/internal/email/README.md`                                       |
-| Hit repo friction (flaky script, gotcha) | Log it in `.agents/PAPERCUTS.md` with the `papercuts` skill              |
-| Touch anything that calls DataForSEO     | `docs/integrations/DATAFORSEO.md` (cost boundaries)                      |
-| Touch auth, tenancy or caching           | `docs/security/MODEL.md`                                                 |
-| Write or review tests                    | `docs/testing/REGRESSION.md`                                             |
+| You are about to...                      | Read first                                                                      |
+| ---------------------------------------- | ------------------------------------------------------------------------------- |
+| Do anything                              | This file, `FOUNDER.md`, `imp_sessions_talked.md`, then latest `docs/WEEKLY.md` |
+| Choose, scope or prioritise a feature    | `docs/PRODUCT.md`, `ROADMAP.md`                                                 |
+| Check what the owner already decided     | `DECISIONS.md` (decisions, Railway variable names, open asks)                   |
+| Touch a feature's code                   | Its `README.md` → `flow.md` → `decision.md`, then tests and API contract        |
+| Add or change a table                    | `backend/internal/database/README.md`                                           |
+| Add or change an HTTP endpoint           | `backend/api/<feature>.yaml` if it exists, the feature README                   |
+| Run it locally                           | `docs/LOCAL_DEVELOPMENT.md`                                                     |
+| Deploy, or change a production setting   | `docs/DEPLOY.md`                                                                |
+| Change email (Loops)                     | `backend/internal/email/README.md`                                              |
+| Hit repo friction (flaky script, gotcha) | Log it in `.agents/PAPERCUTS.md` with the `papercuts` skill                     |
+| Touch anything that calls DataForSEO     | `docs/integrations/DATAFORSEO.md` (cost boundaries)                             |
+| Touch auth, tenancy or caching           | `docs/security/MODEL.md`                                                        |
+| Write or review tests                    | `docs/testing/REGRESSION.md`                                                    |
 
 If a doc and the code disagree, the code is the truth: fix the doc in the same
 change.
@@ -274,6 +274,8 @@ Propose with a recommendation; do not decide silently.
   before coding.
 
 - Keep answers short, in Hinglish, senior-dev tone. No long essays.
+- Before a session ends, record anything important the owner said (feeling,
+  business call, priority, correction) at the top of `imp_sessions_talked.md`.
 - Before planning a new feature, search the web for current competitor
   features, pricing and user complaints, and cite the sources in the PR.
 - Ship each feature as its own PR. The description says what changed, the

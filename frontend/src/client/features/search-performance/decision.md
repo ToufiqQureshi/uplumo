@@ -58,3 +58,15 @@ in the linked feature READMEs; do not silently change them during a UI refactor.
 - Update this file in the same commit whenever this feature changes. State the
   choice, reason, affected code, trade-off and verification/constraints; replace
   superseded statements rather than accumulating contradictory appendices.
+
+## Restore the report before the generic overview
+
+- **Decision:** restore the Search Performance layout before PR #203 and remove
+  its Pages worth reviewing cards and repeated advice.
+- **Why:** the owner rejected these generic recommendations and requested the
+  preceding report experience. The removed advice was static copy, not AI output.
+- **Preserve:** existing Google data, filters, combined analysis, explicit AI
+  actions, credit controls and unrelated Analytics changes.
+- **Trace:** restore `SearchPerformancePage.tsx` and `tests/search-growth.spec.ts`
+  from the parent of #203; remove `SearchPerformanceOverview.tsx` and
+  `SearchPerformanceTools.tsx`. No backend or database changes.

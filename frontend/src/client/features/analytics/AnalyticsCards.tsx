@@ -133,10 +133,9 @@ export function AiTrafficCard({
     >
       <div className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          People who find you through ChatGPT and other AI assistants usually
-          arrive ready to act, so they often convert better than search
-          visitors. We also catch AI visits that other tools file as
-          &ldquo;Direct&rdquo;.
+          Visits attributed to AI assistants from available referral and
+          campaign signals. Unidentified visits cannot reliably be assigned to
+          an assistant.
         </p>
         {aiVisitors === 0 ? (
           <EmptyState
@@ -172,13 +171,11 @@ export function ChannelsCard({ channels }: Pick<AnalyticsSummary, "channels">) {
 
 export function AcquisitionPerformanceCard({
   rows,
-  goalEventName,
 }: {
   rows: AnalyticsSummary["acquisitionChannels"];
-  goalEventName: string;
 }) {
   return (
-    <CardShell title="Acquisition to goal">
+    <CardShell title="Sessions by first source">
       {rows.length === 0 ? (
         <EmptyState
           variant="plain"
@@ -195,12 +192,6 @@ export function AcquisitionPerformanceCard({
               <th scope="col" className="pb-2 text-right font-medium">
                 Sessions
               </th>
-              <th scope="col" className="pb-2 text-right font-medium">
-                Goals
-              </th>
-              <th scope="col" className="pb-2 text-right font-medium">
-                Rate
-              </th>
             </tr>
           </thead>
           <tbody>
@@ -215,34 +206,18 @@ export function AcquisitionPerformanceCard({
                 <td className="py-2 text-right tabular-nums">
                   {formatCount(row.sessions)}
                 </td>
-                <td className="py-2 text-right tabular-nums">
-                  {formatCount(row.conversions)}
-                </td>
-                <td className="py-2 text-right tabular-nums">
-                  {goalEventName
-                    ? formatShare(
-                        row.sessions === 0 ? 0 : row.conversions / row.sessions,
-                      )
-                    : "—"}
-                </td>
               </tr>
             ))}
           </tbody>
         </table>
       )}
-      <p className="mt-3 text-xs text-muted-foreground">
-        {goalEventName
-          ? `Goal: ${goalEventName}. Count it only after the form, booking or purchase succeeds.`
-          : "Choose a successful outcome event in Enquiries to see goal rates."}
-      </p>
     </CardShell>
   );
 }
 
 export function CampaignPerformanceCard({
   campaigns,
-  goalEventName,
-}: Pick<AnalyticsSummary, "campaigns" | "goalEventName">) {
+}: Pick<AnalyticsSummary, "campaigns">) {
   return (
     <CardShell title="Campaign performance">
       {campaigns.length === 0 ? (
@@ -250,7 +225,7 @@ export function CampaignPerformanceCard({
           variant="plain"
           size="sm"
           title="No tagged campaign sessions"
-          description="Add UTM tags to your ad links to compare campaign sessions and goal completions."
+          description="Add UTM tags to your links to compare campaign visits."
         />
       ) : (
         <div className="overflow-x-auto">
@@ -264,10 +239,7 @@ export function CampaignPerformanceCard({
                   Sessions
                 </th>
                 <th scope="col" className="pb-2 text-right font-medium">
-                  Goals
-                </th>
-                <th scope="col" className="pb-2 text-right font-medium">
-                  Rate
+                  Visitors
                 </th>
               </tr>
             </thead>
@@ -311,16 +283,7 @@ export function CampaignPerformanceCard({
                       {formatCount(row.sessions)}
                     </td>
                     <td className="py-2 text-right tabular-nums">
-                      {formatCount(row.conversions)}
-                    </td>
-                    <td className="py-2 text-right tabular-nums">
-                      {goalEventName
-                        ? formatShare(
-                            row.sessions === 0
-                              ? 0
-                              : row.conversions / row.sessions,
-                          )
-                        : "—"}
+                      {formatCount(row.visitors)}
                     </td>
                   </tr>
                 );
@@ -329,11 +292,6 @@ export function CampaignPerformanceCard({
           </table>
         </div>
       )}
-      <p className="mt-3 text-xs text-muted-foreground">
-        {goalEventName
-          ? `Goals are tracked ${goalEventName} events.`
-          : "Set a goal in Enquiries to compare outcomes."}
-      </p>
     </CardShell>
   );
 }

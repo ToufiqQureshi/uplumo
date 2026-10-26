@@ -27,9 +27,6 @@ async function installAnalytics(page: Page, failClicks = false) {
           bounceRate: 0.5,
           totalEngagementMs: 280000,
           avgEngagementMs: 2000,
-          goalEventName: "lead",
-          conversionSessions: 7,
-          conversionRate: 0.05,
           series: [{ date, visitors: 120, pageviews: 200 }],
           audience: [
             {
@@ -104,6 +101,15 @@ test("daily audience and destination counts render with scoped paging and option
 }) => {
   const requests = await installAnalytics(page);
   await page.goto("/p/e2e-project/analytics");
+  await expect(
+    page.getByRole("region", { name: "Traffic overview" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Daily new and returning" }),
+  ).toBeHidden();
+  await page
+    .getByText("Explore audience, campaigns and page journeys", { exact: true })
+    .click();
   await expect(
     page.getByRole("heading", { name: "Daily new and returning" }),
   ).toBeVisible();
@@ -185,6 +191,9 @@ test("destination errors do not hide the daily audience report", async ({
 }) => {
   await installAnalytics(page, true);
   await page.goto("/p/e2e-project/analytics");
+  await page
+    .getByText("Explore audience, campaigns and page journeys", { exact: true })
+    .click();
   await expect(
     page.getByRole("heading", { name: "Daily new and returning" }),
   ).toBeVisible();

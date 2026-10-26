@@ -184,14 +184,7 @@ func (r repository) summary(ctx context.Context, projectID string, start, end ti
 		GROUP BY name ORDER BY 2 DESC, name LIMIT $4`, append(args, topLimit)...).
 		Query(collectInto(&s.Events, pgx.RowToStructByPos[EventCount]))
 
-	b.Queue(`WITH goal AS (
-			SELECT event_name FROM go_analytics_enquiry_goals WHERE project_id = $1
-		), conversions AS (
-			SELECT DISTINCT session_hash FROM go_analytics_custom_events
-			WHERE site_id = (SELECT id FROM go_analytics_sites WHERE project_id = $1)
-				AND occurred_at >= $2 AND occurred_at < $3 AND session_hash IS NOT NULL
-				AND name = (SELECT event_name FROM goal)
-		), first_page AS (
+	b.Queue(`WITH first_page AS (
 			SELECT DISTINCT ON (e.session_hash) e.session_hash, e.visitor_hash,
 				e.utm_source, e.utm_medium, e.utm_campaign, e.utm_term, e.utm_content
 			FROM go_analytics_events e
@@ -203,22 +196,13 @@ func (r repository) summary(ctx context.Context, projectID string, start, end ti
 		)
 		SELECT coalesce(f.utm_source, ''), coalesce(f.utm_medium, ''), coalesce(f.utm_campaign, ''),
 			coalesce(f.utm_term, ''), coalesce(f.utm_content, ''),
-			count(DISTINCT f.visitor_hash), count(DISTINCT f.session_hash),
-			count(DISTINCT f.session_hash) FILTER (WHERE c.session_hash IS NOT NULL)
+			count(DISTINCT f.visitor_hash), count(DISTINCT f.session_hash)
 		FROM first_page f
-		LEFT JOIN conversions c ON c.session_hash = f.session_hash
 		WHERE f.utm_source IS NOT NULL OR f.utm_medium IS NOT NULL OR f.utm_campaign IS NOT NULL OR f.utm_term IS NOT NULL OR f.utm_content IS NOT NULL
-		GROUP BY 1, 2, 3, 4, 5 ORDER BY 8 DESC, 1, 2, 3, 4, 5 LIMIT $4`, append(args, topLimit)...).
+		GROUP BY 1, 2, 3, 4, 5 ORDER BY 7 DESC, 1, 2, 3, 4, 5 LIMIT $4`, append(args, topLimit)...).
 		Query(collectInto(&s.Campaigns, pgx.RowToStructByPos[CampaignCount]))
 
-	b.Queue(`WITH goal AS (
-			SELECT event_name FROM go_analytics_enquiry_goals WHERE project_id = $1
-		), conversions AS (
-			SELECT DISTINCT session_hash FROM go_analytics_custom_events
-			WHERE site_id = (SELECT id FROM go_analytics_sites WHERE project_id = $1)
-				AND occurred_at >= $2 AND occurred_at < $3 AND session_hash IS NOT NULL
-				AND name = (SELECT event_name FROM goal)
-		), first_page AS (
+	b.Queue(`WITH first_page AS (
 			SELECT DISTINCT ON (e.session_hash) e.session_hash, e.channel
 			FROM go_analytics_events e
 			JOIN (SELECT DISTINCT session_hash`+eventsInRange+`
@@ -226,36 +210,25 @@ func (r repository) summary(ctx context.Context, projectID string, start, end ti
 			WHERE e.site_id = (SELECT id FROM go_analytics_sites WHERE project_id = $1)
 			ORDER BY e.session_hash, e.occurred_at, e.pageview_hash
 		)
-		SELECT f.channel, count(*), count(*) FILTER (WHERE c.session_hash IS NOT NULL)
-		FROM first_page f LEFT JOIN conversions c USING (session_hash)
+		SELECT f.channel, count(*)
+		FROM first_page f
 		WHERE f.channel <> $4
 		GROUP BY f.channel ORDER BY 2 DESC, 1`, append(args, channelInternal)...).
 		Query(collectInto(&s.AcquisitionChannels, pgx.RowToStructByPos[AcquisitionCount]))
 
-	b.Queue(`WITH goal AS (
-			SELECT event_name FROM go_analytics_enquiry_goals WHERE project_id = $1
-		), conversions AS (
-			SELECT DISTINCT session_hash FROM go_analytics_custom_events
-			WHERE site_id = (SELECT id FROM go_analytics_sites WHERE project_id = $1)
-				AND occurred_at >= $2 AND occurred_at < $3 AND session_hash IS NOT NULL
-				AND name = (SELECT event_name FROM goal)
-		), sessions AS (
-			SELECT e.session_hash, count(*) AS pageviews, sum(e.engaged_ms) AS engaged_ms,
-				bool_or(c.session_hash IS NOT NULL) AS converted
+	b.Queue(`WITH sessions AS (
+			SELECT e.session_hash, count(*) AS pageviews, sum(e.engaged_ms) AS engaged_ms
 			FROM go_analytics_events e
-			LEFT JOIN conversions c ON c.session_hash = e.session_hash
 			WHERE e.site_id = (SELECT id FROM go_analytics_sites WHERE project_id = $1)
 				AND e.occurred_at >= $2 AND e.occurred_at < $3 AND e.session_hash IS NOT NULL
 			GROUP BY e.session_hash
 		)
-		SELECT count(*), count(*) FILTER (WHERE engaged_ms >= 10000 OR pageviews >= 2 OR converted),
-			coalesce(sum(engaged_ms), 0), coalesce(avg(engaged_ms)::bigint, 0),
-			coalesce((SELECT event_name FROM goal), ''),
-			count(*) FILTER (WHERE converted)
+		SELECT count(*), count(*) FILTER (WHERE engaged_ms >= 10000 OR pageviews >= 2),
+			coalesce(sum(engaged_ms), 0), coalesce(avg(engaged_ms)::bigint, 0)
 		FROM sessions`, args...).
 		QueryRow(func(row pgx.Row) error {
 			return row.Scan(&s.Sessions, &s.EngagedSessions, &s.TotalEngagementMS,
-				&s.AvgEngagementMS, &s.GoalEventName, &s.ConversionSessions)
+				&s.AvgEngagementMS)
 		})
 
 	// Landing and exit pages come from the whole session, like the campaign
@@ -308,7 +281,6 @@ func (r repository) summary(ctx context.Context, projectID string, start, end ti
 	}
 	if s.Sessions > 0 {
 		s.BounceRate = float64(s.Sessions-s.EngagedSessions) / float64(s.Sessions)
-		s.ConversionRate = float64(s.ConversionSessions) / float64(s.Sessions)
 	}
 	return s, nil
 }

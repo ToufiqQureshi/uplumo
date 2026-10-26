@@ -5,7 +5,7 @@ on the owner. Feature status lives in `ROADMAP.md`, history in git.
 **No secret values here, only variable names.** Agents: keep this file and
 update it when the owner decides something or a Railway variable changes.
 
-Last updated: 23 Oct 2026
+Last updated: 25 Oct 2026
 
 ---
 
@@ -40,9 +40,9 @@ Last updated: 23 Oct 2026
 | 19 Oct | **No per-workspace daily credit limit.** `WorkspaceDailyLimitUSD` returns 0; the credits a customer bought are the limit. The global `PROVIDER_DAILY_LIMIT_USD` brake stays until the owner removes it.                                                                                                                                                                                                                                                 | Owner: a customer who paid must not be stopped by a day cap. It showed "used today's share" to paying customers.                                                              |
 | 19 Oct | AI call hold ceilings are per endpoint: $0.10 per model answer, $0.25 per mentions task (was a flat $0.50).                                                                                                                                                                                                                                                                                                                                             | A flat $0.50 made 4 models with web search hold $4.00 and Brand Lookup $6, so neither could run; live calls bill $0.03 and $0.10-0.15.                                        |
 | 20 Oct | **IndexNow** is on **Basic, Pro and Agency** (Business too since 21 Oct), not Free. Pages published live to WordPress from Uplumo are submitted automatically once the project has set up IndexNow.                                                                                                                                                                                                                                                     | Owner decision. Each workspace may make 60 IndexNow requests an hour, so one cannot get Uplumo's servers rate-limited for everyone. Google does not use IndexNow.             |
-| 23 Oct | Uplumo is a **global** product, not India-only. | Owner decision; pricing pages and copy still say INR/India and need a follow-up. |
-| 23 Oct | AI moves from OpenRouter to the **DeepSeek API** (`deepseek-flash`) for SAM and the writer. The owner accepts that DeepSeek processes customer prompts on its own servers; once revenue allows, Uplumo will self-host a DeepSeek model. | Cheaper per turn, OpenAI-compatible tool calls. Separate PR; until it merges OpenRouter stays live. |
-| 23 Oct | The dashboard becomes **useful and customizable** (cards a user can add, hide and reorder) and **SAM writes a data-backed daily brief**. Shipped one PR at a time: dashboard bugs, customizable dashboard, DeepSeek, daily brief. | Owner: the live dashboard showed numbers but no next step, and SAM was hidden behind a chat. |
+| 23 Oct | Uplumo is built to work **globally**, but its **first customers are Indian businesses, small to big** (owner, 25 Oct; goal: first 10 paying customers, see `FOUNDER.md`).                                                                                                                                                                                                                                                                               | Owner decisions of 23 and 25 Oct read together: no India-only limits in the product, while copy, pricing and sales target India first.                                        |
+| 23 Oct | AI moves from OpenRouter to the **DeepSeek API** (`deepseek-flash`) for SAM and the writer. The owner accepts that DeepSeek processes customer prompts on its own servers; once revenue allows, Uplumo will self-host a DeepSeek model.                                                                                                                                                                                                                 | Cheaper per turn, OpenAI-compatible tool calls. Separate PR; until it merges OpenRouter stays live.                                                                           |
+| 23 Oct | The dashboard becomes **useful and customizable** (cards a user can add, hide and reorder) and **SAM writes a data-backed daily brief**. Shipped one PR at a time: dashboard bugs, customizable dashboard, DeepSeek, daily brief.                                                                                                                                                                                                                       | Owner: the live dashboard showed numbers but no next step, and SAM was hidden behind a chat.                                                                                  |
 
 ## 2. Waiting for the owner
 
@@ -64,11 +64,11 @@ Last updated: 23 Oct 2026
 | `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `PUBLIC_URL`                        | set                                                                         | Login and links                                                              |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`                                   | set                                                                         | Google login, Search Console, GA4                                            |
 | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`          | set (**live**, 22 Oct)                                                      | Billing                                                                      |
-| `RAZORPAY_PLAN_ID_BASIC`, `_PRO`, `_AGENCY`                                  | set; presence verified 23 Oct; terms checked at release                                            | Monthly plans; each live plan amount must equal `catalog.go` (Agency ₹9,999) |
-| `RAZORPAY_PLAN_ID_BUSINESS`                                                  | set; presence verified 23 Oct; terms checked at release                      | Business ₹4,999 monthly plan; without it Business cannot be bought           |
+| `RAZORPAY_PLAN_ID_BASIC`, `_PRO`, `_AGENCY`                                  | set; presence verified 23 Oct; terms checked at release                     | Monthly plans; each live plan amount must equal `catalog.go` (Agency ₹9,999) |
+| `RAZORPAY_PLAN_ID_BUSINESS`                                                  | set; presence verified 23 Oct; terms checked at release                     | Business ₹4,999 monthly plan; without it Business cannot be bought           |
 | `LOOPS_API_KEY` + 3 `LOOPS_TRANSACTIONAL_*_ID`                               | set                                                                         | Email                                                                        |
 | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_CONTENT_IMAGE_BUCKET` | set (14 Oct)                                                                | Content editor images (`content-images` bucket)                              |
-| `DATAFORSEO_API_KEY`                                                         | **set 14 Oct**                                                              | SEO data; owner confirms working 23 Oct; intentional $2/day cap                                    |
+| `DATAFORSEO_API_KEY`                                                         | **set 14 Oct**                                                              | SEO data; owner confirms working 23 Oct; intentional $2/day cap              |
 | `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`                                     | set                                                                         | AI writing and assistant                                                     |
 | `PAGESPEED_API_KEY`                                                          | **set 15 Oct**                                                              | Lighthouse in Site Audit (free, 200 checks per workspace per day)            |
 | `CRUX_API_KEY`                                                               | **set 15 Oct** (same key)                                                   | Real-visitor Core Web Vitals                                                 |
@@ -135,11 +135,7 @@ Google Cloud project `agentproject-473109`:
 - Reuse Go/Postgres jobs and the existing credit ledger. Paid features share workspace credits; only the global/provider emergency brakes remain. No subscription prices or grants are changed.
 - Credit-pack commercial terms require an explicit `BILLING_TOPUP_PACKS` configuration; no default pack price or new production configuration is activated by these PRs.
 
-- Owner requested two improvement PRs including the content editor and a paid
-  product differentiator. The second implements evidence → editorial fix →
-  enquiry measurement, reusing existing analytics and writing services. It adds
-  no plan-price change, new paid provider, automatic publishing or externally
-  delivered alerts. Competitor feature overlap is acknowledged in the PR.
+- The content editor and paid product differentiator shipped without plan-price changes, new paid providers, automatic publishing or external alerts. The owner later removed the enquiry measurement feature; first-party Analytics and GSC/GA4 integrations remain available.
 
 ## Search Growth scope and maintenance decisions
 
@@ -236,7 +232,7 @@ Owner-approved scope: one focused PR adds optional 180-day browser recognition a
   (`AppShell.tsx`): Traffic (Analytics, Search Performance), AI Visibility
   (Tracker, Brand Lookup, Prompt Explorer), Keywords (Research, Saved),
   Competitors (Domain Overview, Backlinks), Setup (Context, Agent setup).
-  "New" stays only on AI Visibility and Missed Enquiries Finder.
+  "New" stays only on AI Visibility.
 - **Why:** owner feedback that 17 rows with five "New" badges felt crowded
   and jargon-heavy for small-business users. Tabs link to the existing routes
   instead of rebuilding pages, which needs no redirects and no page rewrite.
@@ -316,3 +312,17 @@ Owner-approved scope: one focused PR adds optional 180-day browser recognition a
 - Confirmed live Data API exposure was closed using the same idempotent SQL committed as migration 42. Afterward: 0 tables without RLS, 0 client grants, trusted-owner reads and HTTP readiness/session checks pass. This emergency Supabase migration does not mark pending Goose versions as applied.
 - Shared worker supervision replaces duplicated restart code and prevents audit/rank queues from permanently stopping after temporary DB errors. Opaque IDs use Go `crypto/rand.Text`; MCP no-op telemetry and frontend fixture bypass code are removed. Successful external MCP tools now persist the actual first-call onboarding milestone.
 - The [launch audit](docs/audits/2026-10-23-launch-readiness.md) records economics assumptions, checks and live acceptance limits.
+
+## Founder brief for every agent (25 October)
+
+- **Decision:** Add root `FOUNDER.md` with the owner's vision (is the site cited by AI, who is cited instead, why not and what to fix), his standing worries (paid-call waste, credit accuracy, bloat, half-wired features, tests that cannot fail, security, scale) and a one-table product map. `CLAUDE.md`, `AGENTS.md` and `docs/INDEX.md` make it required reading at session start.
+- **Why:** The owner kept getting work that did not match what he wanted, and no agent could see the vision behind the rules. One file, read every session, carries it.
+- **Preserve:** `CLAUDE.md` stays the rulebook; `FOUNDER.md` holds vision and the map only. Agents restate what they will build and wait for the owner's yes before coding. Update the map when a sidebar page, its backend package or its paid provider changes.
+- **Owner answers (same day):** customer = Indian businesses, small to big; goal = first 10 paying customers; work order = credits audit → DataForSEO audit → "why not cited" feature → remaining audits; new features wait. Root `imp_sessions_talked.md` records important owner talks; every agent reads it and adds an entry before a session ends.
+- **Trace:** `FOUNDER.md`, `imp_sessions_talked.md`, `CLAUDE.md` sections 1 and 6, `AGENTS.md`, `docs/INDEX.md`. The map's "Not yet verified" list is not an audit result: credits, DataForSEO call counts, wiring and test strength are still unchecked.
+
+## Shown credits before paid actions (26 October)
+
+- **Decision:** The owner chose to show the maximum credits an action can charge next to its typical cost, instead of capping the charge at the typical figure ([credits audit](docs/audits/2026-10-25-credits-audit.md) F1). Not built yet; it ships as its own PR.
+- **Why:** A Brand Lookup shows about 372 credits but can hold up to 2,240; the customer should see the most they can pay before clicking.
+- **Preserve:** Customers are charged the real cost, never above the shown maximum. The 3 active subscriptions in production are the owner's test accounts.

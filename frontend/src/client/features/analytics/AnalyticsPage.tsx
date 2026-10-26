@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AnalyticsOverview } from "./AnalyticsOverview";
 import { useQuery } from "@tanstack/react-query";
 import { Code } from "lucide-react";
 import { QueryError } from "@/client/components/QueryState";
@@ -88,6 +89,10 @@ export function AnalyticsPage({
             </>
           }
         />
+        <p className="text-sm text-muted-foreground">
+          Understand where visits come from, what gets read, and which actions
+          get recorded.
+        </p>
         {summaryQuery.isPending ? (
           <DashboardSkeleton />
         ) : summaryQuery.isError && !summary ? (
@@ -106,6 +111,19 @@ export function AnalyticsPage({
           />
         ) : (
           <>
+            {summaryQuery.isError ? (
+              <QueryError
+                error={summaryQuery.error}
+                fallback="Showing the last loaded analytics. Refresh failed."
+                onRetry={() => void summaryQuery.refetch()}
+                isRetrying={summaryQuery.isFetching}
+              />
+            ) : null}
+            <AnalyticsOverview
+              summary={summary}
+              range={rangeForDays(days, new Date())}
+              onOpenTracking={() => setShowCode(true)}
+            />
             {showCode ? (
               <TrackingCodeCard key={projectId} projectId={projectId} />
             ) : null}
@@ -159,7 +177,7 @@ function Dashboard({
   return (
     <div className="space-y-6">
       <Card>
-        <CardContent className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
+        <CardContent className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
           <StatTile
             label="Visitors"
             value={formatCount(summary.visitors)}
@@ -185,43 +203,12 @@ function Dashboard({
             value={summary.sessions > 0 ? formatShare(summary.bounceRate) : "—"}
             hint={`${formatCount(summary.engagedSessions)} engaged sessions`}
           />
-          <StatTile
-            label={summary.goalEventName ? "Goal completions" : "Goal not set"}
-            value={
-              summary.goalEventName
-                ? formatCount(summary.conversionSessions)
-                : "—"
-            }
-            hint={
-              summary.goalEventName
-                ? `${formatShare(summary.conversionRate)} of sessions`
-                : "Set in Enquiries"
-            }
-          />
         </CardContent>
       </Card>
-      <DailyAudienceCard days={summary.audience} />
-      <ClickDestinationsCard projectId={projectId} range={range} />
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <TrafficChartCard series={summary.series} />
-        </div>
-        <AiTrafficCard
-          aiSources={summary.aiSources}
-          channels={summary.channels}
-        />
-      </div>
+      <TrafficChartCard series={summary.series} />
       <div className="grid gap-6 lg:grid-cols-2">
         <ChannelsCard channels={summary.channels} />
-        <AcquisitionPerformanceCard
-          rows={summary.acquisitionChannels}
-          goalEventName={summary.goalEventName}
-        />
-        <CampaignPerformanceCard
-          campaigns={summary.campaigns}
-          goalEventName={summary.goalEventName}
-        />
-        <CountriesCard projectId={projectId} range={range} />
+
         <CountListCard
           title="Top pages"
           unit="Pageviews"
@@ -232,53 +219,78 @@ function Dashboard({
             count: row.pageviews,
           }))}
         />
-        <CountListCard
-          title="Landing pages"
-          unit="Sessions"
-          emptyTitle="No session entry pages yet"
-          rows={summary.entries.map((row) => ({
-            key: row.path,
-            label: `${displayPath(row.path)} · avg ${formatDuration(row.avgEngagementMs)}`,
-            count: row.sessions,
-          }))}
-        />
-        <CountListCard
-          title="Exit pages"
-          unit="Sessions"
-          emptyTitle="No session exit pages yet"
-          rows={summary.exits.map((row) => ({
-            key: row.path,
-            label: `${displayPath(row.path)} · avg ${formatDuration(row.avgEngagementMs)}`,
-            count: row.sessions,
-          }))}
-        />
-        <CountListCard
-          title="Referring websites"
-          unit="Visitors"
-          emptyTitle="No visitors came from other websites"
-          rows={summary.referrers.map((row) => ({
-            key: row.host,
-            label: row.host,
-            count: row.visitors,
-          }))}
-        />
-        <CountListCard
-          title="Devices"
-          unit="Visitors"
-          emptyTitle="No device data in this period"
-          rows={deviceRows(summary.devices)}
-        />
+      </div>
+      <section id="visitor-actions" className="space-y-3 scroll-mt-4">
+        <h2 className="text-lg font-semibold">Actions visitors take</h2>
+        <p className="text-sm text-muted-foreground">
+          Recorded clicks and custom events show activity. They do not confirm
+          an enquiry, booking or sale.
+        </p>
+        <ClickDestinationsCard projectId={projectId} range={range} />
         <CountListCard
           title="Custom events"
           unit="Events"
-          emptyTitle='No clicks tracked yet. Add data-uplumo-event="Signup" to any button or link to count its clicks.'
+          emptyTitle="No custom events recorded. Tag important buttons in Tracking code to start measuring actions."
           rows={summary.events.map((row) => ({
             key: row.name,
-            label: `${row.name} · ${row.visitors} ${row.visitors === 1 ? "visitor" : "visitors"}`,
+            label: `${row.name} · ${row.visitors} visitor-days`,
             count: row.count,
           }))}
         />
-      </div>
+      </section>
+      <details className="rounded-xl border border-border bg-card p-4">
+        <summary className="cursor-pointer font-medium">
+          Explore audience, campaigns and page journeys
+        </summary>
+        <div className="mt-4 space-y-6">
+          <DailyAudienceCard days={summary.audience} />
+          <div className="grid gap-6 lg:grid-cols-2">
+            <AiTrafficCard
+              aiSources={summary.aiSources}
+              channels={summary.channels}
+            />
+            <AcquisitionPerformanceCard rows={summary.acquisitionChannels} />
+            <CampaignPerformanceCard campaigns={summary.campaigns} />
+            <CountriesCard projectId={projectId} range={range} />
+            <CountListCard
+              title="Landing pages"
+              unit="Sessions"
+              emptyTitle="No session entry pages yet"
+              rows={summary.entries.map((row) => ({
+                key: row.path,
+                label: `${displayPath(row.path)} · avg ${formatDuration(row.avgEngagementMs)}`,
+                count: row.sessions,
+              }))}
+            />
+            <CountListCard
+              title="Exit pages"
+              unit="Sessions"
+              emptyTitle="No session exit pages yet"
+              rows={summary.exits.map((row) => ({
+                key: row.path,
+                label: `${displayPath(row.path)} · avg ${formatDuration(row.avgEngagementMs)}`,
+                count: row.sessions,
+              }))}
+            />
+            <CountListCard
+              title="Referring websites"
+              unit="Visitors"
+              emptyTitle="No visitors came from other websites"
+              rows={summary.referrers.map((row) => ({
+                key: row.host,
+                label: row.host,
+                count: row.visitors,
+              }))}
+            />
+            <CountListCard
+              title="Devices"
+              unit="Visitors"
+              emptyTitle="No device data in this period"
+              rows={deviceRows(summary.devices)}
+            />
+          </div>
+        </div>
+      </details>
     </div>
   );
 }
@@ -286,7 +298,7 @@ function Dashboard({
 function DashboardSkeleton() {
   return (
     <div className="space-y-6" aria-busy>
-      <SkeletonStatGrid count={6} className="md:grid-cols-3 xl:grid-cols-6" />
+      <SkeletonStatGrid count={5} className="md:grid-cols-3 xl:grid-cols-5" />
       <div className="grid gap-6 lg:grid-cols-3">
         <Skeleton className="h-80 lg:col-span-2" />
         <Skeleton className="h-80" />

@@ -56,7 +56,6 @@ const summarySchema = z.object({
       content: z.string(),
       visitors: count,
       sessions: count,
-      conversions: count,
     }),
   ),
   entries: z.array(
@@ -69,7 +68,6 @@ const summarySchema = z.object({
     z.object({
       channel: z.enum(CHANNELS),
       sessions: count,
-      conversions: count,
     }),
   ),
   sessions: count,
@@ -77,9 +75,6 @@ const summarySchema = z.object({
   bounceRate: z.number().min(0).max(1),
   totalEngagementMs: count,
   avgEngagementMs: count,
-  goalEventName: z.string(),
-  conversionSessions: count,
-  conversionRate: z.number().min(0).max(1),
   audience: z.array(
     z.object({
       date: isoDate,
