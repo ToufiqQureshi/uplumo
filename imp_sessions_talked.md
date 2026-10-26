@@ -17,6 +17,13 @@ feelings, business calls, priorities, corrections. Read it after
 
 ---
 
+## 26 Oct 2026: theme means public pages too (Codex)
+
+- Owner corrected that the theme control was missing from blogs and public
+  pages; the earlier app-only implementation did not meet his expectation.
+- Add it to the shared public header, share the saved app preference, and
+  finish the release with actual public-page browser checks.
+
 ## 26 Oct 2026: header light-mode access (Codex)
 
 - Owner asked to add light mode in the header to the existing PR.

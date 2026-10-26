@@ -94,3 +94,21 @@ Why: optional recognition changes the privacy behavior of enabled customer snipp
 - **Why:** Business at its full keyword/depth limit can require 15,400 credits across five weekly runs, exceeding its 15,000 grant before research. A blanket weekly-check promise without this caveat can cause refunds.
 - **Preserve:** Owner-approved prices, grants, keyword capacities and default weekly schedule; no automatic paid top-up or new cap. Billing forecasts runs and the spend guard prevents overspending.
 - **Trace:** Pricing template, plan/cost tests and launch economics review.
+
+## Public pages share the app appearance preference
+
+- **Decision:** Put System/Light/Dark in the shared public header, covering the
+  homepage, pricing, blog index/articles and every informational/legal page.
+  Reuse the app's `theme-preference` storage key and root theme names. Load a
+  small versioned self-hosted script before CSS; use native select keyboard
+  behavior and a contrasting light palette, including links and code examples.
+- **Why:** The first header implementation covered only the authenticated React
+  app. The owner expected the same capability on public pages and blogs.
+- **Preserve:** No account/API/provider calls, cookies or CSP weakening. HTML is
+  still server rendered and crawlable without JavaScript; without scripting,
+  the existing dark appearance remains. Blocked storage falls back to an
+  in-document choice, not a broken selector. System follows OS; explicit picks
+  win and are shared with app navigation. Keep colored CTA text readable.
+- **Trace:** `templates/base.html`, `static/theme.js`, `site_test.go`, frontend
+  `scripts/public-theme.test.ts`. Browser checks cover every public route at
+  1280/375/320px, selected light palette, persistence, reload and system changes.
