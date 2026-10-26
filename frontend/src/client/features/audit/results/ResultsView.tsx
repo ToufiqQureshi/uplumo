@@ -14,6 +14,7 @@ import {
 import { PagesTable } from "@/client/features/audit/results/PagesTable";
 import { ShopifyCrawlWarning } from "@/client/features/audit/results/ShopifyCrawlWarning";
 import { RenderingWarnings } from "@/client/features/audit/results/RenderingWarnings";
+import { AiReadinessCard } from "@/client/features/audit/results/AiReadinessCard";
 import { PerformanceTable } from "@/client/features/audit/results/ResultsTables";
 import {
   BotProtectionAdvice,
@@ -129,6 +130,11 @@ export function ResultsView({
       )}
 
       <RenderingWarnings data={data} />
+
+      <AiReadinessCard
+        issueTypes={issues.map((issue) => issue.issueType)}
+        startedAt={audit.startedAt}
+      />
 
       <StatsStrip
         pagesCrawled={audit.pagesCrawled}

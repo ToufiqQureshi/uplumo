@@ -40,3 +40,25 @@ Starts an asynchronous crawl and presents technical SEO findings, crawl progress
 - **Why:** The new `ai-crawlers-blocked` issue lists crawler names; arrows would read as a path.
 - **Preserve:** Details stay plain text from the issue's JSON; nothing is fetched.
 - **Trace:** `results/IssuesView.tsx`; backend decision in `backend/internal/audit/decision.md`.
+
+## AI readiness score card
+
+- **Decision:** `results/AiReadinessCard.tsx` sits above the audit stats. `aiReadiness.ts` scores 6 checks from issues the audit already found. Score = 100 minus the weight of each failed check:
+
+  | Check (issue)           | Weight |
+  | ----------------------- | ------ |
+  | AI bots blocked         | 30     |
+  | Business schema         | 25     |
+  | Question answers        | 20     |
+  | JavaScript-only content | 10     |
+  | Several phone numbers   | 10     |
+  | `llms.txt`              | 5      |
+
+  The card shows "Pass", "Partly" or "Weak" for three areas: can AI read it, does AI know who you are, can AI quote you. It then lists the fixes, biggest first, each with the registry's explanation and how-to-fix.
+
+- **Why:** The owner wants every audit to say whether the site is AEO/GEO friendly, why not, and what to fix. This is artboard 3 of the approved Traffic redesign.
+- **Preserve:**
+  - No request and no credits.
+  - Audits started before `AI_CHECKS_SINCE` (2026-10-26T15:00Z, when the crawler checks went live) are not scored. They show "run a new audit", because a missing issue there means "not checked".
+  - The weights are judgement. Change them here only.
+- **Trace:** `aiReadiness.ts`, `aiReadiness.test.ts`. Each of these 4 mutations fails the tests: pass check, Weak verdict, the date guard, fix order. Backend checks: #220 and #223.
