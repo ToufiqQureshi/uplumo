@@ -427,7 +427,6 @@ func run(logger *slog.Logger) (err error) {
 			Activation:              &activation.Service{Store: activation.Repository{DB: db}},
 			Reports:                 reportsSvc,
 			PublicURL:               cfg.PublicURL,
-			DataForSEOConfigured:    strings.TrimSpace(cfg.DataForSEOAPIKey) != "",
 			OpenRouterConfigured:    strings.TrimSpace(cfg.OpenRouterAPIKey) != "",
 			ContentWriterConfigured: strings.TrimSpace(cfg.OpenRouterAPIKey) != "",
 			Credits:                 credits,

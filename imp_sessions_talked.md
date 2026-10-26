@@ -17,6 +17,16 @@ feelings, business calls, priorities, corrections. Read it after
 
 ---
 
+## 26 Oct 2026 (later): "teeno ek saath complete kar" (Claude)
+
+- Owner wants the three open items done together, reported short.
+- Done: max credits shown (PR #210, CI green, merge left to him: the merge
+  was refused by the permission check); wiring, test-strength and code-size
+  audit (this PR): no broken screen wiring, one dead route removed, tenancy
+  and money tests catch real bugs.
+- Not started on purpose: the "why not cited" feature. It is the core
+  product and `FOUNDER.md` asks for a plan and his "haan" first.
+
 ## 26 Oct 2026: owner answers, DataForSEO audit (Claude)
 
 - Owner: "max dikhao" — show the maximum credits before a paid action

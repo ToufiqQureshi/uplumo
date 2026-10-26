@@ -41,3 +41,10 @@ The mounted plan regression sends the explicit `userInitiated: true` contract, s
 - **Why:** Checkout now refuses unverified/mismatched terms before making a plan payable. A fake subscription response cannot stand in for a plan response.
 - **Preserve:** Owner-only checkout, HMAC webhook validation, duplicate delivery behavior, internal/provider error distinction and read-only billing behavior.
 - **Trace:** `billing_test.go`, `TestBillingEndToEnd`; full mounted suite required before release.
+
+## Remove the unused DataForSEO key status route
+
+- **Decision:** Delete `GET /api/v1/config/seo-api-key-status` and the `DataForSEOConfigured` field it read.
+- **Why:** The wiring audit (`docs/audits/2026-10-26-wiring-tests-size-audit.md`) found no frontend caller, test or doc for it; paid features already answer 503 without the key.
+- **Preserve:** `content-writer-status` and the other config routes are unchanged; no paid path read this field.
+- **Trace:** `httpapi.go`, `cmd/server/main.go`; `internal/httpapi` and `cmd/server` tests pass against Postgres.
