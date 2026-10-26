@@ -44,3 +44,5 @@ visibility decline. The comparison is a sampled answer rate, not AI traffic,
 search demand, guaranteed ranking or revenue attribution.
 
 Source titles may be null; link labels fall back to the safe URL. Vitest discovers both `.test.ts` and `.test.tsx`, including the empty-history rendering regression.
+
+`starterQuestions.ts` suggests local customer questions (business type + city, brand, two competitors) for the tracker form; free, it only edits the unsaved form.

@@ -13,6 +13,7 @@ import {
   type TrackingConfig,
   type TrackingEstimate,
 } from "./trackingApi";
+import { QuestionStarter } from "./components/QuestionStarter";
 
 const ENGINES = [
   ["chat_gpt", "ChatGPT"],
@@ -171,6 +172,10 @@ export function TrackingForm({
         from their apps, and require a higher credit hold. Questions are your
         chosen sample of AI answers.
       </p>
+      <QuestionStarter
+        config={config}
+        onChange={(prompts) => update({ prompts })}
+      />
       {config.prompts.map((p, i) => (
         <div
           key={i}

@@ -75,3 +75,16 @@ Brand Lookup compares brand mentions and cited pages across supported answer eng
 - **Why:** Both cited/retrieved source call sites failed TypeScript checks because the provider schema permits missing titles.
 - **Preserve:** Only credential-free HTTP(S) links are clickable; no new fetch or provider work.
 - **Trace:** `components/QueryAnswerDetails.tsx`, TypeScript checks; the previously excluded TSX history regression is now included by Vite test discovery.
+
+## Suggested local questions for the tracker
+
+- **Decision:** The tracker form has "Suggest questions". The customer types what they sell and their city or area. `starterQuestions.ts` then adds up to 8 questions:
+  - 4 that find a business (best, top rated, affordable, recommended in that city)
+  - 2 about the brand
+  - up to 2 brand-versus-competitor questions
+
+  `addQuestions` fills the blank row first, skips duplicates (ignoring case) and keeps the 30-question cap.
+
+- **Why:** The tracker started with one empty box. Ubersuggest picks broad industry prompts, such as "best luxury hotels in India" for a mid-range Mumbai hotel, and reports a useless 0% ([review](../../../../../docs/audits/2026-10-26-ubersuggest-competitor.md)). Questions that name the business type and city measure the market the customer actually competes in.
+- **Preserve:** No AI or provider call. Suggestions only edit the unsaved form, so the existing "Review cost" step still quotes credits before anything is saved or run.
+- **Trace:** `starterQuestions.ts`, `starterQuestions.test.ts`. Each of these 6 mutations fails the test: city phrase, duplicate skip, blank-row replace, 30 cap, competitor cap, empty business. Also `TrackingForm.tsx`.
