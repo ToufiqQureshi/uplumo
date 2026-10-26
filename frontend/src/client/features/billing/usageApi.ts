@@ -39,6 +39,8 @@ const usageSchema = z.object({
       action: z.string().optional(),
       unit: z.string(),
       credits: z.number().int().positive(),
+      // The most one action can charge, where it is far above `credits`.
+      maxCredits: z.number().int().positive().optional(),
     }),
   ),
 });

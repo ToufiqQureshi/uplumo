@@ -64,6 +64,27 @@ func EstimateUSD(path string, body []byte) float64 {
 	return math.Round(total*1e6) / 1e6
 }
 
+// BrandLookupCeilingUSD is the most one Brand Lookup can buy, and so the most
+// it can charge: the totals call, then per platform a mentions sample and its
+// cited pages, plus one comparison per platform when competitors are set.
+func BrandLookupCeilingUSD(platforms int, comparisons bool) float64 {
+	calls := 1 + 2*platforms
+	if comparisons {
+		calls += platforms
+	}
+	return float64(calls) * AIMentionsCeilingUSD
+}
+
+// PromptExplorerCeilingUSD is the most one Prompt Explorer run can charge: one
+// answer per model, and with web search one bounded retry per model.
+func PromptExplorerCeilingUSD(models int, webSearch bool) float64 {
+	calls := models
+	if webSearch {
+		calls *= 2
+	}
+	return float64(calls) * AIResponseCeilingUSD
+}
+
 // SerpCostUSD returns the published cost of one Google Organic SERP task at
 // the requested depth, using Live or Standard queue pricing.
 func SerpCostUSD(depth int, queued bool) float64 {

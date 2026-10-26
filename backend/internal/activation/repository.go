@@ -29,7 +29,7 @@ func (r Repository) GetDashboardActivation(ctx context.Context, userID, projectI
 		(SELECT count(*) FROM projects WHERE organization_id=p.organization_id AND archived_at IS NULL),
 		(SELECT count(*) FROM member WHERE organization_id=p.organization_id),
 		EXISTS(SELECT 1 FROM invitation WHERE organization_id=p.organization_id AND status='pending' AND expires_at>now()),
-		EXISTS(SELECT 1 FROM audits WHERE project_id=p.id),
+		EXISTS(SELECT 1 FROM go_audits WHERE project_id=p.id),
 		ARRAY(SELECT step FROM dashboard_step_dismissals WHERE user_id=$2 AND project_id=p.id ORDER BY step)
 		FROM projects p WHERE p.id=$1 AND p.organization_id=$3 AND p.archived_at IS NULL`, projectID, userID, organizationID).
 		Scan(&result.Domain, &result.GA4.PropertyDisplayName, &result.GSC.SiteURL, &result.MCP.AuthorizedAt, &result.MCP.FirstToolCallAt, &result.GA4.CardDismissedAt, &result.MCP.CardDismissedAt, &result.CompetitorClickedAt, &result.KeywordsClickedAt, &projectCount, &memberCount, &pendingInvite, &result.HasAudit, &result.DismissedSteps)

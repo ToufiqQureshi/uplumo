@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   getDashboardActivation,
+  getDashboardLayout,
   getDashboardOverview,
+  saveDashboardLayout,
   refreshDashboardBacklinkSnapshot,
   markDashboardStepClicked,
   setDashboardStepDismissed,
@@ -53,6 +55,30 @@ describe("dashboard API", () => {
     expect(fetchMock.mock.calls[0]).toMatchObject([
       "/api/v1/projects/p1/dashboard/backlinks/refresh",
       { method: "POST", body: JSON.stringify({ userInitiated: true }) },
+    ]);
+  });
+
+  it("reads a missing layout as null and saves the card list as sent", async () => {
+    const cards = [
+      { id: "ai_visibility", hidden: false },
+      { id: "gsc", hidden: true },
+    ];
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(Response.json({ cards: null }))
+      .mockResolvedValueOnce(Response.json({ cards }));
+    await expect(
+      getDashboardLayout({ data: { projectId: "p/1" } }),
+    ).resolves.toBeNull();
+    await expect(
+      saveDashboardLayout({ data: { projectId: "p1", cards } }),
+    ).resolves.toEqual({ cards });
+    expect(fetchMock.mock.calls).toMatchObject([
+      ["/api/v1/projects/p%2F1/dashboard/layout/get", { body: "{}" }],
+      [
+        "/api/v1/projects/p1/dashboard/layout/save",
+        { method: "POST", body: JSON.stringify({ cards }) },
+      ],
     ]);
   });
 

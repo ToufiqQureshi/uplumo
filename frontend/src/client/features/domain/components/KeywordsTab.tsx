@@ -1,3 +1,5 @@
+import { allowPurchase } from "@/client/lib/paidIntent";
+import { domainIntentKey } from "@/client/features/domain/domainApi";
 import {
   useCallback,
   useEffect,
@@ -277,7 +279,11 @@ export function KeywordsTab({
             <QueryError
               error={query.error}
               fallback="Failed to load keywords."
-              onRetry={() => void query.refetch()}
+              onRetry={() => {
+                // Retry is the customer asking to buy this report again.
+                allowPurchase(domainIntentKey(projectId, target));
+                void query.refetch();
+              }}
               isRetrying={isFetching}
             />
           ) : null

@@ -135,11 +135,18 @@ components:
             properties:
               feature:
                 $ref: "#/components/schemas/Feature"
+              action:
+                type: string
+                description: Tells apart actions of one feature that cost very differently (brand_lookup, prompt_explorer).
               unit:
                 type: string
               credits:
                 type: integer
                 minimum: 1
+              maxCredits:
+                type: integer
+                minimum: 1
+                description: The most one action can charge (its hold), set where it is far above the typical cost.
     Error:
       type: object
       required: [error]

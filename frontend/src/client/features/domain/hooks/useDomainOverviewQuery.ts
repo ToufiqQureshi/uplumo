@@ -1,5 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { getDomainOverview } from "@/client/features/domain/domainApi";
+import {
+  domainIntentKey,
+  getDomainOverview,
+} from "@/client/features/domain/domainApi";
+import { purchaseAllowed } from "@/client/lib/paidIntent";
 import type { ResearchScope } from "@/shared/researchScope";
 
 type Input = {
@@ -30,6 +34,9 @@ export function useDomainOverviewQuery(input: Input) {
         data: {
           projectId: input.projectId,
           domain: trimmedDomain,
+          cachedOnly: !purchaseAllowed(
+            domainIntentKey(input.projectId, trimmedDomain),
+          ),
           scope: input.scope,
           locationCode: input.locationCode,
         },

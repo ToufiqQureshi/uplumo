@@ -22,3 +22,10 @@ Shows domain/page backlink summaries, referring domains and top linked pages.
 - **Why:** The summary already paid for these categories; hiding entries beyond six drops customer data.
 - **Preserve:** Keep the existing sort and total; do not turn missing categories into zero.
 - **Trace:** `BacklinksProfilePanel.tsx` and backend summary normalization.
+
+## Saved links load from cache; Search and Retry buy
+
+- **Decision:** Report queries send `cachedOnly` (header `X-Cached-Only`) unless the customer clicked Search or Retry for that report in this browser session (`client/lib/paidIntent.ts`). An expired cache then shows the server's "refresh" message with Retry, and Retry is the purchase.
+- **Why:** Opening a saved link after the cache expired bought the report again without a click (owner, 26 Oct).
+- **Preserve:** `cachedOnly` is read at request time, so the refetch a Retry starts is allowed to buy; it never goes in the request body. Paging, sorting and tabs after a Search in the same session still load normally.
+- **Trace:** `backend/internal/platform/dataforseo/decision.md`; tests in `client/lib/uplumoApi.test.ts`, `backlinksApi.test.ts`, `domain/domain-cache.test.ts`.

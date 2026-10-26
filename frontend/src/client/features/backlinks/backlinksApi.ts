@@ -137,6 +137,8 @@ type Lookup = {
   projectId: string;
   target: string;
   scope?: BacklinksTargetScope;
+  /** Answer from cache only; never buy (see paidIntent). */
+  cachedOnly?: boolean;
 };
 type PageInput = Lookup & {
   page: number;
@@ -149,12 +151,13 @@ function path(projectId: string, endpoint: string) {
 export function getBacklinksOverview(
   input: Lookup,
 ): Promise<BacklinksOverviewData> {
-  const { projectId, ...body } = input;
+  const { projectId, cachedOnly, ...body } = input;
   return apiRequest(
     path(projectId, "overview"),
     backlinksOverviewSchema,
     "POST",
     body,
+    { cachedOnly },
   );
 }
 export function getBacklinksRows(
@@ -165,12 +168,13 @@ export function getBacklinksRows(
     mode: "one_per_domain" | "as_is";
   },
 ): Promise<BacklinksRowsPageData> {
-  const { projectId, ...body } = input;
+  const { projectId, cachedOnly, ...body } = input;
   return apiRequest(
     path(projectId, "backlinks"),
     backlinksRowsPageSchema,
     "POST",
     body,
+    { cachedOnly },
   );
 }
 export function getBacklinksReferringDomains(
@@ -179,22 +183,24 @@ export function getBacklinksReferringDomains(
     filters: ReferringDomainsFilters;
   },
 ): Promise<ReferringDomainsPageData> {
-  const { projectId, ...body } = input;
+  const { projectId, cachedOnly, ...body } = input;
   return apiRequest(
     path(projectId, "referring-domains"),
     referringDomainsPageSchema,
     "POST",
     body,
+    { cachedOnly },
   );
 }
 export function getBacklinksTopPages(
   input: PageInput & { sortField: TopPagesSortField; filters: TopPagesFilters },
 ): Promise<TopPagesPageData> {
-  const { projectId, ...body } = input;
+  const { projectId, cachedOnly, ...body } = input;
   return apiRequest(
     path(projectId, "top-pages"),
     topPagesPageSchema,
     "POST",
     body,
+    { cachedOnly },
   );
 }

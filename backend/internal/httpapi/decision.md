@@ -20,6 +20,23 @@ Every feature handler, auth middleware, logging and dependency wiring.
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.
 
+## Static files must be readable by the runtime user
+
+- **Decision:** the `Dockerfile` copies the built app into `/dist` owned by the
+  image's runtime user (65532, distroless `nonroot`).
+- **Why:** live on 23 Oct 2026, `/logo.svg` and `/favicon.ico` answered `403`
+  from the Go origin (Railway request id, `text/plain`, 14 bytes) while
+  `/site/logo.svg` and hashed `/assets/*` loaded. `spaHandler` serves files with
+  `http.ServeFileFS`, which answers 403 on a permission error. Files built inside
+  the image are world-readable; files Vite copies from `frontend/src/public` keep
+  the mode they arrived with from the deploy upload, which can be owner-only
+  for root. The app logo was a broken image on every page.
+- **Preserve:** `spaHandler` keeps serving only files under `STATIC_DIR`; this
+  changes ownership, not which paths are public.
+- **Trace:** root `Dockerfile`. Not reproducible in Go tests (permissions come
+  from the image); verify after deploy that `/logo.svg` and `/favicon.ico`
+  return 200.
+
 ## Recognition and destination tracker
 
 Decision: `/t.js` accepts optional first-party browser recognition and captures configured click destinations plus outbound links without injecting content or a banner. Random browser IDs expire 180 days from creation and require secure storage/Web Locks; default snippets keep prior anonymous behavior. Host consent revocation clears identifiers and suppresses subsequent collection, including heartbeat/navigation handlers. Storage removal broadcasts revocation to other same-origin tabs. Recognition reuses the existing bounded collector, whose new fields are validated before service access.
