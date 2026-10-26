@@ -166,12 +166,6 @@ export function DashboardPage({ projectId }: { projectId: string }) {
 
         <DashboardShortcuts projectId={projectId} />
 
-        <DashboardOnboarding
-          key={projectId}
-          projectId={projectId}
-          activation={activation}
-        />
-
         {activationQuery.isError ? (
           <QueryError
             error={activationQuery.error}
@@ -205,6 +199,14 @@ export function DashboardPage({ projectId }: { projectId: string }) {
             All cards are hidden. Use Customize to show them again.
           </p>
         ) : null}
+
+        {/* Below the cards: the insights a returning customer came for come
+          first; the setup checklist stays until its steps are done. */}
+        <DashboardOnboarding
+          key={projectId}
+          projectId={projectId}
+          activation={activation}
+        />
       </div>
     </div>
   );
