@@ -29,3 +29,17 @@ still required before claiming live Google reporting works for a customer.
 - **Why:** Production routes use the validated implementation in `performance.go`. Keeping a second, unreachable algorithm and tests hid drift.
 - **Preserve:** Live date presets, history floor, comparison semantics, authorization and Google quotas remain unchanged.
 - **Trace:** `dates.go`, `performance.go`, `performance_test.go`; production deadcode scan identified the removed functions.
+
+## Pages that lost clicks, with the reason
+
+- **Decision:** When a comparison period exists, `GetPerformance` makes two more Search Analytics queries: the page dimension for each period, 1,000 rows each, with the report's own filters. `buildPageChanges` returns the 5 pages that lost the most clicks, biggest loss first and ties ordered by URL. A page missing from the current period counts as having lost all its clicks. Each page gets one reason, checked in this order:
+  1. `rank_fell`: position worsened by 1 or more, or the page is no longer shown at all
+  2. `fewer_searches`: shown at least 20% less
+  3. `ctr_fell`: clicked at least 20% less
+  4. `mixed`: none of the above
+- **Why:** The Search Performance verdict has to name the pages to fix and why.
+- **Preserve:**
+  - Search Console is free (Google quota only). The report now makes 6 queries, all in parallel.
+  - No comparison means no extra queries and an empty list.
+  - The response field is always an array, never null.
+- **Trace:** `page_changes.go`, `page_changes_test.go`. Each of these 6 mutations fails the tests: rank threshold, impressions threshold, CTR threshold, the "only losses" rule, sort order, a vanished page. `performance_test.go` asserts 6 requests and that both page periods carry the report filters.

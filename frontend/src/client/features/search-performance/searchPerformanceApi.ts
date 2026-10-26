@@ -74,6 +74,23 @@ const reportSchema = z.discriminatedUnion("connected", [
       }),
     ),
     countries: z.array(dimensionRowSchema),
+    // Pages that lost the most clicks against the previous period, with why.
+    pageChanges: z
+      .array(
+        z.object({
+          page: z.string(),
+          clicks: z.number(),
+          prevClicks: z.number(),
+          impressions: z.number(),
+          prevImpressions: z.number(),
+          position: z.number(),
+          prevPosition: z.number(),
+          ctr: z.number(),
+          prevCtr: z.number(),
+          reason: z.enum(["rank_fell", "fewer_searches", "ctr_fell", "mixed"]),
+        }),
+      )
+      .default([]),
   }),
 ]);
 

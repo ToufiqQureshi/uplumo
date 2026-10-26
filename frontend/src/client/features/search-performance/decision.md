@@ -70,3 +70,27 @@ in the linked feature READMEs; do not silently change them during a UI refactor.
 - **Trace:** restore `SearchPerformancePage.tsx` and `tests/search-growth.spec.ts`
   from the parent of #203; remove `SearchPerformanceOverview.tsx` and
   `SearchPerformanceTools.tsx`. No backend or database changes.
+
+## Verdict first: what happened, why, what to fix
+
+- **Decision:** The page now opens with these sections, top to bottom:
+  1. `SearchVerdict`: one sentence on what happened and the main cause, using `searchVerdict.ts`. The cause is one of:
+     - rank slipped (by 1 place or more)
+     - shown less (impressions fell more than CTR)
+     - clicked less
+     - grew
+     - steady (within ±5%)
+     - no comparison available
+  2. The totals.
+  3. `PagesToFix`: the 5 pages that lost the most clicks, each with its reason and one action. Fewer searches leads to Keyword Research; everything else leads to the Content Editor.
+  4. `QuickWins`: the top 3 striking-distance searches by impressions, each opening the editor with that keyword.
+
+  The tables and the growth analysis panel move below them.
+
+- **Why:** The owner said the page gave numbers but no decision ("ye giri hai, kyu giri, aise solve karo"). The approved design is in the Traffic redesign artifact.
+- **Preserve:**
+  - No AI or paid calls. Everything comes from the same GSC report.
+  - `pageChanges` defaults to `[]` for older responses.
+  - The "Write" and "Improve" links only pre-fill the editor.
+  - Every existing table, export, filter and the growth panel are unchanged, only lower on the page.
+- **Trace:** `searchVerdict.ts` and `searchVerdict.test.ts`. Each of these 5 mutations fails the tests: rank rule, impressions-vs-CTR rule, steady band, comparison guard, growth rule. Also `SearchVerdictCards.tsx`, `SearchPerformancePage.tsx`, `searchPerformanceApi.ts`. Backend: `backend/internal/gsc/decision.md`.

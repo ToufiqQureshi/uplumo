@@ -288,6 +288,15 @@ func (s *Service) GetPerformance(ctx context.Context, organizationID, projectID 
 			return nil, buildErr
 		}
 		requests = append(requests, previousRequest)
+		currentPages, buildErr := BuildSearchAnalyticsRequest(currentInput, []string{"page"}, pageRowLimit, 0, now)
+		if buildErr != nil {
+			return nil, buildErr
+		}
+		previousPages, buildErr := BuildSearchAnalyticsRequest(previousInput, []string{"page"}, pageRowLimit, 0, now)
+		if buildErr != nil {
+			return nil, buildErr
+		}
+		requests = append(requests, currentPages, previousPages)
 	}
 	queryPagesIndex := len(requests)
 	requests = append(requests, queryPages, countryRequest)
@@ -301,13 +310,15 @@ func (s *Service) GetPerformance(ctx context.Context, organizationID, projectID 
 	}
 	currentRows := rowsByRequest[0]
 	previousRows := []SearchRow(nil)
+	pageChanges := []PageChange{}
 	if comparisonAvailable {
 		previousRows = rowsByRequest[1]
+		pageChanges = buildPageChanges(rowsByRequest[2], rowsByRequest[3], pageChangeLimit)
 	} else {
 		previous = dateWindow{}
 	}
 	queryRows, countryRows := rowsByRequest[queryPagesIndex], rowsByRequest[queryPagesIndex+1]
-	return map[string]any{"connected": true, "range": map[string]any{"startDate": window.StartDate, "endDate": window.EndDate, "prevStartDate": previous.StartDate, "prevEndDate": previous.EndDate, "comparisonAvailable": comparisonAvailable}, "totals": sumSearchTotals(currentRows), "prevTotals": sumSearchTotals(previousRows), "daily": toDailyRows(currentRows), "strikingDistance": buildStrikingDistanceRows(queryRows, strikingDistanceLimit), "countries": toDimensionRows(countryRows)}, nil
+	return map[string]any{"connected": true, "range": map[string]any{"startDate": window.StartDate, "endDate": window.EndDate, "prevStartDate": previous.StartDate, "prevEndDate": previous.EndDate, "comparisonAvailable": comparisonAvailable}, "totals": sumSearchTotals(currentRows), "prevTotals": sumSearchTotals(previousRows), "daily": toDailyRows(currentRows), "strikingDistance": buildStrikingDistanceRows(queryRows, strikingDistanceLimit), "countries": toDimensionRows(countryRows), "pageChanges": pageChanges}, nil
 }
 
 func toDailyRows(rows []SearchRow) []map[string]any {

@@ -217,8 +217,18 @@ func TestGetPerformanceBuildsLegacyReportAndOmitsCountryFilterForCountryRows(t *
 		t.Fatal(err)
 	}
 	requests := client.requestSnapshot()
-	if len(requests) != 4 {
-		t.Fatalf("got %d provider requests, want 4", len(requests))
+	// date (now, before), page (now, before), query+page, country.
+	if len(requests) != 6 {
+		t.Fatalf("got %d provider requests, want 6", len(requests))
+	}
+	pagePeriods := map[string]bool{}
+	for _, request := range requests {
+		if len(request.Dimensions) == 1 && request.Dimensions[0] == "page" {
+			pagePeriods[request.StartDate+".."+request.EndDate] = request.RowLimit == pageRowLimit && len(request.DimensionFilterGroups) == 1
+		}
+	}
+	if !pagePeriods["2026-05-18..2026-05-25"] || !pagePeriods["2026-05-10..2026-05-17"] {
+		t.Fatalf("page comparison must query both periods with the report's filters: %+v", requests)
 	}
 	currentFound, previousFound, countryFound := false, false, false
 	for _, request := range requests {
