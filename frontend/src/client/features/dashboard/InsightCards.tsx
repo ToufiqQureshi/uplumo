@@ -23,6 +23,7 @@ import {
   trackingApi,
   trackingKey,
 } from "@/client/features/ai-search/trackingApi";
+import { whyNotCited } from "@/client/features/ai-search/whyNotCited";
 import {
   aiNextStep,
   citedInstead,
@@ -198,6 +199,8 @@ export function AiVisibilityCard({ projectId }: { projectId: string }) {
   const citationRate = latest.cited / latest.answered;
   const next = aiNextStep(mentionRate, citationRate);
   const instead = citedInstead(answers.data ?? []);
+  const topGap = whyNotCited(answers.data ?? [], latest.configuration.domain)
+    .gaps[0];
   return (
     <CardShell
       title="AI visibility"
@@ -241,22 +244,53 @@ export function AiVisibilityCard({ projectId }: { projectId: string }) {
           </ul>
         </div>
       ) : null}
-      <p className="mt-4 text-sm text-muted-foreground">{next.text}</p>
-      <Button
-        className="mt-3"
-        size="sm"
-        variant="outline"
-        nativeButton={false}
-        render={
-          next.to === "content-editor" ? (
-            <Link to="/p/$projectId/content-editor" params={{ projectId }} />
-          ) : (
-            <Link to="/p/$projectId/prompt-tracking" params={{ projectId }} />
-          )
-        }
-      >
-        {next.label}
-      </Button>
+      {topGap ? (
+        <>
+          <p className="mt-4 text-sm">
+            <span className="font-medium">Main reason:</span> {topGap.title}
+          </p>
+          <Button
+            className="mt-3"
+            size="sm"
+            variant="outline"
+            nativeButton={false}
+            render={
+              <Link
+                to="/p/$projectId/prompt-tracking"
+                params={{ projectId }}
+                hash="why-not-cited"
+              />
+            }
+          >
+            See why and fix it
+          </Button>
+        </>
+      ) : (
+        <>
+          <p className="mt-4 text-sm text-muted-foreground">{next.text}</p>
+          <Button
+            className="mt-3"
+            size="sm"
+            variant="outline"
+            nativeButton={false}
+            render={
+              next.to === "content-editor" ? (
+                <Link
+                  to="/p/$projectId/content-editor"
+                  params={{ projectId }}
+                />
+              ) : (
+                <Link
+                  to="/p/$projectId/prompt-tracking"
+                  params={{ projectId }}
+                />
+              )
+            }
+          >
+            {next.label}
+          </Button>
+        </>
+      )}
     </CardShell>
   );
 }

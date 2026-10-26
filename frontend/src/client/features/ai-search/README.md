@@ -44,3 +44,5 @@ visibility decline. The comparison is a sampled answer rate, not AI traffic,
 search demand, guaranteed ranking or revenue attribution.
 
 Source titles may be null; link labels fall back to the safe URL. Vitest discovers both `.test.ts` and `.test.tsx`, including the empty-history rendering regression.
+
+`whyNotCited.ts` and `components/WhyNotCitedCard.tsx` explain why AI did not cite the site, from a check's saved answers only (no credits): listing sites, competitor pages, named-not-linked, recommended rivals and community sites, each with one action.
