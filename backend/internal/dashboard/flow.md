@@ -1,22 +1,33 @@
-# Dashboard response contracts: flow
+# Dashboard layout: flow
 
 > Internal guide for developers and coding agents. Verify current behavior against source and tests before changing it.
 
 ## Entry points
 
-- **API/trigger:** No standalone route; consumed by `dashboardoverview` handlers and the dashboard client.
-- **Source:** `types.go`
+- `POST .../dashboard/layout/get` and `.../layout/save` (`handler.go`).
 
-## Request or job flow
+## Request flow
 
-Dashboard UI requests `dashboardoverview`; response types in this package keep card fields consistent; activation state is separately provided by `activation`.
+1. `withSession` resolves the member; `requireProjectAccess` checks the
+   project belongs to their active organization (else `404 project_not_found`).
+2. The handler decodes a strict JSON body (unknown fields refused, 8 KiB cap).
+3. `get` reads the row for `(member, project)`; no row answers `cards: null`.
+4. `save` validates, then upserts the row; an empty list deletes it.
 
-## Dependencies and cost boundary
+The dashboard client merges the saved list with its own card list
+(`frontend/src/client/features/dashboard/dashboardLayout.ts`): saved order
+first, unknown ids dropped, cards added later appended and shown.
 
-Go package contracts only; no IO, provider calls or persistence.
+## Cost boundary
+
+No provider calls. One small Postgres read on dashboard open, one write on
+Save. Opening the dashboard stays free.
 
 ## Failure, security and data invariants
 
-- Keep this package free of side effects and provider dependencies.
-- Change JSON fields only with corresponding client and contract-test updates.
-- Do not implement refresh behavior in a response-types package.
+- A layout belongs to the signed-in member: the user id comes from the
+  session, never from the request.
+- A refused request writes nothing.
+- If the layout cannot load, the client shows the default layout; the
+  dashboard still works.
+- Deleting a user or a project deletes their layouts (`ON DELETE CASCADE`).

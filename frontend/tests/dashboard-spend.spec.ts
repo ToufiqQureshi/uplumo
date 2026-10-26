@@ -54,12 +54,23 @@ test("dashboard visits never refresh paid backlinks automatically", async ({
       },
     }),
   );
+  // Every request a dashboard visit makes; none may reach an endpoint that
+  // buys provider work (the read-only cards use saved data only).
+  const paidPaths =
+    /\/(ai-search\/(tracking\/run(?![s/])|brand-lookup|prompt-explorer)|rank-tracking\/(checks\/start|keywords\/metrics\/refresh)|keywords\/(research|serp)|backlinks\/|domain\/|sam\/sessions\/chat)/u;
+  const apiCalls: string[] = [];
+  page.on("request", (request) => {
+    const path = new URL(request.url()).pathname;
+    if (path.startsWith("/api/")) apiCalls.push(path);
+  });
   await page.route("**/api/v1/projects/*/dashboard/**", (route) => {
     const path = new URL(route.request().url()).pathname;
     if (path.endsWith("/overview"))
       return route.fulfill({
         json: { audit: null, backlinks: null, backlinkRefreshAvailable: true },
       });
+    if (path.endsWith("/layout/get"))
+      return route.fulfill({ json: { cards: null } });
     expect(route.request().postDataJSON()).toEqual({ userInitiated: true });
     refreshes.push(path);
     return route.fulfill({
@@ -78,6 +89,7 @@ test("dashboard visits never refresh paid backlinks automatically", async ({
   ).toBeVisible();
   await page.waitForLoadState("networkidle");
   expect(refreshes).toEqual([]);
+  expect(apiCalls.filter((path) => paidPaths.test(path))).toEqual([]);
   await page.reload();
   await expect(
     page.getByRole("heading", { name: "Backlink pulse" }),
