@@ -16,9 +16,64 @@ concurrency:
 
 jobs:
   backend:
-    name: Go checks and integration tests
+    name: Go checks
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Check module files
+        working-directory: backend
+        run: |
+          go mod download
+          go mod tidy
+          git diff --exit-code -- backend/go.mod backend/go.sum
+      - name: Check formatting
+        working-directory: backend
+        run: |
+          unformatted="$(gofmt -l .)"
+          test -z "$unformatted" || { printf '%s\n' "$unformatted"; exit 1; }
+      - name: Vet
+        working-directory: backend
+        run: go vet ./...
+      - name: Static analysis
+        working-directory: backend
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@2026.2.2
+          staticcheck ./...
+      - name: Lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.14.0
+          working-directory: backend
+      - name: Check known vulnerabilities
+        working-directory: backend
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+      - name: Check dead code
+        working-directory: backend
+        run: |
+          go install golang.org/x/tools/cmd/deadcode@latest
+          output="$(deadcode -test ./...)"
+          test -z "$output" || { printf '%s\n' "$output"; exit 1; }
+
+  # Go tests run in four shards, each with its own Postgres and Redis.
+  # Packages run one at a time, each against its own fresh database;
+  # compiling them is done first in parallel. Shard 0 holds
+  # the slowest package; every other package is assigned by position, so a
+  # new package is always tested without editing this file.
+  backend-tests:
+    name: Go tests shard ${{ matrix.shard }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
     services:
       postgres:
         image: postgres:17
@@ -52,49 +107,38 @@ jobs:
         with:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
-      - name: Check module files
+      - name: Pick this shard's packages
         working-directory: backend
         run: |
-          go mod download
-          go mod tidy
-          git diff --exit-code -- backend/go.mod backend/go.sum
-      - name: Check formatting
+          slow=github.com/toufiqqureshi/uplumo/backend/internal/emailauth
+          if [ "${{ matrix.shard }}" = 0 ]; then
+            pkgs="$slow"
+          else
+            pkgs="$(go list ./... | grep -vx "$slow" | awk -v s="${{ matrix.shard }}" '(NR - 1) % 3 == s - 1')"
+          fi
+          test -n "$pkgs"
+          echo "PKGS=$(echo $pkgs)" >> "$GITHUB_ENV"
+          printf '%s\n' $pkgs
+      - name: Compile tests in parallel
         working-directory: backend
-        run: |
-          unformatted="$(gofmt -l .)"
-          test -z "$unformatted" || { printf '%s\n' "$unformatted"; exit 1; }
-      - name: Vet
-        working-directory: backend
-        run: go vet ./...
-      - name: Static analysis
-        working-directory: backend
-        run: |
-          go install honnef.co/go/tools/cmd/staticcheck@2026.2.2
-          staticcheck ./...
-      - name: Lint
-        uses: golangci/golangci-lint-action@v9
-        with:
-          version: v2.14.0
-          working-directory: backend
-      - name: Require PostgreSQL-backed billing tests
-        working-directory: backend
-        run: |
-          test -n "$TEST_DATABASE_URL"
-          go test -p 1 -count=1 ./internal/billing
+        # -exec /bin/true builds every test binary and runs none, so no
+        # TestMain migrates the shared database in parallel.
+        run: go test -race -count=1 -exec /bin/true $PKGS
       - name: Test with race detector and real Postgres and Redis
         working-directory: backend
-        run: go test -p 1 -race -count=1 -coverprofile=coverage.out -covermode=atomic ./...
-      - name: Check known vulnerabilities
-        working-directory: backend
+        # Each package gets a fresh database: some tests create tables
+        # outside the migrations, so a shared one depends on package order.
         run: |
-          go install golang.org/x/vuln/cmd/govulncheck@latest
-          govulncheck ./...
-      - name: Check dead code
-        working-directory: backend
-        run: |
-          go install golang.org/x/tools/cmd/deadcode@latest
-          output="$(deadcode -test ./...)"
-          test -z "$output" || { printf '%s\n' "$output"; exit 1; }
+          test -n "$TEST_DATABASE_URL"
+          base="${TEST_DATABASE_URL%%/uplumo_test*}"
+          n=0
+          failed=0
+          for pkg in $PKGS; do
+            n=$((n + 1))
+            PGPASSWORD=ci_test_password psql -q -h localhost -U uplumo -d uplumo_test -c "CREATE DATABASE pkg_$n"
+            TEST_DATABASE_URL="$base/pkg_$n?sslmode=disable" go test -race -count=1 "$pkg" || failed=1
+          done
+          exit "$failed"
 
   frontend:
     name: Frontend checks and tests
