@@ -1,3 +1,4 @@
+import { EngineLogo } from "@/client/components/BrandLogo";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/client/components/ui/button";
@@ -227,7 +228,8 @@ export function PromptTrackingPage({ projectId }: { projectId: string }) {
           {answers.data?.map((a) => (
             <details key={a.id} className="rounded-lg border p-3">
               <summary className="cursor-pointer text-sm font-medium">
-                {a.topic} · {a.prompt} · {engineLabel(a.engine)} · {a.status}
+                <EngineLogo engine={a.engine} /> {a.topic} · {a.prompt} ·{" "}
+                {engineLabel(a.engine)} · {a.status}
                 {a.errorCode ? ` (${a.errorCode.replaceAll("_", " ")})` : ""}
               </summary>
               {a.recommended.length > 0 ? (

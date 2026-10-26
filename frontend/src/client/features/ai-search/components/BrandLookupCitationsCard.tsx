@@ -1,3 +1,4 @@
+import { BrandLogo } from "@/client/components/BrandLogo";
 import { useMemo, useState } from "react";
 import { type SortingState } from "@tanstack/react-table";
 import { ExportMenu } from "@/client/components/ExportMenu";
@@ -18,10 +19,7 @@ import {
   buildTopPagesColumns,
   buildTopQueriesColumns,
 } from "@/client/features/ai-search/components/BrandLookupCitationTables";
-import {
-  formatPlatformLabel,
-  PLATFORM_DOT_CLASS,
-} from "@/client/features/ai-search/platformLabels";
+import { formatPlatformLabel } from "@/client/features/ai-search/platformLabels";
 import {
   filterQueries,
   filterTopPages,
@@ -180,8 +178,9 @@ export function CitationTabsCard({
             </p>
             {captionPlatform ? (
               <span className="inline-flex shrink-0 items-center gap-1.5 text-xs">
-                <span
-                  className={`size-1.5 rounded-full ${PLATFORM_DOT_CLASS[captionPlatform]}`}
+                <BrandLogo
+                  brand={captionPlatform === "chat_gpt" ? "chatgpt" : "google"}
+                  size={14}
                 />
                 {formatPlatformLabel(captionPlatform)}
               </span>

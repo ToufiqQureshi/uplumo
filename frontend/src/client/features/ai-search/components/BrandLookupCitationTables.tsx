@@ -1,3 +1,4 @@
+import { BrandLogo } from "@/client/components/BrandLogo";
 import { createColumnHelper } from "@tanstack/react-table";
 import { Link } from "@tanstack/react-router";
 import { ExternalLink, Sparkles } from "lucide-react";
@@ -14,7 +15,6 @@ import {
 import { numericNullsLast } from "@/client/components/table/nullSafeSort";
 import {
   formatCount,
-  PLATFORM_DOT_CLASS,
   PLATFORM_SHORT_LABEL,
 } from "@/client/features/ai-search/platformLabels";
 import { formatUrlForDisplay } from "@/client/components/table/url";
@@ -51,8 +51,9 @@ const PLATFORM_HELP =
 function PlatformCell({ platform }: { platform: PlatformKey }) {
   return (
     <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-      <span
-        className={`size-1.5 rounded-full ${PLATFORM_DOT_CLASS[platform]}`}
+      <BrandLogo
+        brand={platform === "chat_gpt" ? "chatgpt" : "google"}
+        size={14}
       />
       {PLATFORM_SHORT_LABEL[platform]}
     </span>
