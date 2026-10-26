@@ -1,6 +1,10 @@
 import { apiRequest } from "@/client/lib/uplumoApi";
 import { REPORT_APP_LIST_LIMIT } from "@/types/schemas/reports";
 import { z } from "zod";
+import {
+  reportDefinitionSchema,
+  type ReportDefinition,
+} from "./reportDefinition";
 
 type ReportInput<T extends object = object> = {
   data: T & { projectId: string };
@@ -95,6 +99,7 @@ export async function saveReport({
   summary: string;
   html: string;
   skill?: string;
+  definition?: ReportDefinition;
 }>) {
   return apiRequest(
     reportPath(data.projectId, "save"),
@@ -111,8 +116,23 @@ export async function saveReport({
       summary: data.summary,
       html: data.html,
       skill: data.skill ?? "Manual",
+      definition: data.definition,
     },
   );
+}
+
+export async function getReportDefinition(projectId: string, reportId: string) {
+  const result = await apiRequest(
+    reportPath(projectId, "get"),
+    z.object({ definition: reportDefinitionSchema.nullable() }),
+    "POST",
+    { reportId, includeHtml: true },
+  );
+  if (!result.definition)
+    throw new Error(
+      "This report was not created in the visual builder. Its saved content is still available in the report viewer.",
+    );
+  return result.definition;
 }
 
 export async function shareReport({ data }: ReportInput<{ reportId: string }>) {

@@ -21,3 +21,9 @@ Postgres report/template data; optional branding; project auth.
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.
+
+## Private visual editor state
+
+- Persist optional editor JSON separately from shareable HTML, in the report row, with atomic replacement. JSON is versioned and byte-bounded; ordinary report readers and all public surfaces omit it. The existing project/report predicates remain authoritative. This prevents a recipient inspecting source and recovering hidden CSV columns or filtered-out rows.
+- Count HTML plus definition bytes toward existing storage quotas; return actual HTML bytes in `SaveResult.HTMLBytes`. This prevents private editor payloads bypassing the existing storage cap. Legacy/manual saves omit definition and replace it with NULL; their API remains compatible.
+- Preserve the sandbox/CSP and public-sharing opt-in. No new provider, auth rule or direct database client is added. Real Postgres coverage is `database.TestReportBuilderPrivateDefinitionPersistence`; service bounds/privacy coverage is `TestBuilderDefinitionIsPrivateBoundedAndRoundTrips`.

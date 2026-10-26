@@ -17,6 +17,12 @@ feelings, business calls, priorities, corrections. Read it after
 
 ---
 
+## 26 Oct 2026: reports must let users build their own reports (Codex)
+
+- Owner opened Reports and said the existing experience is not useful: wants a Power BI-like flow where users can build reports themselves, and asked the agent to think through user needs and implement it.
+- Scoped to visual report creation: source/CSV import, metrics and breakdowns, filters, canvas preview, editable saved snapshots and existing share/PDF flow. Raw imported data stays private. No paid provider calls, DAX engine, joins or scheduled reports added.
+- This request explicitly authorizes Reports work despite the earlier feature-priority order; no production deployment implied.
+
 ## 26 Oct 2026: owner answers, DataForSEO audit (Claude)
 
 - Owner: "max dikhao" — show the maximum credits before a paid action

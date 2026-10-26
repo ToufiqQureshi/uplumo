@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ExternalLink,
+  Pencil,
   FileDown,
   Globe,
   Lock,
@@ -188,6 +189,21 @@ function ReportDetailPage() {
         }
         actions={
           <>
+            {report.skill === "Visual report" && (
+              <Button
+                variant="outline"
+                onClick={() =>
+                  void navigate({
+                    to: "/p/$projectId/reports",
+                    params: { projectId },
+                    search: { builder: true, edit: report.id },
+                  })
+                }
+              >
+                <Pencil />
+                Edit report
+              </Button>
+            )}
             {/* The icon carries the state: a globe once a public link is
                 live, a lock while only members can open it. */}
             <Button onClick={() => setShowShare(true)}>
