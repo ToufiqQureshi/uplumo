@@ -143,5 +143,8 @@ jobs:
           cache-dependency-path: frontend/pnpm-lock.yaml
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      # Videos of failed tests need Playwright's ffmpeg; Chrome is the runner's.
+      - name: Install Playwright ffmpeg
+        run: pnpm exec playwright install ffmpeg
       - name: Run paid-call browser tests
         run: pnpm test:e2e dashboard-spend content-editor search-growth audit-capabilities
