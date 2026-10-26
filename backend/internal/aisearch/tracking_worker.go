@@ -110,6 +110,9 @@ func (s *Tracking) Execute(ctx context.Context, job jobs.Job) error {
 				continue
 			}
 			done, answer, citations, recommended, e := s.collect(ctx, a)
+			if errors.Is(e, errAnswerFailed) {
+				continue
+			}
 			if e != nil {
 				pending = true
 				s.Search.logger.WarnContext(ctx, "AI tracking task read failed", "run", payload.RunID, "err", e)
@@ -274,14 +277,30 @@ func (s *Tracking) collect(ctx context.Context, a TrackingAnswer) (bool, string,
 		return false, "", nil, nil, nil
 	}
 	if code != 20000 && code != 40102 {
-		_, err = s.DB.Exec(ctx, `UPDATE go_ai_tracking_answers SET status='failed',error_code='provider_failed' WHERE id=$1 AND status='submitted'`, a.ID)
-		return false, "", nil, nil, err
+		return false, "", nil, nil, s.failAnswer(ctx, a.ID, "provider_failed")
 	}
 	if len(env.Tasks[0].Result) == 0 {
 		return true, "", []Citation{}, nil, nil
 	}
 	answer, citations, recommended, err := parseTrackingAnswer(env.Tasks[0].Result[0], a.Engine)
-	return err == nil, answer, citations, recommended, err
+	if err != nil {
+		// A finished result that cannot be read will not change on the next
+		// poll; fail it now instead of polling until the run times out.
+		s.Search.logger.ErrorContext(ctx, "AI tracking result unreadable", "answer", a.ID, "engine", a.Engine, "err", err)
+		return false, "", nil, nil, s.failAnswer(ctx, a.ID, "unreadable_result")
+	}
+	return true, answer, citations, recommended, nil
+}
+
+// errAnswerFailed reports an answer collect marked failed: it is finished,
+// so the run must not keep polling for it.
+var errAnswerFailed = errors.New("AI tracking answer failed")
+
+func (s *Tracking) failAnswer(ctx context.Context, id, code string) error {
+	if _, err := s.DB.Exec(ctx, `UPDATE go_ai_tracking_answers SET status='failed',error_code=$2 WHERE id=$1 AND status='submitted'`, id, code); err != nil {
+		return err
+	}
+	return errAnswerFailed
 }
 
 type trackingSource struct {
@@ -307,9 +326,9 @@ func parseTrackingAnswer(raw []byte, engine string) (string, []Citation, []Recom
 			Markdown      string                `json:"markdown"`
 			References    []trackingSource      `json:"references"`
 			BrandEntities []trackingBrandEntity `json:"brand_entities"`
-			Items         []struct {
-				References []trackingSource `json:"references"`
-			} `json:"items"`
+			// Raw because some SERP elements (related_searches) list plain
+			// keywords here, not objects.
+			Items []json.RawMessage `json:"items"`
 		} `json:"items"`
 	}
 	if err := json.Unmarshal(raw, &r); err != nil {
@@ -331,8 +350,13 @@ func parseTrackingAnswer(raw []byte, engine string) (string, []Citation, []Recom
 			if i.Type == "ai_overview" {
 				text = i.Markdown
 				sources = append(sources, i.References...)
-				for _, child := range i.Items {
-					sources = append(sources, child.References...)
+				for _, raw := range i.Items {
+					var child struct {
+						References []trackingSource `json:"references"`
+					}
+					if json.Unmarshal(raw, &child) == nil {
+						sources = append(sources, child.References...)
+					}
 				}
 				break
 			}

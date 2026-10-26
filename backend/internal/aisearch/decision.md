@@ -113,3 +113,10 @@ Use the package tests next to the source files in `README.md`. For changes cross
 - **Why:** Audit/rank now need the same outage recovery; keeping one loop avoids drift and removes duplicate lifecycle code.
 - **Preserve:** Two workers, five-second restart delay, cancellation, existing task checkpoints and paid-call limits.
 - **Trace:** `tracking_worker.go`, `platform/jobs/worker.go` and its injected-database-failure integration test.
+
+## Finished tracker answers stop the polling
+
+- **Decision:** `parseTrackingAnswer` reads nested SERP `items` as raw JSON, so keyword-only lists (`related_searches`, `people_also_search`) no longer fail a Google AI Overview answer. A finished task that fails or cannot be read is marked failed (`provider_failed`, `unreadable_result`) and returns `errAnswerFailed`, so the run stops polling it.
+- **Why:** Production runs on 24 and 25 Oct 2026 bought three AI Overview SERP tasks each, then polled for two hours and ended `collection_timeout`: every AI Overview result failed to decode, so the customer paid for answers never shown. A failed answer was also still counted as pending, so even the existing `provider_failed` path waited for the next poll.
+- **Preserve:** Polling stays free and never replays a paid POST; a network error on `task_get` still retries on the next poll; only queued tasks (20100, 40601, 40602) keep a run waiting.
+- **Trace:** `tracking_worker.go` (`parseTrackingAnswer`, `collect`, `failAnswer`); `TestTrackingEvidenceSeparatesCitationsFromMentions` failed on the keyword-only items before the fix; `TestTrackingUnreadableResultFailsInsteadOfPollingUntilTimeout` timed out (`collection_timeout`) with the stop-polling check removed. Not verified against a live AI Overview task yet: after deploy, the next daily run on the test workspace is the check.

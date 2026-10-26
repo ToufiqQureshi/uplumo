@@ -164,7 +164,9 @@ configuration and evidence for 13 months. Organization/project deletion cascades
   budgeted at $0.0012 per answer; model API collection holds $0.10
   per answer. Actual successful usage settles after submission. No automatic
   retry purchases a fresh answer. Successful queued submissions are billed even
-  if later collection fails; polling is free.
+  if later collection fails; polling is free. A finished task that fails or
+  cannot be read is marked failed (`provider_failed`, `unreadable_result`) at
+  once and is not polled again; only queued tasks keep the run waiting.
 - Run creation, immutable questions and the `go_jobs` outbox insert are one
   transaction. A tracker row lock and partial unique index allow only one active
   check. The worker checkpoints task IDs, recovers free collection, and marks
