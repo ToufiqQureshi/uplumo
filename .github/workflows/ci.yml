@@ -121,7 +121,9 @@ jobs:
           printf '%s\n' $pkgs
       - name: Compile tests in parallel
         working-directory: backend
-        run: go test -race -count=1 -run '^$' $PKGS
+        # -exec /bin/true builds every test binary and runs none, so no
+        # TestMain migrates the shared database in parallel.
+        run: go test -race -count=1 -exec /bin/true $PKGS
       - name: Test with race detector and real Postgres and Redis
         working-directory: backend
         run: |
