@@ -47,4 +47,4 @@ Migration 42 enables RLS on non-extension tables in the application schema and r
 
 Known costs after a zero estimate use a zero-amount outcome reservation (migration 43), committed before staff top-up, expiry or customer charging. The existing settlement/reconciler charges available credits and records provider spend once; charging failure cannot turn it into an ordinary refundable hold.
 
-Migration 44 adds nullable `reports.builder_definition` JSONB for private visual-editor snapshots. Existing reports read with NULL editor state. Report HTML/public shares exclude source datasets; report storage accounting includes editor bytes. Table ownership, existing RLS and project authorization are unchanged.
+Migration 45 adds nullable `reports.builder_definition` JSONB for private visual-editor snapshots, including databases where version 44 was already recorded by another branch. Existing reports read with NULL editor state. Report HTML/public shares exclude source datasets; report storage accounting includes editor bytes. Table ownership, existing RLS and project authorization are unchanged.
