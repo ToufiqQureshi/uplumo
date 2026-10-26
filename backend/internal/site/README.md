@@ -16,6 +16,10 @@ GET /, /pricing, /blog, /blog/{slug}, /robots.txt, /sitemap.xml, assets
 Blog sources must use reviewed HTTPS documentation hosts accepted by
 `TestPagesHaveNoDeadLinks`; Google crawling/indexing explanations link to the
 Search Central fundamentals documentation.
+Product comparisons may also cite the reviewed official Semrush, Ahrefs and
+Ubersuggest hosts in that exact allowlist. Comparison claims must follow the
+scope and evidence rules in `decision.md`; a host check alone does not verify
+the claim or live destination.
 
 `static/analytics.js` loads the owner's GA4 and first-party Uplumo tags on
 production public pages and the React shell. It respects DNT/GPC, excludes

@@ -17,6 +17,15 @@ feelings, business calls, priorities, corrections. Read it after
 
 ---
 
+## 26 Oct 2026: ten Uplumo product and comparison blogs (Codex)
+
+- Owner requested ten positive, substantive Uplumo articles, including Semrush,
+  Ahrefs and Ubersuggest comparisons, with positioning from SMBs to enterprises.
+- Articles use verified code capabilities and official competitor references.
+  Google-algorithm-trained model and fastest-growing claims were not evidenced;
+  use accurate descriptions of AI writing, briefs and scoring instead.
+- Scope is new editorial content for review, not runtime features or deployment.
+
 ## 26 Oct 2026 (later): "teeno ek saath complete kar" (Claude)
 
 - Owner wants the three open items done together, reported short.

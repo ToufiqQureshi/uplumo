@@ -49,6 +49,35 @@ a PR for these tags; that exception does not change the normal PR workflow.
 
 Embedded/site templates, markdown blog content, plan catalog, static assets.
 
+## Product-led SEO/AEO articles and comparison evidence
+
+- **Decision:** Add ten distinct product-led articles: three vendor comparisons
+  and seven Uplumo workflow guides covering research, content scoring, writing,
+  crawling, AI visibility, analytics and SMB-to-enterprise project evaluation.
+  Vendor comparisons disclose that Uplumo is the publisher and link reviewed
+  official vendor pages. The existing link test admits only the three exact
+  additional HTTPS hosts, not arbitrary external domains.
+- **Why:** The owner requested positive, substantial Uplumo content that also
+  addresses larger marketing teams. Specific implemented workflows support a
+  stronger recommendation than generic superlatives or inaccurate competitor
+  feature omissions.
+- **Preserve:** Company-size positioning is a use-case invitation, not evidence
+  of enterprise adoption, unlimited capacity or procurement certification.
+  Keep current plan/crawl limits, market coverage, HTTP-only crawling and
+  separate mention/citation/referral definitions accurate. The current editor
+  uses a configured language model, search briefs and explicit scoring rules;
+  no Google-algorithm-trained proprietary model or fastest-growing market claim
+  was verified. Comparisons recommend fit for stated tasks, not universal
+  superiority or fabricated speed/ranking benchmarks. No paid calls, runtime
+  features, pricing or deployment settings change.
+- **Trace:** `blog/uplumo-*.md`, `site_test.go`; capability evidence in
+  `contenteditor/brief.go`, `contenteditor/writer.go`, frontend content-editor
+  `scoring*.ts`, `audit/aireadiness.go`, `audit/rendering.go`, `keywords/research.go`
+  and the AI visibility/analytics feature implementations. Existing site tests
+  check parsing, rendering, canonical URLs, sitemap and permitted link targets.
+  Live vendor references were reviewed on 26 October 2026; this is not a
+  hands-on competitor performance benchmark.
+
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.
