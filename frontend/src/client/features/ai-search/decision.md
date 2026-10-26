@@ -95,3 +95,10 @@ Brand Lookup compares brand mentions and cited pages across supported answer eng
 - **Why:** The owner's core promise is "why not you, what to fix". Ubersuggest's equivalent is generic advice with an empty Opportunities list ([review](../../../../../docs/audits/2026-10-26-ubersuggest-competitor.md)); the real reasons (e.g. AI cites Booking, Tripadvisor and Justdial for a Mumbai hotel) are already in answers we paid for.
 - **Preserve:** No provider call and no credits: it reads only `GET .../tracking/runs/{runId}`. Only completed, non-empty answers count. Any citation of the project's domain or a subdomain counts as cited. The editor keyword stays within the route's 200-character limit and only pre-fills the draft (no paid lookup on load). The listing and community site lists are judgement, not provider data; extend them when a market needs it.
 - **Trace:** `whyNotCited.ts` and its test (5 mutations: cited skip, status filter, subdomain match, listing classification, keyword cut, each fails it), `components/WhyNotCitedCard.tsx`, `PromptTrackingPage.tsx`, `../dashboard/InsightCards.tsx`. Not run: a check against production answers.
+
+## Google Business Profile and clean evidence links
+
+- **Decision:** A Google Maps place link that AI cites is counted as the listing "Google Business Profile", and its action opens business.google.com. Evidence links drop `utm_*` parameters and fragments. Counts read "1 answer" rather than "1 answers".
+- **Why:** In the first live check, the Maps link showed up as a "competitor page", and ChatGPT's `?utm_source=chatgpt.com` cluttered every link. For a local Indian business, the Google profile is the most important listing.
+- **Preserve:** No new requests. Classification still only reads the URLs that were saved.
+- **Trace:** `whyNotCited.ts`. Its test fails under each of 4 mutations: the Maps path, the utm filter, the singular wording and the profile link.
