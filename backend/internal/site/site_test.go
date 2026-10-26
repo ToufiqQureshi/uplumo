@@ -283,6 +283,9 @@ func TestPagesHaveNoDeadLinks(t *testing.T) {
 		"www.google.com":        true,
 		"www.reddit.com":        true,
 		"www.w3.org":            true,
+		"www.semrush.com":       true,
+		"ahrefs.com":            true,
+		"ubersuggest.com":       true,
 	}
 	// The privacy policy must point at Google's own policy and at the page
 	// where a user removes our access. Any other outside link is a mistake.

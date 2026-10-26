@@ -4,6 +4,7 @@ import { Link, useMatchRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { GscReEngagementModal } from "@/client/features/gsc/GscReEngagementModal";
 import { Sidebar } from "@/client/components/Sidebar";
+import { ThemePreferenceMenu } from "@/client/components/ThemePreferenceMenuItems";
 import { getLastProjectId } from "@/client/lib/active-project";
 import {
   accountNavGroup,
@@ -122,6 +123,9 @@ function AppHeader({ projectId }: { projectId: string | null }) {
             </ol>
           </nav>
         ) : null}
+        <div className="ml-auto shrink-0">
+          <ThemePreferenceMenu />
+        </div>
       </header>
       {current?.item.tabs ? (
         <nav
