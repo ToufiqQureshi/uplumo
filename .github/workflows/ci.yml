@@ -62,8 +62,8 @@ jobs:
           test -z "$output" || { printf '%s\n' "$output"; exit 1; }
 
   # Go tests run in four shards, each with its own Postgres and Redis.
-  # Packages in one shard share a database, so they still run one at a
-  # time (-p 1); compiling them is done first in parallel. Shard 0 holds
+  # Packages run one at a time, each against its own fresh database;
+  # compiling them is done first in parallel. Shard 0 holds
   # the slowest package; every other package is assigned by position, so a
   # new package is always tested without editing this file.
   backend-tests:
@@ -126,9 +126,19 @@ jobs:
         run: go test -race -count=1 -exec /bin/true $PKGS
       - name: Test with race detector and real Postgres and Redis
         working-directory: backend
+        # Each package gets a fresh database: some tests create tables
+        # outside the migrations, so a shared one depends on package order.
         run: |
           test -n "$TEST_DATABASE_URL"
-          go test -p 1 -race -count=1 $PKGS
+          base="${TEST_DATABASE_URL%%/uplumo_test*}"
+          n=0
+          failed=0
+          for pkg in $PKGS; do
+            n=$((n + 1))
+            PGPASSWORD=ci_test_password psql -q -h localhost -U uplumo -d uplumo_test -c "CREATE DATABASE pkg_$n"
+            TEST_DATABASE_URL="$base/pkg_$n?sslmode=disable" go test -race -count=1 "$pkg" || failed=1
+          done
+          exit "$failed"
 
   frontend:
     name: Frontend checks and tests
