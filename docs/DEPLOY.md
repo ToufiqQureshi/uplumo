@@ -10,8 +10,11 @@ Secrets go into Railway variables only. Never put them in the repo or in chat.
 ## Shipping a change
 
 Merging to `main` does **not** deploy. In Railway, open the `uplumo` service
-and deploy the latest commit of `main` (or reconnect the source to branch
-`main`, which starts a deploy). Changing a variable also redeploys.
+and deploy a CI-passing commit of `main`. The production source is pinned to
+an explicitly selected commit; reconnect the existing service source with the
+chosen `commitSha` to deploy it while preserving manual releases. Connecting
+without `commitSha` enables branch-following deploys. Changing a variable also
+redeploys.
 
 If Railway shows "Could not load branches", its GitHub link is broken and
 neither of those works. Deploy from a checkout of `main` with the Railway CLI
@@ -26,6 +29,23 @@ After a deploy, require `https://uplumo.com/readyz` to return 200, then open the
 page you changed. `/api/health` is only process liveness; `/readyz` checks
 Postgres and Redis with bounded timeouts. Railway uses `/readyz` before routing
 traffic to a replacement deployment.
+
+## Sitemap and CDN freshness
+
+Production keeps Railway CDN enabled with `cdn.purgeOnDeploy = "all"`.
+The sitemap is generated from published blog posts at startup. XML counts as
+static content at the edge: purging HTML alone leaves `/sitemap.xml` cached
+for its one-hour origin TTL, even after new blog pages are live. Purging all
+content after successful deploys trades a brief cold asset cache for consistent
+blog, sitemap and asset responses.
+
+After a content release, fetch the ordinary `/sitemap.xml` URL without query
+parameters and verify the new canonical URLs and `lastmod` dates. Check that
+each new post returns 200 with its article HTML and that `/readyz` returns 200.
+A query-string cache miss proves origin freshness only. If the ordinary URL
+is stale, use Railway's **Purge All** control, or `railway cdn purge all` scoped
+to the production `uplumo` service. Allow about ten seconds for propagation.
+Do not disable the CDN or trigger paid research actions to verify a release.
 
 ## 1. Create the project
 

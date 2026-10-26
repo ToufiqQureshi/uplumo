@@ -9,6 +9,22 @@ Last updated: 25 Oct 2026
 
 ---
 
+## Production sitemap release decision
+
+- **Decision:** The owner requested the sitemap be updated live with the merged
+  blogs. Deploy the tested merge commit explicitly and keep manual, pinned
+  releases. Production CDN remains enabled with the cache policy documented in
+  [DEPLOY.md](docs/DEPLOY.md#sitemap-and-cdn-freshness).
+- **Why:** The release produced the new sitemap at origin, but an old XML edge
+  entry continued serving 59 URLs. HTML-only invalidation does not cover XML.
+- **Preserve:** Keep auth, billing, provider limits and database settings intact;
+  verification uses public GETs without paid provider submissions.
+- **Trace:** Commit `90d02ca`, deployment
+  `3505ffd7-2f3f-4191-a9a7-1d7368fb6cd9` reached SUCCESS. The ordinary sitemap
+  returned 69 URLs, all ten new articles returned 200 with BlogPosting data,
+  and `/readyz` returned 200. Authenticated theme interaction was tested before
+  release; it was not repeated with a production customer session.
+
 ## 1. Decisions taken by the owner
 
 | Date   | Decision                                                                                                                                                                                                                                                                                                                                                                                                                                                | Why                                                                                                                                                                           |
