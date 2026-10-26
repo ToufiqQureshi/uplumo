@@ -17,6 +17,14 @@ feelings, business calls, priorities, corrections. Read it after
 
 ---
 
+## 26 Oct 2026: finish the live sitemap update (Codex)
+
+- Owner corrected stopping at a deployment diagnosis: update the live sitemap
+  as part of finishing the blog release, without waiting for another prompt.
+- Deployed merged PR #230 and verified the public sitemap and all ten articles.
+- Fixed XML cache freshness through the production CDN release policy; see
+  `docs/DEPLOY.md` and the production sitemap decision in `DECISIONS.md`.
+
 ## 26 Oct 2026: header light-mode access (Codex)
 
 - Owner asked to add light mode in the header to the existing PR.
