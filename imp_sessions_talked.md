@@ -17,7 +17,6 @@ feelings, business calls, priorities, corrections. Read it after
 
 ---
 
-<<<<<<< HEAD
 ## 26 Oct 2026 (later): "teeno ek saath complete kar" (Claude)
 
 - Owner wants the three open items done together, reported short.
@@ -27,7 +26,7 @@ feelings, business calls, priorities, corrections. Read it after
   and money tests catch real bugs.
 - Not started on purpose: the "why not cited" feature. It is the core
   product and `FOUNDER.md` asks for a plan and his "haan" first.
-=======
+
 ## 26 Oct 2026: money rules, refresh, "why not cited" (Claude)
 
 - **Money rule (his words):** "jitna kharcha ha utna hi kaato… hold ki kya
@@ -44,7 +43,6 @@ feelings, business calls, priorities, corrections. Read it after
   brake nai hone chahiye"; "jaldi karna bhai time nai ha".
 - Merged + deployed today: #197, #198 (AI card shows who is cited instead),
   #208, #209. Waiting for him: #210–#216.
->>>>>>> origin/main
 
 ## 26 Oct 2026: owner answers, DataForSEO audit (Claude)
 
