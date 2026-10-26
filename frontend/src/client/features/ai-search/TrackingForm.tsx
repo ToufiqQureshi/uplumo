@@ -1,3 +1,4 @@
+import { EngineLogo } from "@/client/components/BrandLogo";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/client/components/ui/button";
@@ -162,6 +163,7 @@ export function TrackingForm({
                 })
               }
             />
+            <EngineLogo engine={id} />
             {label}
           </label>
         ))}

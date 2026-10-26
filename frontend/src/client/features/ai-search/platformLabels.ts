@@ -38,12 +38,7 @@ export function formatPlatformLabel(platform: "chat_gpt" | "google"): string {
   return MENTION_PLATFORM_LABELS[platform];
 }
 
-/** Shared per-platform accent dot + short label for compact table/KPI rows. */
-export const PLATFORM_DOT_CLASS: Record<"chat_gpt" | "google", string> = {
-  chat_gpt: "bg-emerald-500",
-  google: "bg-sky-500",
-};
-
+/** Short platform label for compact table/KPI rows. */
 export const PLATFORM_SHORT_LABEL: Record<"chat_gpt" | "google", string> = {
   chat_gpt: "ChatGPT",
   google: "Google",

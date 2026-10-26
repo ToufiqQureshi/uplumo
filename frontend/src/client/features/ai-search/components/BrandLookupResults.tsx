@@ -1,3 +1,4 @@
+import { BrandLogo } from "@/client/components/BrandLogo";
 import { Info, TriangleAlert } from "lucide-react";
 import { Alert, AlertTitle } from "@/client/components/ui/alert";
 import { Badge } from "@/client/components/ui/badge";
@@ -18,7 +19,6 @@ import {
 import {
   formatCount,
   formatPlatformLabel,
-  PLATFORM_DOT_CLASS,
 } from "@/client/features/ai-search/platformLabels";
 import type { BrandLookupResult } from "@/types/schemas/ai-search";
 import { RESEARCH_SCOPE_LABELS } from "@/shared/researchScope";
@@ -211,8 +211,9 @@ function PlatformStatRow({
   return (
     <div className="flex items-center justify-between text-xs">
       <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-        <span
-          className={`size-1.5 rounded-full ${PLATFORM_DOT_CLASS[row.platform]}`}
+        <BrandLogo
+          brand={row.platform === "chat_gpt" ? "chatgpt" : "google"}
+          size={14}
         />
         {formatPlatformLabel(row.platform)}
         {row.platform === "chat_gpt" ? (

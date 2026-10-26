@@ -95,3 +95,15 @@ Brand Lookup compares brand mentions and cited pages across supported answer eng
 - **Why:** The owner's core promise is "why not you, what to fix". Ubersuggest's equivalent is generic advice with an empty Opportunities list ([review](../../../../../docs/audits/2026-10-26-ubersuggest-competitor.md)); the real reasons (e.g. AI cites Booking, Tripadvisor and Justdial for a Mumbai hotel) are already in answers we paid for.
 - **Preserve:** No provider call and no credits: it reads only `GET .../tracking/runs/{runId}`. Only completed, non-empty answers count. Any citation of the project's domain or a subdomain counts as cited. The editor keyword stays within the route's 200-character limit and only pre-fills the draft (no paid lookup on load). The listing and community site lists are judgement, not provider data; extend them when a market needs it.
 - **Trace:** `whyNotCited.ts` and its test (5 mutations: cited skip, status filter, subdomain match, listing classification, keyword cut, each fails it), `components/WhyNotCitedCard.tsx`, `PromptTrackingPage.tsx`, `../dashboard/InsightCards.tsx`. Not run: a check against production answers.
+
+## Real brand logos for AI engines and services
+
+- **Decision:** `client/components/BrandLogo.tsx` shows the real logos instead of coloured dots. It covers ChatGPT, Gemini, Claude, Perplexity and Google (full colour, from `@lobehub/icons-static-svg`, MIT). It also covers Search Console, GA4, Maps, WhatsApp, Tripadvisor, Booking and others (from `simple-icons`, CC0). `EngineLogo` maps API engine ids to logos. They appear in Brand Lookup, Prompt Explorer, the tracker form and the saved answers.
+- **Why:** The owner said real logos make the product look premium and easier to scan.
+- **Preserve:**
+  - Logos only name a service; Uplumo's own brand never uses them.
+  - Next to the written name they are decorative (`alt=""`).
+  - The ChatGPT mark is inverted in dark mode.
+  - Both packages are MIT/CC0 and pinned in the lockfile.
+  - `src/vite-env.d.ts` adds Vite's asset types so SVG imports type-check.
+- **Trace:** `BrandLogo.tsx`, `BrandLogo.test.tsx`, the ai-search components that used `PLATFORM_DOT_CLASS` and the model accent dot.

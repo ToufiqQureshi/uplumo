@@ -1,3 +1,4 @@
+import { EngineLogo } from "@/client/components/BrandLogo";
 import {
   AlertCircle,
   CheckCircle2,
@@ -189,11 +190,10 @@ function ModelHeader({
   highlightBrand: string | null;
   status: "success" | "error" | "skipped";
 }) {
-  const accent = getModelAccent(model);
   return (
     <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-muted/40 px-5 py-3">
       <div className="flex flex-wrap items-center gap-2">
-        <span className={`size-2 rounded-full ${accent.dot}`} />
+        <EngineLogo engine={model} size={18} />
         <h3 className="text-sm font-semibold">{formatModelLabel(model)}</h3>
         {modelName ? (
           <code className="text-xs text-muted-foreground">{modelName}</code>
