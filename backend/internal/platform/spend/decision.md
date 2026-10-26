@@ -27,3 +27,8 @@ Use the package tests next to the source files in `README.md`. For changes cross
 - **Why:** A retried run can reload changed config; hashing the changed body would otherwise create a second hold and a second provider purchase for the same run/pair.
 - **Preserve:** Ordinary user actions still scope idempotency by method, path and body and may contain multiple distinct paid requests.
 - **Trace:** `spend.WithStableIdempotencyKey`, `ScopedKey`, and rank tracking `lookupAll`.
+
+## ErrRefreshRequired
+
+- **Decision:** `WithCachedOnly`/`CachedOnly` mark a request the customer did not ask to pay for; paid transports refuse it with `ErrRefreshRequired` (409 `refresh_required`), which `Refused` includes.
+- **Why/Trace:** see `../dataforseo/decision.md` ("Cached-only requests never buy").

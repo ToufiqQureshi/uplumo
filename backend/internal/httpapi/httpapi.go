@@ -26,6 +26,7 @@ import (
 	"github.com/toufiqqureshi/uplumo/backend/internal/contentauthors"
 	"github.com/toufiqqureshi/uplumo/backend/internal/contenteditor"
 	"github.com/toufiqqureshi/uplumo/backend/internal/crawleraccess"
+	"github.com/toufiqqureshi/uplumo/backend/internal/dashboard"
 	"github.com/toufiqqureshi/uplumo/backend/internal/dashboardoverview"
 	"github.com/toufiqqureshi/uplumo/backend/internal/domain"
 	"github.com/toufiqqureshi/uplumo/backend/internal/emailauth"
@@ -90,6 +91,8 @@ type Deps struct {
 	// Domain is nil when no DataForSEO key is configured.
 	Domain            *domain.Service
 	DashboardOverview *dashboardoverview.Service
+	// DashboardLayouts stores each member's dashboard card layout.
+	DashboardLayouts dashboard.LayoutStore
 	// GoogleAccounts removes a user's Google data grants and mappings.
 	GoogleAccounts google.AccountRepository
 	// GoogleOAuth owns consent start and callback routes.
@@ -154,7 +157,6 @@ type Deps struct {
 	// Reports owns project report documents, templates, and sharing.
 	Reports                 *reports.Service
 	PublicURL               *url.URL
-	DataForSEOConfigured    bool
 	OpenRouterConfigured    bool
 	ContentWriterConfigured bool
 	Credits                 *billing.CreditLedgerService
@@ -247,9 +249,6 @@ func NewHandler(d Deps) http.Handler {
 	}
 	team.Mount(mux, d.Team, withSession)
 	crawleraccess.Mount(mux, d.CrawlerAccess, withSession, func(next http.Handler) http.Handler { return requireProjectAccess(d.Logger, d.Auth, next) })
-	mux.Handle("GET /api/v1/config/seo-api-key-status", withSession(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		httpx.WriteJSON(w, http.StatusOK, map[string]bool{"configured": d.DataForSEOConfigured})
-	})))
 	mux.Handle("GET /api/v1/config/content-writer-status", withSession(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		configured := d.ContentWriterConfigured
 		message := ""
@@ -354,6 +353,7 @@ func NewHandler(d Deps) http.Handler {
 		Logger: d.Logger, Service: d.RankTracking, Checks: d.RankChecks, ProjectMarkets: d.ProjectMarkets, WithSession: withSession,
 		WithProjectAccess: func(next http.Handler) http.Handler { return requireProjectAccess(d.Logger, d.Auth, next) },
 	})
+	dashboard.Mount(mux, dashboard.Deps{Logger: d.Logger, Store: d.DashboardLayouts, WithSession: withSession, WithProjectAccess: func(next http.Handler) http.Handler { return requireProjectAccess(d.Logger, d.Auth, next) }})
 	activation.Mount(mux, activation.Deps{Logger: d.Logger, Service: d.Activation, WithSession: withSession, WithProjectAccess: func(next http.Handler) http.Handler { return requireProjectAccess(d.Logger, d.Auth, next) }})
 	reports.Mount(mux, reports.Deps{Logger: d.Logger, Service: d.Reports, PublicURL: d.PublicURL, WithSession: withSession,
 		View:              reportViewDeps(d),
@@ -468,6 +468,11 @@ func requireSession(logger *slog.Logger, authn *auth.Service, next http.Handler)
 			return
 		}
 		ctx := spend.WithIdempotencyKey(r.Context(), r.Header.Get("Idempotency-Key"))
+		// The browser marks loads the customer did not ask to pay for (a page
+		// opened from a saved link): they are answered from cache or refused.
+		if r.Header.Get("X-Cached-Only") == "1" {
+			ctx = spend.WithCachedOnly(ctx)
+		}
 		ctx = spend.WithUserID(ctx, user.ID)
 		ctx = spend.WithCreditMeter(ctx)
 		next.ServeHTTP(&creditsUsedWriter{ResponseWriter: w, ctx: ctx}, r.WithContext(auth.WithUser(ctx, user)))

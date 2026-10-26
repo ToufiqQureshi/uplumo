@@ -1,3 +1,5 @@
+import { allowPurchase } from "@/client/lib/paidIntent";
+import { domainIntentKey } from "@/client/features/domain/domainApi";
 /* eslint-disable max-lines, max-lines-per-function -- Domain Overview keeps page-only orchestration colocated to avoid fake indirection. */
 import { useCallback, useEffect, useMemo, useRef, type FormEvent } from "react";
 import { useForm, useStore } from "@tanstack/react-form";
@@ -304,6 +306,8 @@ function useDomainOverviewState({
       const parsed = parseResearchTarget(value.domain, value.scope);
       if (!parsed.ok) return;
       const target = parsed.target;
+      // Search is the customer asking to buy this domain's reports.
+      allowPurchase(domainIntentKey(projectId, target.display));
       formApi.setFieldValue("domain", target.display);
       formApi.setFieldValue("scope", target.scope);
       setSearchParams(
@@ -529,7 +533,11 @@ export function DomainOverviewPage({
     <QueryError
       error={state.overviewQuery.error}
       fallback="Lookup failed."
-      onRetry={() => void state.overviewQuery.refetch()}
+      onRetry={() => {
+        // Retry is the customer asking to buy this report again.
+        allowPurchase(domainIntentKey(projectId, routeState.domain));
+        void state.overviewQuery.refetch();
+      }}
       isRetrying={state.overviewQuery.isFetching}
     />
   ) : null;

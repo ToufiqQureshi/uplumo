@@ -151,15 +151,10 @@ func (s *Service) loadBrandLookup(ctx context.Context, organizationID, key strin
 	if isChatGPTLocale(in.LocationCode, in.LanguageCode) {
 		fetched = []string{platformChatGPT, platformGoogle}
 	}
-	// The hold covers the most this lookup can buy: the totals call, then per
-	// platform a mentions sample and, for a brand with more answers than the
-	// sample holds, its cited pages, then one comparison per platform.
-	callCount := 1 + 2*len(fetched)
-	if len(groups) > 0 {
-		callCount += len(fetched)
-	}
+	// The hold covers the most this lookup can buy; Billing shows the same
+	// ceiling as the action's maximum.
 	var result BrandLookupResult
-	err := s.provider.client.DoBudgeted(ctx, organizationID, spend.AIVisibility, float64(callCount)*dataforseo.AIMentionsCeilingUSD, func(request dataforseo.DoBudgetedRequest) error {
+	err := s.provider.client.DoBudgeted(ctx, organizationID, spend.AIVisibility, dataforseo.BrandLookupCeilingUSD(len(fetched), len(groups) > 0), func(request dataforseo.DoBudgetedRequest) error {
 		budgetCtx := context.WithValue(ctx, budgetRequestContextKey{}, request)
 		// One call answers for every platform. When it finds no mention, the
 		// lookup stops here instead of buying empty samples.
@@ -496,13 +491,10 @@ func (s *Service) loadPrompt(ctx context.Context, organizationID, projectID stri
 	if len(uncachedModels) == 0 {
 		return result, nil
 	}
-	callLimit := len(uncachedModels)
-	if in.WebSearch {
-		callLimit *= 2 // one bounded retry is made when the first answer did not search
-	}
 	uncachedInput := in
 	uncachedInput.Models = uncachedModels
-	err := s.provider.client.DoBudgeted(ctx, organizationID, spend.AIVisibility, float64(callLimit)*dataforseo.AIResponseCeilingUSD, func(request dataforseo.DoBudgetedRequest) error {
+	// One bounded retry is made when a web-search answer did not search.
+	err := s.provider.client.DoBudgeted(ctx, organizationID, spend.AIVisibility, dataforseo.PromptExplorerCeilingUSD(len(uncachedModels), in.WebSearch), func(request dataforseo.DoBudgetedRequest) error {
 		var runErr error
 		var fresh PromptExplorerResult
 		fresh, runErr = s.explorePrompt(ctxWithBudget(ctx, request), organizationID, projectID, uncachedInput)

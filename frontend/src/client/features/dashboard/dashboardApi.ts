@@ -94,6 +94,36 @@ export async function refreshDashboardBacklinkSnapshot({ data }: ProjectInput) {
   );
 }
 
+const layoutCardSchema = z.object({ id: z.string(), hidden: z.boolean() });
+export type DashboardLayoutCard = z.infer<typeof layoutCardSchema>;
+
+/** The member's saved card layout, or null when they kept the default. */
+export async function getDashboardLayout({ data }: ProjectInput) {
+  projectInput.projectId.parse(data.projectId);
+  const out = await apiRequest(
+    `/api/v1/projects/${encodeURIComponent(data.projectId)}/dashboard/layout/get`,
+    z.object({ cards: z.array(layoutCardSchema).nullable() }),
+    "POST",
+    {},
+  );
+  return out.cards;
+}
+
+/** Saves the layout; an empty list resets to the default. */
+export async function saveDashboardLayout({
+  data,
+}: {
+  data: { projectId: string; cards: DashboardLayoutCard[] };
+}) {
+  projectInput.projectId.parse(data.projectId);
+  return apiRequest(
+    `/api/v1/projects/${encodeURIComponent(data.projectId)}/dashboard/layout/save`,
+    z.object({ cards: z.array(layoutCardSchema) }),
+    "POST",
+    { cards: data.cards },
+  );
+}
+
 export async function markDashboardStepClicked({
   data,
 }: {

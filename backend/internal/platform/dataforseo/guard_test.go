@@ -78,6 +78,39 @@ func TestDoSendsNothingWhenTheGuardRefuses(t *testing.T) {
 	}
 }
 
+// A page opened from a saved link must not buy anything: a paid call is
+// refused before the hold, while free reference lookups still work.
+func TestCachedOnlyRequestsNeverBuyProviderWork(t *testing.T) {
+	requests := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requests++
+		_, _ = w.Write([]byte(`{"status_code":20000,"tasks":[{"status_code":20000,"cost":0,"path":["v3","serp","google","locations"]}]}`))
+	}))
+	defer server.Close()
+	recorder := &testRecorder{}
+	guard := &spendtest.Guard{}
+	client := guardedClient(t, server, recorder, guard, 0)
+	ctx := spend.WithCachedOnly(context.Background())
+
+	_, err := client.Do(ctx, "org", spend.Backlinks, http.MethodPost, "/v3/backlinks/summary/live", []byte(`[{"target":"example.com"}]`), false)
+	if !errors.Is(err, spend.ErrRefreshRequired) || !errors.Is(err, ErrBillingIssue) {
+		t.Fatalf("paid Do() error = %v, want ErrRefreshRequired wrapped in ErrBillingIssue", err)
+	}
+	err = client.DoBudgeted(ctx, "org", spend.AIVisibility, 1, func(DoBudgetedRequest) error {
+		t.Fatal("budgeted work ran for a cached-only request")
+		return nil
+	})
+	if !errors.Is(err, spend.ErrRefreshRequired) {
+		t.Fatalf("DoBudgeted() error = %v, want ErrRefreshRequired", err)
+	}
+	if requests != 0 || len(guard.Held()) != 0 {
+		t.Fatalf("cached-only paid work reached the provider: %d requests, %d holds", requests, len(guard.Held()))
+	}
+	if _, err = client.Do(ctx, "org", spend.Reference, http.MethodGet, "/v3/serp/google/locations/in", nil, true); err != nil || requests != 1 {
+		t.Fatalf("free lookup under cached-only: err=%v requests=%d, want it sent", err, requests)
+	}
+}
+
 func TestDoHoldsTheCeilingAndSettlesTheRealCost(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = io.WriteString(w, `{"tasks":[{"path":["v3","backlinks","summary","live"],"cost":0.02},{"path":["v3","backlinks","summary","live"],"cost":0.0201}]}`)

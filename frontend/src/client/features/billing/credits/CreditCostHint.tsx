@@ -45,7 +45,11 @@ export function CreditCostHint({
   return (
     <p className={cn("text-xs text-muted-foreground", className)}>
       {cost
-        ? `About ${formatCredits(cost.credits)} credits per ${cost.unit} · `
+        ? `About ${formatCredits(cost.credits)} credits per ${cost.unit}${
+            cost.maxCredits
+              ? ` (at most ${formatCredits(cost.maxCredits)})`
+              : ""
+          } · `
         : null}
       {formatCredits(usage.balanceCredits)} left
     </p>

@@ -29,6 +29,7 @@ import {
 } from "./backlinksFilterTypes";
 import type { BacklinksFiltersState } from "./useBacklinksFilters";
 import { toScopeSearchParam } from "@/shared/researchScope";
+import { allowPurchase, purchaseAllowed } from "@/client/lib/paidIntent";
 
 type UseBacklinksPageDataArgs = {
   projectId: string;
@@ -87,6 +88,11 @@ export function useBacklinksPageData({
   const rowsMode = view === "all" ? "as_is" : "one_per_domain";
   const targetReady = Boolean(target);
   const baseQueryKeyParts = [projectId, scope, target] as const;
+  // Without a Search or Refresh click in this session, ask for cached data
+  // only: an expired report then shows Refresh instead of buying unasked.
+  // Read at request time, so a Refresh click applies to the refetch it starts.
+  const intentKey = backlinksIntentKey(projectId, target, scope);
+  const cachedOnly = () => !purchaseAllowed(intentKey);
   const pageInputBase = { projectId, target, scope, page, pageSize };
   // Keep the current table on screen while paging, sorting or filtering the
   // same target. A new target shows the loading state instead. Each tab has
@@ -109,7 +115,13 @@ export function useBacklinksPageData({
     refetchOnReconnect: false,
     refetchOnWindowFocus: false,
     staleTime: BACKLINKS_QUERY_STALE_TIME_MS,
-    queryFn: () => getBacklinksOverview({ projectId, target, scope }),
+    queryFn: () =>
+      getBacklinksOverview({
+        projectId,
+        target,
+        scope,
+        cachedOnly: cachedOnly(),
+      }),
   });
 
   // Each table is a paid call. It waits for the overview and is skipped when
@@ -156,6 +168,7 @@ export function useBacklinksPageData({
     queryFn: () =>
       getBacklinksRows({
         ...pageInputBase,
+        cachedOnly: cachedOnly(),
         sortField: rowsSort.field,
         sortOrder: rowsSort.order,
         filters: rowsFilters,
@@ -193,6 +206,7 @@ export function useBacklinksPageData({
     queryFn: () =>
       getBacklinksReferringDomains({
         ...pageInputBase,
+        cachedOnly: cachedOnly(),
         sortField: domainsSort.field,
         sortOrder: domainsSort.order,
         filters: domainsFilters,
@@ -228,6 +242,7 @@ export function useBacklinksPageData({
     queryFn: () =>
       getBacklinksTopPages({
         ...pageInputBase,
+        cachedOnly: cachedOnly(),
         sortField: pagesSort.field,
         sortOrder: pagesSort.order,
         filters: pagesFilters,
@@ -249,8 +264,15 @@ export function useBacklinksPageData({
     activeTabFilterError ??
     getBacklinksErrorMessage(activeTabQuery.error, "Could not load this tab.");
 
+  // Refresh or Retry is the customer asking to buy this report again.
+  const buyFresh = (query: { refetch: () => unknown }) => {
+    allowPurchase(intentKey);
+    void query.refetch();
+  };
+
   return {
     activeTabErrorMessage,
+    buyFresh,
     activeTabFilterError,
     activeTabQuery,
     overviewErrorMessage,
@@ -280,4 +302,13 @@ export function navigateToBacklinksSearch(
     }),
     replace: true,
   });
+}
+
+/** The paid-intent key of one Backlinks report (see paidIntent). */
+export function backlinksIntentKey(
+  projectId: string,
+  target: string | undefined,
+  scope: string | undefined,
+) {
+  return `backlinks:${projectId}:${scope ?? ""}:${target ?? ""}`;
 }

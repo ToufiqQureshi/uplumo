@@ -75,6 +75,14 @@ refusal, a replay or a customer who left still fails the request.
 The HTTP server's write timeout (150s) outlasts two provider calls (60s each),
 and a budgeted operation stops starting calls after 120s.
 
+## Saved links never buy
+
+A request carrying `X-Cached-Only: 1` is answered from cache or refused with
+`409 refresh_required` before any hold (`spend.WithCachedOnly`). The
+Backlinks and Domain screens send it unless the customer clicked Search or
+Retry in this session, so reopening an expired report costs nothing until the
+customer asks. Details: `backend/internal/platform/dataforseo/decision.md`.
+
 ## Field-delivery audit
 
 The [dated field audit](../audits/2026-10-21-dataforseo-field-delivery.md) maps

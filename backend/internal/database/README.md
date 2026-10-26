@@ -45,4 +45,6 @@ Migration 41 adds pending-outcome and settlement metadata to credit reservations
 
 Migration 42 enables RLS on non-extension tables in the application schema and revokes PUBLIC/anon/authenticated privileges on its tables, views and sequences. It also removes the migration owner's default client privileges for future objects. The Go database role must own the tables or have BYPASSRLS; browser traffic uses Go session/project authorization, never direct Data API table access. Storage API service-role uploads are separate. Rollback retains these protections. `private_storage_test.go` verifies fresh migration, owner reads, client read denial after accidental grants, and TRUNCATE privilege removal.
 
+Migration 44 adds `go_dashboard_layouts`: one card layout per member per project (`internal/dashboard`), cascading on user and project deletion, with RLS on and no client grants.
+
 Known costs after a zero estimate use a zero-amount outcome reservation (migration 43), committed before staff top-up, expiry or customer charging. The existing settlement/reconciler charges available credits and records provider spend once; charging failure cannot turn it into an ordinary refundable hold.

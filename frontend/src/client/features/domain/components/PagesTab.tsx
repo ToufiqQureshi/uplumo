@@ -1,3 +1,5 @@
+import { allowPurchase } from "@/client/lib/paidIntent";
+import { domainIntentKey } from "@/client/features/domain/domainApi";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { QueryError } from "@/client/components/QueryState";
 import { TablePagination } from "@/client/components/table/TablePagination";
@@ -177,7 +179,11 @@ export function PagesTab({
           <QueryError
             error={query.error}
             fallback="Failed to load pages."
-            onRetry={() => void query.refetch()}
+            onRetry={() => {
+              // Retry is the customer asking to buy this report again.
+              allowPurchase(domainIntentKey(projectId, target));
+              void query.refetch();
+            }}
             isRetrying={isFetching}
           />
         ) : null

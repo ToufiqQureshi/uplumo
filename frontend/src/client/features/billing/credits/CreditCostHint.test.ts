@@ -88,6 +88,16 @@ describe("CreditCostHint", () => {
     expect(brandLookup).not.toContain("128");
   });
 
+  it("shows the maximum next to the typical cost when there is one", () => {
+    usageState.data = {
+      ...proUsage,
+      costs: [{ ...proUsage.costs[0], maxCredits: 1024 }],
+    };
+    expect(render()).toContain(
+      "About 26 credits per keyword search (at most 1,024) · 7,420 left",
+    );
+  });
+
   it("still shows the balance for a feature without a listed cost", () => {
     usageState.data = { ...proUsage, costs: [] };
     expect(render()).toContain("7,420 left");

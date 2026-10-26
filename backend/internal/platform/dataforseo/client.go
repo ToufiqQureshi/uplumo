@@ -175,8 +175,12 @@ func (c *Client) Do(ctx context.Context, organizationID string, feature spend.Fe
 	}
 	// Each distinct request is its own purchase under the action's key, so an
 	// action that buys several results is not refused as a replay of its first.
+	estimate := EstimateUSD(path, body)
+	if estimate > 0 && spend.CachedOnly(ctx) {
+		return nil, fmt.Errorf("%w: %w", ErrBillingIssue, spend.ErrRefreshRequired)
+	}
 	key := spend.ScopedKey(ctx, []byte(method), []byte(path), body)
-	hold, err := c.guard.Hold(ctx, spend.Request{OrganizationID: organizationID, Feature: feature, Endpoint: path, IdempotencyKey: key, EstimateUSD: EstimateUSD(path, body)})
+	hold, err := c.guard.Hold(ctx, spend.Request{OrganizationID: organizationID, Feature: feature, Endpoint: path, IdempotencyKey: key, EstimateUSD: estimate})
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrBillingIssue, err)
 	}
@@ -204,6 +208,9 @@ func (c *Client) Do(ctx context.Context, organizationID string, feature spend.Fe
 func (c *Client) DoBudgeted(ctx context.Context, organizationID string, feature spend.Feature, ceilingUSD float64, work func(DoBudgetedRequest) error) error {
 	if strings.TrimSpace(organizationID) == "" || len(organizationID) > 128 || strings.TrimSpace(string(feature)) == "" || math.IsNaN(ceilingUSD) || math.IsInf(ceilingUSD, 0) || ceilingUSD <= 0 || work == nil {
 		return fmt.Errorf("%w: invalid budgeted operation", ErrInvalidRequest)
+	}
+	if spend.CachedOnly(ctx) {
+		return fmt.Errorf("%w: %w", ErrBillingIssue, spend.ErrRefreshRequired)
 	}
 	key := spend.ScopedKey(ctx, []byte("budgeted"), []byte(feature), []byte(strconv.FormatFloat(ceilingUSD, 'g', -1, 64)))
 	hold, err := c.guard.Hold(ctx, spend.Request{OrganizationID: organizationID, Feature: feature, Endpoint: "multi", IdempotencyKey: key, EstimateUSD: ceilingUSD})

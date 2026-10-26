@@ -5,9 +5,12 @@ import { BacklinksSearchCard } from "./BacklinksSearchCard";
 import { BacklinksBody } from "./BacklinksPageContent";
 import type { BacklinksPageProps } from "./backlinksPageTypes";
 import {
+  backlinksIntentKey,
   navigateToBacklinksSearch,
   useBacklinksPageData,
 } from "./useBacklinksPageData";
+import { allowPurchase } from "@/client/lib/paidIntent";
+import { toScopeSearchParam } from "@/shared/researchScope";
 import { useBacklinksDomainExpansion } from "./useBacklinksDomainExpansion";
 import { useBacklinksFilters } from "./useBacklinksFilters";
 import { useBacklinksSearchHistory } from "@/client/hooks/useBacklinksSearchHistory";
@@ -133,6 +136,14 @@ export function BacklinksPage({
         <BacklinksSearchCard
           initialValues={data.searchCardInitialValues}
           onSubmit={(values) => {
+            // Search is the customer asking to buy this report.
+            allowPurchase(
+              backlinksIntentKey(
+                projectId,
+                values.target,
+                toScopeSearchParam(values.target, values.scope),
+              ),
+            );
             searchTabs.openTab({ type: "backlinks", ...values });
             navigateToBacklinksSearch(navigate, values);
             addSearch({ target: values.target, scope: values.scope });

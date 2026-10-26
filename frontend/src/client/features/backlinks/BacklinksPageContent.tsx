@@ -163,7 +163,7 @@ export function BacklinksBody({
         {tabControls}
         <BacklinksErrorState
           errorMessage={data.overviewErrorMessage}
-          onRetry={() => void data.overviewQuery.refetch()}
+          onRetry={() => data.buyFresh(data.overviewQuery)}
           isRetrying={data.overviewQuery.isFetching}
         />
       </>
@@ -242,7 +242,7 @@ export function BacklinksBody({
             onRetryTab={
               data.activeTabFilterError
                 ? undefined
-                : () => void data.activeTabQuery.refetch()
+                : () => data.buyFresh(data.activeTabQuery)
             }
             isTabRetrying={data.activeTabQuery.isFetching}
             exportTarget={overviewData.displayTarget || searchState.target}

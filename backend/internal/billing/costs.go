@@ -19,6 +19,9 @@ type ActionCost struct {
 	// such as a brand lookup and a prompt explorer run. It is empty when the
 	// feature has one action.
 	Action string `json:"action,omitempty"`
+	// MaxCredits is the most one unit can charge (its hold), shown before the
+	// action where it is far above the typical cost. Zero when not shown.
+	MaxCredits int64 `json:"maxCredits,omitempty"`
 }
 
 // typicalUSD is the provider cost of one typical action, per feature. The
@@ -29,22 +32,25 @@ type ActionCost struct {
 // a brand lookup is the totals task
 // ($0.101) and one prompt sample ($0.10 + $0.001 a row; $0.143-0.182 measured
 // for an 80-mention brand). A brand AI never mentions stops after the totals
-// ($0.101); the US market adds ChatGPT's sample.
+// ($0.101); the US market adds ChatGPT's sample. maxUSD is set for the AI
+// visibility actions, whose holds are several times their typical cost; it is
+// the worst case (US market, competitors, web search).
 var typicalUSD = []struct {
 	feature spend.Feature
 	action  string
 	unit    string
 	usd     float64
+	maxUSD  float64
 }{
-	{spend.RankTracking, "", "keyword check (top 30, scheduled)", dataforseo.SerpCostUSD(30, true)},
-	{spend.KeywordResearch, "", "keyword search", 0.047},
-	{spend.DomainResearch, "", "domain report tab", 0.031},
+	{spend.RankTracking, "", "keyword check (top 30, scheduled)", dataforseo.SerpCostUSD(30, true), 0},
+	{spend.KeywordResearch, "", "keyword search", 0.047, 0},
+	{spend.DomainResearch, "", "domain report tab", 0.031, 0},
 	// Summary $0.024 + history $0.024 + the first 1,000 table rows $0.06.
-	{spend.Backlinks, "", "backlink report", 0.108},
-	{spend.AIVisibility, ActionPromptExplorer, "prompt on 4 AI models", 0.1},
-	{spend.AIVisibility, ActionBrandLookup, "brand lookup (less when AI has no data, more with competitors)", 0.29},
-	{spend.AIAssistant, "", "AI assistant reply", 0.03},
-	{spend.AIWriting, "", "AI writing action", 0.01},
+	{spend.Backlinks, "", "backlink report", 0.108, 0},
+	{spend.AIVisibility, ActionPromptExplorer, "prompt on 4 AI models", 0.1, dataforseo.PromptExplorerCeilingUSD(4, true)},
+	{spend.AIVisibility, ActionBrandLookup, "brand lookup (less when AI has no data, more with competitors)", 0.29, dataforseo.BrandLookupCeilingUSD(2, true)},
+	{spend.AIAssistant, "", "AI assistant reply", 0.03, 0},
+	{spend.AIWriting, "", "AI writing action", 0.01, 0},
 }
 
 // Actions of the AI visibility feature that ActionCost tells apart.
@@ -57,7 +63,7 @@ const (
 func ActionCosts() []ActionCost {
 	out := make([]ActionCost, len(typicalUSD))
 	for i, c := range typicalUSD {
-		out[i] = ActionCost{Feature: c.feature, Action: c.action, Unit: c.unit, Credits: CreditsForUSD(c.usd)}
+		out[i] = ActionCost{Feature: c.feature, Action: c.action, Unit: c.unit, Credits: CreditsForUSD(c.usd), MaxCredits: CreditsForUSD(c.maxUSD)}
 	}
 	return out
 }

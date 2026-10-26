@@ -3,7 +3,7 @@ import { installGrowthFixtures } from "./search-growth.fixtures";
 
 test("search growth stays explicit and carries evidence through save, analyst and editor", async ({
   page,
-}) => {
+}, testInfo) => {
   const { requests, paid, chatModes, growthInputs } =
     await installGrowthFixtures(page);
   await page.setViewportSize({ width: 1280, height: 900 });
@@ -109,7 +109,7 @@ test("search growth stays explicit and carries evidence through save, analyst an
   ).toBeVisible();
   expect(paid).toEqual([]);
   await page.screenshot({
-    path: "/workspace/search-growth-desktop.png",
+    path: testInfo.outputPath("search-growth-desktop.png"),
     fullPage: true,
   });
   await page.setViewportSize({ width: 390, height: 844 });
@@ -117,7 +117,7 @@ test("search growth stays explicit and carries evidence through save, analyst an
     page.getByRole("button", { name: "Refresh analysis" }),
   ).toBeVisible();
   await page.screenshot({
-    path: "/workspace/search-growth-mobile.png",
+    path: testInfo.outputPath("search-growth-mobile.png"),
     fullPage: true,
   });
   await page
@@ -151,7 +151,7 @@ test("search growth stays explicit and carries evidence through save, analyst an
 for (const width of [320, 390]) {
   test(`mobile investigations stay readable at ${width}px without a wider page`, async ({
     page,
-  }) => {
+  }, testInfo) => {
     const { paid, requests } = await installGrowthFixtures(page);
     await page.setViewportSize({ width, height: 844 });
     await page.goto("/p/e2e-project/search-performance");
@@ -186,7 +186,7 @@ for (const width of [320, 390]) {
     await expect(journey.getByText("75.0%", { exact: true })).toBeVisible();
     await journey.scrollIntoViewIfNeeded();
     await page.screenshot({
-      path: `/workspace/search-growth-journey-${width}.png`,
+      path: testInfo.outputPath(`search-growth-journey-${width}.png`),
       fullPage: false,
     });
     await page.getByText("Performance by device", { exact: true }).click();
