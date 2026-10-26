@@ -24,6 +24,12 @@ import {
   trackingKey,
 } from "@/client/features/ai-search/trackingApi";
 import {
+  aiNextStep,
+  citedInstead,
+  latestChecks,
+  shareChange,
+} from "@/client/features/dashboard/aiVisibilityInsight";
+import {
   getLatestRankResults,
   getRankTrackingConfigSummaries,
 } from "@/client/features/rank-tracking/rankTrackingApi";
@@ -112,19 +118,12 @@ export function AnalyticsSummaryCard({ projectId }: { projectId: string }) {
           label="AI share"
           value={formatShare(aiShareOfVisitors(summary.channels))}
         />
-        <StatTile
-          label={summary.goalEventName ? "Goal completions" : "Goal not set"}
-          value={
-            summary.goalEventName
-              ? count.format(summary.conversionSessions)
-              : "—"
-          }
-        />
+        <StatTile label="Pageviews" value={count.format(summary.pageviews)} />
       </div>
       <p className="mt-4 text-sm text-muted-foreground">
         {topAi
           ? `${topAi.label} sends you the most AI visitors.`
-          : "No AI assistant has sent a visitor yet. AI visibility below shows where you are mentioned."}
+          : "No AI assistant has sent a visitor yet. The AI visibility card shows where you are mentioned."}
       </p>
     </CardShell>
   );
@@ -138,6 +137,15 @@ export function AiVisibilityCard({ projectId }: { projectId: string }) {
     staleTime: 30_000,
   });
   const state = query.data;
+  const [latest, previous] = latestChecks(state?.runs ?? []);
+  // Reading a saved check's answers is free; the same query backs the
+  // tracker page, so opening it afterwards uses the cache.
+  const answers = useQuery({
+    queryKey: [...trackingKey(projectId), "answers", latest?.id],
+    queryFn: () => trackingApi.answers(projectId, latest!.id),
+    enabled: Boolean(latest),
+    staleTime: 30_000,
+  });
   const action = (
     <Link
       to="/p/$projectId/prompt-tracking"
@@ -162,9 +170,6 @@ export function AiVisibilityCard({ projectId }: { projectId: string }) {
       </CardShell>
     );
   }
-  const latest = state.runs.find(
-    (run) => run.status === "completed" && run.answered > 0,
-  );
   if (!latest) {
     return (
       <CardShell title="AI visibility">
@@ -191,12 +196,8 @@ export function AiVisibilityCard({ projectId }: { projectId: string }) {
 
   const mentionRate = latest.mentioned / latest.answered;
   const citationRate = latest.cited / latest.answered;
-  const next =
-    mentionRate === 0
-      ? "AI did not name you in any answer. Write a page that answers these questions directly."
-      : citationRate === 0
-        ? "AI names you but links to other sites. Add a clear answer and FAQ on your own page so AI can cite it."
-        : "AI names and cites you. Keep these pages fresh and track more questions.";
+  const next = aiNextStep(mentionRate, citationRate);
+  const instead = citedInstead(answers.data ?? []);
   return (
     <CardShell
       title="AI visibility"
@@ -206,10 +207,56 @@ export function AiVisibilityCard({ projectId }: { projectId: string }) {
       action={action}
     >
       <div className="grid grid-cols-2 gap-3">
-        <StatTile label="Mentioned" value={formatShare(mentionRate)} />
-        <StatTile label="Cited" value={formatShare(citationRate)} />
+        <StatTile
+          label="Mentioned"
+          value={formatShare(mentionRate)}
+          hint={shareChange(
+            mentionRate,
+            previous && previous.mentioned / previous.answered,
+          )}
+        />
+        <StatTile
+          label="Cited"
+          value={formatShare(citationRate)}
+          hint={shareChange(
+            citationRate,
+            previous && previous.cited / previous.answered,
+          )}
+        />
       </div>
-      <p className="mt-4 text-sm text-muted-foreground">{next}</p>
+      {instead.length > 0 ? (
+        <div className="mt-4">
+          <p className="label-mono text-muted-foreground">
+            AI cites instead of you
+          </p>
+          <ul className="mt-1 space-y-0.5 text-sm">
+            {instead.map((row) => (
+              <li key={row.domain} className="flex justify-between gap-2">
+                <span className="truncate">{row.domain}</span>
+                <span className="shrink-0 tabular-nums text-muted-foreground">
+                  {row.answersCiting} of {latest.answered} answers
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      <p className="mt-4 text-sm text-muted-foreground">{next.text}</p>
+      <Button
+        className="mt-3"
+        size="sm"
+        variant="outline"
+        nativeButton={false}
+        render={
+          next.to === "content-editor" ? (
+            <Link to="/p/$projectId/content-editor" params={{ projectId }} />
+          ) : (
+            <Link to="/p/$projectId/prompt-tracking" params={{ projectId }} />
+          )
+        }
+      >
+        {next.label}
+      </Button>
     </CardShell>
   );
 }

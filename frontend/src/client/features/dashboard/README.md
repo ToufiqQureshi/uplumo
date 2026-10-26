@@ -1,7 +1,7 @@
 # Project dashboard
 
 The first page of a project: shortcuts, the setup checklist and a grid of
-cards (Google Search, visitors and AI traffic, AI visibility, rank tracking,
+cards (AI visibility first, then Google Search, visitors and AI traffic, rank tracking,
 site audit, backlinks, Google Analytics). Each member can hide, show and
 reorder the cards with **Customize**; the layout is saved per member per
 project.

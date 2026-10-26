@@ -1,10 +1,14 @@
 import type { DashboardLayoutCard } from "@/client/features/dashboard/dashboardApi";
 
-/** Every card the dashboard can show, in default order. */
+/**
+ * Every card the dashboard can show, in default order. AI visibility leads:
+ * whether AI cites the site, and who it cites instead, is Uplumo's core
+ * question (FOUNDER.md).
+ */
 export const DASHBOARD_CARDS = [
+  { id: "ai_visibility", label: "AI visibility" },
   { id: "gsc", label: "Search performance (Google)" },
   { id: "analytics", label: "Visitors and AI traffic" },
-  { id: "ai_visibility", label: "AI visibility" },
   { id: "rank_tracking", label: "Rank tracking" },
   { id: "audit", label: "Site audit" },
   { id: "backlinks", label: "Backlink pulse" },

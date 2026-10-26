@@ -57,7 +57,7 @@ test("dashboard visits never refresh paid backlinks automatically", async ({
   // Every request a dashboard visit makes; none may reach an endpoint that
   // buys provider work (the read-only cards use saved data only).
   const paidPaths =
-    /\/(ai-search\/(tracking\/run|brand-lookup|prompt-explorer)|rank-tracking\/(checks\/start|keywords\/metrics\/refresh)|keywords\/(research|serp)|backlinks\/|domain\/|sam\/sessions\/chat)/u;
+    /\/(ai-search\/(tracking\/run(?![s/])|brand-lookup|prompt-explorer)|rank-tracking\/(checks\/start|keywords\/metrics\/refresh)|keywords\/(research|serp)|backlinks\/|domain\/|sam\/sessions\/chat)/u;
   const apiCalls: string[] = [];
   page.on("request", (request) => {
     const path = new URL(request.url()).pathname;

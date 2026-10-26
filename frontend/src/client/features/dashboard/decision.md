@@ -59,3 +59,10 @@ Combines project onboarding state, audit/backlink summaries and GA4 overview car
 - **Why:** Old cached tabs still submit the previous empty automatic request. A completed mutation error otherwise survives a project switch and misrepresents the new project's state.
 - **Preserve:** Server authorization, plan/credit checks and zero automatic retries remain required. Internal project switching clears only local view/mutation state; server queries remain project-scoped.
 - **Trace:** `dashboardApi.ts`, route `p/$projectId/index.tsx`, API unit test and the real SPA project-switch browser regression in `dashboard-spend.spec.ts`. The marker blocks legacy callers, not malicious clients claiming a click.
+
+## AI visibility card answers who AI cites instead
+
+- **Decision:** AI visibility is the first default card. It reads the latest check that has answers, completed or partial, and shows mentioned and cited shares with the change from the previous check, the top 3 domains AI cited instead of the site (from that check's saved citations), and a next step with a button to the page that fixes it (Content Editor or the tracker). The visitors card shows pageviews in place of goal completions.
+- **Why:** The owner wants the dashboard to answer the product's core question (`FOUNDER.md`): is the site cited, who is cited instead, and what to do. Production checks end `partial` when one engine fails, so the old `completed`-only filter showed an empty card over real data. Goal data was removed from analytics with the Missed Enquiries Finder, which broke the type check after merging `main`.
+- **Preserve:** Opening the dashboard buys nothing: the answers read is a stored GET shared with the tracker page's query key. `dashboard-spend.spec.ts` matches the paid `tracking/run` POST only, not `tracking/runs/{id}` reads. Own-brand citations never count as "cited instead".
+- **Trace:** `aiVisibilityInsight.ts` and its test (partial-run and own-brand mutations both fail it), `InsightCards.tsx`, `dashboardLayout.ts`, `../../../../tests/dashboard-spend.spec.ts`. Not run: the Playwright spec (not in CI) and a check against production data.

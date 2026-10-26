@@ -13,7 +13,7 @@
 3. Each visible card loads its own data from saved records:
    - Search performance: GSC report, last 28 days.
    - Visitors and AI traffic: `analytics/summary`, last 30 days.
-   - AI visibility: `ai-search/tracking` state, latest completed check.
+   - AI visibility: `ai-search/tracking` state (latest completed or partial check and the one before), then `GET ai-search/tracking/runs/{runId}` for that check's saved answers to list the domains AI cited instead. Both are free reads; 0 paid calls.
    - Rank tracking: `rank-tracking/configs/summaries`, then
      `results/latest` for the first active tracker with keywords.
    - Site audit and backlinks: `dashboard/overview`.
