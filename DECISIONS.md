@@ -326,3 +326,10 @@ Owner-approved scope: one focused PR adds optional 180-day browser recognition a
 - **Decision:** The owner chose to show the maximum credits an action can charge next to its typical cost, instead of capping the charge at the typical figure ([credits audit](docs/audits/2026-10-25-credits-audit.md) F1). Not built yet; it ships as its own PR.
 - **Why:** A Brand Lookup shows about 372 credits but can hold up to 2,240; the customer should see the most they can pay before clicking.
 - **Preserve:** Customers are charged the real cost, never above the shown maximum. The 3 active subscriptions in production are the owner's test accounts.
+
+## Faster CI: Go tests in four shards (26 October)
+
+- **Decision:** `.github/workflows/ci.yml` runs lint, vet, staticcheck, govulncheck and deadcode in one job (`Go checks`) and the Go tests in four parallel jobs (`Go tests shard 0-3`), each with its own Postgres and Redis. Shard 0 runs `internal/emailauth` (57 of 168 test-seconds); the others split the remaining packages by position in `go list`. Each shard compiles its tests in parallel first, then runs them with `-p 1 -race`.
+- **Why:** The owner asked for a much faster CI. The single test step took 318 s, of which only 168 s was tests: `-p 1` (needed because packages share one database) also serialised compiling.
+- **Preserve:** Every package is still tested with the race detector against real Postgres and Redis; a new package is picked up automatically. The removed separate billing step ran the same billing tests again. The unused `coverage.out` file is no longer written. Local commands in `CLAUDE.md` section 5 are unchanged.
+- **Trace:** `.github/workflows/ci.yml`; timings from the 26 Oct `main` run. Agent/CI rule change: called out in the PR.
