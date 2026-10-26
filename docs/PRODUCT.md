@@ -48,10 +48,9 @@ These are the complaints we exist to fix (2026 research):
 
 Full list and status: `ROADMAP.md`.
 
-0. **"Why not cited, and what to fix"** (not built): joins AI Visibility's
-   cited pages and competitors with Site Audit and content gaps into a
-   ranked fix list. This is the next feature after the credits and
-   DataForSEO audits (`FOUNDER.md` section 1a).
+0. **"Why not cited, and what to fix"** (v1 shipped): explains from saved
+   AI answers which sites AI used instead and what to do, with AI readiness
+   checks in Site Audit. The core product: grow it first (`FOUNDER.md`).
 1. **Uplumo Analytics**: our own privacy-friendly tracker (GA4/PostHog
    style) with first-class **AI traffic detection** for ChatGPT,
    Perplexity, Gemini, Claude and Copilot, including recovery of the

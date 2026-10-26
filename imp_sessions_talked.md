@@ -17,6 +17,17 @@ feelings, business calls, priorities, corrections. Read it after
 
 ---
 
+## 26 Oct 2026 (evening): "Saare docs outdated" (Claude, PR #231)
+
+- Owner: "Saare docs outdated hain. Razorpay test nahi, live mode pe hai.
+  Docs kaam ke saath update nahi hue." He expects docs to change in the same
+  PR as the work, every time.
+- Found: Razorpay docs already say live; the real staleness was that ~20 PRs
+  merged on 26 Oct (audits, max credits, "why not cited" v1, Search
+  Performance/Analytics) while `README`, `FOUNDER`, `ROADMAP`, `PRODUCT`,
+  `WEEKLY` still said "not built". All five fixed in #231.
+- Not done yet: a line-by-line check of the ~300 feature docs against code.
+
 ## 26 Oct 2026: header light-mode access (Codex)
 
 - Owner asked to add light mode in the header to the existing PR.

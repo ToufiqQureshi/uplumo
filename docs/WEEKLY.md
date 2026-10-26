@@ -5,19 +5,30 @@ Read the latest week first; rules are in `CLAUDE.md` section 7.
 
 ## 24–30 Oct 2026 (in progress, updated 26 Oct)
 
-**Merged:** #208: `FOUNDER.md` (owner vision, worries, priorities, product
-map), `imp_sessions_talked.md` (important owner talks), credits audit.
-`CLAUDE.md` and `AGENTS.md` now make every agent read both files.
+**Merged:**
+
+- Vision and audits: #208 (`FOUNDER.md`, `imp_sessions_talked.md`, credits
+  audit), #209 (DataForSEO audit; AI Overview answers paid and never shown,
+  fixed), #211 (wiring/tests/size audit, one dead route removed), #217
+  (owner's 26 Oct decisions).
+- Why not cited and AI readiness: #219, #221, #222, #220, #223, #227, #224.
+- Value on existing pages: #197, #198, #214 (dashboard), #202–#205, #225
+  (Search Performance: what changed, why, what to fix), #204, #226
+  (Analytics).
+- Money safety: #210 (max credits shown), #216 (saved reports never rebought
+  without a click). CI: #212 (four Go test shards), #215 (paid-call browser
+  tests). Content: #218 (Ubersuggest review), #230 (10 guides, theme menu).
 
 **Decisions:** customer = Indian businesses, small to big; goal = first 10
-paying customers; order = credits audit → DataForSEO audit → "why not cited"
-feature → other audits; no new features until then.
+paying customers; show max credits; hold only the typical cost and charge
+the actual (not built); test workspace tracker stays daily.
 
-**Money:** credits audit found production provider spend of $4.24 fully
-charged back; open owner decision on charges above the shown cost (F1).
+**Money:** production provider spend $4.24 (DataForSEO $4.17), all from the
+owner's 3 test workspaces, fully charged back.
 
 **Docs changed:** `FOUNDER.md`, `imp_sessions_talked.md`, `docs/PRODUCT.md`,
-`ROADMAP.md`, `CLAUDE.md`, `AGENTS.md`, `DECISIONS.md`, credits audit.
+`ROADMAP.md`, `README.md`, `CLAUDE.md`, `AGENTS.md`, `DECISIONS.md`, three
+audits.
 
 ## 17–23 Oct 2026 (updated 23 Oct; week closes Friday 23 Oct)
 

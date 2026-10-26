@@ -112,11 +112,15 @@ This is a shortlist for product discovery, not a claim that competitors lack the
 
 Owner's order (25 Oct 2026, `FOUNDER.md` section 1a). New features wait.
 
-1. ✅ Credits audit (`docs/audits/2026-10-25-credits-audit.md`). Owner still
-   decides F1 (show the max, or cap the charge) and F5.
-2. ⏳ DataForSEO audit: real paid calls per click vs. each `flow.md`.
-3. ⏳ Build "why not cited, and what to fix".
-4. ⏳ Wiring, test-strength and code/docs-size audits.
+1. ✅ Credits audit (#208). F1: max credits shown before Brand Lookup and
+   Prompt Explorer (#210). F5: the 3 active subscriptions are the owner's
+   test accounts.
+2. ✅ DataForSEO audit (#209, `docs/audits/2026-10-26-dataforseo-audit.md`).
+3. 🔨 "Why not cited, and what to fix": v1 shipped (#219, #222, Site Audit
+   AI readiness #220, #223, #227). Grow this next.
+4. ✅ Wiring, test-strength and code-size audit (#211).
+5. ⏳ Hold only the typical cost, charge the actual cost; Uplumo absorbs a
+   shortfall (owner, 26 Oct, `DECISIONS.md`). Not built.
 
 Still open from before: verify live Razorpay plan IDs and the
 subscribe/renew/cancel flow; walk every production page as a real user;
@@ -174,11 +178,9 @@ Secrets go into Railway variables only, never into the repo or chat.
 
 ## Open decisions for the owner
 
-- Credits audit F1: Brand Lookup shows "about 372 credits" but may charge up
-  to its hold (2,240 in the US with competitors). Show the max, or cap the
-  charge at the shown cost?
-- Credits audit F5: confirm the 3 `active` subscriptions in production are
-  the owner's own or test workspaces.
+- The test workspace's daily AI Overview tracker costs about $5.7/month of
+  real DataForSEO spend: keep daily (owner, 26 Oct: "stays daily") or revisit
+  once paying customers arrive.
 
 - The typical costs on Billing (`backend/internal/billing/costs.go`) are from
   published prices; check them against the first real DataForSEO and
