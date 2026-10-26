@@ -136,6 +136,7 @@ func applyAnalysis(page *CrawledPageResult, analysis PageAnalysis, headers http.
 	page.Images = analysis.Images
 	page.Links = analysis.Links
 	page.HasStructuredData = analysis.HasStructuredData
+	page.AI = analysis.AI
 	page.HreflangTags = analysis.HreflangTags
 	page.JavaScriptShell = analysis.JavaScriptShell
 	page.IsIndexable = computeIsIndexable(analysis.RobotsMeta, page.XRobotsTag)

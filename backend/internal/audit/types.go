@@ -137,6 +137,9 @@ type PageAnalysis struct {
 
 	HasStructuredData bool     `json:"hasStructuredData"`
 	HreflangTags      []string `json:"hreflangTags"`
+
+	// AI holds the AI readiness signals; transient, never persisted.
+	AI AIPageSignals `json:"-"`
 }
 
 // LighthouseResult is a Lighthouse check for a single URL and strategy.
@@ -201,8 +204,10 @@ type CrawledPageResult struct {
 	Links             []PageLink `json:"links"`
 	HasStructuredData bool       `json:"hasStructuredData"`
 	HreflangTags      []string   `json:"hreflangTags"`
-	IsIndexable       bool       `json:"isIndexable"`
-	ResponseTimeMs    int64      `json:"responseTimeMs"`
+	// AI holds the AI readiness signals for the site-wide checks. Transient.
+	AI             AIPageSignals `json:"-"`
+	IsIndexable    bool          `json:"isIndexable"`
+	ResponseTimeMs int64         `json:"responseTimeMs"`
 	// CrawlDepth is nil when the page was not reached via links.
 	CrawlDepth *int `json:"crawlDepth"`
 	InSitemap  bool `json:"inSitemap"`

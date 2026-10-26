@@ -113,6 +113,15 @@ type analyzerState struct {
 	headingOrder []int
 	openH1       []string
 
+	// AI readiness signals (aireadiness.go).
+	inLDJSON         bool
+	ldJSONParts      []string
+	ldJSONBytes      int
+	schemaTypes      []string
+	openQuestion     []string
+	questionHeadings int
+	phones           []string
+
 	images        []ImageRef
 	linksByTarget map[string]PageLink
 	openAnchor    *openAnchor
@@ -239,12 +248,17 @@ func (s *analyzerState) onOpenTag(name string, attributes map[string]string, alt
 		}
 		if attributes["type"] == "application/ld+json" {
 			s.hasStructuredData = true
+			s.inLDJSON = true
+			s.ldJSONParts = nil
 		}
 	case "a":
 		// HTML forbids nested <a>; browsers implicitly close the open one and
 		// the tokenizer has no tree correction, so mirror that.
 		s.closeAnchor()
 		href := attributes["href"]
+		if phone := telNumber(href); phone != "" && !slices.Contains(s.phones, phone) {
+			s.phones = append(s.phones, phone)
+		}
 		if href != "" && !hasSkippedProtocol(href) {
 			s.openAnchor = &openAnchor{href: href, rel: strings.ToLower(attributes["rel"])}
 		}
@@ -254,10 +268,20 @@ func (s *analyzerState) onOpenTag(name string, attributes map[string]string, alt
 		if level == 1 && s.openH1 == nil {
 			s.openH1 = []string{}
 		}
+		if (level == 2 || level == 3) && s.openQuestion == nil {
+			s.openQuestion = []string{}
+		}
 	}
 }
 
 func (s *analyzerState) onText(text string) {
+	if s.inLDJSON {
+		if s.ldJSONBytes+len(text) <= maxLDJSONBytes {
+			s.ldJSONParts = append(s.ldJSONParts, text)
+			s.ldJSONBytes += len(text)
+		}
+		return
+	}
 	if s.suppressDepth > 0 {
 		return
 	}
@@ -270,6 +294,9 @@ func (s *analyzerState) onText(text string) {
 	if s.openH1 != nil {
 		s.openH1 = append(s.openH1, text)
 	}
+	if s.openQuestion != nil {
+		s.openQuestion = append(s.openQuestion, text)
+	}
 	if s.openAnchor != nil {
 		s.openAnchor.text = append(s.openAnchor.text, text)
 	}
@@ -281,6 +308,17 @@ func (s *analyzerState) onText(text string) {
 }
 
 func (s *analyzerState) onCloseTag(name string) {
+	if name == "script" && s.inLDJSON {
+		s.schemaTypes = append(s.schemaTypes, schemaTypes(strings.Join(s.ldJSONParts, ""))...)
+		s.inLDJSON = false
+		s.ldJSONParts = nil
+	}
+	if (name == "h2" || name == "h3") && s.openQuestion != nil {
+		if isQuestionHeading(strings.Join(s.openQuestion, "")) {
+			s.questionHeadings++
+		}
+		s.openQuestion = nil
+	}
 	if _, ok := nonContentTags[name]; ok && s.suppressDepth > 0 {
 		s.suppressDepth--
 	}
@@ -355,6 +393,7 @@ func (s *analyzerState) result(statusCode int, responseTimeMs int64, redirectURL
 		Links:             links,
 		HasStructuredData: s.hasStructuredData,
 		HreflangTags:      s.hreflangTags,
+		AI:                AIPageSignals{SchemaTypes: s.schemaTypes, QuestionHeadings: s.questionHeadings, Phones: s.phones},
 	}
 }
 
