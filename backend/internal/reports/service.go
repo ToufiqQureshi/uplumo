@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -22,6 +23,7 @@ type Service struct {
 
 // SaveInput contains report fields to create or update.
 type SaveInput struct {
+	Definition                                                                            json.RawMessage
 	ProjectID, OrganizationID, ReportID, Title, Summary, HTML, CreatedBy, CreatedByUserID string
 	Skill, TemplateID                                                                     *string
 }
@@ -65,9 +67,17 @@ func (s *Service) Save(ctx context.Context, in SaveInput) (SaveResult, error) {
 	if in.Skill != nil && chars(*in.Skill) > MaxSkillCharacters {
 		return SaveResult{}, fail("VALIDATION_ERROR", fmt.Sprintf("Skill exceeds the %d character limit.", MaxSkillCharacters))
 	}
-	size := len([]byte(in.HTML))
+	if len(in.Definition) > 0 {
+		var definition struct {
+			Version int `json:"version"`
+		}
+		if len(in.Definition) > MaxHTMLBytes || json.Unmarshal(in.Definition, &definition) != nil || definition.Version != 1 {
+			return SaveResult{}, fail("VALIDATION_ERROR", "Report editor data must be a version 1 JSON object within the report size limit.")
+		}
+	}
+	size := len(in.HTML) + len(in.Definition)
 	if size > MaxHTMLBytes {
-		return SaveResult{}, fail("VALIDATION_ERROR", fmt.Sprintf("Report is %s; the limit is %s. Remove inlined images and save again.", kbUp(size), kbDown(MaxHTMLBytes)))
+		return SaveResult{}, fail("VALIDATION_ERROR", fmt.Sprintf("Report content and editor data are %s; the limit is %s. Remove data rows, visuals or inlined images and save again.", kbUp(size), kbDown(MaxHTMLBytes)))
 	}
 	trimmed := strings.ToLower(strings.TrimSpace(in.HTML))
 	if !strings.Contains(trimmed, "<html") || !strings.HasSuffix(trimmed, "</html>") {
@@ -120,6 +130,7 @@ func (s *Service) Save(ctx context.Context, in SaveInput) (SaveResult, error) {
 		existing.Title = in.Title
 		existing.Summary = in.Summary
 		existing.SizeBytes = size
+		existing.Definition = in.Definition
 		existing.UpdatedAt = now
 		if in.Skill != nil {
 			existing.Skill = in.Skill
@@ -130,17 +141,17 @@ func (s *Service) Save(ctx context.Context, in SaveInput) (SaveResult, error) {
 		if err := s.Store.Update(ctx, existing, in.HTML); err != nil {
 			return SaveResult{}, err
 		}
-		return SaveResult{ReportID: existing.ID, Title: existing.Title, Created: false, HTMLBytes: size}, nil
+		return SaveResult{ReportID: existing.ID, Title: existing.Title, Created: false, HTMLBytes: len(in.HTML)}, nil
 	}
 	id, err := ids.New()
 	if err != nil {
 		return SaveResult{}, fmt.Errorf("create report id: %w", err)
 	}
-	item := Metadata{ID: id, ProjectID: in.ProjectID, Title: in.Title, Summary: in.Summary, Skill: in.Skill, TemplateID: in.TemplateID, CreatedBy: in.CreatedBy, CreatedByUserID: in.CreatedByUserID, SizeBytes: size, CreatedAt: now, UpdatedAt: now}
+	item := Metadata{Definition: in.Definition, ID: id, ProjectID: in.ProjectID, Title: in.Title, Summary: in.Summary, Skill: in.Skill, TemplateID: in.TemplateID, CreatedBy: in.CreatedBy, CreatedByUserID: in.CreatedByUserID, SizeBytes: size, CreatedAt: now, UpdatedAt: now}
 	if err := s.Store.Insert(ctx, item, in.HTML); err != nil {
 		return SaveResult{}, err
 	}
-	return SaveResult{ReportID: id, Title: in.Title, Created: true, HTMLBytes: size}, nil
+	return SaveResult{ReportID: id, Title: in.Title, Created: true, HTMLBytes: len(in.HTML)}, nil
 }
 
 // List returns a page of report metadata for a project.

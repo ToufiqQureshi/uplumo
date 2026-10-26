@@ -17,3 +17,12 @@ Creates report templates, lists/renders project reports and manages optional pub
 ## Verification pointers
 
 - `reportApi.test.ts`
+
+## Visual builder
+
+- Use an editable snapshot definition plus a separately rendered HTML snapshot. Raw source rows belong only to the private editor column; never embed them in HTML or share metadata. This permits editing without exposing filtered-out rows/columns to recipients.
+- Reuse existing project-scoped report save/get/share/export and existing analytics/Google reads. Source import is explicit, bounded and cached; switching charts/fields/filter values performs no network request. No paid model/data provider is introduced.
+- Use the same static HTML/SVG chart renderer in the canvas and exported document. The existing report CSP prohibits executable chart libraries; changing the sandbox would expose report readers to user/agent content. Keyboard-accessible settings and move buttons provide layout control without a new drag dependency.
+- Apply row/date filters before aggregation, preserve zero/missing values and label the aggregation/group limits. A sum of daily visitors is visitor-days; a mean of rates is unweighted. This builder does not infer business conclusions, calculate measures/DAX, join sources, schedule delivery or promise live refresh.
+- Bound imported data and visual counts and enforce the existing report byte ceiling across both HTML and private editor data. This is a small-report editor, not a warehouse query engine; move aggregation server-side if larger datasets become a requirement.
+- Keep unsaved editor changes on failed saves and warn on leaving. Existing report replacement semantics and public share state remain unchanged; concurrent editors still use last-write-wins, with no version history.

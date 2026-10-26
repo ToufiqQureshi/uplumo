@@ -36,3 +36,5 @@ reporting month, completed work, outcomes, evidence links, and next steps.
 Evidence links accept only HTTP(S) URLs without embedded credentials and are
 escaped into the saved HTML. A public client review link is created only when
 the author explicitly opts in; the existing share controls can revoke it.
+
+Visual builder reports additionally store optional `builder_definition` JSONB (migration 44). It contains private editor state and source rows. `Metadata.Definition` is excluded from JSON and list/ordinary-get SQL; only authenticated get with `includeHtml: true` returns a top-level `definition`. Public/view HTML never embeds it. Manual and MCP saves without this field keep working and clear editor state on replacement.
