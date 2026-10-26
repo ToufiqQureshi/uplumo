@@ -326,3 +326,10 @@ Owner-approved scope: one focused PR adds optional 180-day browser recognition a
 - **Decision:** The owner chose to show the maximum credits an action can charge next to its typical cost, instead of capping the charge at the typical figure ([credits audit](docs/audits/2026-10-25-credits-audit.md) F1). Not built yet; it ships as its own PR.
 - **Why:** A Brand Lookup shows about 372 credits but can hold up to 2,240; the customer should see the most they can pay before clicking.
 - **Preserve:** Customers are charged the real cost, never above the shown maximum. The 3 active subscriptions in production are the owner's test accounts.
+
+## Paid-call browser tests run in CI (26 October)
+
+- **Decision:** A `Paid-call guards (browser)` CI job runs the Playwright specs `dashboard-spend`, `content-editor`, `search-growth` and `audit-capabilities` on every PR and `main` push, against the built SPA with mocked APIs.
+- **Why:** These specs fail when a page load, reload, typing, autosave or double click buys provider work, but no CI job ran them, so a regression could ship. Owner asked for it on 26 Oct.
+- **Preserve:** No real provider is called (routes are mocked). The other specs stay local-only until they are needed; the job uses the runner's Chrome (the config's default `chrome` channel).
+- **Trace:** `.github/workflows/ci.yml`; all 14 tests in these specs passed locally in about 3 minutes. Agent/CI rule change: called out in the PR.
