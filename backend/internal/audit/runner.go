@@ -124,7 +124,8 @@ func (r *Runner) run(ctx, jobCtx context.Context, job JobPayload) error {
 		return err
 	}
 
-	pagesCrawled, err := r.crawl(ctx, job, origin, seedURLs, robots, maxPages)
+	ai := &aiSiteSignals{}
+	pagesCrawled, err := r.crawl(ctx, job, origin, seedURLs, robots, maxPages, ai)
 	if err != nil {
 		return err
 	}
@@ -133,6 +134,9 @@ func (r *Runner) run(ctx, jobCtx context.Context, job JobPayload) error {
 	// job's clock, so a full-length crawl is still finalized and saved.
 	ctx = jobCtx
 	if err := r.finalizeChecks(ctx, job); err != nil {
+		return err
+	}
+	if err := r.repo.InsertIssues(ctx, job.AuditID, ai.issues(job.StartURL)); err != nil {
 		return err
 	}
 	lighthouseCtx, cancelLighthouse := context.WithTimeout(ctx, lighthouseBudget)
@@ -159,7 +163,7 @@ type crawlQueueItem struct {
 }
 
 // crawl runs the BFS crawl, persisting each sub-batch as it lands.
-func (r *Runner) crawl(ctx context.Context, job JobPayload, _ string, seedURLs []string, robots RobotsResult, maxPages int) (int, error) {
+func (r *Runner) crawl(ctx context.Context, job JobPayload, _ string, seedURLs []string, robots RobotsResult, maxPages int, ai *aiSiteSignals) (int, error) {
 	startNormalized, ok := normalizeURL(job.StartURL, "")
 	if !ok {
 		return 0, ErrStartURLInvalid
@@ -220,6 +224,7 @@ func (r *Runner) crawl(ctx context.Context, job JobPayload, _ string, seedURLs [
 			}
 			page.HTMLBytes = result.HTMLBytesRead
 			pages = append(pages, page)
+			ai.add(page, page.URL == startNormalized || isHomePage(page.URL))
 			issues = append(issues, runPageReporters(page)...)
 			progressEntries = append(progressEntries, ProgressEntry{
 				URL: page.URL, StatusCode: page.StatusCode, Title: page.Title, CrawledAt: r.now().UnixMilli(),

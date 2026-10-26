@@ -33,3 +33,35 @@ Use the package tests next to the source files in `README.md`. For changes cross
 - **Why:** An assistant that cannot read the site cannot cite it. This is the first cause to rule out in "why AI does not cite you". Ubersuggest lists both checks but showed no data ([review](../../../docs/audits/2026-10-26-ubersuggest-competitor.md)).
 - **Preserve:** No provider call and no credits. robots.txt is the copy discovery already fetched; `llms.txt` is one extra GET to the customer's own origin through the same SSRF-guarded `fetchFollowingRedirects` (10 s, 64 KB). A missing robots.txt blocks nothing. Blocking only training agents is reported but explained as a choice, not an error. Google AI Overviews use Googlebot, already covered by the normal crawl.
 - **Trace:** `aiaccess.go`, `aiaccess_test.go` (robots cases, soft-404 HTML, content type, empty, 5xx). Each of 5 mutations fails it: nil robots, HTML prefix, content type, llms flag, a dropped crawler. Also `runner.go`, `issuetypes.go`, `frontend/src/shared/audit-issues.ts`, `IssuesView.tsx` (lists join with commas, redirect hops keep arrows). Not run against a live site yet.
+
+## AI readiness checks: business schema, question answers, phone numbers
+
+- **Decision:** The page analyzer now also collects, for each page:
+  - its JSON-LD `@type` values (including `@graph`)
+  - how many H2/H3 headings are phrased as questions
+  - its `tel:` numbers (last 10 digits)
+
+  `aiSiteSignals` gathers these during the crawl and adds three site-wide issues:
+  - `missing-business-schema` (warning): the home page has no Organization or LocalBusiness-type schema. If the crawl never reached the home page, any page is judged instead.
+  - `no-question-answers` (warning): no page has FAQPage schema or two or more question headings.
+  - `several-phone-numbers` (info): more than one distinct number. The details list up to 5 numbers, each with the first page it appears on.
+- **Why:** The owner asked for an audit that says whether a site is AEO/GEO friendly, why not, and what to fix. These are the "does AI know who you are" and "can AI quote you" parts of the approved AI readiness design. They come from HTML the crawl already fetched.
+- **Preserve:**
+  - No extra request, provider call or credits.
+  - Signals are transient (`json:"-"`) and not persisted. No migration.
+  - A crawl with no 2xx HTML page reports nothing.
+  - JSON-LD text never enters `BodyText` or the word count, and is capped at 256 KB per page.
+  - Invalid JSON-LD counts as no schema.
+  - Several phone numbers is info, not an error: real businesses can have departments.
+- **Trace:** `aireadiness.go`, `pageanalyzer.go`, `types.go`, `crawler.go`, `runner.go`, `issuetypes.go`, `frontend/src/shared/audit-issues.ts`. Tests are in `aireadiness_test.go`. Each of these mutations fails a test:
+  - question mark
+  - phone length
+  - home-page rule
+  - FAQ rule
+  - phone count
+  - empty crawl
+  - status filter
+  - `@graph` walk
+  - H3 headings
+
+  Not run against a live site yet.

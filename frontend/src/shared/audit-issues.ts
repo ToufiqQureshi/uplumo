@@ -272,6 +272,30 @@ export const AUDIT_ISSUE_TYPES = {
     howToFix:
       "Add a plain-text /llms.txt that lists your most important pages with one line each (what the page answers). It is optional and few assistants read it yet, so do this after the AI crawler and content fixes.",
   },
+  "missing-business-schema": {
+    severity: "warning",
+    title: "AI cannot read who the business is",
+    explanation:
+      "The home page has no Organization or LocalBusiness structured data. AI assistants and Google use it to confirm your name, address, phone, hours and profiles before recommending you.",
+    howToFix:
+      "Add Organization or LocalBusiness JSON-LD to the home page with your exact business name, address, phone, opening hours, price range and links to your Google Business Profile and social profiles (sameAs). Use one schema.org subtype that fits, such as Hotel, Restaurant or Dentist. Check it with Google's Rich Results Test.",
+  },
+  "no-question-answers": {
+    severity: "warning",
+    title: "No page answers customer questions",
+    explanation:
+      "No crawled page has an FAQ or headings phrased as questions. AI assistants quote pages that state a question and answer it directly.",
+    howToFix:
+      "Add a short FAQ to your main service pages: real customer questions as H2 or H3 headings, each answered in the first one or two sentences below it (price, location, timing, who it is for). Use the questions from Search Console and the AI Visibility Tracker. FAQPage schema is optional.",
+  },
+  "several-phone-numbers": {
+    severity: "info",
+    title: "Different phone numbers across pages",
+    explanation:
+      "Your pages link to more than one phone number. When contact details differ, AI and Google are less sure which business is which.",
+    howToFix:
+      "If these are the same business, use one main number everywhere: website, Google Business Profile and listings such as Justdial. AI and Google trust details that match. If they are different departments, label each one clearly.",
+  },
 } as const satisfies Record<string, AuditIssueDescriptor>;
 
 export const ISSUE_SEVERITY_ORDER: Record<IssueSeverity, number> = {

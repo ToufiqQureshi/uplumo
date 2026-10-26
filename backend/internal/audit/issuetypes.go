@@ -47,6 +47,9 @@ const (
 	IssueDeepPage                     IssueType = "deep-page"
 	IssueAICrawlersBlocked            IssueType = "ai-crawlers-blocked"
 	IssueMissingLLMsTxt               IssueType = "missing-llms-txt"
+	IssueMissingBusinessSchema        IssueType = "missing-business-schema"
+	IssueNoQuestionAnswers            IssueType = "no-question-answers"
+	IssueSeveralPhoneNumbers          IssueType = "several-phone-numbers"
 )
 
 // issueDescriptor is the server-side part of an issue descriptor: the severity
@@ -91,6 +94,9 @@ var issueRegistry = map[IssueType]issueDescriptor{
 	IssueDeepPage:                     {SeverityInfo, "Page is deep in the site structure"},
 	IssueAICrawlersBlocked:            {SeverityWarning, "AI assistants are blocked from reading the site"},
 	IssueMissingLLMsTxt:               {SeverityInfo, "No llms.txt file"},
+	IssueMissingBusinessSchema:        {SeverityWarning, "AI cannot read who the business is"},
+	IssueNoQuestionAnswers:            {SeverityWarning, "No page answers customer questions"},
+	IssueSeveralPhoneNumbers:          {SeverityInfo, "Different phone numbers across pages"},
 }
 
 // severityOf returns the severity for an issue type, defaulting to warning so a
@@ -142,6 +148,9 @@ var issueRemediation = map[IssueType]string{
 	IssueType("deep-page"):                      "Add links from higher-level pages (hubs, category pages, navigation) to flatten the path to this page.",
 	IssueAICrawlersBlocked:                      "Remove the Disallow rules for these user agents in robots.txt (or add Allow: / for them). Blocking the search agents (OAI-SearchBot, ChatGPT-User, PerplexityBot, Claude-SearchBot) stops those assistants from linking your pages; blocking only training agents (GPTBot, ClaudeBot, Google-Extended) is a choice, not an error. Also check that your firewall or CDN bot protection does not block them.",
 	IssueMissingLLMsTxt:                         "Add a plain-text /llms.txt that lists your most important pages with one line each (what the page answers). It is optional and few assistants read it yet, so do this after the AI crawler and content fixes.",
+	IssueMissingBusinessSchema:                  "Add Organization or LocalBusiness JSON-LD to the home page with your exact business name, address, phone, opening hours, price range and links to your Google Business Profile and social profiles (sameAs). Use one schema.org subtype that fits, such as Hotel, Restaurant or Dentist. Check it with Google's Rich Results Test.",
+	IssueNoQuestionAnswers:                      "Add a short FAQ to your main service pages: real customer questions as H2 or H3 headings, each answered in the first one or two sentences below it (price, location, timing, who it is for). Use the questions from Search Console and the AI Visibility Tracker. FAQPage schema is optional.",
+	IssueSeveralPhoneNumbers:                    "If these are the same business, use one main number everywhere: website, Google Business Profile and listings such as Justdial. AI and Google trust details that match. If they are different departments, label each one clearly.",
 }
 
 // DescribeIssueType returns the descriptor for a known audit issue type.
