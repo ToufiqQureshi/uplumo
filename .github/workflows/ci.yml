@@ -191,4 +191,4 @@ jobs:
       - name: Install Playwright ffmpeg
         run: pnpm exec playwright install ffmpeg
       - name: Run paid-call browser tests
-        run: pnpm test:e2e dashboard-spend content-editor search-growth audit-capabilities
+        run: pnpm test:e2e dashboard-spend content-editor search-growth audit-capabilities theme-preference

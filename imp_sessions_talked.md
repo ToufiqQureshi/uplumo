@@ -17,6 +17,13 @@ feelings, business calls, priorities, corrections. Read it after
 
 ---
 
+## 26 Oct 2026: header light-mode access (Codex)
+
+- Owner asked to add light mode in the header to the existing PR.
+- Reuse the implemented light/dark palettes and saved theme preference;
+  expose System/Light/Dark visibly in the authenticated app header, including
+  mobile, rather than creating a separate appearance system.
+
 ## 26 Oct 2026: ten Uplumo product and comparison blogs (Codex)
 
 - Owner requested ten positive, substantive Uplumo articles, including Semrush,

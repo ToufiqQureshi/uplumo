@@ -4,6 +4,14 @@
 
 ## User and request flow
 
+Appearance: authenticated app header → `ThemePreferenceMenu` → existing
+`useThemePreference` hook → browser storage/session fallback → root `data-theme`.
+The same preference is reflected in personal settings and the account menu.
+System mode follows OS changes; explicit Light/Dark choices persist across
+reloads. No API, database or provider call is involved in changing appearance.
+
+Server-backed settings:
+
 1. Settings route selects a settings panel.
 2. Each panel uses its feature API: API keys use Better Auth API-key endpoints, branding uses `/api/v1/branding`, and crawler access uses crawler-access routes.
 3. The backend independently checks session, role, plan and project scope for each mutation.
