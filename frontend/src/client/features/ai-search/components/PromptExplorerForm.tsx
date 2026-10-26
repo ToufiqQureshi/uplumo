@@ -1,3 +1,4 @@
+import { EngineLogo } from "@/client/components/BrandLogo";
 import type { FormEvent } from "react";
 import { cn } from "cn";
 import { Info } from "lucide-react";
@@ -171,6 +172,7 @@ export function PromptExplorerForm({
                       checked={form.models.includes(model)}
                       onCheckedChange={() => toggleModel(model)}
                     />
+                    <EngineLogo engine={model} />
                     <span>
                       {formatModelLabel(model)}
                       {unsupportedModels.includes(model) &&
