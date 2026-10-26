@@ -35,6 +35,21 @@ lookup: a previous domain finishing later cannot hide the current domain's data.
 The domain-switch regression uses real Postgres and a blocked provider; malformed
 and legacy request tests assert zero provider calls without an earlier plan gate.
 
+## Read audits from `go_audits`
+
+- **Decision:** `Repository.LatestAudit` reads the newest row of `go_audits` and
+  its issues from `go_audit_issues` (by that audit's id), formatting
+  `started_at` as the same UTC ISO string the client already parses.
+- **Why:** `internal/audit` writes only `go_audits`; the legacy `audits` table
+  from migration 1 is no longer written. Live on 23 Oct 2026 a project with two
+  finished crawls (21 Oct) still showed "Run an audit" because the API returned
+  `audit: null`. The old test built its own `audits` table, so it hid the bug.
+- **Preserve:** Reads stay free (no provider call) and project-scoped; the
+  newest crawl of this project wins, never another project's or a legacy row.
+- **Trace:** `repository.go`; `repository_test.go` now seeds `go_audits` with an
+  older crawl, another project's newer crawl and a legacy `audits` row, and fails
+  on the old query.
+
 ## Cancellation before a new paid operation
 
 - **Decision:** `RefreshBacklinkSnapshot` rechecks cancellation after `ProjectDomain` and before `refreshes.DoChan`.

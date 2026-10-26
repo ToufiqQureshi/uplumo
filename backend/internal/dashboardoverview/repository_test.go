@@ -46,7 +46,7 @@ func dashboardDB(t *testing.T) *pgxpool.Pool {
 		t.Fatal(err)
 	}
 	t.Cleanup(db.Close)
-	for _, sql := range []string{`CREATE TABLE projects(id text,organization_id text,domain text,archived_at text)`, `CREATE TABLE audits(id text,project_id text,status text,pages_crawled int,started_at text)`, `CREATE TABLE audit_issues(id text,audit_id text,page_url text,issue_type text,severity text)`, `CREATE TABLE backlink_snapshots(id serial,project_id text,domain text,rank int,backlinks bigint,referring_domains bigint,new_backlinks bigint,lost_backlinks bigint,new_referring_domains bigint,lost_referring_domains bigint,captured_at text)`, `INSERT INTO projects VALUES('p','o','example.com',NULL)`, `INSERT INTO audits VALUES('a','p','completed',12,'2026-10-10T10:00:00.000Z')`, `INSERT INTO audit_issues VALUES('1','a','https://example.com/a','title','critical'),('2','a','https://example.com/a','title','critical'),('3','a','https://example.com/b','links','warning'),('4','a','https://example.com/c','meta','info')`, `INSERT INTO backlink_snapshots(project_id,domain,rank,backlinks,referring_domains,captured_at) VALUES('p','example.com',12,500,40,'2026-10-10T11:00:00.000Z'),('p','old.example',9,20,3,'2026-10-10T11:30:00.000Z')`} {
+	for _, sql := range []string{`CREATE TABLE projects(id text,organization_id text,domain text,archived_at text)`, `CREATE TABLE go_audits(id text PRIMARY KEY,project_id text NOT NULL,status text NOT NULL,pages_crawled integer NOT NULL DEFAULT 0,started_at timestamptz NOT NULL DEFAULT now())`, `CREATE TABLE go_audit_issues(id text PRIMARY KEY,audit_id text NOT NULL REFERENCES go_audits(id),page_url text NOT NULL,issue_type text NOT NULL,severity text NOT NULL)`, `CREATE TABLE audits(id text,project_id text,status text,pages_crawled int,started_at text)`, `CREATE TABLE backlink_snapshots(id serial,project_id text,domain text,rank int,backlinks bigint,referring_domains bigint,new_backlinks bigint,lost_backlinks bigint,new_referring_domains bigint,lost_referring_domains bigint,captured_at text)`, `INSERT INTO projects VALUES('p','o','example.com',NULL)`, `INSERT INTO go_audits VALUES('old','p','completed',3,'2026-10-09T10:00:00Z'),('a','p','completed',12,'2026-10-10T10:00:00Z'),('other','p2','completed',99,'2026-10-11T10:00:00Z')`, `INSERT INTO go_audit_issues VALUES('1','a','https://example.com/a','title','critical'),('2','a','https://example.com/a','title','critical'),('3','a','https://example.com/b','links','warning'),('4','a','https://example.com/c','meta','info'),('5','old','https://example.com/x','old_issue','critical')`, `INSERT INTO audits VALUES('legacy','p','running',1,'2026-10-12T10:00:00.000Z')`, `INSERT INTO backlink_snapshots(project_id,domain,rank,backlinks,referring_domains,captured_at) VALUES('p','example.com',12,500,40,'2026-10-10T11:00:00.000Z'),('p','old.example',9,20,3,'2026-10-10T11:30:00.000Z')`} {
 		if _, err = db.Exec(ctx, sql); err != nil {
 			t.Fatal(err)
 		}
@@ -61,8 +61,13 @@ func TestRepositoryReadsProjectScopedDashboardCards(t *testing.T) {
 		t.Fatalf("project domain=%v err=%v", domain, err)
 	}
 	audit, err := repo.LatestAudit(context.Background(), "p")
-	if err != nil || audit == nil || audit.PagesCrawled != 12 || audit.TotalIssueTypes != 3 || len(audit.TopIssues) != 3 || audit.TopIssues[0].Count != 1 {
+	// The newest go_audits row of this project wins: not the older crawl, not
+	// another project's newer crawl, and not the unwritten legacy audits table.
+	if err != nil || audit == nil || audit.Status != "completed" || audit.PagesCrawled != 12 || audit.StartedAt != "2026-10-10T10:00:00.000Z" || audit.TotalIssueTypes != 3 || len(audit.TopIssues) != 3 || audit.TopIssues[0].Count != 1 {
 		t.Fatalf("audit=%+v err=%v", audit, err)
+	}
+	if audit, err = repo.LatestAudit(context.Background(), "no-audits"); err != nil || audit != nil {
+		t.Fatalf("project without audits: audit=%+v err=%v", audit, err)
 	}
 	snapshot, found, err := repo.LatestBacklinkSnapshot(context.Background(), "p", "example.com")
 	if err != nil || !found || snapshot.Domain != "example.com" {
