@@ -107,3 +107,10 @@ Brand Lookup compares brand mentions and cited pages across supported answer eng
   - Both packages are MIT/CC0 and pinned in the lockfile.
   - `src/vite-env.d.ts` adds Vite's asset types so SVG imports type-check.
 - **Trace:** `BrandLogo.tsx`, `BrandLogo.test.tsx`, the ai-search components that used `PLATFORM_DOT_CLASS` and the model accent dot.
+
+## Google Business Profile and clean evidence links
+
+- **Decision:** A Google Maps place link that AI cites is counted as the listing "Google Business Profile", and its action opens business.google.com. Evidence links drop `utm_*` parameters and fragments. Counts read "1 answer" rather than "1 answers".
+- **Why:** In the first live check, the Maps link showed up as a "competitor page", and ChatGPT's `?utm_source=chatgpt.com` cluttered every link. For a local Indian business, the Google profile is the most important listing.
+- **Preserve:** No new requests. Classification still only reads the URLs that were saved.
+- **Trace:** `whyNotCited.ts`. Its test fails under each of 4 mutations: the Maps path, the utm filter, the singular wording and the profile link.

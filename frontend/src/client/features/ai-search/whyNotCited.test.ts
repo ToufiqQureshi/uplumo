@@ -139,4 +139,27 @@ describe("whyNotCited", () => {
     const action = result.gaps[0].action;
     expect(action.kind === "write" && action.keyword.length).toBe(200);
   });
+
+  it("treats a Google Maps place as the Google Business Profile listing", () => {
+    const result = whyNotCited(
+      [
+        answer({
+          cites: [
+            "https://www.google.com/maps/place/?q=place_id%3AChIJ&utm_source=chatgpt.com",
+            "https://rival.example/about/?utm_source=chatgpt.com&lang=en#team",
+          ],
+        }),
+      ],
+      own,
+    );
+    expect(result.gaps[0]).toMatchObject({
+      kind: "listings",
+      evidence: ["Google Business Profile"],
+      action: { href: "https://business.google.com/" },
+    });
+    expect(result.gaps[0]?.detail).toContain("In 1 answer AI linked");
+    expect(result.gaps[1]?.evidence).toEqual([
+      "https://rival.example/about/?lang=en",
+    ]);
+  });
 });

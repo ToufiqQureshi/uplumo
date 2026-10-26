@@ -1,4 +1,5 @@
 import { SearchGrowthPanel } from "./SearchGrowthPanel";
+import { PagesToFix, QuickWins, SearchVerdict } from "./SearchVerdictCards";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
@@ -240,8 +241,7 @@ export function SearchPerformancePage({
           <div>
             <h1 className="text-2xl font-semibold">Search Performance</h1>
             <p className="text-sm text-muted-foreground">
-              See your site&apos;s clicks, impressions, CTR, and position from
-              Google Search Console.
+              What changed in Google search, why, and what to fix first.
             </p>
           </div>
           {report?.connected ? (
@@ -269,11 +269,15 @@ export function SearchPerformancePage({
         ) : (
           <>
             {reportQuery.isError ? reportError : null}
-            <SearchGrowthPanel key={projectId} projectId={projectId} />
             {reportQuery.isPlaceholderData ? (
               <SearchPerformanceLoadingState />
             ) : (
-              <TotalsCards report={report} />
+              <>
+                <SearchVerdict projectId={projectId} report={report} />
+                <TotalsCards report={report} />
+                <PagesToFix projectId={projectId} report={report} />
+                <QuickWins projectId={projectId} report={report} />
+              </>
             )}
             {!reportQuery.isPlaceholderData ? (
               <SearchPerformanceTrend report={report} />
@@ -384,6 +388,7 @@ export function SearchPerformancePage({
                 />
               )}
             </div>
+            <SearchGrowthPanel key={projectId} projectId={projectId} />
           </>
         )}
 
