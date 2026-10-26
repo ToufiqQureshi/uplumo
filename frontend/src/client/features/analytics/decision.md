@@ -46,3 +46,21 @@ Trace: `AudienceJourneyCards.tsx`, `AnalyticsPage.tsx`, `TrackingCodeCard.tsx`, 
   case inconsistencies and outcome labels. Audience browser regressions open the
   secondary disclosure before inspecting the existing report. Visual browser
   acceptance must be recorded separately from unit/type checks.
+
+## Overview: fix tracking first, then enquiries
+
+- **Decision:** `AnalyticsOverview` now shows these, in order:
+  1. A "Fix this first" card with 3 steps, shown only when page views arrive but no visits are recorded.
+  2. A verdict: who visited, how many tried to contact the business, where most came from, and one next step.
+  3. Four tiles: visitors, enquiries, enquiry rate, and visits from AI assistants.
+
+  `visitSummary.ts` merges event names that differ only by letter case (`whatsapp`/`WhatsApp`) and says so. Enquiries are events whose names match WhatsApp, call, phone, form, lead, contact, enquiry, book, quote, submit, sign-up, order or checkout.
+
+- **Why:** The owner said the page gave no decision and the disclaimers ("does not prove…") confused users. The approved design is artboard 2 of the Traffic redesign.
+- **Preserve:**
+  - Broken tracking is still flagged first.
+  - Merged event counts take the largest visitor-day count, not the sum, so the same person is not counted twice.
+  - The full tables below are unchanged.
+  - No new request, no AI call.
+  - Enquiries are clicks on contact buttons, not confirmed sales. The tile hint says "taps".
+- **Trace:** `visitSummary.ts`, `AnalyticsOverview.tsx`, `AnalyticsOverview.test.tsx`. Each of these 5 mutations fails the tests: tracking rule, case merge, visitor max, enquiry filter, booking pattern. The old tests that asserted the disclaimer text were replaced on purpose.
