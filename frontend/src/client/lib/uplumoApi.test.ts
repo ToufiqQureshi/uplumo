@@ -65,6 +65,20 @@ describe("apiRequest", () => {
     ).toMatch(/.+/u);
   });
 
+  it("asks for cached data only when the customer did not ask to buy", async () => {
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(Response.json({ plan: "pro" })),
+    );
+    await apiRequest("/api/v1/test", schema, "POST", {}, { cachedOnly: true });
+    await apiRequest("/api/v1/test", schema, "POST", {});
+    const header = (call: number) =>
+      new Headers(fetchMock.mock.calls[call]?.[1]?.headers).get(
+        "X-Cached-Only",
+      );
+    expect(header(0)).toBe("1");
+    expect(header(1)).toBeNull();
+  });
+
   it("reuses POST keys after failures and rotates them after success", async () => {
     fetchMock
       .mockResolvedValueOnce(

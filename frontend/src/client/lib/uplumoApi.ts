@@ -103,6 +103,8 @@ export async function apiRequest<T>(
   schema: z.ZodType<T>,
   method: "GET" | "POST" = "GET",
   jsonBody?: unknown,
+  /** cachedOnly: answer from cache or fail with 409 refresh_required; never buy. */
+  options: { cachedOnly?: boolean } = {},
 ): Promise<T> {
   if (method === "GET" && jsonBody !== undefined) {
     throw new TypeError("GET requests cannot include a JSON body");
@@ -119,6 +121,7 @@ export async function apiRequest<T>(
     headers: {
       Accept: "application/json",
       ...(idempotency ? { "Idempotency-Key": idempotency.key } : {}),
+      ...(options.cachedOnly ? { "X-Cached-Only": "1" } : {}),
       ...(requestBody === undefined
         ? {}
         : { "Content-Type": "application/json" }),

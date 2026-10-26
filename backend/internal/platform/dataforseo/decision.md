@@ -64,3 +64,10 @@ Use the package tests next to the source files in `README.md`. For changes cross
 - **Trace:** `client.go`, `uncertain_test.go`, updated budget/timeout tests. Empty/malformed JSON, missing tasks and missing task-cost regressions failed with a zero settlement before the fix; tests also cover a caller swallowing the uncertainty. No live paid request was made for validation.
 
 Documented account refusals 40200/40203/40210 release credits even without task-cost metadata; 40203 is classified as a billing stop so budget callers stop further purchases. Other missing costs remain uncertain. Source: https://dataforseo.com/help-center/limit-my-payments and the provider error appendix. `TestAccountCapRejectionReleasesCreditsAndStopsBudgetLegs` covers top-level and task-level $2/day refusals without making a live request.
+
+## Cached-only requests never buy
+
+- **Decision:** A request with `X-Cached-Only: 1` (set by `requireSession` into `spend.WithCachedOnly`) may be answered from cache, but `dataforseo.Client.Do` refuses any paid call (estimate above zero) and `DoBudgeted` refuses all work with `spend.ErrRefreshRequired` before a hold is made; `spend.WriteHTTPError` answers `409 refresh_required`. Free reference lookups still run. Without the header nothing changes (MCP, schedules, SAM).
+- **Why:** The owner asked that a saved Backlinks or Domain link opened after its cache expired (24 h tables, 12 h domain reports) no longer buys the report again without a click. One check in the transport covers every feature that reads through it.
+- **Preserve:** The refusal happens before the hold, so no credits are reserved and nothing is recorded; `spend.Refused` counts it, so partial-answer paths stop instead of caching half a report.
+- **Trace:** `platform/spend/spend.go`, `platform/dataforseo/client.go` (`TestCachedOnlyRequestsNeverBuyProviderWork`), `httpapi/httpapi.go` and `httpapi/backlinks_test.go` (409 before purchase, 200 from cache after; fails with the header wiring removed).

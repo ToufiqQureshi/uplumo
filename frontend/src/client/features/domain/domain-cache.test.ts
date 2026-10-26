@@ -12,8 +12,11 @@ import { useDomainOverviewQuery } from "./hooks/useDomainOverviewQuery";
 import { useDomainKeywordsQuery } from "./hooks/useDomainKeywordsQuery";
 import { useDomainPagesQuery } from "./hooks/useDomainPagesQuery";
 import { EMPTY_DOMAIN_FILTERS } from "./types";
+import { allowPurchase } from "@/client/lib/paidIntent";
 
 vi.mock("./domainApi", () => ({
+  domainIntentKey: (projectId: string, domain: string) =>
+    `domain:${projectId}:${domain}`,
   getDomainOverview: vi.fn(),
   getDomainKeywordsPage: vi.fn(),
   getDomainPagesPage: vi.fn(),
@@ -149,4 +152,28 @@ it("requires an explicit retry after a failed paid report even when remounted", 
   expect(getDomainOverview).toHaveBeenCalledTimes(1);
   expect(getDomainKeywordsPage).toHaveBeenCalledTimes(1);
   expect(getDomainPagesPage).toHaveBeenCalledTimes(1);
+});
+
+it("asks for cached reports only until the customer searches or retries", async () => {
+  mount();
+  await act(async () => {
+    await vi.waitFor(() => {
+      expect(getDomainOverview).toHaveBeenCalledTimes(1);
+    });
+  });
+  // Opened from a link: nothing may be bought unasked.
+  expect(vi.mocked(getDomainOverview).mock.calls[0]?.[0].data.cachedOnly).toBe(
+    true,
+  );
+  expect(
+    vi.mocked(getDomainKeywordsPage).mock.calls[0]?.[0].data.cachedOnly,
+  ).toBe(true);
+
+  allowPurchase("domain:project:example.com");
+  await act(async () => {
+    await client.refetchQueries();
+  });
+  expect(
+    vi.mocked(getDomainOverview).mock.calls.at(-1)?.[0].data.cachedOnly,
+  ).toBe(false);
 });

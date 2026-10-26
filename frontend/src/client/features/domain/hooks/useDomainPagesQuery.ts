@@ -1,5 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { getDomainPagesPage } from "@/client/features/domain/domainApi";
+import {
+  domainIntentKey,
+  getDomainPagesPage,
+} from "@/client/features/domain/domainApi";
+import { purchaseAllowed } from "@/client/lib/paidIntent";
 import {
   toNumberOrUndefined,
   toPageSortMode,
@@ -57,6 +61,9 @@ export function useDomainPagesQuery(input: DomainPagesQueryInput) {
         data: {
           projectId: input.projectId,
           domain: input.domain,
+          cachedOnly: !purchaseAllowed(
+            domainIntentKey(input.projectId, input.domain),
+          ),
           scope: input.scope,
           locationCode: input.locationCode,
           page: input.page,

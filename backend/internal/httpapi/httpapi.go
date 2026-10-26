@@ -472,6 +472,11 @@ func requireSession(logger *slog.Logger, authn *auth.Service, next http.Handler)
 			return
 		}
 		ctx := spend.WithIdempotencyKey(r.Context(), r.Header.Get("Idempotency-Key"))
+		// The browser marks loads the customer did not ask to pay for (a page
+		// opened from a saved link): they are answered from cache or refused.
+		if r.Header.Get("X-Cached-Only") == "1" {
+			ctx = spend.WithCachedOnly(ctx)
+		}
 		ctx = spend.WithUserID(ctx, user.ID)
 		ctx = spend.WithCreditMeter(ctx)
 		next.ServeHTTP(&creditsUsedWriter{ResponseWriter: w, ctx: ctx}, r.WithContext(auth.WithUser(ctx, user)))

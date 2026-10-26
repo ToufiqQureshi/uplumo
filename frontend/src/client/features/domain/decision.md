@@ -58,3 +58,10 @@ Shows organic estimates, keyword/page tables and filtered domain research.
 - **Why:** A global fixture flag skipped the suggestions endpoint entirely, so the paid-call regression could not exercise the real request path. Several filter tests also depended on an unrelated logged-in dev backend.
 - **Preserve:** Customer API schemas and requests, no real paid browser-test calls, exact suggestion-call counts and filter URL assertions.
 - **Trace:** `domainApi.ts`, test utility and spend/browser regressions. Filter selectors use the current visible label.
+
+## Saved links load from cache; Search and Retry buy
+
+- **Decision:** Report queries send `cachedOnly` (header `X-Cached-Only`) unless the customer clicked Search or Retry for that report in this browser session (`client/lib/paidIntent.ts`). An expired cache then shows the server's "refresh" message with Retry, and Retry is the purchase.
+- **Why:** Opening a saved link after the cache expired bought the report again without a click (owner, 26 Oct).
+- **Preserve:** `cachedOnly` is read at request time, so the refetch a Retry starts is allowed to buy; it never goes in the request body. Paging, sorting and tabs after a Search in the same session still load normally.
+- **Trace:** `backend/internal/platform/dataforseo/decision.md`; tests in `client/lib/uplumoApi.test.ts`, `backlinksApi.test.ts`, `domain/domain-cache.test.ts`.

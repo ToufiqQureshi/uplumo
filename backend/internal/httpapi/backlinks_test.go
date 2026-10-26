@@ -84,10 +84,20 @@ func TestBacklinksEndToEndAttributesPaidProviderTaskToAuthorizedProjectOrganizat
 		}
 		return count
 	}
+	// A page opened from a saved link asks for cached data only.
+	cachedOnly := func() *httptest.ResponseRecorder {
+		req := httptest.NewRequestWithContext(ctx, http.MethodPost, "/api/v1/projects/"+ownProject+"/backlinks/overview", strings.NewReader(`{"target":"example.com","scope":"exact_url"}`))
+		req.AddCookie(&http.Cookie{Name: "__Secure-better-auth.session_token", Value: sign(token), HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode})
+		req.Header.Set("X-Cached-Only", "1")
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		return rec
+	}
 	assertError(t, lookup(ownProject, false), http.StatusUnauthorized, "unauthenticated")
 	assertError(t, lookup(otherProject, true), http.StatusNotFound, "project_not_found")
+	assertError(t, cachedOnly(), http.StatusConflict, "refresh_required")
 	if usage(ownOrg)+usage(otherOrg) != 0 {
-		t.Fatal("a refused project access was billed")
+		t.Fatal("a refused or cached-only request was billed")
 	}
 	rec := lookup(ownProject, true)
 	if rec.Code != http.StatusOK {
@@ -95,6 +105,9 @@ func TestBacklinksEndToEndAttributesPaidProviderTaskToAuthorizedProjectOrganizat
 	}
 	if got := usage(ownOrg); got != 1 {
 		t.Errorf("authorized organization usage=%d, want 1", got)
+	}
+	if rec := cachedOnly(); rec.Code != http.StatusOK || usage(ownOrg) != 1 {
+		t.Fatalf("cached-only reopen status=%d usage=%d, want 200 from cache and no new purchase", rec.Code, usage(ownOrg))
 	}
 	if got := usage(otherOrg); got != 0 {
 		t.Errorf("other organization usage=%d, want 0", got)
