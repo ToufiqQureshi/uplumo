@@ -45,4 +45,6 @@ search demand, guaranteed ranking or revenue attribution.
 
 Source titles may be null; link labels fall back to the safe URL. Vitest discovers both `.test.ts` and `.test.tsx`, including the empty-history rendering regression.
 
+`starterQuestions.ts` suggests local customer questions (business type + city, brand, two competitors) for the tracker form; free, it only edits the unsaved form.
+
 `whyNotCited.ts` and `components/WhyNotCitedCard.tsx` explain why AI did not cite the site, from a check's saved answers only (no credits): listing sites, competitor pages, named-not-linked, recommended rivals and community sites, each with one action.
