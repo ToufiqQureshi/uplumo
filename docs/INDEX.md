@@ -16,6 +16,7 @@ Code and tests are the source of truth. Feature docs are colocated with their so
 - [DataForSEO field-delivery audit](audits/2026-10-21-dataforseo-field-delivery.md)
 - [Launch readiness and unit economics](audits/2026-10-23-launch-readiness.md)
 - [Credits audit](audits/2026-10-25-credits-audit.md)
+- [DataForSEO audit](audits/2026-10-26-dataforseo-audit.md)
 
 ## Repo-wide guidance and references
 

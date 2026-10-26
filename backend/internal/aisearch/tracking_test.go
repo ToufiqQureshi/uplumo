@@ -99,6 +99,16 @@ func TestTrackingEvidenceSeparatesCitationsFromMentions(t *testing.T) {
 	if err != nil || text != "" {
 		t.Fatal("organic result treated as AI Overview")
 	}
+	// A paid AI Overview SERP also carries related searches, whose items are
+	// plain keywords. Failing to parse them kept the answer "pending" until
+	// the run timed out, so the customer paid for an answer never shown.
+	text, citations, _, err = parseTrackingAnswer([]byte(`{"items":[
+		{"type":"ai_overview","markdown":"Acme leads.","references":[{"url":"https://acme.example/a"}]},
+		{"type":"related_searches","items":["acme pricing","acme reviews"]},
+		{"type":"people_also_search","items":["acme vs rival"]}]}`), "google_ai_overview")
+	if err != nil || text != "Acme leads." || len(citations) != 1 {
+		t.Fatalf("text=%q citations=%+v err=%v, want the overview despite keyword-only items", text, citations, err)
+	}
 }
 func trackingDB(t *testing.T) *pgxpool.Pool {
 	t.Helper()
@@ -119,6 +129,80 @@ func trackingDB(t *testing.T) *pgxpool.Pool {
 	}
 	return db
 }
+func TestTrackingUnreadableResultFailsInsteadOfPollingUntilTimeout(t *testing.T) {
+	db := trackingDB(t)
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+	org, project := "org-"+rand.Text(), "project-"+rand.Text()
+	if _, err := db.Exec(ctx, `INSERT INTO organization(id,name,slug,created_at) VALUES($1,'Tracking',$1,now())`, org); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if _, err := db.Exec(context.Background(), `DELETE FROM organization WHERE id=$1`, org); err != nil {
+			t.Error(err)
+		}
+	})
+	if _, err := db.Exec(ctx, `INSERT INTO projects(id,organization_id,name) VALUES($1,$2,'Tracking')`, project, org); err != nil {
+		t.Fatal(err)
+	}
+	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if strings.HasSuffix(r.URL.Path, "/task_post") {
+			var tasks []struct {
+				Tag string `json:"tag"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&tasks); err != nil {
+				t.Error(err)
+			}
+			entries := []any{}
+			for _, task := range tasks {
+				entries = append(entries, map[string]any{"id": task.Tag, "status_code": 20100, "cost": 0.0012, "path": strings.Split(strings.Trim(r.URL.Path, "/"), "/"), "data": map[string]string{"tag": task.Tag}})
+			}
+			if err := json.NewEncoder(w).Encode(map[string]any{"status_code": 20000, "tasks": entries}); err != nil {
+				t.Error(err)
+			}
+			return
+		}
+		// A finished task whose result cannot be decoded.
+		if _, err := io.WriteString(w, `{"status_code":20000,"tasks":[{"status_code":20000,"result":[{"markdown":42}]}]}`); err != nil {
+			t.Error(err)
+		}
+	}))
+	t.Cleanup(api.Close)
+	client, err := dataforseo.NewClient(dataforseo.Options{APIKey: base64.StdEncoding.EncodeToString([]byte("test:fixture")), BaseURL: api.URL, Guard: &spendtest.Guard{}, Recorder: dataforseo.NewUsageRecorder(db)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc := &Tracking{DB: db, Plans: trackingPaidPlans{}, Search: NewService(client, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))}
+	if err = svc.Save(ctx, org, project, validTracking()); err != nil {
+		t.Fatal(err)
+	}
+	id, err := svc.Start(ctx, org, project, "unreadable-check", false, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, _ := json.Marshal(map[string]string{"runId": id})
+	if err = svc.Execute(ctx, jobs.Job{Payload: raw, Attempts: 1}); err != nil {
+		t.Fatal(err)
+	}
+	answers, err := svc.Answers(context.Background(), org, project, id)
+	if err != nil || len(answers) == 0 {
+		t.Fatalf("answers=%+v err=%v", answers, err)
+	}
+	for _, a := range answers {
+		if a.Status != "failed" || a.ErrorCode != "unreadable_result" {
+			t.Fatalf("answer %s status=%q code=%q, want failed/unreadable_result before the run deadline", a.Engine, a.Status, a.ErrorCode)
+		}
+	}
+	var runCode string
+	if err = db.QueryRow(context.Background(), `SELECT error_code FROM go_ai_tracking_runs WHERE id=$1`, id).Scan(&runCode); err != nil {
+		t.Fatal(err)
+	}
+	if runCode == "collection_timeout" {
+		t.Fatal("run kept polling finished answers until it timed out")
+	}
+}
+
 func TestTrackingDurableCollectionAndTenantIsolation(t *testing.T) {
 	db := trackingDB(t)
 	ctx := t.Context()

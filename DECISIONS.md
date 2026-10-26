@@ -317,3 +317,9 @@ Owner-approved scope: one focused PR adds optional 180-day browser recognition a
 - **Preserve:** `CLAUDE.md` stays the rulebook; `FOUNDER.md` holds vision and the map only. Agents restate what they will build and wait for the owner's yes before coding. Update the map when a sidebar page, its backend package or its paid provider changes.
 - **Owner answers (same day):** customer = Indian businesses, small to big; goal = first 10 paying customers; work order = credits audit → DataForSEO audit → "why not cited" feature → remaining audits; new features wait. Root `imp_sessions_talked.md` records important owner talks; every agent reads it and adds an entry before a session ends.
 - **Trace:** `FOUNDER.md`, `imp_sessions_talked.md`, `CLAUDE.md` sections 1 and 6, `AGENTS.md`, `docs/INDEX.md`. The map's "Not yet verified" list is not an audit result: credits, DataForSEO call counts, wiring and test strength are still unchecked.
+
+## Shown credits before paid actions (26 October)
+
+- **Decision:** The owner chose to show the maximum credits an action can charge next to its typical cost, instead of capping the charge at the typical figure ([credits audit](docs/audits/2026-10-25-credits-audit.md) F1). Not built yet; it ships as its own PR.
+- **Why:** A Brand Lookup shows about 372 credits but can hold up to 2,240; the customer should see the most they can pay before clicking.
+- **Preserve:** Customers are charged the real cost, never above the shown maximum. The 3 active subscriptions in production are the owner's test accounts.

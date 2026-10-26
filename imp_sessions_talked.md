@@ -17,6 +17,19 @@ feelings, business calls, priorities, corrections. Read it after
 
 ---
 
+## 26 Oct 2026: owner answers, DataForSEO audit (Claude)
+
+- Owner: "max dikhao" — show the maximum credits before a paid action
+  (credits audit F1). Separate PR, not built yet.
+- Owner: the 3 `active` subscriptions are his test accounts.
+- Asked again "isse mujhe kya milega?" before the audit: he wants the payoff
+  first, in one breath, then the work.
+- Found and fixed: AI Overview tracker answers were bought daily and never
+  shown. Open for him: the test workspace's daily tracker costs ~$5.7/month
+  real DataForSEO money; pause or weekly?
+- An agent's `git stash pop` mistake pulled another agent's stash into the
+  tree; restored on his go. Stash `keyword field-delivery WIP` is intact.
+
 ## 25 Oct 2026: credits audit result (Claude, PR #208)
 
 - Owner said "haan" to the credits audit and asked first "isse mujhe kya
