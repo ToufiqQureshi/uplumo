@@ -62,7 +62,7 @@ func (s *Service) GetGrowthFunnel(ctx context.Context, project string, in Growth
 	}
 	work, cancel := context.WithTimeout(ctx, 45*time.Second)
 	defer cancel()
-	err = s.Google.DoJSON(work, google.APIRequest{UserID: c.ConnectedByUserID, Provider: "google-analytics", AccountID: c.GA4AccountID, Method: http.MethodPost, URL: "https://analyticsdata.googleapis.com/v1alpha/" + c.PropertyID + ":runFunnelReport", Body: body, Response: &response, Retryable: true, MaxResponseBytes: 2 << 20})
+	err = s.Google.DoJSON(work, google.APIRequest{UserID: c.ConnectedByUserID, Provider: google.ProviderGA4, AccountID: c.GA4AccountID, Method: http.MethodPost, URL: "https://analyticsdata.googleapis.com/v1alpha/" + c.PropertyID + ":runFunnelReport", Body: body, Response: &response, Retryable: true, MaxResponseBytes: 2 << 20})
 	if err != nil {
 		return nil, mapProviderError(err)
 	}

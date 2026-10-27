@@ -167,3 +167,28 @@ func TestListGA4PropertiesSaysWhyPropertiesAreUnavailable(t *testing.T) {
 		})
 	}
 }
+
+// providerRecorder is a token source that records the provider it was asked
+// for and stops the request there.
+type providerRecorder struct{ providers []string }
+
+func (r *providerRecorder) AccessToken(_ context.Context, _, provider, _, _ string) (string, error) {
+	r.providers = append(r.providers, provider)
+	return "", errors.New("stop")
+}
+
+func TestGA4GoogleCallsUseTheGA4Provider(t *testing.T) {
+	tokens := &providerRecorder{}
+	api := &google.APIClient{Tokens: tokens}
+	admin := GooglePropertyAdmin{API: api, UserID: "user", AccountID: "acct"}
+	_, _ = admin.ListProperties(context.Background())
+	_, _ = admin.UserInfoEmail(context.Background())
+	if len(tokens.providers) != 2 {
+		t.Fatalf("token requests = %v, want 2", tokens.providers)
+	}
+	for _, provider := range tokens.providers {
+		if provider != google.ProviderGA4 {
+			t.Fatalf("GA4 asked for provider %q, want %q: the token service rejects any other name", provider, google.ProviderGA4)
+		}
+	}
+}

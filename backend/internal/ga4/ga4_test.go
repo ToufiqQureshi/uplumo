@@ -159,7 +159,7 @@ func TestMeasurementHealthMapsAdminConfigurationAndFlags(t *testing.T) {
 	if summary["dataStreamCount"] != 2 || summary["webStreamCount"] != 1 || summary["keyEventCount"] != 1 || summary["customDimensionCount"] != 1 || summary["customMetricCount"] != 1 || summary["issueCount"] != 1 {
 		t.Fatalf("summary = %#v", summary)
 	}
-	if len(client.requests) != 5 || client.requests[0].Method != http.MethodGet || client.requests[0].Provider != "google-analytics" || client.requests[0].AccountID != "account-1" {
+	if len(client.requests) != 5 || client.requests[0].Method != http.MethodGet || client.requests[0].Provider != google.ProviderGA4 || client.requests[0].AccountID != "account-1" {
 		t.Fatalf("Admin API requests = %#v", client.requests)
 	}
 	if got["issues"].([]string)[0] != "site_search_measurement_disabled" {
@@ -333,7 +333,7 @@ func TestRunReportBuildsGA4RequestAndMapsProviderErrors(t *testing.T) {
 		t.Fatalf("provider calls = %d", len(provider.requests))
 	}
 	req := provider.requests[0]
-	if req.Provider != "google-analytics" || req.AccountID != "account-1" || req.UserID != "owner-1" {
+	if req.Provider != google.ProviderGA4 || req.AccountID != "account-1" || req.UserID != "owner-1" {
 		t.Fatalf("token scope = %#v", req)
 	}
 	if req.URL != "https://analyticsdata.googleapis.com/v1beta/properties/123:runReport" {

@@ -12,11 +12,17 @@ import (
 // AccountRepository removes a user's Google data grant and dependent mappings.
 type AccountRepository struct{ Pool *pgxpool.Pool }
 
+// Provider names every Google API caller passes in APIRequest.Provider.
+const (
+	ProviderGSC = "gsc"
+	ProviderGA4 = "ga4"
+)
+
 func accountScope(provider string) (table, providerID, accountColumn string, err error) {
 	switch provider {
-	case "gsc":
+	case ProviderGSC:
 		return "gsc_connections", "google-search-console", "gsc_account_id", nil
-	case "ga4":
+	case ProviderGA4:
 		return "ga4_connections", "google-analytics", "ga4_account_id", nil
 	default:
 		return "", "", "", errors.New("invalid google provider")

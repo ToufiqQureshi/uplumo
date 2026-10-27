@@ -89,7 +89,7 @@ func (c *Client) ListSites(ctx context.Context) ([]Site, error) {
 	var response struct {
 		SiteEntry []Site `json:"siteEntry"`
 	}
-	if err := c.API.DoJSON(ctx, google.APIRequest{UserID: c.UserID, Provider: "gsc", AccountID: c.AccountID, Method: http.MethodGet, URL: c.baseURL() + "/sites", Response: &response, Retryable: true}); err != nil {
+	if err := c.API.DoJSON(ctx, google.APIRequest{UserID: c.UserID, Provider: google.ProviderGSC, AccountID: c.AccountID, Method: http.MethodGet, URL: c.baseURL() + "/sites", Response: &response, Retryable: true}); err != nil {
 		return nil, err
 	}
 	if len(response.SiteEntry) > 10_000 {
@@ -178,7 +178,7 @@ func (c *Client) QuerySearchAnalytics(ctx context.Context, siteURL string, reque
 		Rows []SearchRow `json:"rows"`
 	}
 	endpoint := c.baseURL() + "/sites/" + url.PathEscape(siteURL) + "/searchAnalytics/query"
-	if err := c.API.DoJSON(ctx, google.APIRequest{UserID: c.UserID, Provider: "gsc", AccountID: c.AccountID, Method: http.MethodPost, URL: endpoint, Body: request, Response: &response, Retryable: true, MaxResponseBytes: 16 << 20}); err != nil {
+	if err := c.API.DoJSON(ctx, google.APIRequest{UserID: c.UserID, Provider: google.ProviderGSC, AccountID: c.AccountID, Method: http.MethodPost, URL: endpoint, Body: request, Response: &response, Retryable: true, MaxResponseBytes: 16 << 20}); err != nil {
 		return nil, err
 	}
 	if len(response.Rows) > request.RowLimit {
@@ -195,7 +195,7 @@ func (c *Client) UserInfoEmail(ctx context.Context) (string, error) {
 	var response struct {
 		Email string `json:"email"`
 	}
-	if err := c.API.DoJSON(ctx, google.APIRequest{UserID: c.UserID, Provider: "gsc", AccountID: c.AccountID, Method: http.MethodGet, URL: c.userInfoURL(), Response: &response, Retryable: true}); err != nil {
+	if err := c.API.DoJSON(ctx, google.APIRequest{UserID: c.UserID, Provider: google.ProviderGSC, AccountID: c.AccountID, Method: http.MethodGet, URL: c.userInfoURL(), Response: &response, Retryable: true}); err != nil {
 		return "", err
 	}
 	return response.Email, nil
@@ -217,7 +217,7 @@ func (c *Client) InspectURL(ctx context.Context, siteURL, inspectionURL, languag
 	var response struct {
 		InspectionResult map[string]any `json:"inspectionResult"`
 	}
-	if err := c.API.DoJSON(ctx, google.APIRequest{UserID: c.UserID, Provider: "gsc", AccountID: c.AccountID, Method: http.MethodPost, URL: c.inspectionURL(), Body: body, Response: &response, Retryable: true}); err != nil {
+	if err := c.API.DoJSON(ctx, google.APIRequest{UserID: c.UserID, Provider: google.ProviderGSC, AccountID: c.AccountID, Method: http.MethodPost, URL: c.inspectionURL(), Body: body, Response: &response, Retryable: true}); err != nil {
 		return nil, err
 	}
 	return response.InspectionResult, nil

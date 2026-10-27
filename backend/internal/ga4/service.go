@@ -182,7 +182,7 @@ func (s *Service) runProvider(ctx context.Context, c Connection, request APIRequ
 	}
 	var response ProviderResponse
 	urlPath := "https://analyticsdata.googleapis.com/v1beta/" + c.PropertyID + ":runReport"
-	err := s.Google.DoJSON(ctx, google.APIRequest{UserID: c.ConnectedByUserID, Provider: "google-analytics", AccountID: c.GA4AccountID, Method: http.MethodPost, URL: urlPath, Body: request, Response: &response, Retryable: true, MaxResponseBytes: 2 << 20})
+	err := s.Google.DoJSON(ctx, google.APIRequest{UserID: c.ConnectedByUserID, Provider: google.ProviderGA4, AccountID: c.GA4AccountID, Method: http.MethodPost, URL: urlPath, Body: request, Response: &response, Retryable: true, MaxResponseBytes: 2 << 20})
 	return response, err
 }
 
