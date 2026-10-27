@@ -16,6 +16,7 @@ func TestEstimateUSDIsTheMostARequestCanCost(t *testing.T) {
 		{"live serp top 10", "/v3/serp/google/organic/live/advanced", `[{"keyword":"shoes","depth":10}]`, 0.002},
 		{"live serp default depth is 10", "/v3/serp/google/organic/live/advanced", `[{"keyword":"shoes"}]`, 0.002},
 		{"live serp with operator", "/v3/serp/google/organic/live/advanced", `[{"keyword":"site:example.com shoes","depth":10}]`, 0.01},
+		{"live serp with pixel rectangles adds one base price", "/v3/serp/google/organic/live/advanced", `[{"keyword":"shoes","depth":10,"calculate_rectangles":true}]`, 0.004},
 		{"queued serp per task", "/v3/serp/google/organic/task_post", `[{"keyword":"a","depth":20},{"keyword":"b","depth":20}]`, 2 * (0.0006 + 0.0006)},
 		{"queued serp priority", "/v3/serp/google/organic/task_post", `[{"keyword":"a","depth":10,"priority":2}]`, 0.0012},
 		{"labs with limit at July 2026 rates", "/v3/dataforseo_labs/google/keyword_ideas/live", `[{"limit":100}]`, 0.024},

@@ -47,6 +47,8 @@ var typicalUSD = []struct {
 	{spend.DomainResearch, "", "domain report tab", 0.031, 0},
 	// Summary $0.024 + history $0.024 + the first 1,000 table rows $0.06.
 	{spend.Backlinks, "", "backlink report", 0.108, 0},
+	// One domain_intersection task of 100 sites: $0.024 + 100 x $0.000036.
+	{spend.Backlinks, ActionBacklinkGap, "backlink gap lookup (100 sites)", 0.0276, 0},
 	{spend.AIVisibility, ActionPromptExplorer, "prompt on 4 AI models", 0.1, dataforseo.PromptExplorerCeilingUSD(4, true)},
 	{spend.AIVisibility, ActionBrandLookup, "brand lookup (less when AI has no data, more with competitors)", 0.29, dataforseo.BrandLookupCeilingUSD(2, true)},
 	{spend.AIAssistant, "", "AI assistant reply", 0.03, 0},
@@ -57,6 +59,8 @@ var typicalUSD = []struct {
 const (
 	ActionPromptExplorer = "prompt_explorer"
 	ActionBrandLookup    = "brand_lookup"
+	// ActionBacklinkGap is the Backlink Opportunity lookup.
+	ActionBacklinkGap = "backlink_gap"
 )
 
 // ActionCosts lists the typical cost of every feature that spends credits.

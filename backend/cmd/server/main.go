@@ -297,7 +297,7 @@ func run(logger *slog.Logger) (err error) {
 		indexNowService.Plans = gateSvc.Gate(planCatalog.IndexNow)
 	}
 
-	rankChecks, err := buildRankChecks(ctx, logger, db, gateSvc, dfClient)
+	rankChecks, err := buildRankChecks(ctx, logger, db, rdb, gateSvc, dfClient)
 	if err != nil {
 		return err
 	}
@@ -627,7 +627,7 @@ func buildGSCConnectionOperations(db *pgxpool.Pool, api *google.APIClient, oauth
 // buildRankChecks starts the rank check worker and returns the service that
 // queues checks. Without a DataForSEO key it returns nil and the check route
 // answers 503. Checks run ungated only in self-hosted development.
-func buildRankChecks(ctx context.Context, logger *slog.Logger, db *pgxpool.Pool, billingSvc *billing.Service, dfClient *dataforseo.Client) (*ranktracking.Checks, error) {
+func buildRankChecks(ctx context.Context, logger *slog.Logger, db *pgxpool.Pool, rdb *redis.Client, billingSvc *billing.Service, dfClient *dataforseo.Client) (*ranktracking.Checks, error) {
 	if dfClient == nil {
 		return nil, nil
 	}
@@ -636,6 +636,10 @@ func buildRankChecks(ctx context.Context, logger *slog.Logger, db *pgxpool.Pool,
 		return nil, fmt.Errorf("create rank check job queue: %w", err)
 	}
 	store := ranktracking.Store{DB: db}
+	var pixelCache ranktracking.PixelCache
+	if rdb != nil {
+		pixelCache = ranktracking.RedisPixelCache{Client: rdb}
+	}
 	var plans ranktracking.PaidPlans
 	var depthLimits ranktracking.SerpDepthLimits
 	if billingSvc != nil {
@@ -646,6 +650,7 @@ func buildRankChecks(ctx context.Context, logger *slog.Logger, db *pgxpool.Pool,
 		Repo: store, Results: store, Runs: store, Serp: ranktracking.DataForSEOSerp{Client: dfClient},
 		Queued: ranktracking.DataForSEOSerp{Client: dfClient}, Tasks: store,
 		Scheduler: ranktracking.QueueScheduler{Queue: queue}, Plans: plans, DepthLimits: depthLimits, Logger: logger, Now: time.Now,
+		Pixel: ranktracking.DataForSEOSerp{Client: dfClient}, PixelCache: pixelCache,
 	}
 	worker := jobs.Worker{
 		Queue: queue, QueueName: ranktracking.QueueName, Handle: checks.JobHandler(),

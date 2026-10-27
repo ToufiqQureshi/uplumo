@@ -84,14 +84,17 @@ type SerpDepthLimits interface {
 
 // Checks starts rank checks and runs them.
 type Checks struct {
-	Repo        Repository
-	Results     ResultsRepository
-	Runs        RunStore
-	Serp        SerpProvider
-	Queued      QueuedSerp // nil refuses scheduled runs
-	Tasks       TaskStore
-	Scheduler   RunScheduler
-	Plans       PaidPlans // nil runs ungated, like a self-hosted deployment
+	Repo      Repository
+	Results   ResultsRepository
+	Runs      RunStore
+	Serp      SerpProvider
+	Queued    QueuedSerp // nil refuses scheduled runs
+	Tasks     TaskStore
+	Scheduler RunScheduler
+	Plans     PaidPlans // nil runs ungated, like a self-hosted deployment
+	// Pixel and PixelCache serve the on-demand pixel check; nil Pixel answers 503.
+	Pixel       PixelProvider
+	PixelCache  PixelCache
 	DepthLimits SerpDepthLimits
 	Logger      *slog.Logger
 	Now         func() time.Time

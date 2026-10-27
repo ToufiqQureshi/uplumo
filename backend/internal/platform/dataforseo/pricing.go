@@ -143,6 +143,14 @@ func serpCeiling(path string, task map[string]any) float64 {
 	if keyword, _ := task["keyword"].(string); serpOperator.MatchString(keyword) {
 		price *= serpOperatorFactor
 	}
+	// Pixel rectangles add one base price (Google Organic advanced).
+	if rectangles, _ := task["calculate_rectangles"].(bool); rectangles {
+		if strings.Contains(path, "/task_post") {
+			price += serpQueuedPageUSD
+		} else {
+			price += serpLivePageUSD
+		}
+	}
 	return price
 }
 

@@ -49,6 +49,7 @@ func Mount(mux *http.ServeMux, d Deps) {
 	mux.Handle(base+"keywords/metrics/refresh", protect(handle(d, refreshKeywordMetrics)))
 	mux.Handle(base+"estimate-cost", protect(handle(d, estimateCost)))
 	mux.Handle(base+"checks/start", protect(handle(d, startCheck)))
+	mux.Handle(base+"checks/pixels", protect(handle(d, pixelCheck)))
 	mux.Handle(base+"results/latest", protect(handle(d, latestResults)))
 	mux.Handle(base+"runs/latest", protect(handle(d, latestRun)))
 	mux.Handle(base+"results/history", protect(handle(d, keywordHistory)))
@@ -494,4 +495,29 @@ func startCheck(q request) (any, error) {
 		return nil, err
 	}
 	return map[string]any{"ok": true, "runId": runID}, nil
+}
+
+func pixelCheck(q request) (any, error) {
+	var body struct {
+		configIDBody
+		Keywords []string `json:"keywords"`
+		Device   string   `json:"device"`
+	}
+	if err := q.decode(&body); err != nil {
+		return nil, err
+	}
+	if err := validID(body.ConfigID); err != nil {
+		return nil, err
+	}
+	if q.d.Checks == nil {
+		return nil, ErrChecksUnavailable
+	}
+	rows, err := q.d.Checks.Pixels(q.r.Context(), PixelInput{
+		OrganizationID: q.organizationID, ProjectID: q.projectID, ConfigID: body.ConfigID,
+		Keywords: body.Keywords, Device: body.Device,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"keywords": rows}, nil
 }

@@ -162,7 +162,7 @@ const ISSUE_RULES: Record<string, IssueRule> = {
 const IMPACT_RANK: Record<Impact, number> = { High: 0, Medium: 1, Low: 2 };
 
 /** Short, regex-safe id for free text such as a search query. */
-function hashKey(text: string) {
+export function hashKey(text: string) {
   let h = 2166136261;
   for (let i = 0; i < text.length; i++) {
     h ^= text.charCodeAt(i);

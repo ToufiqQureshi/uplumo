@@ -38,9 +38,11 @@ import { Route as AppPProjectIdIndexRouteImport } from './routes/_app/p/$project
 import { Route as AppPProjectIdAiOpportunitiesRouteImport } from './routes/_app/p/$projectId/ai-opportunities'
 import { Route as AppPProjectIdAiSentimentRouteImport } from './routes/_app/p/$projectId/ai-sentiment'
 import { Route as AppPProjectIdAnalyticsRouteImport } from './routes/_app/p/$projectId/analytics'
+import { Route as AppPProjectIdBacklinkOpportunityRouteImport } from './routes/_app/p/$projectId/backlink-opportunity'
 import { Route as AppPProjectIdBacklinksRouteImport } from './routes/_app/p/$projectId/backlinks'
 import { Route as AppPProjectIdBrandLookupRouteImport } from './routes/_app/p/$projectId/brand-lookup'
 import { Route as AppPProjectIdContentEditorRouteImport } from './routes/_app/p/$projectId/content-editor'
+import { Route as AppPProjectIdContentIdeasRouteImport } from './routes/_app/p/$projectId/content-ideas'
 import { Route as AppPProjectIdContextRouteImport } from './routes/_app/p/$projectId/context'
 import { Route as AppPProjectIdDomainRouteImport } from './routes/_app/p/$projectId/domain'
 import { Route as AppPProjectIdKeywordsRouteImport } from './routes/_app/p/$projectId/keywords'
@@ -210,6 +212,12 @@ const AppPProjectIdAnalyticsRoute = AppPProjectIdAnalyticsRouteImport.update({
   path: '/analytics',
   getParentRoute: () => AppPProjectIdRouteRoute,
 } as any)
+const AppPProjectIdBacklinkOpportunityRoute =
+  AppPProjectIdBacklinkOpportunityRouteImport.update({
+    id: '/backlink-opportunity',
+    path: '/backlink-opportunity',
+    getParentRoute: () => AppPProjectIdRouteRoute,
+  } as any)
 const AppPProjectIdBacklinksRoute = AppPProjectIdBacklinksRouteImport.update({
   id: '/backlinks',
   path: '/backlinks',
@@ -225,6 +233,12 @@ const AppPProjectIdContentEditorRoute =
   AppPProjectIdContentEditorRouteImport.update({
     id: '/content-editor',
     path: '/content-editor',
+    getParentRoute: () => AppPProjectIdRouteRoute,
+  } as any)
+const AppPProjectIdContentIdeasRoute =
+  AppPProjectIdContentIdeasRouteImport.update({
+    id: '/content-ideas',
+    path: '/content-ideas',
     getParentRoute: () => AppPProjectIdRouteRoute,
   } as any)
 const AppPProjectIdContextRoute = AppPProjectIdContextRouteImport.update({
@@ -379,9 +393,11 @@ export interface FileRoutesByFullPath {
   '/p/$projectId/ai-opportunities': typeof AppPProjectIdAiOpportunitiesRoute
   '/p/$projectId/ai-sentiment': typeof AppPProjectIdAiSentimentRoute
   '/p/$projectId/analytics': typeof AppPProjectIdAnalyticsRoute
+  '/p/$projectId/backlink-opportunity': typeof AppPProjectIdBacklinkOpportunityRoute
   '/p/$projectId/backlinks': typeof AppPProjectIdBacklinksRoute
   '/p/$projectId/brand-lookup': typeof AppPProjectIdBrandLookupRoute
   '/p/$projectId/content-editor': typeof AppPProjectIdContentEditorRoute
+  '/p/$projectId/content-ideas': typeof AppPProjectIdContentIdeasRoute
   '/p/$projectId/context': typeof AppPProjectIdContextRoute
   '/p/$projectId/domain': typeof AppPProjectIdDomainRoute
   '/p/$projectId/keywords': typeof AppPProjectIdKeywordsRoute
@@ -430,9 +446,11 @@ export interface FileRoutesByTo {
   '/p/$projectId/ai-opportunities': typeof AppPProjectIdAiOpportunitiesRoute
   '/p/$projectId/ai-sentiment': typeof AppPProjectIdAiSentimentRoute
   '/p/$projectId/analytics': typeof AppPProjectIdAnalyticsRoute
+  '/p/$projectId/backlink-opportunity': typeof AppPProjectIdBacklinkOpportunityRoute
   '/p/$projectId/backlinks': typeof AppPProjectIdBacklinksRoute
   '/p/$projectId/brand-lookup': typeof AppPProjectIdBrandLookupRoute
   '/p/$projectId/content-editor': typeof AppPProjectIdContentEditorRoute
+  '/p/$projectId/content-ideas': typeof AppPProjectIdContentIdeasRoute
   '/p/$projectId/context': typeof AppPProjectIdContextRoute
   '/p/$projectId/domain': typeof AppPProjectIdDomainRoute
   '/p/$projectId/keywords': typeof AppPProjectIdKeywordsRoute
@@ -485,9 +503,11 @@ export interface FileRoutesById {
   '/_app/p/$projectId/ai-opportunities': typeof AppPProjectIdAiOpportunitiesRoute
   '/_app/p/$projectId/ai-sentiment': typeof AppPProjectIdAiSentimentRoute
   '/_app/p/$projectId/analytics': typeof AppPProjectIdAnalyticsRoute
+  '/_app/p/$projectId/backlink-opportunity': typeof AppPProjectIdBacklinkOpportunityRoute
   '/_app/p/$projectId/backlinks': typeof AppPProjectIdBacklinksRoute
   '/_app/p/$projectId/brand-lookup': typeof AppPProjectIdBrandLookupRoute
   '/_app/p/$projectId/content-editor': typeof AppPProjectIdContentEditorRoute
+  '/_app/p/$projectId/content-ideas': typeof AppPProjectIdContentIdeasRoute
   '/_app/p/$projectId/context': typeof AppPProjectIdContextRoute
   '/_app/p/$projectId/domain': typeof AppPProjectIdDomainRoute
   '/_app/p/$projectId/keywords': typeof AppPProjectIdKeywordsRoute
@@ -540,9 +560,11 @@ export interface FileRouteTypes {
     | '/p/$projectId/ai-opportunities'
     | '/p/$projectId/ai-sentiment'
     | '/p/$projectId/analytics'
+    | '/p/$projectId/backlink-opportunity'
     | '/p/$projectId/backlinks'
     | '/p/$projectId/brand-lookup'
     | '/p/$projectId/content-editor'
+    | '/p/$projectId/content-ideas'
     | '/p/$projectId/context'
     | '/p/$projectId/domain'
     | '/p/$projectId/keywords'
@@ -591,9 +613,11 @@ export interface FileRouteTypes {
     | '/p/$projectId/ai-opportunities'
     | '/p/$projectId/ai-sentiment'
     | '/p/$projectId/analytics'
+    | '/p/$projectId/backlink-opportunity'
     | '/p/$projectId/backlinks'
     | '/p/$projectId/brand-lookup'
     | '/p/$projectId/content-editor'
+    | '/p/$projectId/content-ideas'
     | '/p/$projectId/context'
     | '/p/$projectId/domain'
     | '/p/$projectId/keywords'
@@ -645,9 +669,11 @@ export interface FileRouteTypes {
     | '/_app/p/$projectId/ai-opportunities'
     | '/_app/p/$projectId/ai-sentiment'
     | '/_app/p/$projectId/analytics'
+    | '/_app/p/$projectId/backlink-opportunity'
     | '/_app/p/$projectId/backlinks'
     | '/_app/p/$projectId/brand-lookup'
     | '/_app/p/$projectId/content-editor'
+    | '/_app/p/$projectId/content-ideas'
     | '/_app/p/$projectId/context'
     | '/_app/p/$projectId/domain'
     | '/_app/p/$projectId/keywords'
@@ -889,6 +915,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPProjectIdAnalyticsRouteImport
       parentRoute: typeof AppPProjectIdRouteRoute
     }
+    '/_app/p/$projectId/backlink-opportunity': {
+      id: '/_app/p/$projectId/backlink-opportunity'
+      path: '/backlink-opportunity'
+      fullPath: '/p/$projectId/backlink-opportunity'
+      preLoaderRoute: typeof AppPProjectIdBacklinkOpportunityRouteImport
+      parentRoute: typeof AppPProjectIdRouteRoute
+    }
     '/_app/p/$projectId/backlinks': {
       id: '/_app/p/$projectId/backlinks'
       path: '/backlinks'
@@ -908,6 +941,13 @@ declare module '@tanstack/react-router' {
       path: '/content-editor'
       fullPath: '/p/$projectId/content-editor'
       preLoaderRoute: typeof AppPProjectIdContentEditorRouteImport
+      parentRoute: typeof AppPProjectIdRouteRoute
+    }
+    '/_app/p/$projectId/content-ideas': {
+      id: '/_app/p/$projectId/content-ideas'
+      path: '/content-ideas'
+      fullPath: '/p/$projectId/content-ideas'
+      preLoaderRoute: typeof AppPProjectIdContentIdeasRouteImport
       parentRoute: typeof AppPProjectIdRouteRoute
     }
     '/_app/p/$projectId/context': {
@@ -1122,9 +1162,11 @@ interface AppPProjectIdRouteRouteChildren {
   AppPProjectIdAiOpportunitiesRoute: typeof AppPProjectIdAiOpportunitiesRoute
   AppPProjectIdAiSentimentRoute: typeof AppPProjectIdAiSentimentRoute
   AppPProjectIdAnalyticsRoute: typeof AppPProjectIdAnalyticsRoute
+  AppPProjectIdBacklinkOpportunityRoute: typeof AppPProjectIdBacklinkOpportunityRoute
   AppPProjectIdBacklinksRoute: typeof AppPProjectIdBacklinksRoute
   AppPProjectIdBrandLookupRoute: typeof AppPProjectIdBrandLookupRoute
   AppPProjectIdContentEditorRoute: typeof AppPProjectIdContentEditorRoute
+  AppPProjectIdContentIdeasRoute: typeof AppPProjectIdContentIdeasRoute
   AppPProjectIdContextRoute: typeof AppPProjectIdContextRoute
   AppPProjectIdDomainRoute: typeof AppPProjectIdDomainRoute
   AppPProjectIdKeywordsRoute: typeof AppPProjectIdKeywordsRoute
@@ -1149,9 +1191,11 @@ const AppPProjectIdRouteRouteChildren: AppPProjectIdRouteRouteChildren = {
   AppPProjectIdAiOpportunitiesRoute: AppPProjectIdAiOpportunitiesRoute,
   AppPProjectIdAiSentimentRoute: AppPProjectIdAiSentimentRoute,
   AppPProjectIdAnalyticsRoute: AppPProjectIdAnalyticsRoute,
+  AppPProjectIdBacklinkOpportunityRoute: AppPProjectIdBacklinkOpportunityRoute,
   AppPProjectIdBacklinksRoute: AppPProjectIdBacklinksRoute,
   AppPProjectIdBrandLookupRoute: AppPProjectIdBrandLookupRoute,
   AppPProjectIdContentEditorRoute: AppPProjectIdContentEditorRoute,
+  AppPProjectIdContentIdeasRoute: AppPProjectIdContentIdeasRoute,
   AppPProjectIdContextRoute: AppPProjectIdContextRoute,
   AppPProjectIdDomainRoute: AppPProjectIdDomainRoute,
   AppPProjectIdKeywordsRoute: AppPProjectIdKeywordsRoute,

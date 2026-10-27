@@ -40,7 +40,7 @@ func Mount(mux *http.ServeMux, d Deps) {
 	for _, route := range []struct {
 		path string
 		fn   func(Deps) http.HandlerFunc
-	}{{"overview", overviewHandler}, {"backlinks", rowsHandler}, {"referring-domains", domainsHandler}, {"top-pages", pagesHandler}} {
+	}{{"overview", overviewHandler}, {"backlinks", rowsHandler}, {"referring-domains", domainsHandler}, {"top-pages", pagesHandler}, {"gap", gapHandler}} {
 		mux.Handle("POST /api/v1/projects/{projectId}/backlinks/"+route.path, protect(route.fn(d)))
 	}
 }

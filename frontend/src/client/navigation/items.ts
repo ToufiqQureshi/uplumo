@@ -69,6 +69,16 @@ const projectNavItems = [
     icon: Lightbulb,
   },
   {
+    to: "/p/$projectId/content-ideas" as const,
+    label: "Content Ideas",
+    icon: Lightbulb,
+  },
+  {
+    to: "/p/$projectId/backlink-opportunity" as const,
+    label: "Backlink Opportunity",
+    icon: Link2,
+  },
+  {
     to: "/p/$projectId/sam" as const,
     label: "SAM assistant",
     icon: MessagesSquare,
