@@ -53,10 +53,18 @@ is 400). Session and project membership required; any member may call it.
   (`OAI-SearchBot`, `ChatGPT-User`, `PerplexityBot`, `Claude-SearchBot`);
   blocking training bots is the owner's choice and costs no points.
 
+## Agent (paid) and proof (free)
+
+- `POST .../cite-fix/agent/run` `{url, mode: quick|deep, idempotencyKey}` works on one page of the latest scan. Quick: one `deepseek/deepseek-v4.1-flash` call (fix list, answer-first, FAQ, title/meta, JSON-LD, verify list), at most 25 credits. Deep: Flash plus one `deepseek/deepseek-v4-pro` rewrite of the whole page, at most 60 credits.
+- `POST .../cite-fix/agent/results` `{}` lists saved results (newest per page and mode), free.
+- The report's `agent` says if the agent is available, the plan allows it (AI writing feature, Basic+) and its caps; `proof` is the latest saved AI Visibility run: answers citing the customer, rival domains, questions where others were cited.
+- Agent context: live page (SSRF-guarded fetch, 16 KB text), its failed checks, top 15 Search Console queries (90 days), AI Visibility misses.
+- Money rules: provider `max_price` (Flash $0.30/$1.20, Pro $1.30/$2.60 per M) and `data_collection: deny`; one hold per run, ceiling ≤ cap, charge ≤ hold; unusable answer = 0 credits; failed rewrite = analysis only; same key replays; same content + mode cached for 0 credits; one running run per page+mode; 20 runs per project per 10 minutes. Spend feature `cite_fix`.
+
 ## Rules that must never break
 
-- No paid call. A change that adds one is a new PR with cost approval
-  (`CLAUDE.md` section 3).
+- The report never makes a paid call; only `agent/run` does, inside the
+  rules above. A new paid call needs owner approval (`CLAUDE.md` section 3).
 - Every read joins `projects` on the caller's workspace: another workspace's
   project reads as `no_scan`, never as data.
 - A pre-signal audit is `needs_rescan`, never a low score.

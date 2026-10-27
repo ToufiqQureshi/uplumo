@@ -23,6 +23,9 @@ feelings, business calls, priorities, corrections. Read it after
 - On cost: "paise ki chinta mat kar ... user ko batayenge ki ye costly ha ... if needed vo karega warna chod dega". Paid parts show credits before the click.
 - "baar baar nai bana sakte, ek hi baar me" -> agreed: one full design, shipped in 5 PRs. Name: **Cite Fix**, its own UI. He asked for the blueprint in PR 1; it went into the feature docs (repo rule: no plan files).
 - Asked whether the GitHub repos are copied: no, ideas and check lists only (GEO Optimizer MIT rubric, SEOnaut checks).
+- After PR 1: "kuch value dere ha hum? isme ai hai?" -> wanted a real AI agent (not SAM) giving page-specific fixes. Chose cheap models: "not opus, Deepseek v4 through open router". Worried about cost on big sites: "50 page ha to? in urls ko hi kar" -> user picks pages, top 5 default, max 20, cost shown first.
+- Approved: Quick 25 / Deep 60 credits per page, Basic+, Flash for analysis + Pro for rewrite. Found one Flash provider at $30.91/M output, so every call caps provider price.
+- "har ek cheez value de, kuch bhi bekar nai" and "future agent ko samjhe kitna effort" -> decisions, flows and this story are recorded in the citefix docs, DECISIONS.md and here. He is short on tokens: keep replies very short.
 
 ## 27 Oct 2026: Ubersuggest features, AI on every page (Claude)
 

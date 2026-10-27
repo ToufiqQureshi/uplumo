@@ -88,10 +88,11 @@ mean each one has been tried on production with real provider keys.
   site audit; the crawler now stores each page's citation signals (migration
   47). No paid call (`backend/internal/citefix`,
   `frontend/src/client/features/cite-fix`).
-- Not built: PR 2 paid per-page LLM citability score (needs the owner's credit
-  rate), PR 3 citation proof from AI Visibility, PR 4 one click from a fix
-  into the Content Editor with publish and re-scan, PR 5 SAM, MCP and report
-  tools. JavaScript rendering waits on an owner decision.
+- Built: paid AI agent per page (Quick ≤25, Deep ≤60 credits, DeepSeek via
+  OpenRouter), page picker, AI Visibility proof card, results into the
+  Content Editor. Real-provider acceptance pending.
+- Not built: SAM and MCP tools for Cite Fix; JavaScript rendering (owner
+  decision).
 
 ## Not built yet
 

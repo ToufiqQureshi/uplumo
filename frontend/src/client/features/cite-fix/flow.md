@@ -19,10 +19,16 @@
    "What to fix first" (first row open; each row shows impact, points, pages,
    then why, how and up to 20 affected pages), then "Pages, weakest first".
 
+## Agent flow
+
+Pick pages → choose Quick/Deep → "Fix N pages" → confirm (at most N × cap,
+balance shown) → pages run one at a time with live status → results refresh
+→ "Open in Content Editor" creates a draft (`content/drafts/save`) and opens it.
+
 ## Paid calls per user action
 
-None. Opening the page, polling and expanding rows read free data. Scans start
-on the Site Audit page, which makes no paid call either.
+Opening the page, polling, expanding rows and loading results: none. Each
+confirmed page: one agent run (see `backend/internal/citefix/flow.md`).
 
 ## Failure paths
 

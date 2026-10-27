@@ -26,6 +26,16 @@ The signals themselves are written by the crawler: `audit/pageanalyzer.go`
 reads them from the HTML it already fetched, `audit/repository.go` stores them
 with the page row.
 
+## Agent run flow (`agent.go`)
+
+1. Validate mode, key, URL; plan gate; replay by idempotency key.
+2. Find the URL in the workspace's latest completed scan (else 404).
+3. Fetch the live page (15 s, 2 MB, must be 200 HTML with text) → content hash.
+4. Cached completed run for same page, mode, hash → return it, 0 credits.
+5. Claim the run (advisory lock per project, stale >10 min freed, rate 20/10 min, unique running per page+mode).
+6. Evidence: Search Console queries, AI Visibility proof (free, failures logged).
+7. Hold the ceiling (≤ cap) → Flash call → (Deep) Pro call → settle provider vs customer cost → save result.
+
 ## Paid calls per user action
 
 | Action              | Provider calls |
@@ -33,6 +43,9 @@ with the page row.
 | Open the Cite Fix page | 0 |
 | Page polls while a scan runs (every 15 s) | 0 |
 | Start a scan (Site Audit) | 0 paid; PageSpeed checks use Google's free quota as the audit already does |
+| Agent Quick on one page | 1 OpenRouter call (Flash), ≤ 25 credits; 0 if cached or replayed |
+| Agent Deep on one page | 2 OpenRouter calls (Flash, then Pro), ≤ 60 credits; 0 if cached or replayed |
+| Batch of N pages | N runs one after another; confirmed at N × cap before the first |
 
 ## Failure paths
 

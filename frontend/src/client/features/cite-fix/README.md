@@ -14,14 +14,18 @@ live in `backend/internal/citefix/README.md`.
 - `CiteFixPage.tsx`: the page; states, score card, fix rows, page table.
 - `citeFixApi.ts`: `getCiteFixReport` and its Zod schema.
 - `scoreBand.ts`: the words and colour beside a score.
+- `AgentPanel.tsx`: page checkboxes (top 5 weakest preselected, max 20), Quick/Deep, batch max credits and balance, confirm, one-at-a-time runs.
+- `AgentResults.tsx`: saved results; copy blocks; "Open in Content Editor" saves a draft and opens it.
+- `ProofCard.tsx`: who AI answers cite (latest AI Visibility run).
+- `agentSelection.ts`: default selection and batch cap.
 - Route: `frontend/src/routes/_app/p/$projectId/cite-fix.tsx`. Sidebar entry:
   `frontend/src/client/navigation/items.ts`.
 
 ## Rules
 
-- The page reads one free endpoint. It never starts paid work; "Scan my site"
-  and "Scan again" link to Site Audit, which owns plan limits and the start
-  form.
+- Only "Fix N pages" spends credits, after a confirm dialog that names the
+  batch's maximum. Runs use `retry: false` and a new idempotency key each;
+  a credit, plan or rate error stops the batch. Scans start on Site Audit.
 - Never promise a citation: the score says "easier to quote".
 - Fix copy (title, why, how) comes from the API, so SAM, MCP and the page
   cannot drift apart.
