@@ -65,7 +65,7 @@ func TestPixelsOnlyBuysTrackedKeywordsOnceAndCachesThem(t *testing.T) {
 		return PixelInput{OrganizationID: "org", ProjectID: "p", ConfigID: "cfg", Device: device, Keywords: kws}
 	}
 	for name, bad := range map[string]PixelInput{
-		"untracked keyword": in("mobile", "pizza"),
+		"untracked keyword":  in("mobile", "pizza"),
 		"device not tracked": in("desktop", "cold coffee"),
 		"no keywords":        in("mobile"),
 		"over the limit":     in("mobile", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"),
