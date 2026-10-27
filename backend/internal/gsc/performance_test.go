@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -302,7 +303,10 @@ func TestMapProviderErrors(t *testing.T) {
 func TestGetMCPPerformanceAddsPropertyTotalsForQueryRows(t *testing.T) {
 	// Every query row shows 0 clicks because Google anonymized the queries
 	// that got the 3 clicks; the property total must still say 3.
-	client := &performanceClientStub{rows: []SearchRow{{Keys: []string{"chatgpt traffic"}, Clicks: 3, Impressions: 48, CTR: 0.0625, Position: 72.35}}}
+	client := &performanceClientStub{rows: []SearchRow{
+		{Keys: []string{"2026-05-01"}, Clicks: 2, Impressions: 8, Position: 70},
+		{Keys: []string{"2026-05-02"}, Clicks: 1, Impressions: 40, Position: 72.8},
+	}}
 	service := &Service{Connections: performanceConnectionStub{connection: Connection{SiteURL: "https://example.test/"}},
 		NewClient: func(string, string) SearchClient { return client }, Now: func() time.Time { return time.Date(2026, 5, 28, 0, 0, 0, 0, time.UTC) }}
 	result, err := service.GetMCPPerformance(context.Background(), "org-1", "project-1", MCPPerformanceInput{
@@ -315,13 +319,21 @@ func TestGetMCPPerformanceAddsPropertyTotalsForQueryRows(t *testing.T) {
 	if len(requests) != 2 {
 		t.Fatalf("provider requests = %d, want rows + totals", len(requests))
 	}
+	// The stub skips the real client, so check what the real client would
+	// refuse: Search Analytics rejects a request without a dimension.
+	for _, request := range requests {
+		if err := ValidateSearchRequest(request); err != nil {
+			t.Fatalf("request %+v would be refused by the client: %v", request, err)
+		}
+	}
 	total := requests[1]
-	if len(total.Dimensions) != 0 || total.RowLimit != 1 || total.StartRow != 0 || total.StartDate != requests[0].StartDate ||
+	if !slices.Equal(total.Dimensions, []string{"date"}) || total.RowLimit != dailyRowLimit || total.StartRow != 0 || total.StartDate != requests[0].StartDate ||
 		total.EndDate != requests[0].EndDate || len(total.DimensionFilterGroups) != 1 || total.Type != "web" {
-		t.Fatalf("totals request = %+v; want the rows request without dimensions", total)
+		t.Fatalf("totals request = %+v; want daily rows for the same range and filters", total)
 	}
 	totals := result["totals"].(map[string]any)
-	if totals["clicks"] != 3.0 || totals["impressions"] != 48.0 || totals["ctr"] != 0.0625 || totals["position"] != 72.4 {
+	// 3 clicks over 48 impressions; position weighted by impressions.
+	if totals["clicks"] != 3.0 || totals["impressions"] != 48.0 || totals["ctr"] != 0.0625 || totals["position"] != 72.3 {
 		t.Fatalf("totals = %#v", totals)
 	}
 	if result["totalsNote"] == nil {
@@ -349,5 +361,28 @@ func TestGetMCPPerformanceSkipsTotalsWithoutQueriesOrOnLaterPages(t *testing.T) 
 				t.Fatalf("requests = %d, totals = %v; want one request and no totals", n, result["totals"])
 			}
 		})
+	}
+}
+
+// totalsFailClient answers row requests and fails the daily totals read.
+type totalsFailClient struct{ performanceClientStub }
+
+func (c *totalsFailClient) QuerySearchAnalytics(ctx context.Context, site string, request SearchRequest) ([]SearchRow, error) {
+	if slices.Equal(request.Dimensions, []string{"date"}) {
+		return nil, errors.New("quota")
+	}
+	return c.performanceClientStub.QuerySearchAnalytics(ctx, site, request)
+}
+
+func TestGetMCPPerformanceKeepsRowsWhenTotalsFail(t *testing.T) {
+	client := &totalsFailClient{performanceClientStub{rows: []SearchRow{{Keys: []string{"q"}, Impressions: 5}}}}
+	service := &Service{Connections: performanceConnectionStub{connection: Connection{SiteURL: "https://example.test/"}},
+		NewClient: func(string, string) SearchClient { return client }}
+	result, err := service.GetMCPPerformance(context.Background(), "org-1", "project-1", MCPPerformanceInput{Dimensions: []string{"query"}})
+	if err != nil {
+		t.Fatalf("a failed totals read must not fail the rows: %v", err)
+	}
+	if result["totals"] != nil || result["totalsNote"] == nil || result["rowCount"] != 1 {
+		t.Fatalf("result = %#v; want rows, no totals and a warning", result)
 	}
 }
