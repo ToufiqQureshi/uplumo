@@ -219,6 +219,101 @@ describe("tracker", () => {
     expect(beacons.find((beacon) => beacon.n === "Email")?.x).toBeUndefined();
   });
 
+  it("records phone, SMS, email and WhatsApp taps without the number or address", () => {
+    runTracker(options);
+    document.body.innerHTML = [
+      '<a href="tel:+919800000000">Call</a>',
+      '<a href="sms:+919800000000">SMS</a>',
+      '<a href="MAILTO:owner@example.test">Mail</a>',
+      '<a href="https://wa.me/919800000000?text=hi">Chat</a>',
+      '<a href="https://api.whatsapp.com/send?phone=919800000000">Chat</a>',
+      '<a href="whatsapp://send?phone=919800000000">Chat</a>',
+      '<a href="https://www.whatsapp.com/download">Get WhatsApp</a>',
+    ].join("");
+    for (const link of document.querySelectorAll("a")) {
+      link.dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true }),
+      );
+    }
+    const clicks = beacons.filter((beacon) => beacon.c);
+    expect(clicks.map((beacon) => beacon.n)).toEqual([
+      "call_click",
+      "sms_click",
+      "email_click",
+      "whatsapp_click",
+      "whatsapp_click",
+      "whatsapp_click",
+      "outbound_click",
+    ]);
+    for (const click of clicks.slice(0, 6)) expect(click.x).toBeUndefined();
+    expect(JSON.stringify(beacons)).not.toContain("9800000000");
+    expect(JSON.stringify(beacons)).not.toContain("owner@example.test");
+  });
+
+  it("lets an owner's tag name a contact link", () => {
+    runTracker(options);
+    document.body.innerHTML =
+      '<a data-uplumo-event="Header WhatsApp" href="https://wa.me/919800000000">Chat</a>';
+    document
+      .querySelector("a")
+      ?.dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true }),
+      );
+    const clicks = beacons.filter((beacon) => beacon.c);
+    expect(clicks.map((beacon) => beacon.n)).toEqual(["Header WhatsApp"]);
+  });
+
+  it("records file downloads on the site and elsewhere", () => {
+    runTracker(options);
+    document.body.innerHTML =
+      '<a href="/menu.PDF?v=2">Menu</a><a href="https://cdn.test/brochure.zip">Zip</a><a href="/about">About</a>';
+    for (const link of document.querySelectorAll("a")) {
+      link.dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true }),
+      );
+    }
+    const clicks = beacons.filter((beacon) => beacon.c);
+    expect(clicks).toEqual([
+      expect.objectContaining({
+        n: "file_download",
+        x: "https://acme.test/menu.PDF",
+      }),
+      expect.objectContaining({
+        n: "file_download",
+        x: "https://cdn.test/brochure.zip",
+      }),
+    ]);
+  });
+
+  it("records a submitted form once, never search forms or field values", () => {
+    runTracker(options);
+    document.body.innerHTML = [
+      '<form id="lead" method="post"><input name="phone" value="9800000000"><button>Send</button></form>',
+      '<form id="search"><input name="q" value="rooms"></form>',
+      '<form id="search-role" role="search" method="post"><input name="term"></form>',
+      '<form id="tagged" method="post"><button data-uplumo-event="Quote">Get quote</button></form>',
+      '<form id="ignored" method="post" data-uplumo-ignore><input name="x"></form>',
+    ].join("");
+    for (const form of document.querySelectorAll("form")) {
+      form.dispatchEvent(
+        new Event("submit", { bubbles: true, cancelable: true }),
+      );
+    }
+    const submits = beacons.filter((beacon) => beacon.n === "form_submit");
+    expect(submits).toHaveLength(1);
+    expect(submits[0]?.c).toBeUndefined();
+    expect(JSON.stringify(beacons)).not.toContain("9800000000");
+  });
+
+  it("does not count a browser that opted out with uplumo_ignore, until undone", () => {
+    window.location.href = "https://acme.test/?uplumo_ignore=1";
+    expect(runTracker(options)).toBeUndefined();
+    window.location.href = "https://acme.test/pricing";
+    expect(runTracker(options)).toBeUndefined();
+    window.location.href = "https://acme.test/?uplumo_ignore=0";
+    expect(runTracker(options)?.u).toBe("https://acme.test/?uplumo_ignore=0");
+  });
+
   it("stops collection and clears identifiers on consent withdrawal", () => {
     runTracker({ ...options, recognition: true });
     const api = window as unknown as {

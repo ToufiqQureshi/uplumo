@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  aiShareOfVisitors,
+  aiShareOfVisits,
+  actionLabel,
   aiSourceRows,
   channelRows,
   displayPath,
@@ -17,9 +18,7 @@ describe("aiSourceRows", () => {
       "Claude",
       "Copilot",
     ]);
-    expect(rows.every((row) => row.visitors === 0 && row.share === 0)).toBe(
-      true,
-    );
+    expect(rows.every((row) => row.count === 0 && row.share === 0)).toBe(true);
   });
 
   it("sorts by visitors, keeps the named order for ties, and adds other AI only when it has visitors", () => {
@@ -28,7 +27,7 @@ describe("aiSourceRows", () => {
       { source: "other_ai", visitors: 5 },
       { source: "chatgpt", visitors: 10 },
     ]);
-    expect(rows.map((row) => [row.key, row.visitors, row.share])).toEqual([
+    expect(rows.map((row) => [row.key, row.count, row.share])).toEqual([
       ["chatgpt", 10, 0.5],
       ["claude", 5, 0.25],
       ["other_ai", 5, 0.25],
@@ -43,37 +42,46 @@ describe("aiSourceRows", () => {
 });
 
 describe("channelRows", () => {
-  it("drops empty channels and gives each a share of all visitors", () => {
+  it("drops empty sources and gives each a share of all visits", () => {
     const rows = channelRows([
-      { channel: "direct", visitors: 1 },
-      { channel: "social", visitors: 0 },
-      { channel: "ai", visitors: 3 },
+      { channel: "direct", sessions: 1 },
+      { channel: "social", sessions: 0 },
+      { channel: "ai", sessions: 3 },
     ]);
-    expect(rows.map((row) => [row.label, row.share])).toEqual([
-      ["AI assistants", 0.75],
-      ["Direct", 0.25],
+    expect(rows.map((row) => [row.label, row.count, row.share])).toEqual([
+      ["AI assistants", 3, 0.75],
+      ["Direct", 1, 0.25],
     ]);
   });
 });
 
-describe("aiShareOfVisitors", () => {
+describe("aiShareOfVisits", () => {
   it.each([
-    { name: "no visits", channels: [], share: 0 },
+    { name: "no visits", acquisition: [], share: 0 },
     {
       name: "no AI channel",
-      channels: [{ channel: "search" as const, visitors: 4 }],
+      acquisition: [{ channel: "search" as const, sessions: 4 }],
       share: 0,
     },
     {
       name: "a mix",
-      channels: [
-        { channel: "ai" as const, visitors: 1 },
-        { channel: "search" as const, visitors: 3 },
+      acquisition: [
+        { channel: "ai" as const, sessions: 1 },
+        { channel: "search" as const, sessions: 3 },
       ],
       share: 0.25,
     },
-  ])("$name -> $share", ({ channels, share }) => {
-    expect(aiShareOfVisitors(channels)).toBe(share);
+  ])("$name -> $share", ({ acquisition, share }) => {
+    expect(aiShareOfVisits(acquisition)).toBe(share);
+  });
+});
+
+describe("actionLabel", () => {
+  it("names the tracker's own actions and keeps owner tags as typed", () => {
+    expect(actionLabel("whatsapp_click")).toBe("WhatsApp");
+    expect(actionLabel("call_click")).toBe("Phone call");
+    expect(actionLabel("form_submit")).toBe("Form");
+    expect(actionLabel("Book demo")).toBe("Book demo");
   });
 });
 

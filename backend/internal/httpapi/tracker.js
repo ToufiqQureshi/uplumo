@@ -5,6 +5,14 @@
   var nav = navigator;
   var site = script && script.getAttribute("data-site");
   if (!site || nav.doNotTrack === "1" || window.doNotTrack === "1" || nav.globalPrivacyControl) return;
+  // Owners exclude their own browser by opening any page with
+  // ?uplumo_ignore=1 (and undo it with ?uplumo_ignore=0).
+  try {
+    var ignore = new URLSearchParams(location.search).get("uplumo_ignore");
+    if (ignore === "1") localStorage.setItem("uplumo-ignore", "1");
+    else if (ignore === "0") localStorage.removeItem("uplumo-ignore");
+    if (localStorage.getItem("uplumo-ignore") === "1") return;
+  } catch (_) { /* Blocked storage cannot hold the opt-out; keep counting. */ }
 
   var endpoint = new URL("/collect", script.src).href;
   var sessionKey = "uplumo-session:" + site;
@@ -156,6 +164,27 @@
     post(payload(data));
   }
 
+  // contactEvent names a tap on a phone, SMS, email or WhatsApp link. These
+  // are a small business's enquiries, and GA4 does not record them on its
+  // own. The number or address itself is never sent.
+  function contactEvent(href) {
+    var h = String(href || "").trim().toLowerCase();
+    if (h.indexOf("tel:") === 0) return "call_click";
+    if (h.indexOf("sms:") === 0) return "sms_click";
+    if (h.indexOf("mailto:") === 0) return "email_click";
+    if (h.indexOf("whatsapp:") === 0) return "whatsapp_click";
+    try {
+      var url = new URL(href, location.href);
+      var host = url.hostname.replace(/^www\./, "");
+      if (host === "wa.me" || host === "api.whatsapp.com" || host === "web.whatsapp.com" ||
+          host === "whatsapp.com" && url.pathname.indexOf("/send") === 0) return "whatsapp_click";
+    } catch (_) { /* Not a URL. */ }
+    return "";
+  }
+
+  // File types GA4's enhanced measurement counts as downloads.
+  var fileTypes = /\.(pdf|xlsx?|docx?|txt|rtf|csv|exe|key|pp[st]x?|7z|pkg|rar|gz|zip|avi|mov|mp4|mpe?g|wmv|midi?|mp3|wav|wma)$/i;
+
   addEventListener("click", function (e) {
     var target = e.target && (e.target.closest ? e.target : e.target.parentElement);
     if (!target || !target.closest) return;
@@ -164,16 +193,39 @@
     var raw = el && el.getAttribute("data-uplumo-destination") || link && link.getAttribute("href");
     var destination = "";
     var external = false;
+    var download = false;
     try {
       var url = new URL(raw || "", location.href);
       if (raw && /^https?:$/.test(url.protocol) && !url.username && !url.password) {
         external = url.hostname !== location.hostname;
+        download = fileTypes.test(url.pathname);
         destination = url.origin + url.pathname;
         if (destination.length > 2048) destination = "";
       }
     } catch (_) { /* Missing or unsupported targets stay unknown. */ }
+    var contact = link && contactEvent(link.getAttribute("href"));
+    // An owner's tag names the click; otherwise contact, download, outbound.
     if (el) track(el.getAttribute("data-uplumo-event"), { destination: destination });
+    else if (contact) track(contact, {});
+    else if (download && destination) track("file_download", { destination: destination });
     else if (external && destination) track("outbound_click", { destination: destination });
+  }, true);
+
+  // A submitted form is an enquiry attempt, like GA4's form_submit, except
+  // that site search forms are left out, and forms whose button is already
+  // tagged are left to that tag so one submission counts once. The submit
+  // event only fires after the browser's own validation passes; it does not
+  // prove the server accepted the form. Field values are never read.
+  function searchForm(form) {
+    if (form.closest("[role=search]") || form.querySelector("input[type=search]")) return true;
+    if ((form.getAttribute("method") || "get").toLowerCase() !== "get") return false;
+    return !!form.querySelector("[name=q],[name=s],[name=search],[name=query],[name=keyword]");
+  }
+  addEventListener("submit", function (e) {
+    var form = e.target;
+    if (!form || form.nodeName !== "FORM" || form.hasAttribute("data-uplumo-ignore") ||
+        form.closest("[data-uplumo-event]") || form.querySelector("[data-uplumo-event]") || searchForm(form)) return;
+    track("form_submit");
   }, true);
   window.uplumo = function (name) { track(name); };
   // Site owners call this from their consent manager. Revocation stops all

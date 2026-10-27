@@ -15,7 +15,7 @@ import {
   rangeForDays,
 } from "@/client/features/analytics/analyticsApi";
 import {
-  aiShareOfVisitors,
+  aiShareOfVisits,
   aiSourceRows,
   formatShare,
 } from "@/client/features/analytics/presentation";
@@ -104,8 +104,8 @@ export function AnalyticsSummaryCard({ projectId }: { projectId: string }) {
   }
 
   const aiRows = aiSourceRows(summary.aiSources);
-  const aiVisitors = aiRows.reduce((total, row) => total + row.visitors, 0);
-  const topAi = aiRows.find((row) => row.visitors > 0);
+  const aiVisitors = aiRows.reduce((total, row) => total + row.count, 0);
+  const topAi = aiRows.find((row) => row.count > 0);
   return (
     <CardShell
       title="Visitors and AI traffic"
@@ -117,7 +117,7 @@ export function AnalyticsSummaryCard({ projectId }: { projectId: string }) {
         <StatTile label="From AI" value={count.format(aiVisitors)} />
         <StatTile
           label="AI share"
-          value={formatShare(aiShareOfVisitors(summary.channels))}
+          value={formatShare(aiShareOfVisits(summary.acquisitionChannels))}
         />
         <StatTile label="Pageviews" value={count.format(summary.pageviews)} />
       </div>

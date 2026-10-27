@@ -1,18 +1,17 @@
 import type { AiSource, AnalyticsSummary, Channel } from "./analyticsApi";
 
-export const CHANNEL_LABELS: Record<Channel, { label: string; hint: string }> =
-  {
-    ai: {
-      label: "AI assistants",
-      hint: "ChatGPT, Perplexity, Gemini and others",
-    },
-    search: { label: "Search engines", hint: "Google, Bing and others" },
-    social: { label: "Social media", hint: "Facebook, LinkedIn, X and others" },
-    paid: { label: "Paid ads", hint: "Campaign-tagged paid traffic" },
-    email: { label: "Email", hint: "Email campaigns and newsletters" },
-    referral: { label: "Other websites", hint: "Links on other sites" },
-    direct: { label: "Direct", hint: "Typed the address or used a bookmark" },
-  };
+const CHANNEL_LABELS: Record<Channel, { label: string; hint: string }> = {
+  ai: {
+    label: "AI assistants",
+    hint: "ChatGPT, Perplexity, Gemini and others",
+  },
+  search: { label: "Search engines", hint: "Google, Bing and others" },
+  social: { label: "Social media", hint: "Facebook, LinkedIn, X and others" },
+  paid: { label: "Paid ads", hint: "Campaign-tagged paid traffic" },
+  email: { label: "Email", hint: "Email campaigns and newsletters" },
+  referral: { label: "Other websites", hint: "Links on other sites" },
+  direct: { label: "Direct", hint: "Typed the address or used a bookmark" },
+};
 
 export function formatDuration(milliseconds: number): string {
   if (milliseconds < 1000) return "<1s";
@@ -54,33 +53,39 @@ export interface ShareRow {
   key: string;
   label: string;
   hint?: string;
-  visitors: number;
+  /** Visitors (AI sources) or visits (channels), as the caller labels it. */
+  count: number;
   /** This row's part of the total, from 0 to 1. */
   share: number;
 }
 
 function withShares(rows: Omit<ShareRow, "share">[]): ShareRow[] {
-  const total = rows.reduce((sum, row) => sum + row.visitors, 0);
+  const total = rows.reduce((sum, row) => sum + row.count, 0);
   const shared = rows.map((row) => ({
     ...row,
-    share: total === 0 ? 0 : row.visitors / total,
+    share: total === 0 ? 0 : row.count / total,
   }));
   // A fresh array, so sorting in place is safe. The sort is stable.
-  shared.sort((a, b) => b.visitors - a.visitors);
+  shared.sort((a, b) => b.count - a.count);
   return shared;
 }
 
-/** Channels with visitors, biggest first, with their share of all visitors. */
+/**
+ * Visit sources, biggest first, with their share of all visits. Each visit
+ * (session) has exactly one source, its first page's, so the shares add up to
+ * every visit. Visitor-based channel counts cannot do that: one visitor-day
+ * with two visits from two sources counts in both.
+ */
 export function channelRows(
-  channels: AnalyticsSummary["channels"],
+  acquisition: AnalyticsSummary["acquisitionChannels"],
 ): ShareRow[] {
   return withShares(
-    channels
-      .filter((row) => row.visitors > 0)
+    acquisition
+      .filter((row) => row.sessions > 0)
       .map((row) => ({
         key: row.channel,
         ...CHANNEL_LABELS[row.channel],
-        visitors: row.visitors,
+        count: row.sessions,
       })),
   );
 }
@@ -100,16 +105,32 @@ export function aiSourceRows(
     sources.map((source) => ({
       key: source,
       label: AI_SOURCE_LABELS[source],
-      visitors: visitors.get(source) ?? 0,
+      count: visitors.get(source) ?? 0,
     })),
   );
 }
 
-/** The AI channel's part of all visitors, from 0 to 1. */
-export function aiShareOfVisitors(
-  channels: AnalyticsSummary["channels"],
+/** The AI channel's part of all visits, from 0 to 1. */
+export function aiShareOfVisits(
+  acquisition: AnalyticsSummary["acquisitionChannels"],
 ): number {
-  return channelRows(channels).find((row) => row.key === "ai")?.share ?? 0;
+  return channelRows(acquisition).find((row) => row.key === "ai")?.share ?? 0;
+}
+
+// Plain names for the actions the tracker records on its own.
+const ACTION_LABELS: Record<string, string> = {
+  whatsapp_click: "WhatsApp",
+  call_click: "Phone call",
+  sms_click: "SMS",
+  email_click: "Email",
+  form_submit: "Form",
+  file_download: "File download",
+  outbound_click: "Link to another site",
+};
+
+/** An action's plain name: "WhatsApp" for whatsapp_click, else as tagged. */
+export function actionLabel(name: string): string {
+  return ACTION_LABELS[name] ?? name;
 }
 
 const percent = new Intl.NumberFormat("en-IN", {

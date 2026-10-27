@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 	"unicode"
 	"unicode/utf8"
@@ -64,8 +65,16 @@ type siteResponse struct {
 
 // collect records a tracker event. Any site may post to it, so CORS is open.
 func collect(logger *slog.Logger, svc *Service, trusted []netip.Prefix) http.HandlerFunc {
+	var warnedProxy atomic.Bool
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
+		ip := httpx.ClientIP(r, trusted)
+		// Behind an untrusted proxy every visitor shares the proxy's address:
+		// visitor counts merge and split, countries stay empty and one rate
+		// limit covers everyone. Say so once instead of failing silently.
+		if behindUntrustedProxy(ip, r) && warnedProxy.CompareAndSwap(false, true) {
+			logger.WarnContext(r.Context(), "analytics sees a proxy address, not the visitor's; set TRUSTED_PROXY_CIDRS to the proxy's range (docs/DEPLOY.md)")
+		}
 
 		var req collectRequest
 		err := httpx.DecodeJSONLimit(r.Body, maxCollectBody, &req)
@@ -96,7 +105,7 @@ func collect(logger *slog.Logger, svc *Service, trusted []netip.Prefix) http.Han
 			IsClick:      req.IsClick,
 			Destination:  req.Destination,
 			EngagementMS: req.EngagementMS,
-			IP:           httpx.ClientIP(r, trusted),
+			IP:           ip,
 			UserAgent:    r.UserAgent(),
 		})
 		switch {
@@ -114,6 +123,21 @@ func collect(logger *slog.Logger, svc *Service, trusted []netip.Prefix) http.Han
 		}
 	}
 }
+
+// behindUntrustedProxy reports whether ip is a private or shared (CGNAT)
+// address while the request carries forwarding headers: a proxy forwarded it
+// but TRUSTED_PROXY_CIDRS does not name that proxy.
+func behindUntrustedProxy(ip string, r *http.Request) bool {
+	addr, err := netip.ParseAddr(ip)
+	if err != nil || r.Header.Get("X-Forwarded-For") == "" {
+		return false
+	}
+	return addr.IsPrivate() || addr.IsLoopback() || sharedAddressSpace.Contains(addr.Unmap())
+}
+
+// sharedAddressSpace is RFC 6598's 100.64.0.0/10, which netip.Addr.IsPrivate
+// does not cover; Railway's edge proxy connects from it.
+var sharedAddressSpace = netip.MustParsePrefix("100.64.0.0/10")
 
 // collectRequest is what the tracker posts. EventName is empty for a
 // pageview and names a custom event, such as a button click, otherwise.

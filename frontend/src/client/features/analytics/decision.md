@@ -64,3 +64,26 @@ Trace: `AudienceJourneyCards.tsx`, `AnalyticsPage.tsx`, `TrackingCodeCard.tsx`, 
   - No new request, no AI call.
   - Enquiries are clicks on contact buttons, not confirmed sales. The tile hint says "taps".
 - **Trace:** `visitSummary.ts`, `AnalyticsOverview.tsx`, `AnalyticsOverview.test.tsx`. Each of these 5 mutations fails the tests: tracking rule, case merge, visitor max, enquiry filter, booking pattern. The old tests that asserted the disclaimer text were replaced on purpose.
+
+## Session sources and server enquiries
+
+**Decision:** "Where visits come from", "Most came from" and AI share use
+`acquisitionChannels` (one source per session, shares add up to all visits)
+instead of visitor-based `channels`; the duplicate "Sessions by first source"
+card is removed. Enquiries come from the API's `enquiries` object, not a
+browser regex; the rate is enquiring visitors / visitors, shown as `<1%` for
+tiny non-zero rates. Tracker-named actions show plain labels (`actionLabel`:
+WhatsApp, Phone call, Form...), and contact taps in the click table say the
+number or address is not stored. Tracking code explains automatic
+contact/form/download tracking and `?uplumo_ignore=1`.
+
+**Why:** the old regex counted sign-ups and checkouts as WhatsApp/call taps,
+and the visitor-based channel shares did not cover every visitor.
+
+**Preserve:** never compute enquiries or source shares in the browser from
+partial lists; the API is the one definition
+(`backend/internal/analytics/decision.md`).
+
+**Trace:** `AnalyticsOverview.tsx`, `AnalyticsCards.tsx`, `presentation.ts`,
+`AudienceJourneyCards.tsx`, `TrackingCodeCard.tsx`, `dashboard/InsightCards.tsx`,
+`AnalyticsOverview.test.tsx`, `presentation.test.ts`, `analyticsApi.test.ts`.

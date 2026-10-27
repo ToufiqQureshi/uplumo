@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { AnalyticsOverview } from "./AnalyticsOverview";
 import type { AnalyticsSummary } from "./analyticsApi";
-import { enquiries, mergeEvents } from "./visitSummary";
+import { mergeEvents } from "./visitSummary";
 
 function render(overrides: Partial<AnalyticsSummary> = {}) {
   const summary: AnalyticsSummary = {
@@ -25,6 +25,7 @@ function render(overrides: Partial<AnalyticsSummary> = {}) {
     entries: [],
     exits: [],
     acquisitionChannels: [],
+    enquiries: { count: 0, visitors: 0, actions: [] },
     ...overrides,
   };
   return renderToStaticMarkup(
@@ -48,13 +49,20 @@ describe("analytics overview", () => {
     const html = render({
       visitors: 40,
       sessions: 50,
-      events: [
-        { name: "whatsapp", count: 3, visitors: 2 },
-        { name: "scroll_75", count: 30, visitors: 20 },
-      ],
-      channels: [
-        { channel: "direct", visitors: 1 },
-        { channel: "search", visitors: 4 },
+      enquiries: {
+        count: 5,
+        visitors: 3,
+        actions: [
+          { name: "whatsapp_click", count: 3, visitors: 2 },
+          { name: "call_click", count: 1, visitors: 1 },
+          { name: "Book demo", count: 1, visitors: 1 },
+        ],
+      },
+      // Visitor-based channels must not decide the leading source.
+      channels: [{ channel: "direct", visitors: 9 }],
+      acquisitionChannels: [
+        { channel: "direct", sessions: 10 },
+        { channel: "search", sessions: 40 },
       ],
       topPages: [
         { path: "/small", pageviews: 1, avgEngagementMs: 0 },
@@ -64,17 +72,33 @@ describe("analytics overview", () => {
     });
     expect(html).not.toContain("Fix this first");
     expect(html).toContain(
-      "40 people visited. 3 tried to contact you (whatsapp).",
+      "40 visitors came. 3 tried to contact you (WhatsApp, Phone call +1 more).",
     );
     expect(html).toContain("Most came from Search engines");
     expect(html).toContain("/popular");
     expect(html).toContain("AI assistants sent 2 visitors");
-    expect(html).toContain("8%"); // 3 of 40 visitors
+    expect(html).toContain(">5<"); // enquiry actions
+    expect(html).toContain("8%"); // 3 enquiring visitors of 40
+  });
+
+  it("shows a tiny enquiry rate as <1% instead of 0%", () => {
+    const html = render({
+      visitors: 1000,
+      sessions: 1000,
+      enquiries: {
+        count: 1,
+        visitors: 1,
+        actions: [{ name: "call_click", count: 1, visitors: 1 }],
+      },
+    });
+    expect(html).toContain("&lt;1%");
   });
 
   it("says plainly when nobody enquired", () => {
-    const html = render({ sessions: 1, events: [] });
-    expect(html).toContain("Nobody tapped WhatsApp, call or a form yet.");
+    const html = render({ sessions: 1 });
+    expect(html).toContain(
+      "Nobody tapped WhatsApp, call, email or a form yet.",
+    );
   });
 });
 
@@ -99,21 +123,5 @@ describe("visit summary", () => {
       ],
     });
     expect(html).toContain("as one action");
-  });
-
-  it("counts only contact actions as enquiries", () => {
-    const { total, rows } = enquiries([
-      { name: "WhatsApp click", count: 2, visitors: 2 },
-      { name: "call_now", count: 1, visitors: 1 },
-      { name: "book_now", count: 4, visitors: 3 },
-      { name: "video_play", count: 9, visitors: 9 },
-      { name: "scroll", count: 9, visitors: 9 },
-    ]);
-    expect(total).toBe(7);
-    expect(rows.map((row) => row.name)).toEqual([
-      "book_now",
-      "WhatsApp click",
-      "call_now",
-    ]);
   });
 });

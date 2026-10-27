@@ -67,7 +67,10 @@ errors stay in the Railway logs only.
 Optional: `GOOGLE_TOKEN_ENCRYPTION_KEY` (base64, 32 bytes) encrypts Google
 tokens with its own key instead of one derived from `BETTER_AUTH_SECRET`.
 `TRUSTED_PROXY_CIDRS` and `OPENAI_APPS_CHALLENGE` are described in
-`backend/README.md`.
+`backend/README.md`. On Railway set `TRUSTED_PROXY_CIDRS=100.64.0.0/10`
+(Railway's edge proxy range): without it every visitor looks like the proxy,
+so analytics visitors and countries are wrong and per-IP rate limits are
+shared by everyone. `/collect` logs a warning when it is missing.
 
 `TURNSTILE_SITE_KEY`, `POSTHOG_PUBLIC_KEY` and `POSTHOG_HOST` are baked into
 the frontend at build time, so redeploy after changing them.

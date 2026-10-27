@@ -19,7 +19,6 @@ import {
   type RangeDays,
 } from "./analyticsApi";
 import {
-  AcquisitionPerformanceCard,
   AiTrafficCard,
   CampaignPerformanceCard,
   ChannelsCard,
@@ -207,7 +206,10 @@ function Dashboard({
       </Card>
       <TrafficChartCard series={summary.series} />
       <div className="grid gap-6 lg:grid-cols-2">
-        <ChannelsCard channels={summary.channels} />
+        <ChannelsCard
+          acquisitionChannels={summary.acquisitionChannels}
+          sessions={summary.sessions}
+        />
 
         <CountListCard
           title="Top pages"
@@ -247,9 +249,8 @@ function Dashboard({
           <div className="grid gap-6 lg:grid-cols-2">
             <AiTrafficCard
               aiSources={summary.aiSources}
-              channels={summary.channels}
+              acquisitionChannels={summary.acquisitionChannels}
             />
-            <AcquisitionPerformanceCard rows={summary.acquisitionChannels} />
             <CampaignPerformanceCard campaigns={summary.campaigns} />
             <CountriesCard projectId={projectId} range={range} />
             <CountListCard

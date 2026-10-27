@@ -39,10 +39,24 @@ export function TrackingCodeCard({ projectId }: { projectId: string }) {
           <li>Open your site once. Visits show up here within a minute.</li>
         </ol>
         <p className="text-muted-foreground">
-          To count clicks on a button or link, add{" "}
+          Counted on their own, with no extra code: taps on phone (
+          <code>tel:</code>), SMS, email (<code>mailto:</code>) and WhatsApp
+          links, submitted forms (site search forms are left out), file
+          downloads and links to other sites. Phone numbers, email addresses and
+          form answers are never sent. To skip a form, add{" "}
+          <code>data-uplumo-ignore</code> to it.
+        </p>
+        <p className="text-muted-foreground">
+          To name any other button or link, add{" "}
           <code>data-uplumo-event=&quot;Signup&quot;</code> to it (use any
           name). Clicks show up under Custom events and Button and link
-          destinations. External HTTP(S) links are tracked automatically.
+          destinations.
+        </p>
+        <p className="text-muted-foreground">
+          Don&rsquo;t count your own visits: open your site once with{" "}
+          <code>?uplumo_ignore=1</code> at the end of the address (for example{" "}
+          <code>yoursite.com/?uplumo_ignore=1</code>) in each browser you use.{" "}
+          <code>?uplumo_ignore=0</code> counts that browser again.
         </p>
         <p className="text-muted-foreground">
           Links provide their destination automatically. For a JavaScript

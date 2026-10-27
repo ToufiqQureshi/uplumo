@@ -631,3 +631,104 @@ func TestSummarizeSessionsCampaignsAndLandingPages(t *testing.T) {
 		t.Errorf("acquisition = %+v, want 4 sessions in all", got.AcquisitionChannels)
 	}
 }
+
+func TestSummarizeEnquiriesCountVisitorsOnce(t *testing.T) {
+	ctx := context.Background()
+	f := newFixture(ctx, t)
+	s := f.addSite(ctx, t, "acme.com")
+	send := func(ts time.Time, name, ip string) {
+		t.Helper()
+		f.svc.now = func() time.Time { return ts }
+		h := hit(t, s.key, "https://acme.com/", "", ip, desktopUA)
+		h.EventName = name
+		if err := f.svc.Collect(ctx, h); err != nil {
+			t.Fatalf("Collect(%q) error = %v", name, err)
+		}
+	}
+	send(day, "", "10.0.0.1")
+	// One visitor taps WhatsApp twice and Call once: three enquiry actions,
+	// one enquiring visitor-day.
+	send(day, "whatsapp_click", "10.0.0.1")
+	send(day.Add(time.Minute), "whatsapp_click", "10.0.0.1")
+	send(day.Add(2*time.Minute), "call_click", "10.0.0.1")
+	// Another visitor submits a form.
+	send(day.Add(3*time.Minute), "form_submit", "10.0.0.2")
+	// Not enquiries: a sign-up, a checkout and a link that only contains "book".
+	send(day.Add(4*time.Minute), "signup_click", "10.0.0.3")
+	send(day.Add(5*time.Minute), "subscription_checkout_agency", "10.0.0.3")
+	send(day.Add(6*time.Minute), "facebook_click", "10.0.0.4")
+	// Outside the range.
+	send(day.AddDate(0, 0, -1), "call_click", "10.0.0.5")
+
+	got, err := f.svc.Summarize(ctx, s.project, day, day)
+	if err != nil {
+		t.Fatalf("Summarize() error = %v", err)
+	}
+	if got.Enquiries.Count != 4 || got.Enquiries.Visitors != 2 {
+		t.Errorf("enquiries = %d actions by %d visitors; want 4 by 2", got.Enquiries.Count, got.Enquiries.Visitors)
+	}
+	wantActions := []EventCount{{"whatsapp_click", 2, 1}, {"call_click", 1, 1}, {"form_submit", 1, 1}}
+	if !slices.Equal(got.Enquiries.Actions, wantActions) {
+		t.Errorf("enquiry actions = %+v\nwant %+v", got.Enquiries.Actions, wantActions)
+	}
+	if len(got.Events) != 6 {
+		t.Errorf("events = %+v; every custom event must stay listed", got.Events)
+	}
+}
+
+func TestSummarizeWithoutEnquiriesReturnsEmptyActions(t *testing.T) {
+	ctx := context.Background()
+	f := newFixture(ctx, t)
+	s := f.addSite(ctx, t, "acme.com")
+	h := hit(t, s.key, "https://acme.com/", "", "10.0.0.1", desktopUA)
+	h.EventName = "signup_click"
+	f.svc.now = func() time.Time { return day }
+	if err := f.svc.Collect(ctx, h); err != nil {
+		t.Fatal(err)
+	}
+	got, err := f.svc.Summarize(ctx, s.project, day, day)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Enquiries.Count != 0 || got.Enquiries.Visitors != 0 || got.Enquiries.Actions == nil || len(got.Enquiries.Actions) != 0 {
+		t.Errorf("enquiries = %+v; want zero with an empty (not nil) action list", got.Enquiries)
+	}
+}
+
+func TestAcquisitionCountsEverySession(t *testing.T) {
+	ctx := context.Background()
+	f := newFixture(ctx, t)
+	s := f.addSite(ctx, t, "acme.com")
+	send := func(ts time.Time, page, referrer, session, pageview string) {
+		t.Helper()
+		f.svc.now = func() time.Time { return ts }
+		h := hit(t, s.key, page, referrer, "10.0.0.1", desktopUA)
+		h.SessionID, h.PageviewID = session, pageview
+		if err := f.svc.Collect(ctx, h); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// A Google search visit that signs in with Google and comes back: still
+	// one search session, not a second "search" visit.
+	send(day, "https://acme.com/", "https://www.google.com/", "s1", "p1")
+	send(day.Add(time.Minute), "https://acme.com/app", "https://accounts.google.com/", "s1", "p2")
+	// A tab opened from the site without a copied session starts on an
+	// internal referrer: that session is direct, not missing.
+	send(day.Add(2*time.Minute), "https://acme.com/pricing", "https://acme.com/", "s2", "p3")
+
+	got, err := f.svc.Summarize(ctx, s.project, day, day)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []AcquisitionCount{{channelDirect, 1}, {channelSearch, 1}}
+	if !slices.Equal(got.AcquisitionChannels, want) {
+		t.Errorf("acquisition = %+v, want %+v", got.AcquisitionChannels, want)
+	}
+	var total int64
+	for _, row := range got.AcquisitionChannels {
+		total += row.Sessions
+	}
+	if total != got.Sessions {
+		t.Errorf("acquisition sessions = %d, sessions = %d; every session needs one source", total, got.Sessions)
+	}
+}

@@ -47,6 +47,11 @@ const summarySchema = z.object({
     }),
   ),
   events: z.array(z.object({ name: z.string(), count, visitors: count })),
+  enquiries: z.object({
+    count,
+    visitors: count,
+    actions: z.array(z.object({ name: z.string(), count, visitors: count })),
+  }),
   campaigns: z.array(
     z.object({
       source: z.string(),
