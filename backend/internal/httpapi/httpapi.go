@@ -23,6 +23,7 @@ import (
 	"github.com/toufiqqureshi/uplumo/backend/internal/backlinks"
 	"github.com/toufiqqureshi/uplumo/backend/internal/billing"
 	"github.com/toufiqqureshi/uplumo/backend/internal/branding"
+	"github.com/toufiqqureshi/uplumo/backend/internal/citefix"
 	"github.com/toufiqqureshi/uplumo/backend/internal/contentauthors"
 	"github.com/toufiqqureshi/uplumo/backend/internal/contenteditor"
 	"github.com/toufiqqureshi/uplumo/backend/internal/crawleraccess"
@@ -145,6 +146,9 @@ type Deps struct {
 	// LinkSuggest serves free internal link suggestions for drafts. Nil
 	// answers 503.
 	LinkSuggest *linksuggest.Service
+	// CiteFix builds the free Cite Fix report from the latest site audit.
+	// Nil answers 503.
+	CiteFix citefix.Reporter
 	// SAMSessions serves the project chat-session registry.
 	SAMSessions *sam.Service
 	// EmailAuth serves sign-up, sign-in, verification and password reset; nil
@@ -387,6 +391,10 @@ func NewHandler(d Deps) http.Handler {
 			WithProjectAccess: func(next http.Handler) http.Handler { return requireProjectAccess(d.Logger, d.Auth, next) },
 		})
 	}
+	citefix.Mount(mux, citefix.Deps{
+		Logger: d.Logger, Reporter: d.CiteFix, WithSession: withSession,
+		WithProjectAccess: func(next http.Handler) http.Handler { return requireProjectAccess(d.Logger, d.Auth, next) },
+	})
 	linksuggest.Mount(mux, linksuggest.Deps{
 		Logger: d.Logger, Service: d.LinkSuggest, WithSession: withSession,
 		WithProjectAccess: func(next http.Handler) http.Handler { return requireProjectAccess(d.Logger, d.Auth, next) },

@@ -138,7 +138,7 @@ type PageAnalysis struct {
 	HasStructuredData bool     `json:"hasStructuredData"`
 	HreflangTags      []string `json:"hreflangTags"`
 
-	// AI holds the AI readiness signals; transient, never persisted.
+	// AI holds the AI readiness and Cite Fix signals (aireadiness.go).
 	AI AIPageSignals `json:"-"`
 }
 
@@ -204,7 +204,8 @@ type CrawledPageResult struct {
 	Links             []PageLink `json:"links"`
 	HasStructuredData bool       `json:"hasStructuredData"`
 	HreflangTags      []string   `json:"hreflangTags"`
-	// AI holds the AI readiness signals for the site-wide checks. Transient.
+	// AI holds the AI readiness signals. Stored as citation_signals_json for
+	// Cite Fix; not part of this struct's own JSON.
 	AI             AIPageSignals `json:"-"`
 	IsIndexable    bool          `json:"isIndexable"`
 	ResponseTimeMs int64         `json:"responseTimeMs"`

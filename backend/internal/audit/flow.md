@@ -11,6 +11,10 @@
 
 Start validates URL/plan/capacity, creates an audit and job; worker discovers and crawls guarded URLs; checks persist page/issue rows; optional PSI/CrUX checks use quota guards; client polls stored progress/results.
 
+Each page row also stores its AI citation signals (`citation_signals_json`),
+read from the same HTML; Cite Fix (`backend/internal/citefix`) scores the
+latest completed audit from them without crawling again.
+
 ## Dependencies and cost boundary
 
 Postgres audit tables; Redis progress/cache/quota; PageSpeed Insights and CrUX; jobs queue.

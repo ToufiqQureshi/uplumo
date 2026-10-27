@@ -28,6 +28,7 @@ import (
 	"github.com/toufiqqureshi/uplumo/backend/internal/backlinks"
 	"github.com/toufiqqureshi/uplumo/backend/internal/billing"
 	"github.com/toufiqqureshi/uplumo/backend/internal/branding"
+	"github.com/toufiqqureshi/uplumo/backend/internal/citefix"
 	"github.com/toufiqqureshi/uplumo/backend/internal/config"
 	"github.com/toufiqqureshi/uplumo/backend/internal/contentauthors"
 	"github.com/toufiqqureshi/uplumo/backend/internal/contenteditor"
@@ -414,6 +415,7 @@ func run(logger *slog.Logger) (err error) {
 			ContentEditor:           &contenteditor.Repository{DB: db},
 			ContentAuthors:          contentAuthors,
 			LinkSuggest:             linkSuggestSvc,
+			CiteFix:                 citefix.Store{DB: db},
 			SitePublish:             sitePublish,
 			IndexNow:                indexNowService,
 			ContentWriter:           buildContentWriter(cfg, logger, spendGuard.AIMeter(spend.AIWriting, "openrouter/"+contenteditor.WriterModel), billingRoutes.Gate(planCatalog.AIWriting)),

@@ -355,8 +355,9 @@ const upsertPageSQL = `
 		x_robots_tag, header_canonical_url, og_title, og_description, og_image, h1_count, h2_count, h3_count,
 		h4_count, h5_count, h6_count, heading_order_json, word_count, content_hash, images_total,
 		images_missing_alt, images_json, internal_link_count, external_link_count, has_structured_data,
-		hreflang_tags_json, is_indexable, fetch_class, crawl_depth, in_sitemap, response_time_ms
-	) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35)
+		hreflang_tags_json, is_indexable, fetch_class, crawl_depth, in_sitemap, response_time_ms,
+		citation_signals_json
+	) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36)
 	ON CONFLICT (id) DO UPDATE SET
 		url = EXCLUDED.url, status_code = EXCLUDED.status_code, redirect_url = EXCLUDED.redirect_url,
 		title = EXCLUDED.title, meta_description = EXCLUDED.meta_description, canonical_url = EXCLUDED.canonical_url,
@@ -370,7 +371,8 @@ const upsertPageSQL = `
 		internal_link_count = EXCLUDED.internal_link_count, external_link_count = EXCLUDED.external_link_count,
 		has_structured_data = EXCLUDED.has_structured_data, hreflang_tags_json = EXCLUDED.hreflang_tags_json,
 		is_indexable = EXCLUDED.is_indexable, fetch_class = EXCLUDED.fetch_class, crawl_depth = EXCLUDED.crawl_depth,
-		in_sitemap = EXCLUDED.in_sitemap, response_time_ms = EXCLUDED.response_time_ms`
+		in_sitemap = EXCLUDED.in_sitemap, response_time_ms = EXCLUDED.response_time_ms,
+		citation_signals_json = EXCLUDED.citation_signals_json`
 
 // pageArgs flattens a crawled page into the upsert column order.
 func pageArgs(auditID string, page CrawledPageResult) []any {
@@ -385,6 +387,11 @@ func pageArgs(auditID string, page CrawledPageResult) []any {
 	headingOrder, _ := json.Marshal(defaultIntSlice(page.HeadingOrder))
 	images, _ := json.Marshal(defaultImageSlice(page.Images))
 	hreflang, _ := json.Marshal(defaultStringSlice(page.HreflangTags))
+	// Written for every page of a new crawl, so a NULL marks an audit crawled
+	// before Cite Fix existed rather than a page with no signals.
+	signals := page.AI
+	signals.SchemaTypes = defaultStringSlice(signals.SchemaTypes)
+	citation, _ := json.Marshal(signals)
 	var responseTime *int
 	if page.ResponseTimeMs > 0 {
 		value := int(page.ResponseTimeMs)
@@ -398,7 +405,7 @@ func pageArgs(auditID string, page CrawledPageResult) []any {
 		page.H1Count, page.H2Count, page.H3Count, page.H4Count, page.H5Count, page.H6Count, string(headingOrder),
 		page.WordCount, nullableString(page.ContentHash), page.ImagesTotal, page.ImagesMissingAlt, string(images),
 		internal, external, page.HasStructuredData, string(hreflang), page.IsIndexable, string(page.FetchClass),
-		page.CrawlDepth, page.InSitemap, responseTime,
+		page.CrawlDepth, page.InSitemap, responseTime, string(citation),
 	}
 }
 

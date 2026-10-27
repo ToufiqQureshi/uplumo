@@ -32,6 +32,11 @@ are rejected): `start`, `status`, `results`, `history`, `progress`, `delete`,
 
 `go_audits`, `go_audit_pages`, `go_audit_issues`, `go_audit_lighthouse_results`
 (migration `00007_audit.sql`). Pages, issues and results cascade with the audit.
+`go_audit_pages.citation_signals_json` (migration 47) holds each page's AI
+citation signals (schema types, question headings, author, dates, lead
+paragraph length, lists, tables, quotes, statistics) for Cite Fix
+(`backend/internal/citefix`). It is NULL only on audits crawled before it
+existed.
 
 The audit history view also compares the two latest completed crawls with the
 same start URL. It reports changes in title, meta description, canonical URL,

@@ -79,9 +79,15 @@ func TestPageArgsFlattensLinks(t *testing.T) {
 		{TargetURL: "https://other.com/b", IsInternal: false},
 		{TargetURL: "https://example.com/c", IsInternal: true},
 	}
+	page.AI = AIPageSignals{Author: true, LeadWords: 12, Phones: []string{"2212345678"}}
 	args := pageArgs("audit-1", page)
-	if len(args) != 35 {
-		t.Fatalf("args = %d, want 35", len(args))
+	if len(args) != 36 {
+		t.Fatalf("args = %d, want 36", len(args))
+	}
+	// Column 36 stores the Cite Fix signals; phones stay out, and a page with
+	// no schema stores [] so the row is never mistaken for a pre-Cite Fix one.
+	if want := `{"schemaTypes":[],"questionHeadings":0,"author":true,"leadWords":12,"lists":0,"tables":0,"quotes":0,"statistics":0}`; args[35] != want {
+		t.Errorf("citation signals = %v, want %s", args[35], want)
 	}
 	// The internal and external link counts are columns 27 and 28 (1-based).
 	if args[26] != 2 {

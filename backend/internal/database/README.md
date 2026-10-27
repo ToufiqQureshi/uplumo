@@ -47,6 +47,8 @@ Migration 42 enables RLS on non-extension tables in the application schema and r
 
 Migration 44 adds `go_dashboard_layouts`: one card layout per member per project (`internal/dashboard`), cascading on user and project deletion, with RLS on and no client grants.
 
+Migration 47 adds `go_audit_pages.citation_signals_json` (nullable text) for Cite Fix. NULL marks a page crawled before the column existed; every new crawl writes it. See `audit/decision.md`.
+
 Known costs after a zero estimate use a zero-amount outcome reservation (migration 43), committed before staff top-up, expiry or customer charging. The existing settlement/reconciler charges available credits and records provider spend once; charging failure cannot turn it into an ordinary refundable hold.
 
 Migration 46 adds `go_next_action_states` (Insights Next Actions: one done/ignored decision per project and key, cascading on project and organization deletion, RLS on, no client grants; see `internal/dashboard`) and three columns on `go_ai_tracking_answers`: `sentiment` (empty until classified), `sentiment_quote` and `sentiment_reason` (each at most 400 characters; see `internal/aisearch` sentiment).

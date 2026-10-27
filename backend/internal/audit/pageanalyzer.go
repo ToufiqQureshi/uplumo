@@ -29,6 +29,9 @@ const (
 	maxExtractedImages = 1_000
 )
 
+// chromeTags hold site navigation and boilerplate, not the page's answer.
+var chromeTags = map[string]struct{}{"nav": {}, "header": {}, "footer": {}, "aside": {}}
+
 // appRootIDs are common single-page-app entry-point element ids.
 var appRootIDs = map[string]struct{}{"root": {}, "app": {}, "__next": {}, "__nuxt": {}}
 
@@ -121,6 +124,17 @@ type analyzerState struct {
 	openQuestion     []string
 	questionHeadings int
 	phones           []string
+	// Cite Fix signals: who wrote it, when, and how the answer is shaped.
+	chromeDepth int
+	author      bool
+	published   string
+	modified    string
+	openLead    []string
+	leadDone    bool
+	leadWords   int
+	lists       int
+	tables      int
+	quotes      int
 
 	images        []ImageRef
 	linksByTarget map[string]PageLink
@@ -154,7 +168,61 @@ func (s *analyzerState) onMetaTag(attributes map[string]string) {
 		if s.ogImage == nil {
 			s.ogImage = &content
 		}
+	case attributes["name"] == "author" || attributes["property"] == "article:author":
+		s.author = s.author || strings.TrimSpace(content) != ""
+	case attributes["property"] == "article:published_time":
+		s.setPublished(content)
+	case attributes["property"] == "article:modified_time" || attributes["property"] == "og:updated_time":
+		s.setModified(content)
 	}
+}
+
+// setPublished and setModified keep the first date the page states.
+func (s *analyzerState) setPublished(value string) {
+	if value = strings.TrimSpace(value); s.published == "" && value != "" {
+		s.published = truncateChars(value, maxDateChars)
+	}
+}
+
+func (s *analyzerState) setModified(value string) {
+	if value = strings.TrimSpace(value); s.modified == "" && value != "" {
+		s.modified = truncateChars(value, maxDateChars)
+	}
+}
+
+// onItemprop reads microdata author and dates, which themes put on any tag.
+func (s *analyzerState) onItemprop(attributes map[string]string) {
+	value := attributes["content"]
+	if value == "" {
+		value = attributes["datetime"]
+	}
+	switch attributes["itemprop"] {
+	case "author":
+		s.author = true
+	case "datePublished":
+		s.setPublished(value)
+	case "dateModified":
+		s.setModified(value)
+	}
+}
+
+// closeLead ends the paragraph being read as the lead. An empty paragraph (a
+// spacer) is not the lead, so the next one with words is read instead.
+func (s *analyzerState) closeLead() {
+	if s.openLead == nil {
+		return
+	}
+	if words := len(strings.Fields(strings.Join(s.openLead, ""))); words > 0 {
+		s.leadWords = words
+		s.leadDone = true
+	}
+	s.openLead = nil
+}
+
+// inMainContent reports whether the tokenizer is in the body, outside
+// navigation and boilerplate.
+func (s *analyzerState) inMainContent() bool {
+	return s.bodyDepth > 0 && s.chromeDepth == 0
 }
 
 func (s *analyzerState) onLinkTag(attributes map[string]string) {
@@ -169,6 +237,8 @@ func (s *analyzerState) onLinkTag(attributes map[string]string) {
 		}
 	case attributes["rel"] == "alternate" && attributes["hreflang"] != "":
 		s.hreflangTags = append(s.hreflangTags, attributes["hreflang"])
+	case hasSpaceSeparatedToken(strings.ToLower(attributes["rel"]), "author"):
+		s.author = true
 	}
 }
 
@@ -213,6 +283,12 @@ func (s *analyzerState) onOpenTag(name string, attributes map[string]string, alt
 			s.hasAppRoot = true
 		}
 	}
+	if _, ok := chromeTags[name]; ok {
+		s.chromeDepth++
+	}
+	if attributes["itemprop"] != "" {
+		s.onItemprop(attributes)
+	}
 	switch name {
 	case "title":
 		// Ignore <title> inside <svg>; only the document title counts.
@@ -251,7 +327,28 @@ func (s *analyzerState) onOpenTag(name string, attributes map[string]string, alt
 			s.inLDJSON = true
 			s.ldJSONParts = nil
 		}
+	case "p":
+		// HTML lets a paragraph end without </p>; the next one closes it.
+		s.closeLead()
+		if !s.leadDone && s.inMainContent() {
+			s.openLead = []string{}
+		}
+	case "ul", "ol":
+		if s.inMainContent() {
+			s.lists++
+		}
+	case "table":
+		if s.inMainContent() {
+			s.tables++
+		}
+	case "blockquote":
+		if s.inMainContent() {
+			s.quotes++
+		}
 	case "a":
+		if hasSpaceSeparatedToken(strings.ToLower(attributes["rel"]), "author") {
+			s.author = true
+		}
 		// HTML forbids nested <a>; browsers implicitly close the open one and
 		// the tokenizer has no tree correction, so mirror that.
 		s.closeAnchor()
@@ -264,6 +361,7 @@ func (s *analyzerState) onOpenTag(name string, attributes map[string]string, alt
 		}
 	}
 	if level, ok := headingLevels[name]; ok {
+		s.closeLead()
 		s.headingOrder = append(s.headingOrder, level)
 		if level == 1 && s.openH1 == nil {
 			s.openH1 = []string{}
@@ -297,6 +395,9 @@ func (s *analyzerState) onText(text string) {
 	if s.openQuestion != nil {
 		s.openQuestion = append(s.openQuestion, text)
 	}
+	if s.openLead != nil {
+		s.openLead = append(s.openLead, text)
+	}
 	if s.openAnchor != nil {
 		s.openAnchor.text = append(s.openAnchor.text, text)
 	}
@@ -309,7 +410,11 @@ func (s *analyzerState) onText(text string) {
 
 func (s *analyzerState) onCloseTag(name string) {
 	if name == "script" && s.inLDJSON {
-		s.schemaTypes = append(s.schemaTypes, schemaTypes(strings.Join(s.ldJSONParts, ""))...)
+		facts := jsonLDFacts(strings.Join(s.ldJSONParts, ""))
+		s.schemaTypes = append(s.schemaTypes, facts.types...)
+		s.author = s.author || facts.author
+		s.setPublished(facts.published)
+		s.setModified(facts.modified)
 		s.inLDJSON = false
 		s.ldJSONParts = nil
 	}
@@ -328,6 +433,12 @@ func (s *analyzerState) onCloseTag(name string) {
 	}
 	if s.noscriptDepth > 0 {
 		return
+	}
+	if name == "p" {
+		s.closeLead()
+	}
+	if _, ok := chromeTags[name]; ok && s.chromeDepth > 0 {
+		s.chromeDepth--
 	}
 	if name == "title" && s.titleDepth > 0 {
 		s.titleDepth--
@@ -352,6 +463,7 @@ func (s *analyzerState) onCloseTag(name string) {
 
 func (s *analyzerState) result(statusCode int, responseTimeMs int64, redirectURL string) PageAnalysis {
 	s.closeAnchor()
+	s.closeLead()
 	parts := s.fallbackParts
 	if s.sawBody {
 		parts = s.bodyParts
@@ -393,7 +505,11 @@ func (s *analyzerState) result(statusCode int, responseTimeMs int64, redirectURL
 		Links:             links,
 		HasStructuredData: s.hasStructuredData,
 		HreflangTags:      s.hreflangTags,
-		AI:                AIPageSignals{SchemaTypes: s.schemaTypes, QuestionHeadings: s.questionHeadings, Phones: s.phones},
+		AI: AIPageSignals{
+			SchemaTypes: s.schemaTypes, QuestionHeadings: s.questionHeadings, Phones: s.phones,
+			Author: s.author, Published: s.published, Modified: s.modified, LeadWords: s.leadWords,
+			Lists: s.lists, Tables: s.tables, Quotes: s.quotes, Statistics: countStatistics(bodyText),
+		},
 	}
 }
 

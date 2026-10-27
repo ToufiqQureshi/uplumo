@@ -80,6 +80,19 @@ mean each one has been tried on production with real provider keys.
 - Built (PR 1): Next Actions, AI Opportunities, AI Sentiment, AI Prompt Ideas (`frontend/src/client/features/insights`). Reads are free; AI buttons use the content writer (max 15 credits per click).
 - Not built (PR 2, waiting on owner's credit/plan choices): Local SEO grid, Backlink Opportunity, Content Ideas, Pixel Rank.
 
+## Cite Fix
+
+- Built (PR 1 of 5): Cite Fix page (sidebar "Your website") with a free 0-100
+  score for how easy the site is for AI assistants to quote, six categories,
+  fixes ranked by points gained and the weakest pages. It scores the latest
+  site audit; the crawler now stores each page's citation signals (migration
+  47). No paid call (`backend/internal/citefix`,
+  `frontend/src/client/features/cite-fix`).
+- Not built: PR 2 paid per-page LLM citability score (needs the owner's credit
+  rate), PR 3 citation proof from AI Visibility, PR 4 one click from a fix
+  into the Content Editor with publish and re-scan, PR 5 SAM, MCP and report
+  tools. JavaScript rendering waits on an owner decision.
+
 ## Not built yet
 
 | Feature                                                                                                  | Status                                                         |

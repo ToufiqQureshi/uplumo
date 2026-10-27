@@ -48,7 +48,7 @@ Use the package tests next to the source files in `README.md`. For changes cross
 - **Why:** The owner asked for an audit that says whether a site is AEO/GEO friendly, why not, and what to fix. These are the "does AI know who you are" and "can AI quote you" parts of the approved AI readiness design. They come from HTML the crawl already fetched.
 - **Preserve:**
   - No extra request, provider call or credits.
-  - Signals are transient (`json:"-"`) and not persisted. No migration.
+  - Phone numbers stay transient. The other signals are stored per page since Cite Fix (next entry).
   - A crawl with no 2xx HTML page reports nothing.
   - JSON-LD text never enters `BodyText` or the word count, and is capped at 256 KB per page.
   - Invalid JSON-LD counts as no schema.
@@ -65,3 +65,10 @@ Use the package tests next to the source files in `README.md`. For changes cross
   - H3 headings
 
   Not run against a live site yet.
+
+## Cite Fix signals stored with each page
+
+- **Decision:** The analyzer also reads, per page: whether it names an author (meta or itemprop author, `rel=author`, JSON-LD `author`), the first publish and update dates it states (meta `article:*`, `og:updated_time`, itemprop, JSON-LD), the word count of the first paragraph of the main content (outside `nav`, `header`, `footer`, `aside`), lists and tables in the main content, blockquotes, and percent, currency and lakh/crore figures in the body. `AIPageSignals` (minus phones) is stored as `go_audit_pages.citation_signals_json` (migration 47) for every page of a new crawl. `backend/internal/citefix` scores it.
+- **Why:** Cite Fix explains why AI assistants do not quote a site. These facts are in HTML the crawl already fetched, so storing them costs one text column, not a second crawl or a provider call.
+- **Preserve:** No extra request or credits. Every page of a new crawl gets a non-NULL value (an empty schema list is `[]`), so NULL means "crawled before Cite Fix" and is reported as "scan again", never as zero. Dates are kept as written, at most 40 characters. JSON-LD keys are walked in sorted order, so "the first date" is the same on every crawl. A paragraph closed by the next `<p>` or a heading still counts. `noscript` content never opens or closes navigation.
+- **Trace:** `aireadiness.go` (`AIPageSignals`, `jsonLDFacts`, `countStatistics`), `pageanalyzer.go`, `repository.go` (`pageArgs`, column 36), `types.go`, migration `00047_audit_citation_signals.sql`. Tests: `aireadiness_test.go` (`TestAnalyzeHTMLCollectsCitationSignals`, `TestAnalyzeHTMLCitationSignalsAbsent`, `TestAnalyzeHTMLAuthorSources`, `TestJSONLDFactsKeepsTheSameFirstDate`), `repository_helpers_test.go` (`TestPageArgsFlattensLinks`), and `citefix/store_test.go` for the round trip through Postgres. Not run against a live site yet.

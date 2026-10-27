@@ -17,6 +17,13 @@ feelings, business calls, priorities, corrections. Read it after
 
 ---
 
+## 27 Oct 2026: Cite Fix, "sabko AI me cite hona ha" (Claude)
+
+- Owner wants a crawler that reads the whole site and shows "kyu cite nahi hore, ye fixes karo, cite honge", A to Z content quality, and opens the content in the editor in one click. "muje uplumo ko bhohat advance software banana ha jo logo ke kaam aaye".
+- On cost: "paise ki chinta mat kar ... user ko batayenge ki ye costly ha ... if needed vo karega warna chod dega". Paid parts show credits before the click.
+- "baar baar nai bana sakte, ek hi baar me" -> agreed: one full design, shipped in 5 PRs. Name: **Cite Fix**, its own UI. He asked for the blueprint in PR 1; it went into the feature docs (repo rule: no plan files).
+- Asked whether the GitHub repos are copied: no, ideas and check lists only (GEO Optimizer MIT rubric, SEOnaut checks).
+
 ## 27 Oct 2026: Ubersuggest features, AI on every page (Claude)
 
 - Owner compared open-seo, Uplumo and Ubersuggest and wants 8 features: Next Actions, AI Opportunities, AI Sentiment, AI Prompt Ideas, Local SEO grid, Backlink Opportunity, Content Ideas, Pixel Rank. "pura kaam do pr me khatam chahiye"; "jaldi bhai".
