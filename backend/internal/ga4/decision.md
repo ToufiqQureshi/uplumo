@@ -70,3 +70,20 @@ them. Automated fixtures do not replace real-account Google reconciliation.
   (`readAPIError`), `TestListGA4PropertiesSaysWhyPropertiesAreUnavailable`,
   `TestAPIErrorExposesOnlyKnownReasonAndRetryDelay`; UI in
   `frontend/src/client/features/integrations/GooglePropertyPicker.tsx`.
+
+## GA4 Google calls use the `ga4` provider name
+
+- **Decision:** every GA4 call passes `google.ProviderGA4` ("ga4") in
+  `APIRequest.Provider`; GSC passes `google.ProviderGSC`. The constants live in
+  `google/accounts.go` next to `accountScope`, which maps them to the stored
+  `provider_id` (`google-analytics`, `google-search-console`).
+- **Why:** since the Go port, GA4 passed `"google-analytics"`, which
+  `accountScope` rejects ("invalid google provider"), so no GA4 call ever
+  reached Google: the property picker was empty and no GA4 report worked.
+  The new logging from the previous entry showed it; Google Cloud metrics
+  showed zero Admin API requests in 30 days.
+- **Preserve:** never pass a stored `provider_id` as the caller provider.
+- **Trace:** `TestGA4GoogleCallsUseTheGA4Provider`,
+  `TestAccountScopeAcceptsEveryCallerProvider`; two older tests that asserted
+  the wrong name were corrected.
+

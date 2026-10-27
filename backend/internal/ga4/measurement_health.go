@@ -162,7 +162,7 @@ func (s *Service) GetMeasurementHealth(ctx context.Context, projectID string) (m
 }
 
 func (s *Service) adminGet(ctx context.Context, connection Connection, endpoint string, response any) error {
-	return s.Google.DoJSON(ctx, google.APIRequest{UserID: connection.ConnectedByUserID, Provider: "google-analytics", AccountID: connection.GA4AccountID, Method: http.MethodGet, URL: endpoint, Response: response, Retryable: true, MaxResponseBytes: 2 << 20})
+	return s.Google.DoJSON(ctx, google.APIRequest{UserID: connection.ConnectedByUserID, Provider: google.ProviderGA4, AccountID: connection.GA4AccountID, Method: http.MethodGet, URL: endpoint, Response: response, Retryable: true, MaxResponseBytes: 2 << 20})
 }
 
 func nullableString(value string) any {

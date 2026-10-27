@@ -250,7 +250,7 @@ type GooglePropertyAdmin struct {
 }
 
 func (c GooglePropertyAdmin) do(ctx context.Context, path string, dst any) error {
-	return c.API.DoJSON(ctx, google.APIRequest{UserID: c.UserID, Provider: "google-analytics", AccountID: c.AccountID,
+	return c.API.DoJSON(ctx, google.APIRequest{UserID: c.UserID, Provider: google.ProviderGA4, AccountID: c.AccountID,
 		Method: http.MethodGet, URL: "https://analyticsadmin.googleapis.com/v1beta/" + path, Response: dst, Retryable: true, MaxResponseBytes: 2 << 20})
 }
 
@@ -309,7 +309,7 @@ func (c GooglePropertyAdmin) UserInfoEmail(ctx context.Context) (string, error) 
 	var result struct {
 		Email string `json:"email"`
 	}
-	if err := c.API.DoJSON(ctx, google.APIRequest{UserID: c.UserID, Provider: "google-analytics", AccountID: c.AccountID, Method: http.MethodGet,
+	if err := c.API.DoJSON(ctx, google.APIRequest{UserID: c.UserID, Provider: google.ProviderGA4, AccountID: c.AccountID, Method: http.MethodGet,
 		URL: "https://openidconnect.googleapis.com/v1/userinfo", Response: &result, Retryable: true, MaxResponseBytes: 16 << 10}); err != nil {
 		return "", err
 	}

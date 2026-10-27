@@ -53,7 +53,7 @@ func (c *Client) ListSitemaps(ctx context.Context, site string) ([]SitemapStatus
 			} `json:"contents"`
 		} `json:"sitemap"`
 	}
-	err := c.API.DoJSON(ctx, google.APIRequest{UserID: c.UserID, Provider: "gsc", AccountID: c.AccountID, Method: http.MethodGet, URL: c.baseURL() + "/sites/" + url.PathEscape(site) + "/sitemaps", Response: &response, Retryable: true, MaxResponseBytes: 2 << 20})
+	err := c.API.DoJSON(ctx, google.APIRequest{UserID: c.UserID, Provider: google.ProviderGSC, AccountID: c.AccountID, Method: http.MethodGet, URL: c.baseURL() + "/sites/" + url.PathEscape(site) + "/sitemaps", Response: &response, Retryable: true, MaxResponseBytes: 2 << 20})
 	if err != nil {
 		return nil, false, err
 	}

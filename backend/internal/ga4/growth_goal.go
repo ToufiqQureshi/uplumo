@@ -52,7 +52,7 @@ func (s *Service) growthGoals(ctx context.Context, c Connection) ([]string, erro
 			APIName string `json:"apiName"`
 		} `json:"metrics"`
 	}
-	err := s.Google.DoJSON(work, google.APIRequest{UserID: c.ConnectedByUserID, Provider: "google-analytics", AccountID: c.GA4AccountID, Method: http.MethodGet, URL: "https://analyticsdata.googleapis.com/v1beta/" + c.PropertyID + "/metadata", Response: &metadata, Retryable: true, MaxResponseBytes: 2 << 20})
+	err := s.Google.DoJSON(work, google.APIRequest{UserID: c.ConnectedByUserID, Provider: google.ProviderGA4, AccountID: c.GA4AccountID, Method: http.MethodGet, URL: "https://analyticsdata.googleapis.com/v1beta/" + c.PropertyID + "/metadata", Response: &metadata, Retryable: true, MaxResponseBytes: 2 << 20})
 	if err != nil {
 		return nil, mapProviderError(err)
 	}
