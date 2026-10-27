@@ -34,3 +34,13 @@ Stores each member's dashboard card layout per project. It holds no card data.
   (mounted: signed out, another organization's project, two members kept
   apart, invalid bodies write nothing, reset). A mutation that loosened the
   card cap failed both tests.
+
+## Next Actions decisions live here, shared by the project team
+
+- **Decision:** `go_next_action_states` (migration 46) keeps which Next Actions a project's team marked done or ignored; `POST /api/v1/projects/{projectId}/next-actions/get|set` read and write it. "To do" deletes the row.
+- **Why:** The Insights page builds its list from data already stored; only the team's decisions need saving. This package already holds per-project page state, so no new package.
+- **Preserve:**
+  - Organization comes from the project-access middleware and is matched in every query.
+  - Keys match `^[a-z][a-z0-9_:.-]{0,119}$`; at most 500 decisions per project, enforced in the insert under a project row lock; changing an existing key always works.
+  - No paid work; RLS on, no client grants.
+- **Trace:** `actions.go`, `handler.go`, `httpapi/next_actions_test.go` (signed out, foreign project, bad key/status/extra field, teammate sees and changes a decision, reset, cap refuses a new key but not an existing one). A mutation that lifted the cap failed the test.

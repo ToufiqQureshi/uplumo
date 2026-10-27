@@ -47,7 +47,7 @@ export function getContentWriterStatus() {
 }
 export type ContentDraftSummary = z.infer<typeof draftSummarySchema>;
 
-type WriterAction =
+export type WriterAction =
   | "outline"
   | "draft"
   | "improve"
@@ -60,7 +60,13 @@ type WriterAction =
   | "title_meta"
   | "destuff"
   | "fact_check"
-  | "tone_language";
+  | "tone_language"
+  // Started from the insight pages; they work from evidence, not an article.
+  | "review_replies"
+  | "outreach_email"
+  | "business_post"
+  | "action_plan"
+  | "prompt_ideas";
 type WriterRequest = Pick<
   ContentDraftInput,
   "title" | "targetKeyword" | "content"

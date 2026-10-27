@@ -3,6 +3,10 @@ import {
   Bot,
   Brain,
   ChartNoAxesCombined,
+  ListChecks,
+  Lightbulb,
+  Smile,
+  Target,
   CircleHelp,
   ClipboardCheck,
   CreditCard,
@@ -41,6 +45,28 @@ const projectNavItems = [
     // Without exact matching, the index path is a prefix of every project
     // route and the Dashboard item would render active everywhere.
     activeOptions: { exact: true, includeSearch: false },
+  },
+  {
+    to: "/p/$projectId/next-actions" as const,
+    label: "Next Actions",
+    icon: ListChecks,
+    badge: "New",
+  },
+  {
+    to: "/p/$projectId/ai-opportunities" as const,
+    label: "AI Opportunities",
+    icon: Target,
+    badge: "New",
+  },
+  {
+    to: "/p/$projectId/ai-sentiment" as const,
+    label: "AI Sentiment",
+    icon: Smile,
+  },
+  {
+    to: "/p/$projectId/prompt-ideas" as const,
+    label: "AI Prompt Ideas",
+    icon: Lightbulb,
   },
   {
     to: "/p/$projectId/sam" as const,

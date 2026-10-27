@@ -31,6 +31,9 @@ function answer(
     collectedAt: null,
     brands: [],
     recommended: [],
+    sentiment: "",
+    sentimentQuote: "",
+    sentimentReason: "",
     citations: citations.map((c) => ({
       url: `https://${c.domain ?? "x.test"}/p`,
       title: null,

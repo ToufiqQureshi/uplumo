@@ -29,3 +29,10 @@ Use the package tests next to the source files in `README.md`. For changes cross
 - **Why:** Settling zero or a capped amount as the provider cost hid real expense from the emergency spend guard.
 - **Preserve:** One model call, no automatic retry, zero customer charge for unusable answers and the 15-credit ceiling. Unknown usage remains an estimate rather than claimed invoice evidence.
 - **Trace:** `writer.go`, `TestWriterRecordsProviderSpendEvenWhenCustomerIsRefundedOrCapped`; provider spend and customer charge are asserted separately.
+
+## Insight pages reuse the writer
+
+- **Decision:** Five writer actions serve the Insights pages instead of an article: `review_replies`, `outreach_email`, `business_post`, `action_plan`, `prompt_ideas`. They have their own system prompt (`insightSystemPrompt`) without the article-editor framing and work only from the evidence sent in Brief, Content or Instructions.
+- **Why:** The writer already holds credits, settles actual cost, caps an action at 15 credits and never retries; a second AI path would duplicate that money logic.
+- **Preserve:** Each action refuses (400, no hold, no model call) without its evidence: a keyword for prompt ideas, reviews or evidence for replies and plans, a subject for emails and posts. Output limits stay at 600-1,200 tokens. Metered as `ai_writing`.
+- **Trace:** `writer.go`; `TestInsightActionsNeedTheirEvidence`, `TestInsightActionsUseTheirOwnPromptAndAreMetered`. A mutation that dropped the keyword check failed the first test.

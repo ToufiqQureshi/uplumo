@@ -27,3 +27,11 @@ Both need a session and access to the project (`requireProjectAccess`).
 Limits: body 8 KiB, at most `MaxCards` (30) cards, ids match
 `^[a-z][a-z0-9_]{0,39}$`, no duplicate ids. Anything else is `400
 invalid_request` and nothing is written.
+
+## Next Actions states
+
+`actions.go` stores the team's done/ignored decisions for the Insights Next
+Actions page (`frontend/src/client/features/insights`):
+`POST /api/v1/projects/{projectId}/next-actions/get` returns `{states:[{key,status,updatedAt}]}`;
+`POST .../next-actions/set` takes `{key, status}` with status `todo` (deletes), `done` or `ignored`.
+Limit: 500 decisions per project (`MaxActionStates`, 409 `too_many_actions`).

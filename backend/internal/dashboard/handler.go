@@ -22,6 +22,7 @@ type LayoutStore interface {
 type Deps struct {
 	Logger            *slog.Logger
 	Store             LayoutStore
+	Actions           ActionStore
 	WithSession       func(http.Handler) http.Handler
 	WithProjectAccess func(http.Handler) http.Handler
 }
@@ -32,6 +33,8 @@ func Mount(mux *http.ServeMux, d Deps) {
 	protect := func(h http.HandlerFunc) http.Handler { return d.WithSession(d.WithProjectAccess(h)) }
 	mux.Handle("POST /api/v1/projects/{projectId}/dashboard/layout/get", protect(d.get))
 	mux.Handle("POST /api/v1/projects/{projectId}/dashboard/layout/save", protect(d.save))
+	mux.Handle("POST /api/v1/projects/{projectId}/next-actions/get", protect(d.getActions))
+	mux.Handle("POST /api/v1/projects/{projectId}/next-actions/set", protect(d.setAction))
 }
 
 type layoutBody struct {
@@ -118,4 +121,75 @@ func decode(w http.ResponseWriter, r *http.Request, dst any) bool {
 
 func invalid(w http.ResponseWriter) {
 	httpx.WriteError(w, http.StatusBadRequest, "invalid_request", "Choose a valid dashboard layout.")
+}
+
+type actionsBody struct {
+	States []ActionState `json:"states"`
+}
+
+func (d Deps) getActions(w http.ResponseWriter, r *http.Request) {
+	var in struct{}
+	if !decode(w, r, &in) {
+		return
+	}
+	org, ok := d.actionsReady(w, r)
+	if !ok {
+		return
+	}
+	states, err := d.Actions.Actions(r.Context(), org, r.PathValue("projectId"))
+	if err != nil {
+		d.fail(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, actionsBody{States: states})
+}
+
+func (d Deps) setAction(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Key    string `json:"key"`
+		Status string `json:"status"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	if ValidateAction(in.Key, in.Status) != nil {
+		httpx.WriteError(w, http.StatusBadRequest, "invalid_request", "Choose a valid action and status.")
+		return
+	}
+	org, ok := d.actionsReady(w, r)
+	if !ok {
+		return
+	}
+	userID, _ := auth.UserFromContext(r.Context())
+	err := d.Actions.SetAction(r.Context(), org, r.PathValue("projectId"), userID.ID, in.Key, in.Status)
+	switch {
+	case errors.Is(err, ErrTooManyActions):
+		httpx.WriteError(w, http.StatusConflict, "too_many_actions", "This project has too many saved decisions. Restore some to To do first.")
+		return
+	case errors.Is(err, ErrInvalidAction):
+		httpx.WriteError(w, http.StatusBadRequest, "invalid_request", "Choose a valid action and status.")
+		return
+	case err != nil:
+		d.fail(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, map[string]bool{"saved": true})
+}
+
+// actionsReady returns the project's organization. It is the project's
+// workspace from the access middleware, never the session's active one.
+func (d Deps) actionsReady(w http.ResponseWriter, r *http.Request) (string, bool) {
+	if _, ok := d.ready(w, r); !ok {
+		return "", false
+	}
+	if d.Actions == nil {
+		httpx.WriteError(w, http.StatusServiceUnavailable, "next_actions_unavailable", "Next Actions are not available.")
+		return "", false
+	}
+	org, ok := auth.ProjectOrganizationFromContext(r.Context())
+	if !ok || org == "" {
+		httpx.WriteError(w, http.StatusNotFound, "project_not_found", "Project not found.")
+		return "", false
+	}
+	return org, true
 }

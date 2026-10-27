@@ -29,6 +29,9 @@ function answer(over: Partial<TrackingAnswer> & { cites?: string[] }) {
       },
     ],
     recommended: [],
+    sentiment: "",
+    sentimentQuote: "",
+    sentimentReason: "",
     ...rest,
   } satisfies TrackingAnswer;
 }

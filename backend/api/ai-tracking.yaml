@@ -25,7 +25,30 @@ paths:
       operationId: getAITrackingAnswers
       responses:
         '200':
-          description: Saved answers with prompt, topic, engine, status, text, citations, owned/competitor brand observations and collectedAt. An unknown or foreign run returns an empty array.
+          description: Saved answers with prompt, topic, engine, status, text, citations, owned/competitor brand observations, collectedAt and sentiment (empty until classified, or positive/neutral/negative/not_mentioned) with sentimentQuote and sentimentReason. An unknown or foreign run returns an empty array.
+  /projects/{projectId}/ai-search/tracking/runs/{runId}/sentiment:
+    parameters:
+      - $ref: '#/components/parameters/Project'
+      - in: path
+        name: runId
+        required: true
+        schema: { type: string }
+    post:
+      operationId: classifyAITrackingSentiment
+      description: Paid, on click only. Answers that never name the brand are marked not_mentioned for free. Up to 20 others go to one OpenRouter call, held at its ceiling (at most 15 credits) and settled at actual cost. Requires an Idempotency-Key header (8-128 characters) and an empty JSON body. One classification per run at a time.
+      responses:
+        '200':
+          description: classified, notMentioned and remaining counts.
+        '402':
+          description: payment_required (no AI Visibility plan) or insufficient_credits, before any model call.
+        '404':
+          description: Run not in this project's workspace.
+        '409':
+          description: sentiment_running; another click is classifying this run.
+        '502':
+          description: sentiment_unusable; the model answer could not be read and nothing was charged.
+        '503':
+          description: No OpenRouter key configured.
   /projects/{projectId}/ai-search/tracking/estimate:
     parameters:
       - $ref: '#/components/parameters/Project'

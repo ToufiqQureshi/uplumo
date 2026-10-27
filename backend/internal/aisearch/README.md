@@ -192,3 +192,9 @@ paid work. Active callers retain cache-outage fallback; existing shared work
 can finish for other waiters. See the cancellation decision and regressions.
 
 AI tracking workers use the shared `jobs.Worker.RunSupervised` restart loop. Temporary storage errors resume after five seconds; existing accepted-task checkpoints and retry limits still prevent replaying uncertain purchases.
+
+## Sentiment
+
+`Sentiment` (`tracking_sentiment.go`) classifies a saved run's answers on
+request for the Insights AI Sentiment page. Rules and costs are in
+`decision.md`; the route is in `backend/api/ai-tracking.yaml`.
