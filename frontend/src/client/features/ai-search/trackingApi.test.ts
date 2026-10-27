@@ -21,6 +21,9 @@ function answer(over: Partial<TrackingAnswer> = {}): TrackingAnswer {
     collectedAt: null,
     citations: [],
     recommended: [],
+    sentiment: "",
+    sentimentQuote: "",
+    sentimentReason: "",
     brands: [
       { name: "Acme", domain: "acme.com", mentioned: true, cited: false },
     ],

@@ -114,6 +114,12 @@ type TrackingAnswer struct {
 	Recommended []RecommendedBrand `json:"recommended"`
 	ErrorCode   string             `json:"errorCode"`
 	CollectedAt *time.Time         `json:"collectedAt"`
+	// Sentiment is how the answer speaks about the brand ("" until the
+	// customer classifies it; see Sentiment). Quote is the deciding words,
+	// always found in the answer; Reason is a short plain explanation.
+	Sentiment       string `json:"sentiment"`
+	SentimentQuote  string `json:"sentimentQuote"`
+	SentimentReason string `json:"sentimentReason"`
 }
 
 // TrackingState contains configuration and free-to-read recent history.

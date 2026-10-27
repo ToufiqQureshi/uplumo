@@ -17,6 +17,14 @@ feelings, business calls, priorities, corrections. Read it after
 
 ---
 
+## 27 Oct 2026: Ubersuggest features, AI on every page (Claude)
+
+- Owner compared open-seo, Uplumo and Ubersuggest and wants 8 features: Next Actions, AI Opportunities, AI Sentiment, AI Prompt Ideas, Local SEO grid, Backlink Opportunity, Content Ideas, Pixel Rank. "pura kaam do pr me khatam chahiye"; "jaldi bhai".
+- "ui is most important muje dekhna ha sab kaise dikhenge": a clickable prototype was approved first (Design canvas artifact).
+- Correction: "ye sab hinglish me kyu ha" -> product copy for these pages in English. "har ek feature actionable insight and data backed recommendation dena chahiye ... AI dal de har ek page pe ... credit to katega hi".
+- Local SEO comes back (it was removed 17-23 Oct). PR 2 needs his choice of credits per grid scan, the plan for Pixel Rank (2x rank-check cost) and credits per backlink-gap lookup.
+- He asked to force-delete 10 old worktree folders, then stopped the command before it ran; nothing was deleted.
+
 ## 27 Oct 2026: three plans, credit packs, "jitna use utne credit" (Claude)
 
 - Owner: the whole SaaS runs on credits; sell only Basic, Pro, Business (Agency removed, no customers on it). Pro 10 sites, Business 20 sites; above that a +5 sites add-on (Rs 999, owner chose; built as 30 days from payment so a late buy is not wasted).

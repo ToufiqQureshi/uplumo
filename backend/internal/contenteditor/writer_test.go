@@ -238,7 +238,7 @@ func TestWriterDoesNotReturnSuggestionWhenCreditSettlementFails(t *testing.T) {
 }
 
 func TestWriterActionsHaveBoundedTokenBudgets(t *testing.T) {
-	for _, action := range []WriterAction{WriterOutline, WriterSection, WriterFillGap, WriterAnswerFirst, WriterFixTopIssue, WriterTitleMeta, WriterFAQ, WriterDestuff, WriterFactCheck, WriterToneLanguage} {
+	for _, action := range []WriterAction{WriterOutline, WriterSection, WriterFillGap, WriterAnswerFirst, WriterFixTopIssue, WriterTitleMeta, WriterFAQ, WriterDestuff, WriterFactCheck, WriterToneLanguage, WriterReviewReplies, WriterOutreachEmail, WriterBusinessPost, WriterActionPlan, WriterPromptIdeas} {
 		if limit := writerOutputLimit(action); limit <= 0 || limit > 2_000 {
 			t.Errorf("action %q has unsafe token limit %d", action, limit)
 		}
@@ -256,6 +256,63 @@ func TestFactCheckAndTitlePromptsDoNotRewrite(t *testing.T) {
 		title := writerSystemPrompt(WriterTitleMeta, mode)
 		if !strings.Contains(title, "'Title: <title>'") || !strings.Contains(title, "'Description:") {
 			t.Errorf("%s title prompt = %q, want the Title:/Description: lines the editor parses", mode, title)
+		}
+	}
+}
+
+// The insight pages send evidence, not an article. Each action must refuse to
+// run (and so never buy a model call) without the evidence it works from.
+func TestInsightActionsNeedTheirEvidence(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		input WriterInput
+		ok    bool
+	}{
+		{"prompt ideas without keyword", WriterInput{Action: WriterPromptIdeas, Mode: "aeo"}, false},
+		{"prompt ideas with keyword", WriterInput{Action: WriterPromptIdeas, Mode: "aeo", TargetKeyword: "cafe in bhopal"}, true},
+		{"review replies without reviews", WriterInput{Action: WriterReviewReplies, Mode: "aeo"}, false},
+		{"review replies with reviews", WriterInput{Action: WriterReviewReplies, Mode: "aeo", Content: "2★ Waited 40 minutes"}, true},
+		{"plan without evidence", WriterInput{Action: WriterActionPlan, Mode: "aeo", Content: " "}, false},
+		{"plan with evidence", WriterInput{Action: WriterActionPlan, Mode: "aeo", Brief: "Missing in 14 of 40 prompts"}, true},
+		{"email without a site", WriterInput{Action: WriterOutreachEmail, Mode: "aeo"}, false},
+		{"email with a site", WriterInput{Action: WriterOutreachEmail, Mode: "aeo", Brief: "lbb.in best cafes list"}, true},
+		{"post without a topic", WriterInput{Action: WriterBusinessPost, Mode: "aeo"}, false},
+		{"post with a topic", WriterInput{Action: WriterBusinessPost, Mode: "aeo", Instructions: "Faster weekend service"}, true},
+	} {
+		tc.input.IdempotencyKey = "key-" + tc.name
+		if err := validateWriterInput(tc.input); (err == nil) != tc.ok {
+			t.Errorf("%s: validate error = %v, want ok=%v", tc.name, err, tc.ok)
+		}
+	}
+}
+
+func TestInsightActionsUseTheirOwnPromptAndAreMetered(t *testing.T) {
+	for _, tc := range []struct {
+		action WriterAction
+		want   string
+	}{
+		{WriterReviewReplies, "**Reply:**"},
+		{WriterOutreachEmail, "Subject:"},
+		{WriterBusinessPost, "Google Business Profile post"},
+		{WriterActionPlan, "ranked plan of at most 5 actions"},
+		{WriterPromptIdeas, "'<intent>|<question>'"},
+	} {
+		llm := &fakeWriterLLM{result: openrouter.Result{Text: "result", Usage: openrouter.Usage{CostUSD: 0.001}}}
+		meter := &fakeWriterMeter{allowed: true}
+		agent := &WriterAgent{LLM: llm, Meter: meter}
+		_, err := agent.Generate(context.Background(), "org-1", WriterInput{Action: tc.action, Mode: "aeo", TargetKeyword: "cafe", Content: "evidence", Brief: "evidence", IdempotencyKey: "k-" + string(tc.action)})
+		if err != nil {
+			t.Fatalf("%s: Generate() error = %v", tc.action, err)
+		}
+		system := llm.request.Messages[0].Content
+		if !strings.Contains(system, tc.want) || !strings.Contains(system, "untrusted source material") {
+			t.Errorf("%s: system prompt = %q, want %q and the untrusted-input rule", tc.action, system, tc.want)
+		}
+		if strings.Contains(system, "editor") {
+			t.Errorf("%s: insight prompt must not reuse the article-editor framing: %q", tc.action, system)
+		}
+		if meter.settled != 1 || meter.cost != 0.001 || meter.orgID != "org-1" {
+			t.Errorf("%s: not metered once to the organization: %+v", tc.action, meter)
 		}
 	}
 }

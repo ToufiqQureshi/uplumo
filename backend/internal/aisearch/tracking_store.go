@@ -96,7 +96,7 @@ func (s *Tracking) State(ctx context.Context, org, project string) (TrackingStat
 
 // Answers reads evidence only when the run, project and organization match.
 func (s *Tracking) Answers(ctx context.Context, org, project, runID string) ([]TrackingAnswer, error) {
-	rows, err := s.DB.Query(ctx, `SELECT a.id,a.prompt,a.topic,a.engine,a.status,a.task_id,a.answer,a.citations,a.brands,a.error_code,a.collected_at
+	rows, err := s.DB.Query(ctx, `SELECT a.id,a.prompt,a.topic,a.engine,a.status,a.task_id,a.answer,a.citations,a.brands,a.error_code,a.collected_at,a.sentiment,a.sentiment_quote,a.sentiment_reason
  FROM go_ai_tracking_answers a JOIN go_ai_tracking_runs r ON r.id=a.run_id WHERE r.id=$1 AND r.organization_id=$2 AND r.project_id=$3 ORDER BY a.topic,a.prompt,a.engine`, runID, org, project)
 	if err != nil {
 		return nil, err
@@ -106,7 +106,7 @@ func (s *Tracking) Answers(ctx context.Context, org, project, runID string) ([]T
 	for rows.Next() {
 		var a TrackingAnswer
 		var citations, brands []byte
-		if err = rows.Scan(&a.ID, &a.Prompt, &a.Topic, &a.Engine, &a.Status, &a.TaskID, &a.Answer, &citations, &brands, &a.ErrorCode, &a.CollectedAt); err != nil {
+		if err = rows.Scan(&a.ID, &a.Prompt, &a.Topic, &a.Engine, &a.Status, &a.TaskID, &a.Answer, &citations, &brands, &a.ErrorCode, &a.CollectedAt, &a.Sentiment, &a.SentimentQuote, &a.SentimentReason); err != nil {
 			return nil, err
 		}
 		if err = json.Unmarshal(citations, &a.Citations); err != nil {

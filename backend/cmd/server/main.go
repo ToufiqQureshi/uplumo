@@ -391,12 +391,14 @@ func run(logger *slog.Logger) (err error) {
 			Branding:                branding.NewService(db),
 			OpenAIAppsChallenge:     cfg.OpenAIAppsChallenge,
 			AITracking:              aiTracking,
+			AISentiment:             buildAISentiment(cfg, logger, db, spendGuard.AIMeter(spend.AIVisibility, "openrouter/"+aisearch.SentimentModel), aiTracking.Plans),
 			AISearch:                aiSearchSvc,
 			Ahrefs:                  ahrefs.New(rdb),
 			Backlinks:               backlinksSvc,
 			Domain:                  domainSvc,
 			DashboardOverview:       newDashboardOverview(db, backlinksSvc),
 			DashboardLayouts:        dashboard.Store{DB: db},
+			DashboardActions:        dashboard.Store{DB: db},
 			GoogleAccounts:          google.AccountRepository{Pool: db},
 			GoogleOAuth:             googleOAuthSvc,
 			GA4:                     ga4Svc,
@@ -507,6 +509,15 @@ func buildContentWriter(cfg config.Config, logger *slog.Logger, meter contentedi
 		Plans:  plans,
 		Logger: logger,
 	}
+}
+
+// buildAISentiment wires answer sentiment; nil without an OpenRouter key, so
+// its route answers 503 instead of failing at click time.
+func buildAISentiment(cfg config.Config, logger *slog.Logger, db *pgxpool.Pool, meter billing.AIMeter, plans aisearch.PaidPlans) *aisearch.Sentiment {
+	if strings.TrimSpace(cfg.OpenRouterAPIKey) == "" {
+		return nil
+	}
+	return &aisearch.Sentiment{DB: db, LLM: &openrouter.Client{APIKey: cfg.OpenRouterAPIKey}, Meter: meter, Plans: plans, Logger: logger}
 }
 
 // buildContentBriefs wires search briefs. Without DataForSEO there is no

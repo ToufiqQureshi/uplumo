@@ -81,6 +81,13 @@ const trackingAnswersSchema = z.array(
         }),
       )
       .default([]),
+    // How the answer speaks about the brand; "" until classified (paid,
+    // on request, from the AI Sentiment page).
+    sentiment: z
+      .enum(["", "positive", "neutral", "negative", "not_mentioned"])
+      .default(""),
+    sentimentQuote: z.string().default(""),
+    sentimentReason: z.string().default(""),
   }),
 );
 export type TrackingAnswer = z.infer<typeof trackingAnswersSchema>[number];

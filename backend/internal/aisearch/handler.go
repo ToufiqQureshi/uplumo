@@ -34,6 +34,9 @@ type Deps struct {
 	Logger   *slog.Logger
 	Service  *Service
 	Tracking *Tracking
+	// Sentiment classifies saved tracker answers on request. Nil without an
+	// OpenRouter key: its route then answers 503.
+	Sentiment *Sentiment
 	// Plans gates the endpoints behind a paid plan, because every uncached call
 	// is billed. Nil lets every organization in, for deployments that have no
 	// billing and pay the data provider themselves.

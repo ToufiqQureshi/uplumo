@@ -84,6 +84,8 @@ type Deps struct {
 	// answer 503.
 	AISearch   *aisearch.Service
 	AITracking *aisearch.Tracking
+	// AISentiment classifies saved tracker answers; nil without OpenRouter.
+	AISentiment *aisearch.Sentiment
 	// Ahrefs serves optional, free domain-rating lookups.
 	Ahrefs *ahrefs.Service
 	// Backlinks is nil when no DataForSEO key is configured.
@@ -93,6 +95,8 @@ type Deps struct {
 	DashboardOverview *dashboardoverview.Service
 	// DashboardLayouts stores each member's dashboard card layout.
 	DashboardLayouts dashboard.LayoutStore
+	// DashboardActions stores the project team's Next Actions decisions.
+	DashboardActions dashboard.ActionStore
 	// GoogleAccounts removes a user's Google data grants and mappings.
 	GoogleAccounts google.AccountRepository
 	// GoogleOAuth owns consent start and callback routes.
@@ -309,6 +313,7 @@ func NewHandler(d Deps) http.Handler {
 		Logger:      d.Logger,
 		Service:     d.AISearch,
 		Tracking:    d.AITracking,
+		Sentiment:   d.AISentiment,
 		Plans:       plans,
 		WithSession: withSession,
 		WithProjectAccess: func(next http.Handler) http.Handler {
@@ -353,7 +358,7 @@ func NewHandler(d Deps) http.Handler {
 		Logger: d.Logger, Service: d.RankTracking, Checks: d.RankChecks, ProjectMarkets: d.ProjectMarkets, WithSession: withSession,
 		WithProjectAccess: func(next http.Handler) http.Handler { return requireProjectAccess(d.Logger, d.Auth, next) },
 	})
-	dashboard.Mount(mux, dashboard.Deps{Logger: d.Logger, Store: d.DashboardLayouts, WithSession: withSession, WithProjectAccess: func(next http.Handler) http.Handler { return requireProjectAccess(d.Logger, d.Auth, next) }})
+	dashboard.Mount(mux, dashboard.Deps{Logger: d.Logger, Store: d.DashboardLayouts, Actions: d.DashboardActions, WithSession: withSession, WithProjectAccess: func(next http.Handler) http.Handler { return requireProjectAccess(d.Logger, d.Auth, next) }})
 	activation.Mount(mux, activation.Deps{Logger: d.Logger, Service: d.Activation, WithSession: withSession, WithProjectAccess: func(next http.Handler) http.Handler { return requireProjectAccess(d.Logger, d.Auth, next) }})
 	reports.Mount(mux, reports.Deps{Logger: d.Logger, Service: d.Reports, PublicURL: d.PublicURL, WithSession: withSession,
 		View:              reportViewDeps(d),

@@ -120,3 +120,15 @@ Use the package tests next to the source files in `README.md`. For changes cross
 - **Why:** Production runs on 24 and 25 Oct 2026 bought three AI Overview SERP tasks each, then polled for two hours and ended `collection_timeout`: every AI Overview result failed to decode, so the customer paid for answers never shown. A failed answer was also still counted as pending, so even the existing `provider_failed` path waited for the next poll.
 - **Preserve:** Polling stays free and never replays a paid POST; a network error on `task_get` still retries on the next poll; only queued tasks (20100, 40601, 40602) keep a run waiting.
 - **Trace:** `tracking_worker.go` (`parseTrackingAnswer`, `collect`, `failAnswer`); `TestTrackingEvidenceSeparatesCitationsFromMentions` failed on the keyword-only items before the fix; `TestTrackingUnreadableResultFailsInsteadOfPollingUntilTimeout` timed out (`collection_timeout`) with the stop-polling check removed. Not verified against a live AI Overview task yet: after deploy, the next daily run on the test workspace is the check.
+
+## Sentiment is classified once, on click, from the brand's excerpt only
+
+- **Decision:** `POST .../ai-search/tracking/runs/{runId}/sentiment` (`tracking_sentiment.go`) labels a saved run's answers positive/neutral/negative and stores the label, the deciding quote and a reason on the answer row (migration 46). Answers that never name the brand or domain are marked `not_mentioned` without a model call.
+- **Why:** The AI Sentiment page must say how AI speaks about the brand and where a complaint comes from. Labels are stored so reading the page again is free.
+- **Preserve:**
+  - Paid only on click; AI Visibility plan required; at most 20 answers and 15 credits per click (the batch shrinks for long non-ASCII excerpts); held before the call, settled at actual cost, zero charge for unreadable output; no retry.
+  - Only about 700 characters around the first brand mention are sent, fenced as untrusted data.
+  - One classification per run at a time (Postgres advisory lock), and rows are only written where `sentiment` is empty, so two clicks never pay twice for one answer.
+  - A quote not found in the excerpt is dropped rather than shown as the AI's words.
+  - Model and ceiling match the writer (`TestSentimentPricesMatchTheWriter`); metered as `ai_visibility`, endpoint `openrouter/openai/gpt-4.1-mini`.
+- **Trace:** `tracking_sentiment.go`, `tracking_handler.go`; `tracking_sentiment_test.go` (foreign workspace, no plan and no credits refused before the model; one call charged once; second click buys nothing). A mutation that reclassified stored answers failed it.

@@ -35,6 +35,8 @@ import { Route as AppSettingsBrandingRouteImport } from './routes/_app/settings/
 import { Route as AppSettingsOrganizationRouteImport } from './routes/_app/settings/organization'
 import { Route as AuthenticatedOnboardingIndexRouteImport } from './routes/_authenticated.onboarding.index'
 import { Route as AppPProjectIdIndexRouteImport } from './routes/_app/p/$projectId/index'
+import { Route as AppPProjectIdAiOpportunitiesRouteImport } from './routes/_app/p/$projectId/ai-opportunities'
+import { Route as AppPProjectIdAiSentimentRouteImport } from './routes/_app/p/$projectId/ai-sentiment'
 import { Route as AppPProjectIdAnalyticsRouteImport } from './routes/_app/p/$projectId/analytics'
 import { Route as AppPProjectIdBacklinksRouteImport } from './routes/_app/p/$projectId/backlinks'
 import { Route as AppPProjectIdBrandLookupRouteImport } from './routes/_app/p/$projectId/brand-lookup'
@@ -42,7 +44,9 @@ import { Route as AppPProjectIdContentEditorRouteImport } from './routes/_app/p/
 import { Route as AppPProjectIdContextRouteImport } from './routes/_app/p/$projectId/context'
 import { Route as AppPProjectIdDomainRouteImport } from './routes/_app/p/$projectId/domain'
 import { Route as AppPProjectIdKeywordsRouteImport } from './routes/_app/p/$projectId/keywords'
+import { Route as AppPProjectIdNextActionsRouteImport } from './routes/_app/p/$projectId/next-actions'
 import { Route as AppPProjectIdPromptExplorerRouteImport } from './routes/_app/p/$projectId/prompt-explorer'
+import { Route as AppPProjectIdPromptIdeasRouteImport } from './routes/_app/p/$projectId/prompt-ideas'
 import { Route as AppPProjectIdPromptTrackingRouteImport } from './routes/_app/p/$projectId/prompt-tracking'
 import { Route as AppPProjectIdRankTrackingRouteImport } from './routes/_app/p/$projectId/rank-tracking'
 import { Route as AppPProjectIdSamRouteImport } from './routes/_app/p/$projectId/sam'
@@ -189,6 +193,18 @@ const AppPProjectIdIndexRoute = AppPProjectIdIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppPProjectIdRouteRoute,
 } as any)
+const AppPProjectIdAiOpportunitiesRoute =
+  AppPProjectIdAiOpportunitiesRouteImport.update({
+    id: '/ai-opportunities',
+    path: '/ai-opportunities',
+    getParentRoute: () => AppPProjectIdRouteRoute,
+  } as any)
+const AppPProjectIdAiSentimentRoute =
+  AppPProjectIdAiSentimentRouteImport.update({
+    id: '/ai-sentiment',
+    path: '/ai-sentiment',
+    getParentRoute: () => AppPProjectIdRouteRoute,
+  } as any)
 const AppPProjectIdAnalyticsRoute = AppPProjectIdAnalyticsRouteImport.update({
   id: '/analytics',
   path: '/analytics',
@@ -226,10 +242,22 @@ const AppPProjectIdKeywordsRoute = AppPProjectIdKeywordsRouteImport.update({
   path: '/keywords',
   getParentRoute: () => AppPProjectIdRouteRoute,
 } as any)
+const AppPProjectIdNextActionsRoute =
+  AppPProjectIdNextActionsRouteImport.update({
+    id: '/next-actions',
+    path: '/next-actions',
+    getParentRoute: () => AppPProjectIdRouteRoute,
+  } as any)
 const AppPProjectIdPromptExplorerRoute =
   AppPProjectIdPromptExplorerRouteImport.update({
     id: '/prompt-explorer',
     path: '/prompt-explorer',
+    getParentRoute: () => AppPProjectIdRouteRoute,
+  } as any)
+const AppPProjectIdPromptIdeasRoute =
+  AppPProjectIdPromptIdeasRouteImport.update({
+    id: '/prompt-ideas',
+    path: '/prompt-ideas',
     getParentRoute: () => AppPProjectIdRouteRoute,
   } as any)
 const AppPProjectIdPromptTrackingRoute =
@@ -348,6 +376,8 @@ export interface FileRoutesByFullPath {
   '/settings/organization': typeof AppSettingsOrganizationRoute
   '/settings/': typeof AppSettingsIndexRoute
   '/onboarding/': typeof AuthenticatedOnboardingIndexRoute
+  '/p/$projectId/ai-opportunities': typeof AppPProjectIdAiOpportunitiesRoute
+  '/p/$projectId/ai-sentiment': typeof AppPProjectIdAiSentimentRoute
   '/p/$projectId/analytics': typeof AppPProjectIdAnalyticsRoute
   '/p/$projectId/backlinks': typeof AppPProjectIdBacklinksRoute
   '/p/$projectId/brand-lookup': typeof AppPProjectIdBrandLookupRoute
@@ -355,7 +385,9 @@ export interface FileRoutesByFullPath {
   '/p/$projectId/context': typeof AppPProjectIdContextRoute
   '/p/$projectId/domain': typeof AppPProjectIdDomainRoute
   '/p/$projectId/keywords': typeof AppPProjectIdKeywordsRoute
+  '/p/$projectId/next-actions': typeof AppPProjectIdNextActionsRoute
   '/p/$projectId/prompt-explorer': typeof AppPProjectIdPromptExplorerRoute
+  '/p/$projectId/prompt-ideas': typeof AppPProjectIdPromptIdeasRoute
   '/p/$projectId/prompt-tracking': typeof AppPProjectIdPromptTrackingRoute
   '/p/$projectId/rank-tracking': typeof AppPProjectIdRankTrackingRouteWithChildren
   '/p/$projectId/sam': typeof AppPProjectIdSamRoute
@@ -395,6 +427,8 @@ export interface FileRoutesByTo {
   '/settings/organization': typeof AppSettingsOrganizationRoute
   '/settings': typeof AppSettingsIndexRoute
   '/onboarding': typeof AuthenticatedOnboardingIndexRoute
+  '/p/$projectId/ai-opportunities': typeof AppPProjectIdAiOpportunitiesRoute
+  '/p/$projectId/ai-sentiment': typeof AppPProjectIdAiSentimentRoute
   '/p/$projectId/analytics': typeof AppPProjectIdAnalyticsRoute
   '/p/$projectId/backlinks': typeof AppPProjectIdBacklinksRoute
   '/p/$projectId/brand-lookup': typeof AppPProjectIdBrandLookupRoute
@@ -402,7 +436,9 @@ export interface FileRoutesByTo {
   '/p/$projectId/context': typeof AppPProjectIdContextRoute
   '/p/$projectId/domain': typeof AppPProjectIdDomainRoute
   '/p/$projectId/keywords': typeof AppPProjectIdKeywordsRoute
+  '/p/$projectId/next-actions': typeof AppPProjectIdNextActionsRoute
   '/p/$projectId/prompt-explorer': typeof AppPProjectIdPromptExplorerRoute
+  '/p/$projectId/prompt-ideas': typeof AppPProjectIdPromptIdeasRoute
   '/p/$projectId/prompt-tracking': typeof AppPProjectIdPromptTrackingRoute
   '/p/$projectId/sam': typeof AppPProjectIdSamRoute
   '/p/$projectId/saved': typeof AppPProjectIdSavedRoute
@@ -446,6 +482,8 @@ export interface FileRoutesById {
   '/_app/settings/organization': typeof AppSettingsOrganizationRoute
   '/_app/settings/': typeof AppSettingsIndexRoute
   '/_authenticated/onboarding/': typeof AuthenticatedOnboardingIndexRoute
+  '/_app/p/$projectId/ai-opportunities': typeof AppPProjectIdAiOpportunitiesRoute
+  '/_app/p/$projectId/ai-sentiment': typeof AppPProjectIdAiSentimentRoute
   '/_app/p/$projectId/analytics': typeof AppPProjectIdAnalyticsRoute
   '/_app/p/$projectId/backlinks': typeof AppPProjectIdBacklinksRoute
   '/_app/p/$projectId/brand-lookup': typeof AppPProjectIdBrandLookupRoute
@@ -453,7 +491,9 @@ export interface FileRoutesById {
   '/_app/p/$projectId/context': typeof AppPProjectIdContextRoute
   '/_app/p/$projectId/domain': typeof AppPProjectIdDomainRoute
   '/_app/p/$projectId/keywords': typeof AppPProjectIdKeywordsRoute
+  '/_app/p/$projectId/next-actions': typeof AppPProjectIdNextActionsRoute
   '/_app/p/$projectId/prompt-explorer': typeof AppPProjectIdPromptExplorerRoute
+  '/_app/p/$projectId/prompt-ideas': typeof AppPProjectIdPromptIdeasRoute
   '/_app/p/$projectId/prompt-tracking': typeof AppPProjectIdPromptTrackingRoute
   '/_app/p/$projectId/rank-tracking': typeof AppPProjectIdRankTrackingRouteWithChildren
   '/_app/p/$projectId/sam': typeof AppPProjectIdSamRoute
@@ -497,6 +537,8 @@ export interface FileRouteTypes {
     | '/settings/organization'
     | '/settings/'
     | '/onboarding/'
+    | '/p/$projectId/ai-opportunities'
+    | '/p/$projectId/ai-sentiment'
     | '/p/$projectId/analytics'
     | '/p/$projectId/backlinks'
     | '/p/$projectId/brand-lookup'
@@ -504,7 +546,9 @@ export interface FileRouteTypes {
     | '/p/$projectId/context'
     | '/p/$projectId/domain'
     | '/p/$projectId/keywords'
+    | '/p/$projectId/next-actions'
     | '/p/$projectId/prompt-explorer'
+    | '/p/$projectId/prompt-ideas'
     | '/p/$projectId/prompt-tracking'
     | '/p/$projectId/rank-tracking'
     | '/p/$projectId/sam'
@@ -544,6 +588,8 @@ export interface FileRouteTypes {
     | '/settings/organization'
     | '/settings'
     | '/onboarding'
+    | '/p/$projectId/ai-opportunities'
+    | '/p/$projectId/ai-sentiment'
     | '/p/$projectId/analytics'
     | '/p/$projectId/backlinks'
     | '/p/$projectId/brand-lookup'
@@ -551,7 +597,9 @@ export interface FileRouteTypes {
     | '/p/$projectId/context'
     | '/p/$projectId/domain'
     | '/p/$projectId/keywords'
+    | '/p/$projectId/next-actions'
     | '/p/$projectId/prompt-explorer'
+    | '/p/$projectId/prompt-ideas'
     | '/p/$projectId/prompt-tracking'
     | '/p/$projectId/sam'
     | '/p/$projectId/saved'
@@ -594,6 +642,8 @@ export interface FileRouteTypes {
     | '/_app/settings/organization'
     | '/_app/settings/'
     | '/_authenticated/onboarding/'
+    | '/_app/p/$projectId/ai-opportunities'
+    | '/_app/p/$projectId/ai-sentiment'
     | '/_app/p/$projectId/analytics'
     | '/_app/p/$projectId/backlinks'
     | '/_app/p/$projectId/brand-lookup'
@@ -601,7 +651,9 @@ export interface FileRouteTypes {
     | '/_app/p/$projectId/context'
     | '/_app/p/$projectId/domain'
     | '/_app/p/$projectId/keywords'
+    | '/_app/p/$projectId/next-actions'
     | '/_app/p/$projectId/prompt-explorer'
+    | '/_app/p/$projectId/prompt-ideas'
     | '/_app/p/$projectId/prompt-tracking'
     | '/_app/p/$projectId/rank-tracking'
     | '/_app/p/$projectId/sam'
@@ -816,6 +868,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPProjectIdIndexRouteImport
       parentRoute: typeof AppPProjectIdRouteRoute
     }
+    '/_app/p/$projectId/ai-opportunities': {
+      id: '/_app/p/$projectId/ai-opportunities'
+      path: '/ai-opportunities'
+      fullPath: '/p/$projectId/ai-opportunities'
+      preLoaderRoute: typeof AppPProjectIdAiOpportunitiesRouteImport
+      parentRoute: typeof AppPProjectIdRouteRoute
+    }
+    '/_app/p/$projectId/ai-sentiment': {
+      id: '/_app/p/$projectId/ai-sentiment'
+      path: '/ai-sentiment'
+      fullPath: '/p/$projectId/ai-sentiment'
+      preLoaderRoute: typeof AppPProjectIdAiSentimentRouteImport
+      parentRoute: typeof AppPProjectIdRouteRoute
+    }
     '/_app/p/$projectId/analytics': {
       id: '/_app/p/$projectId/analytics'
       path: '/analytics'
@@ -865,11 +931,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPProjectIdKeywordsRouteImport
       parentRoute: typeof AppPProjectIdRouteRoute
     }
+    '/_app/p/$projectId/next-actions': {
+      id: '/_app/p/$projectId/next-actions'
+      path: '/next-actions'
+      fullPath: '/p/$projectId/next-actions'
+      preLoaderRoute: typeof AppPProjectIdNextActionsRouteImport
+      parentRoute: typeof AppPProjectIdRouteRoute
+    }
     '/_app/p/$projectId/prompt-explorer': {
       id: '/_app/p/$projectId/prompt-explorer'
       path: '/prompt-explorer'
       fullPath: '/p/$projectId/prompt-explorer'
       preLoaderRoute: typeof AppPProjectIdPromptExplorerRouteImport
+      parentRoute: typeof AppPProjectIdRouteRoute
+    }
+    '/_app/p/$projectId/prompt-ideas': {
+      id: '/_app/p/$projectId/prompt-ideas'
+      path: '/prompt-ideas'
+      fullPath: '/p/$projectId/prompt-ideas'
+      preLoaderRoute: typeof AppPProjectIdPromptIdeasRouteImport
       parentRoute: typeof AppPProjectIdRouteRoute
     }
     '/_app/p/$projectId/prompt-tracking': {
@@ -1039,6 +1119,8 @@ const AppPProjectIdSettingsRouteWithChildren =
   )
 
 interface AppPProjectIdRouteRouteChildren {
+  AppPProjectIdAiOpportunitiesRoute: typeof AppPProjectIdAiOpportunitiesRoute
+  AppPProjectIdAiSentimentRoute: typeof AppPProjectIdAiSentimentRoute
   AppPProjectIdAnalyticsRoute: typeof AppPProjectIdAnalyticsRoute
   AppPProjectIdBacklinksRoute: typeof AppPProjectIdBacklinksRoute
   AppPProjectIdBrandLookupRoute: typeof AppPProjectIdBrandLookupRoute
@@ -1046,7 +1128,9 @@ interface AppPProjectIdRouteRouteChildren {
   AppPProjectIdContextRoute: typeof AppPProjectIdContextRoute
   AppPProjectIdDomainRoute: typeof AppPProjectIdDomainRoute
   AppPProjectIdKeywordsRoute: typeof AppPProjectIdKeywordsRoute
+  AppPProjectIdNextActionsRoute: typeof AppPProjectIdNextActionsRoute
   AppPProjectIdPromptExplorerRoute: typeof AppPProjectIdPromptExplorerRoute
+  AppPProjectIdPromptIdeasRoute: typeof AppPProjectIdPromptIdeasRoute
   AppPProjectIdPromptTrackingRoute: typeof AppPProjectIdPromptTrackingRoute
   AppPProjectIdRankTrackingRoute: typeof AppPProjectIdRankTrackingRouteWithChildren
   AppPProjectIdSamRoute: typeof AppPProjectIdSamRoute
@@ -1062,6 +1146,8 @@ interface AppPProjectIdRouteRouteChildren {
 }
 
 const AppPProjectIdRouteRouteChildren: AppPProjectIdRouteRouteChildren = {
+  AppPProjectIdAiOpportunitiesRoute: AppPProjectIdAiOpportunitiesRoute,
+  AppPProjectIdAiSentimentRoute: AppPProjectIdAiSentimentRoute,
   AppPProjectIdAnalyticsRoute: AppPProjectIdAnalyticsRoute,
   AppPProjectIdBacklinksRoute: AppPProjectIdBacklinksRoute,
   AppPProjectIdBrandLookupRoute: AppPProjectIdBrandLookupRoute,
@@ -1069,7 +1155,9 @@ const AppPProjectIdRouteRouteChildren: AppPProjectIdRouteRouteChildren = {
   AppPProjectIdContextRoute: AppPProjectIdContextRoute,
   AppPProjectIdDomainRoute: AppPProjectIdDomainRoute,
   AppPProjectIdKeywordsRoute: AppPProjectIdKeywordsRoute,
+  AppPProjectIdNextActionsRoute: AppPProjectIdNextActionsRoute,
   AppPProjectIdPromptExplorerRoute: AppPProjectIdPromptExplorerRoute,
+  AppPProjectIdPromptIdeasRoute: AppPProjectIdPromptIdeasRoute,
   AppPProjectIdPromptTrackingRoute: AppPProjectIdPromptTrackingRoute,
   AppPProjectIdRankTrackingRoute: AppPProjectIdRankTrackingRouteWithChildren,
   AppPProjectIdSamRoute: AppPProjectIdSamRoute,
