@@ -94,3 +94,25 @@ in the linked feature READMEs; do not silently change them during a UI refactor.
   - The "Write" and "Improve" links only pre-fill the editor.
   - Every existing table, export, filter and the growth panel are unchanged, only lower on the page.
 - **Trace:** `searchVerdict.ts` and `searchVerdict.test.ts`. Each of these 5 mutations fails the tests: rank rule, impressions-vs-CTR rule, steady band, comparison guard, growth rule. Also `SearchVerdictCards.tsx`, `SearchPerformancePage.tsx`, `searchPerformanceApi.ts`. Backend: `backend/internal/gsc/decision.md`.
+
+## What fell, by how much, how urgent, and what Google visitors did
+
+- **Decision:** the verdict headline shows the click numbers
+  ("fell 32% (500 → 340)") and a red count of urgent drops. Pages to fix show
+  `−N clicks (−X%)` and an Urgent/Watch/Small dip badge. A new "Searches you
+  lost and won" card lists the API's `queryLosses` (why, how bad, "Win it
+  back" opens the editor with that search) and `queryGains`. A GA4 card shows
+  organic visits, engaged rate and key events against the previous period,
+  plus key events per 100 Google visits; it shares the dashboard's cached
+  query (`dashboardGa4Report`) and asks to connect GA4 when it is not.
+- **Why:** owner: show GSC and GA4 "valuable way se: kya gira, kitna gira,
+  urgent". The numbers already came from free Google reads; they were not on
+  screen.
+- **Preserve:** no paid call on load (asserted in `tests/search-insights.spec.ts`);
+  GA4 overview read once and not retried; named searches are labeled as
+  excluding Google's hidden rare searches; older responses default the new
+  arrays to `[]` and severity to `watch`.
+- **Trace:** `SearchVerdictCards.tsx`, `searchVerdict.ts`, `Ga4OrganicCard.tsx`,
+  `searchPerformanceApi.ts`, `searchVerdict.test.ts`,
+  `tests/search-insights.spec.ts` (desktop and 360px). Backend:
+  `backend/internal/gsc/decision.md`.

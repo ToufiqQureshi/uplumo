@@ -6,6 +6,7 @@ import (
 	"errors"
 	"math"
 	"net/http"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -296,7 +297,15 @@ func (s *Service) GetPerformance(ctx context.Context, organizationID, projectID 
 		if buildErr != nil {
 			return nil, buildErr
 		}
-		requests = append(requests, currentPages, previousPages)
+		currentQueries, buildErr := BuildSearchAnalyticsRequest(currentInput, []string{"query"}, pageRowLimit, 0, now)
+		if buildErr != nil {
+			return nil, buildErr
+		}
+		previousQueries, buildErr := BuildSearchAnalyticsRequest(previousInput, []string{"query"}, pageRowLimit, 0, now)
+		if buildErr != nil {
+			return nil, buildErr
+		}
+		requests = append(requests, currentPages, previousPages, currentQueries, previousQueries)
 	}
 	queryPagesIndex := len(requests)
 	requests = append(requests, queryPages, countryRequest)
@@ -310,15 +319,17 @@ func (s *Service) GetPerformance(ctx context.Context, organizationID, projectID 
 	}
 	currentRows := rowsByRequest[0]
 	previousRows := []SearchRow(nil)
-	pageChanges := []PageChange{}
+	pageChanges, queryLosses, queryGains := []PageChange{}, []QueryChange{}, []QueryChange{}
 	if comparisonAvailable {
 		previousRows = rowsByRequest[1]
-		pageChanges = buildPageChanges(rowsByRequest[2], rowsByRequest[3], pageChangeLimit)
+		sitePrevClicks := sumSearchTotals(previousRows).Clicks
+		pageChanges = buildPageChanges(rowsByRequest[2], rowsByRequest[3], sitePrevClicks, pageChangeLimit)
+		queryLosses, queryGains = buildQueryChanges(rowsByRequest[4], rowsByRequest[5], sitePrevClicks)
 	} else {
 		previous = dateWindow{}
 	}
 	queryRows, countryRows := rowsByRequest[queryPagesIndex], rowsByRequest[queryPagesIndex+1]
-	return map[string]any{"connected": true, "range": map[string]any{"startDate": window.StartDate, "endDate": window.EndDate, "prevStartDate": previous.StartDate, "prevEndDate": previous.EndDate, "comparisonAvailable": comparisonAvailable}, "totals": sumSearchTotals(currentRows), "prevTotals": sumSearchTotals(previousRows), "daily": toDailyRows(currentRows), "strikingDistance": buildStrikingDistanceRows(queryRows, strikingDistanceLimit), "countries": toDimensionRows(countryRows), "pageChanges": pageChanges}, nil
+	return map[string]any{"connected": true, "range": map[string]any{"startDate": window.StartDate, "endDate": window.EndDate, "prevStartDate": previous.StartDate, "prevEndDate": previous.EndDate, "comparisonAvailable": comparisonAvailable}, "totals": sumSearchTotals(currentRows), "prevTotals": sumSearchTotals(previousRows), "daily": toDailyRows(currentRows), "strikingDistance": buildStrikingDistanceRows(queryRows, strikingDistanceLimit), "countries": toDimensionRows(countryRows), "pageChanges": pageChanges, "queryLosses": queryLosses, "queryGains": queryGains}, nil
 }
 
 func toDailyRows(rows []SearchRow) []map[string]any {
@@ -454,7 +465,30 @@ func (s *Service) GetMCPPerformance(ctx context.Context, organizationID, project
 	if truncated {
 		nextStartRow = startRow + keptIndices[len(rows)-1] + 1
 	}
-	return map[string]any{"connected": true, "siteUrl": connection.SiteURL, "startDate": window.StartDate, "endDate": window.EndDate, "dimensions": input.Dimensions, "rowCount": len(serialized), "rows": serialized, "hasMore": hasMore, "nextStartRow": nextStartRow}, nil
+	result := map[string]any{"connected": true, "siteUrl": connection.SiteURL, "startDate": window.StartDate, "endDate": window.EndDate, "dimensions": input.Dimensions, "rowCount": len(serialized), "rows": serialized, "hasMore": hasMore, "nextStartRow": nextStartRow}
+	// Google drops anonymized (rare) queries from query rows, so adding them
+	// up undercounts: a site with 3 clicks can show 0 on every query. Send the
+	// property total for the same range and filters so the total is never
+	// derived from rows. One extra free Search Console read, first page only.
+	if slices.Contains(input.Dimensions, "query") && startRow == 0 {
+		totalRequest := request
+		totalRequest.Dimensions, totalRequest.RowLimit, totalRequest.StartRow = nil, 1, 0
+		totalRows, err := client.QuerySearchAnalytics(ctx, connection.SiteURL, totalRequest)
+		if err != nil {
+			return nil, mapProviderError(err)
+		}
+		total := map[string]any{"clicks": 0.0, "impressions": 0.0, "ctr": 0.0}
+		if len(totalRows) > 0 {
+			row := totalRows[0]
+			total = map[string]any{"clicks": row.Clicks, "impressions": row.Impressions, "ctr": mathRound(row.CTR, 4)}
+			if typeValue != "discover" && typeValue != "googleNews" {
+				total["position"] = mathRound(row.Position, 1)
+			}
+		}
+		result["totals"] = total
+		result["totalsNote"] = "totals include anonymized queries that Google leaves out of query rows; use totals, not a sum of rows, for overall clicks and impressions."
+	}
+	return result, nil
 }
 
 func mathRound(value float64, digits int) float64 {

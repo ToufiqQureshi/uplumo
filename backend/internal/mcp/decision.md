@@ -59,3 +59,14 @@ verify schema validation and project binding through the existing MCP/SAM tests.
 - **Trace:** Registry, runner, transport and `TestRunnerContainsInternalFailures` covering panic, error and missing response.
 
 Successful external tool calls now persist the first authorized/call timestamps in organization activation state with a two-second best-effort write; internal SAM and failed calls do not complete onboarding. COALESCE preserves the first evidence across repeats. `activation_test.go` verifies external/internal/failure boundaries on real Postgres.
+
+## Search Console text leads with the property total
+
+- **Decision:** `get_search_console_performance` puts the property total
+  (clicks, impressions, CTR, "includes anonymized queries") as the first text
+  line whenever the gsc service returns `totals`.
+- **Why:** models quote the first numbers they see; summing query rows gave
+  SAM a wrong total (0 instead of 3). See `backend/internal/gsc/decision.md`.
+- **Preserve:** structured `rows` are unchanged; `totals` and `totalsNote`
+  are additional fields.
+- **Trace:** `gsc_tools.go`.

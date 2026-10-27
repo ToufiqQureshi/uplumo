@@ -26,3 +26,9 @@ Sitemap drill-down -> selected scoped property/client -> one bounded Google
 Customer-controlled sitemap URLs are displayed safely but never fetched by the
 server. Click investigation reads two exact-page query windows on explicit action;
 expanded growth pagination stops at five 1,000-row pages per source.
+
+Search Performance report -> 8 free Search Console reads with a comparison
+(date, page and query for both periods, query+page, country), 4 without ->
+totals, daily trend, striking distance, countries, `pageChanges`,
+`queryLosses` and `queryGains` with reason and severity. MCP/SAM query rows
+add one no-dimension read for the true property total.

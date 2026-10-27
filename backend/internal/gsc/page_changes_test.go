@@ -28,7 +28,7 @@ func TestBuildPageChangesExplainsTheBiggestLosses(t *testing.T) {
 		pageRow("/grew", 20, 150, .13, 7),
 		pageRow("/same", 20, 300, .07, 9),
 	}
-	got := buildPageChanges(current, previous, 10)
+	got := buildPageChanges(current, previous, 340, 10)
 	// Equal losses (30 clicks) are ordered by page for a stable list.
 	var order, reasons []string
 	for _, change := range got {
@@ -44,10 +44,60 @@ func TestBuildPageChangesExplainsTheBiggestLosses(t *testing.T) {
 	if got[1].Clicks != 0 || got[1].PrevClicks != 30 {
 		t.Fatalf("a page that vanished lost all its clicks: %+v", got[1])
 	}
-	if limited := buildPageChanges(current, previous, 2); len(limited) != 2 {
+	if limited := buildPageChanges(current, previous, 340, 2); len(limited) != 2 {
 		t.Fatalf("limit ignored: %d", len(limited))
 	}
-	if empty := buildPageChanges(nil, nil, 5); empty == nil || len(empty) != 0 {
+	if empty := buildPageChanges(nil, nil, 0, 5); empty == nil || len(empty) != 0 {
 		t.Fatalf("no data must be an empty list, not null: %#v", empty)
+	}
+}
+
+func TestSeverityScalesWithTheSite(t *testing.T) {
+	tests := []struct {
+		name                   string
+		before, after, siteWas float64
+		want                   string
+	}{
+		{"half lost on a big part of the site", 40, 10, 400, SeverityUrgent},
+		{"all lost", 30, 0, 300, SeverityUrgent},
+		{"exactly half at the size floor", 5, 2.5, 100, SeverityUrgent},
+		{"tiny row on a big site is not urgent", 4, 0, 10000, SeverityWatch},
+		{"under 5% of a big site is not urgent", 40, 0, 1000, SeverityWatch},
+		{"20% drop", 100, 80, 1000, SeverityWatch},
+		{"small dip", 100, 90, 1000, SeverityMinor},
+		{"no loss", 10, 10, 100, ""},
+		{"growth", 10, 20, 100, ""},
+		{"nothing before", 0, 0, 100, ""},
+	}
+	for _, tt := range tests {
+		if got := severity(tt.before, tt.after, tt.siteWas); got != tt.want {
+			t.Errorf("%s: severity(%v, %v, %v) = %q, want %q", tt.name, tt.before, tt.after, tt.siteWas, got, tt.want)
+		}
+	}
+}
+
+func TestBuildQueryChangesListsLossesAndGains(t *testing.T) {
+	previous := []SearchRow{
+		pageRow("hotel lonavala", 50, 1000, .05, 3),
+		pageRow("resort pool", 8, 200, .04, 6),
+		pageRow("steady", 10, 100, .1, 4),
+	}
+	current := []SearchRow{
+		pageRow("hotel lonavala", 10, 900, .011, 7),
+		pageRow("steady", 10, 100, .1, 4),
+		pageRow("new search", 12, 300, .04, 5),
+		pageRow("resort pool", 9, 220, .041, 6),
+	}
+	losses, gains := buildQueryChanges(current, previous, 68)
+	if len(losses) != 1 || losses[0].Query != "hotel lonavala" || losses[0].PrevClicks != 50 || losses[0].Clicks != 10 ||
+		losses[0].Reason != ReasonRankFell || losses[0].Severity != SeverityUrgent {
+		t.Fatalf("losses = %+v", losses)
+	}
+	if len(gains) != 2 || gains[0].Query != "new search" || gains[0].PrevClicks != 0 || gains[1].Query != "resort pool" ||
+		gains[0].Reason != "" || gains[0].Severity != "" {
+		t.Fatalf("gains = %+v; want new and growing searches, biggest first, without a loss reason", gains)
+	}
+	if l, g := buildQueryChanges(nil, nil, 0); l == nil || g == nil || len(l)+len(g) != 0 {
+		t.Fatalf("no data must give empty lists, not null: %#v %#v", l, g)
 	}
 }

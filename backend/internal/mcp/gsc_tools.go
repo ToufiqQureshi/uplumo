@@ -58,6 +58,10 @@ func handleSearchConsolePerformance(ctx context.Context, raw json.RawMessage, en
 	result["ok"] = true
 	rows, _ := result["rows"].([]map[string]any)
 	text := formatSearchConsoleRows(rows)
+	if totals, ok := result["totals"].(map[string]any); ok {
+		text = fmt.Sprintf("Property total for %v to %v (includes anonymized queries Google leaves out of rows; quote this for overall numbers): clicks %.0f | impressions %.0f | CTR %.1f%%\n",
+			result["startDate"], result["endDate"], number(totals["clicks"]), number(totals["impressions"]), number(totals["ctr"])*100) + text
+	}
 	return mcpResponse(text, result, meta), nil
 }
 

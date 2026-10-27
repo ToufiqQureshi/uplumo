@@ -11,6 +11,8 @@ Read [flow.md](flow.md) for the user workflow and API limits. Search Console opp
 - `SearchPerformanceTrend.tsx` and `SearchPerformanceIndexing.tsx`
 - `ContentRefreshQueuePanel.tsx` and `contentRefreshQueue.ts`
 - `backend/internal/gsc/performance.go`
+- `SearchVerdictCards.tsx`: verdict, pages to fix, searches lost and won,
+  quick wins; `Ga4OrganicCard.tsx`: what Google visitors did (GA4)
 
 ## Search growth
 

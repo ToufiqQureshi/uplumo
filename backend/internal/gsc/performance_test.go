@@ -217,18 +217,24 @@ func TestGetPerformanceBuildsLegacyReportAndOmitsCountryFilterForCountryRows(t *
 		t.Fatal(err)
 	}
 	requests := client.requestSnapshot()
-	// date (now, before), page (now, before), query+page, country.
-	if len(requests) != 6 {
-		t.Fatalf("got %d provider requests, want 6", len(requests))
+	// date, page and query (now, before each), query+page, country. All are
+	// free Search Console reads.
+	if len(requests) != 8 {
+		t.Fatalf("got %d provider requests, want 8", len(requests))
 	}
-	pagePeriods := map[string]bool{}
-	for _, request := range requests {
-		if len(request.Dimensions) == 1 && request.Dimensions[0] == "page" {
-			pagePeriods[request.StartDate+".."+request.EndDate] = request.RowLimit == pageRowLimit && len(request.DimensionFilterGroups) == 1
+	for _, dimension := range []string{"page", "query"} {
+		periods := map[string]bool{}
+		for _, request := range requests {
+			if len(request.Dimensions) == 1 && request.Dimensions[0] == dimension {
+				periods[request.StartDate+".."+request.EndDate] = request.RowLimit == pageRowLimit && len(request.DimensionFilterGroups) == 1
+			}
+		}
+		if !periods["2026-05-18..2026-05-25"] || !periods["2026-05-10..2026-05-17"] {
+			t.Fatalf("%s comparison must query both periods with the report's filters: %+v", dimension, requests)
 		}
 	}
-	if !pagePeriods["2026-05-18..2026-05-25"] || !pagePeriods["2026-05-10..2026-05-17"] {
-		t.Fatalf("page comparison must query both periods with the report's filters: %+v", requests)
+	if result["queryLosses"] == nil || result["queryGains"] == nil {
+		t.Fatalf("report must include query losses and gains: %+v", result)
 	}
 	currentFound, previousFound, countryFound := false, false, false
 	for _, request := range requests {
@@ -290,5 +296,58 @@ func TestTableInputRejectsNullAndNonPositivePageValues(t *testing.T) {
 func TestMapProviderErrors(t *testing.T) {
 	if got := mapProviderError(errors.New("opaque transport detail")); got == nil {
 		t.Fatal("expected error")
+	}
+}
+
+func TestGetMCPPerformanceAddsPropertyTotalsForQueryRows(t *testing.T) {
+	// Every query row shows 0 clicks because Google anonymized the queries
+	// that got the 3 clicks; the property total must still say 3.
+	client := &performanceClientStub{rows: []SearchRow{{Keys: []string{"chatgpt traffic"}, Clicks: 3, Impressions: 48, CTR: 0.0625, Position: 72.35}}}
+	service := &Service{Connections: performanceConnectionStub{connection: Connection{SiteURL: "https://example.test/"}},
+		NewClient: func(string, string) SearchClient { return client }, Now: func() time.Time { return time.Date(2026, 5, 28, 0, 0, 0, 0, time.UTC) }}
+	result, err := service.GetMCPPerformance(context.Background(), "org-1", "project-1", MCPPerformanceInput{
+		Dimensions: []string{"query"}, DateRange: "last_28_days", Filters: []DimensionFilter{{Dimension: "country", Expression: "ind"}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	requests := client.requestSnapshot()
+	if len(requests) != 2 {
+		t.Fatalf("provider requests = %d, want rows + totals", len(requests))
+	}
+	total := requests[1]
+	if len(total.Dimensions) != 0 || total.RowLimit != 1 || total.StartRow != 0 || total.StartDate != requests[0].StartDate ||
+		total.EndDate != requests[0].EndDate || len(total.DimensionFilterGroups) != 1 || total.Type != "web" {
+		t.Fatalf("totals request = %+v; want the rows request without dimensions", total)
+	}
+	totals := result["totals"].(map[string]any)
+	if totals["clicks"] != 3.0 || totals["impressions"] != 48.0 || totals["ctr"] != 0.0625 || totals["position"] != 72.4 {
+		t.Fatalf("totals = %#v", totals)
+	}
+	if result["totalsNote"] == nil {
+		t.Fatal("totals must explain that rows leave out anonymized queries")
+	}
+}
+
+func TestGetMCPPerformanceSkipsTotalsWithoutQueriesOrOnLaterPages(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		input MCPPerformanceInput
+	}{
+		{"page rows include every click", MCPPerformanceInput{Dimensions: []string{"page"}}},
+		{"later query page", MCPPerformanceInput{Dimensions: []string{"query"}, StartRow: new(1000)}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			client := &performanceClientStub{}
+			service := &Service{Connections: performanceConnectionStub{connection: Connection{SiteURL: "https://example.test/"}},
+				NewClient: func(string, string) SearchClient { return client }}
+			result, err := service.GetMCPPerformance(context.Background(), "org-1", "project-1", tc.input)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if n := len(client.requestSnapshot()); n != 1 || result["totals"] != nil {
+				t.Fatalf("requests = %d, totals = %v; want one request and no totals", n, result["totals"])
+			}
+		})
 	}
 }

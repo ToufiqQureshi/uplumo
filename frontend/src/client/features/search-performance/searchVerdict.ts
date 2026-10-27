@@ -26,7 +26,7 @@ export function searchVerdict(report: Report): {
   const rankSlip = totals.position - prevTotals.position;
   const cause = whyChanged(clicks, shown, rate, rankSlip);
   const verb = clicks < 0 ? "fell" : "grew";
-  const head = `Google clicks ${verb} ${pct(Math.abs(clicks))}`;
+  const head = `Google clicks ${verb} ${pct(Math.abs(clicks))} (${count(prevTotals.clicks)} → ${count(totals.clicks)})`;
   switch (cause) {
     case "shown_less":
       return {
@@ -58,7 +58,7 @@ export function searchVerdict(report: Report): {
     default:
       return {
         cause,
-        headline: `Google clicks are steady (${clicks >= 0 ? "+" : "−"}${pct(Math.abs(clicks))}).`,
+        headline: `Google clicks are steady (${count(prevTotals.clicks)} → ${count(totals.clicks)}, ${clicks >= 0 ? "+" : "−"}${pct(Math.abs(clicks))}).`,
         detail:
           "Nothing dropped sharply. The quick wins below are the cheapest way to grow.",
       };
@@ -94,3 +94,31 @@ export const PAGE_REASON = {
   ctr_fell: { label: "Fewer clicks per view", action: "Rewrite title & intro" },
   mixed: { label: "Small drops everywhere", action: "Review this page" },
 } as const satisfies Record<string, { label: string; action: string }>;
+
+/** How urgent a loss is, in plain words, with a color class for its badge. */
+export const SEVERITY = {
+  urgent: {
+    label: "Urgent",
+    className: "bg-red-100 text-red-900 dark:bg-red-950 dark:text-red-100",
+  },
+  watch: {
+    label: "Watch",
+    className:
+      "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-100",
+  },
+  minor: { label: "Small dip", className: "bg-muted text-foreground" },
+} as const;
+
+/** "−30 clicks (−60%)", or "lost all 12 clicks". */
+export function lossText(before: number, after: number): string {
+  if (after <= 0) return `lost all ${count(before)} clicks`;
+  const lost = before - after;
+  return `−${count(lost)} clicks (−${pct(before > 0 ? lost / before : 0)})`;
+}
+
+/** The urgent losses, pages and searches together, for the verdict. */
+export function urgentCount(report: Report): number {
+  return [...report.pageChanges, ...report.queryLosses].filter(
+    (row) => row.severity === "urgent",
+  ).length;
+}
