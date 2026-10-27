@@ -3,6 +3,7 @@ package ga4
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
@@ -34,11 +35,15 @@ type PropertySummary struct {
 
 // PropertyAccount groups discoverable properties and grant health for one OAuth grant.
 type PropertyAccount struct {
-	AccountID             string            `json:"accountId"`
-	Email                 *string           `json:"email"`
-	RequiresReconnect     bool              `json:"requiresReconnect"`
-	PropertiesUnavailable bool              `json:"propertiesUnavailable"`
-	Properties            []PropertySummary `json:"properties"`
+	AccountID             string  `json:"accountId"`
+	Email                 *string `json:"email"`
+	RequiresReconnect     bool    `json:"requiresReconnect"`
+	PropertiesUnavailable bool    `json:"propertiesUnavailable"`
+	// UnavailableReason says why properties could not be listed:
+	// "missing_permission" (reconnect and allow Analytics), "api_disabled"
+	// (Uplumo's Google Cloud project), or "" (temporary; try again).
+	UnavailableReason string            `json:"unavailableReason,omitempty"`
+	Properties        []PropertySummary `json:"properties"`
 }
 
 // PropertyDetails contains canonical metadata read from Google's Admin API.
@@ -81,6 +86,8 @@ type ConnectionOperations struct {
 	Store      PropertyConnectionStore
 	NewAdmin   PropertyAdminFactory
 	OAuthReady bool
+	// Logger records why a property list failed; nil discards it.
+	Logger *slog.Logger
 }
 
 // Status returns the selected property and the user's grant and permission state.
@@ -138,6 +145,12 @@ func (s *ConnectionOperations) ListProperties(ctx context.Context, userID, organ
 		if listErr != nil {
 			account.RequiresReconnect = isGrantFailure(listErr)
 			account.PropertiesUnavailable = !account.RequiresReconnect
+			account.UnavailableReason = unavailableReason(listErr)
+			if s.Logger != nil {
+				var apiErr google.APIError
+				errors.As(listErr, &apiErr)
+				s.Logger.WarnContext(ctx, "list GA4 properties", "project_id", projectID, "status", apiErr.Status, "reason", apiErr.Reason, "err", listErr)
+			}
 			accounts[i] = account
 			continue
 		}
@@ -304,6 +317,22 @@ func (c GooglePropertyAdmin) UserInfoEmail(ctx context.Context) (string, error) 
 		return "", google.ErrInvalidAPIResponse
 	}
 	return result.Email, nil
+}
+
+// unavailableReason maps a property-list failure the user or owner can fix
+// to a stable code for the UI.
+func unavailableReason(err error) string {
+	var apiErr google.APIError
+	if !errors.As(err, &apiErr) {
+		return ""
+	}
+	switch apiErr.Reason {
+	case google.ReasonScopeInsufficient:
+		return "missing_permission"
+	case google.ReasonServiceDisabled:
+		return "api_disabled"
+	}
+	return ""
 }
 
 func isGrantFailure(err error) bool {

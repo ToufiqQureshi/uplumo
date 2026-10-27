@@ -90,6 +90,7 @@ function ga4PickerOptions(accounts: Ga4Accounts): PickerOptions {
     accounts.map((account) => ({
       ...account,
       unavailable: account.propertiesUnavailable,
+      unavailableReason: account.unavailableReason,
       properties: account.properties.map((property) => ({
         id: property.propertyId,
         name: property.displayName,

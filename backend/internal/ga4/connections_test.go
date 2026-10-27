@@ -3,6 +3,8 @@ package ga4
 import (
 	"context"
 	"errors"
+	"log/slog"
+	"strings"
 	"testing"
 
 	"github.com/toufiqqureshi/uplumo/backend/internal/google"
@@ -128,5 +130,40 @@ func TestValidPropertyIDRejectsMalformedProviderInput(t *testing.T) {
 		if validPropertyID(value) {
 			t.Errorf("accepted %q", value)
 		}
+	}
+}
+
+func TestListGA4PropertiesSaysWhyPropertiesAreUnavailable(t *testing.T) {
+	tests := []struct {
+		name    string
+		listErr error
+		want    string
+	}{
+		{"analytics permission unticked", google.APIError{Status: 403, Reason: google.ReasonScopeInsufficient}, "missing_permission"},
+		{"admin API turned off", google.APIError{Status: 403, Reason: google.ReasonServiceDisabled}, "api_disabled"},
+		{"temporary failure", google.APIError{Status: 503}, ""},
+		{"not an API error", errors.New("timeout"), ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var logs strings.Builder
+			ops := &ConnectionOperations{
+				Store:  &setupStoreFake{grants: []PropertyGrant{{AccountID: "acct"}}},
+				Logger: slog.New(slog.NewTextHandler(&logs, nil)),
+				NewAdmin: func(string, string) PropertyAdmin {
+					return propertyAdminFake{listErr: tt.listErr}
+				},
+			}
+			got, err := ops.ListProperties(context.Background(), "user", "org", "project")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(got) != 1 || !got[0].PropertiesUnavailable || got[0].UnavailableReason != tt.want {
+				t.Fatalf("account = %+v, want unavailable with reason %q", got, tt.want)
+			}
+			if !strings.Contains(logs.String(), "list GA4 properties") {
+				t.Fatalf("the failure must be logged for the on-call person:\n%s", logs.String())
+			}
+		})
 	}
 }
