@@ -1,5 +1,11 @@
 import { SearchGrowthPanel } from "./SearchGrowthPanel";
-import { PagesToFix, QuickWins, SearchVerdict } from "./SearchVerdictCards";
+import { Ga4OrganicCard } from "./Ga4OrganicCard";
+import {
+  PagesToFix,
+  QuickWins,
+  SearchesChanged,
+  SearchVerdict,
+} from "./SearchVerdictCards";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
@@ -276,7 +282,9 @@ export function SearchPerformancePage({
                 <SearchVerdict projectId={projectId} report={report} />
                 <TotalsCards report={report} />
                 <PagesToFix projectId={projectId} report={report} />
+                <SearchesChanged projectId={projectId} report={report} />
                 <QuickWins projectId={projectId} report={report} />
+                <Ga4OrganicCard projectId={projectId} />
               </>
             )}
             {!reportQuery.isPlaceholderData ? (

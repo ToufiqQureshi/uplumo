@@ -43,3 +43,38 @@ still required before claiming live Google reporting works for a customer.
   - No comparison means no extra queries and an empty list.
   - The response field is always an array, never null.
 - **Trace:** `page_changes.go`, `page_changes_test.go`. Each of these 6 mutations fails the tests: rank threshold, impressions threshold, CTR threshold, the "only losses" rule, sort order, a vanished page. `performance_test.go` asserts 6 requests and that both page periods carry the report filters.
+
+## Lost and won searches, with urgency
+
+- **Decision:** when a comparison is available the report also reads `query`
+  rows for both periods (1,000 each) and returns `queryLosses` (top 5 searches
+  by clicks lost, with `reason`) and `queryGains` (top 3 by clicks won,
+  including new searches). Page and search losses carry `severity`:
+  `urgent` = lost at least half, at least 5 clicks before, and at least 5% of
+  the site's previous clicks; `watch` = lost at least 20%; `minor` otherwise
+  (`severity` in `page_changes.go`).
+- **Why:** the owner wants the page to say what fell, by how much and what is
+  urgent ("kya gira, kitna gira, urgent"). Pages alone did not show which
+  searches were lost. A scale-free urgency rule avoids calling 2 -> 0 urgent
+  on a big site while 40 -> 10 is urgent on any site.
+- **Preserve:** query rows exclude anonymized searches, so totals stay the
+  source of truth and the UI says so. 8 free Search Console reads per report
+  with a comparison (was 6), 4 without; no paid provider, no credits.
+- **Trace:** `page_changes.go` (`buildChanges`, `severity`),
+  `performance.go` (`GetPerformance`); `TestSeverityScalesWithTheSite`,
+  `TestBuildQueryChangesListsLossesAndGains`,
+  `TestGetPerformanceBuildsLegacyReportAndOmitsCountryFilterForCountryRows`.
+
+## MCP and SAM totals include anonymized searches
+
+- **Decision:** `GetMCPPerformance` adds `totals` (no-dimension read with the
+  same range, filters, type and data state) and `totalsNote` when the rows are
+  split by `query`, on the first page only.
+- **Why:** SAM answered "0 clicks in 28 days" for uplumo.com while the report
+  showed 3, because it added up query rows and Google leaves anonymized
+  searches out of them.
+- **Preserve:** one extra free read, only for query rows; later pages and
+  page/country/device rows do not repeat it.
+- **Trace:** `performance.go`, `TestGetMCPPerformanceAddsPropertyTotalsForQueryRows`,
+  `TestGetMCPPerformanceSkipsTotalsWithoutQueriesOrOnLaterPages`;
+  text line in `mcp/gsc_tools.go`.

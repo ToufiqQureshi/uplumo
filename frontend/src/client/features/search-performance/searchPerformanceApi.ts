@@ -13,6 +13,24 @@ const metricsSchema = z.object({
   position: z.number(),
 });
 
+// One page's or search's numbers in both periods.
+const changeSchema = z.object({
+  clicks: z.number(),
+  prevClicks: z.number(),
+  impressions: z.number(),
+  prevImpressions: z.number(),
+  position: z.number(),
+  prevPosition: z.number(),
+  ctr: z.number(),
+  prevCtr: z.number(),
+});
+
+// A loss also says why, and how urgent it is for this site.
+const lossSchema = changeSchema.extend({
+  reason: z.enum(["rank_fell", "fewer_searches", "ctr_fell", "mixed"]),
+  severity: z.enum(["urgent", "watch", "minor"]).default("watch"),
+});
+
 const dimensionRowSchema = z
   .object({ key: z.string() })
   .extend(metricsSchema.shape);
@@ -75,22 +93,11 @@ const reportSchema = z.discriminatedUnion("connected", [
     ),
     countries: z.array(dimensionRowSchema),
     // Pages that lost the most clicks against the previous period, with why.
-    pageChanges: z
-      .array(
-        z.object({
-          page: z.string(),
-          clicks: z.number(),
-          prevClicks: z.number(),
-          impressions: z.number(),
-          prevImpressions: z.number(),
-          position: z.number(),
-          prevPosition: z.number(),
-          ctr: z.number(),
-          prevCtr: z.number(),
-          reason: z.enum(["rank_fell", "fewer_searches", "ctr_fell", "mixed"]),
-        }),
-      )
-      .default([]),
+    pageChanges: z.array(lossSchema.extend({ page: z.string() })).default([]),
+    // Named searches that lost or won the most clicks (anonymized searches
+    // are not listed; the totals include them).
+    queryLosses: z.array(lossSchema.extend({ query: z.string() })).default([]),
+    queryGains: z.array(changeSchema.extend({ query: z.string() })).default([]),
   }),
 ]);
 

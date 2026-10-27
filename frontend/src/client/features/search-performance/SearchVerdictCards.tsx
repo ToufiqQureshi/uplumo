@@ -6,7 +6,13 @@ import {
   formatPosition,
   type Report,
 } from "./SearchPerformanceColumns";
-import { PAGE_REASON, searchVerdict } from "./searchVerdict";
+import {
+  lossText,
+  PAGE_REASON,
+  SEVERITY,
+  searchVerdict,
+  urgentCount,
+} from "./searchVerdict";
 
 /**
  * The top of Search Performance: what happened, why, and the pages to fix
@@ -20,6 +26,7 @@ export function SearchVerdict({
   report: Report;
 }) {
   const verdict = searchVerdict(report);
+  const urgent = urgentCount(report);
   return (
     <section
       aria-labelledby="search-verdict"
@@ -35,6 +42,11 @@ export function SearchVerdict({
       <p className="text-sm text-background/80 md:text-base">
         {verdict.detail}
       </p>
+      {urgent > 0 ? (
+        <p className="inline-flex rounded-md bg-red-600 px-2.5 py-1 text-sm font-medium text-white">
+          {urgent} urgent {urgent === 1 ? "drop needs" : "drops need"} a fix now
+        </p>
+      ) : null}
       <div className="flex flex-wrap gap-2 pt-1">
         {report.pageChanges.length > 0 ? (
           <Button
@@ -44,6 +56,16 @@ export function SearchVerdict({
             render={<a href="#pages-to-fix" />}
           >
             See the pages to fix
+          </Button>
+        ) : null}
+        {report.queryLosses.length > 0 ? (
+          <Button
+            size="lg"
+            variant="secondary"
+            nativeButton={false}
+            render={<a href="#searches-changed" />}
+          >
+            See the searches you lost
           </Button>
         ) : null}
         <Button
@@ -98,6 +120,7 @@ export function PagesToFix({
             <tr>
               <th className="py-2 font-medium">Page</th>
               <th className="py-2 font-medium">Clicks</th>
+              <th className="py-2 font-medium">How bad</th>
               <th className="py-2 font-medium">Why</th>
               <th className="py-2 font-medium">Do this</th>
             </tr>
@@ -121,6 +144,12 @@ export function PagesToFix({
                   <td className="py-3 pr-3 tabular-nums">
                     {formatCount(change.prevClicks)} →{" "}
                     {formatCount(change.clicks)}
+                    <span className="block text-xs text-muted-foreground">
+                      {lossText(change.prevClicks, change.clicks)}
+                    </span>
+                  </td>
+                  <td className="py-3 pr-3">
+                    <SeverityBadge severity={change.severity} />
                   </td>
                   <td className="py-3 pr-3">
                     <span className="rounded-md bg-muted px-2 py-1 text-xs">
@@ -158,6 +187,112 @@ export function PagesToFix({
           </tbody>
         </table>
       </div>
+    </section>
+  );
+}
+
+function SeverityBadge({ severity }: { severity: keyof typeof SEVERITY }) {
+  const level = SEVERITY[severity];
+  return (
+    <span
+      className={`rounded-md px-2 py-1 text-xs font-medium ${level.className}`}
+    >
+      {level.label}
+    </span>
+  );
+}
+
+/**
+ * Searches that lost and won the most clicks: what people stopped finding you
+ * for, how much, why, and the page edit that targets it.
+ */
+export function SearchesChanged({
+  projectId,
+  report,
+}: {
+  projectId: string;
+  report: Report;
+}) {
+  const { queryLosses, queryGains } = report;
+  if (queryLosses.length === 0 && queryGains.length === 0) return null;
+  return (
+    <section
+      id="searches-changed"
+      aria-labelledby="searches-changed-title"
+      className="space-y-4 rounded-xl border bg-card p-5"
+    >
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 id="searches-changed-title" className="text-lg font-semibold">
+          Searches you lost and won
+        </h2>
+        <p className="text-xs text-muted-foreground">
+          Named searches only: Google hides rare ones, which are still in your
+          totals
+        </p>
+      </div>
+      {queryLosses.length > 0 ? (
+        <ul className="divide-y">
+          {queryLosses.map((row) => {
+            const reason = PAGE_REASON[row.reason];
+            return (
+              <li
+                key={row.query}
+                className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3"
+              >
+                <div className="min-w-0 flex-1 basis-56">
+                  <p className="font-medium break-words">
+                    &ldquo;{row.query}&rdquo;
+                  </p>
+                  <p className="text-xs text-muted-foreground tabular-nums">
+                    {formatCount(row.prevClicks)} → {formatCount(row.clicks)}{" "}
+                    clicks · {lossText(row.prevClicks, row.clicks)} · rank{" "}
+                    {formatPosition(row.prevPosition)} →{" "}
+                    {row.position > 0 ? formatPosition(row.position) : "gone"}
+                  </p>
+                </div>
+                <SeverityBadge severity={row.severity} />
+                <span className="rounded-md bg-muted px-2 py-1 text-xs">
+                  {reason.label}
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  nativeButton={false}
+                  render={
+                    <Link
+                      to="/p/$projectId/content-editor"
+                      params={{ projectId }}
+                      search={{ keyword: row.query.slice(0, 200) }}
+                    />
+                  }
+                >
+                  Win it back
+                </Button>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+      {queryGains.length > 0 ? (
+        <div className="space-y-2">
+          <h3 className="text-sm font-medium">Growing searches</h3>
+          <ul className="grid gap-2 md:grid-cols-3">
+            {queryGains.map((row) => (
+              <li key={row.query} className="rounded-lg border p-3 text-sm">
+                <p className="font-medium break-words">
+                  &ldquo;{row.query}&rdquo;
+                </p>
+                <p className="text-xs text-muted-foreground tabular-nums">
+                  {row.prevClicks > 0
+                    ? `${formatCount(row.prevClicks)} → ${formatCount(row.clicks)} clicks`
+                    : `new: ${formatCount(row.clicks)} clicks`}{" "}
+                  · rank {formatPosition(row.position)}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </section>
   );
 }

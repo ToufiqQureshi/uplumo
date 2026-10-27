@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Report } from "./SearchPerformanceColumns";
-import { searchVerdict } from "./searchVerdict";
+import { lossText, searchVerdict, urgentCount } from "./searchVerdict";
 
 const metrics = (clicks: number, impressions: number, position: number) => ({
   clicks,
@@ -29,6 +29,8 @@ function report(
     strikingDistance: [],
     countries: [],
     pageChanges: [],
+    queryLosses: [],
+    queryGains: [],
   };
 }
 
@@ -39,7 +41,7 @@ describe("searchVerdict", () => {
     );
     expect(v.cause).toBe("shown_less");
     expect(v.headline).toBe(
-      "Google clicks fell 16%. The main reason: Google showed your site 24% less often.",
+      "Google clicks fell 16% (1,720 → 1,441). The main reason: Google showed your site 24% less often.",
     );
   });
 
@@ -77,5 +79,37 @@ describe("searchVerdict", () => {
       searchVerdict(report(metrics(50, 900, 9), metrics(40, 800, 9), false))
         .cause,
     ).toBe("no_comparison");
+  });
+});
+
+describe("loss wording and urgency", () => {
+  it("says how much was lost", () => {
+    expect(lossText(50, 20)).toBe("−30 clicks (−60%)");
+    expect(lossText(12, 0)).toBe("lost all 12 clicks");
+  });
+
+  it("counts urgent pages and searches together", () => {
+    const base = report(metrics(10, 100, 5), metrics(50, 100, 5));
+    const loss = {
+      clicks: 1,
+      prevClicks: 10,
+      impressions: 1,
+      prevImpressions: 1,
+      position: 1,
+      prevPosition: 1,
+      ctr: 0,
+      prevCtr: 0,
+      reason: "rank_fell" as const,
+    };
+    expect(
+      urgentCount({
+        ...base,
+        pageChanges: [
+          { ...loss, page: "/a", severity: "urgent" },
+          { ...loss, page: "/b", severity: "watch" },
+        ],
+        queryLosses: [{ ...loss, query: "q", severity: "urgent" }],
+      }),
+    ).toBe(2);
   });
 });
