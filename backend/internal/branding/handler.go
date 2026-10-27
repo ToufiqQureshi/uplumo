@@ -60,7 +60,7 @@ func agencyOnly(plans PaidPlans, next http.Handler) http.Handler {
 				return
 			}
 			if !allowed {
-				httpx.WriteError(w, http.StatusPaymentRequired, "plan_required", "Custom branding is available on the Agency plan.")
+				httpx.WriteError(w, http.StatusPaymentRequired, "plan_required", "Custom branding is available on the Business plan.")
 				return
 			}
 		}

@@ -39,7 +39,7 @@ const inr = new Intl.NumberFormat("en-IN", {
   maximumFractionDigits: 0,
 });
 
-type PaidPlan = BillingPlan & { id: "basic" | "pro" | "business" | "agency" };
+type PaidPlan = BillingPlan & { id: "basic" | "pro" | "business" };
 
 export function BillingPlanPage() {
   const statusQuery = useQuery(billingStatusQueryOptions);
@@ -81,7 +81,7 @@ export function BillingPlanPage() {
                 </h2>
                 <p className="text-sm text-muted-foreground">
                   Prices are per workspace, per month. Cancel in one click, any
-                  time.
+                  time. Pro and Business can buy extra credits in Billing.
                 </p>
               </div>
               <div className="grid gap-4 lg:grid-cols-3">
@@ -359,7 +359,7 @@ function UpgradeButton({
   name,
   price,
 }: {
-  plan: "basic" | "pro" | "business" | "agency";
+  plan: "basic" | "pro" | "business";
   name: string;
   price: number;
 }) {

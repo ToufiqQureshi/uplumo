@@ -97,10 +97,11 @@ Billing uses Razorpay **Subscriptions**. Do this once in Test Mode, then again
 in Live Mode:
 
 1. Create one monthly plan for each plan Uplumo sells, with the amount in
-   `backend/internal/plans/catalog.go`: Solo ₹999, Growth ₹2,499, Business
-   ₹4,999, Agency ₹9,999 (ids `basic`, `pro`, `business`, `agency`). Their
-   ids (`plan_...`) are `RAZORPAY_PLAN_ID_BASIC`, `RAZORPAY_PLAN_ID_PRO`,
-   `RAZORPAY_PLAN_ID_BUSINESS` and `RAZORPAY_PLAN_ID_AGENCY`. A plan left without
+   `backend/internal/plans/catalog.go`: Basic ₹999, Pro ₹2,499 and Business
+   ₹4,999 (ids `basic`, `pro`, `business`). Their ids (`plan_...`) are
+   `RAZORPAY_PLAN_ID_BASIC`, `RAZORPAY_PLAN_ID_PRO` and
+   `RAZORPAY_PLAN_ID_BUSINESS`. Agency is no longer sold and
+   `RAZORPAY_PLAN_ID_AGENCY` is ignored; remove it. A plan left without
    an id simply cannot be bought.
 2. Add a webhook to `https://uplumo.com/webhooks/razorpay` with a secret of
    your own; the same value is `RAZORPAY_WEBHOOK_SECRET`. Subscribe it to
@@ -116,7 +117,7 @@ in Live Mode:
 2. The landing, pricing, about, contact, terms, privacy, refunds and shipping pages open, and each shows `support@uplumo.com` as text.
 3. Sign up with a real address, receive the verification email, reach the
    dashboard.
-4. In a staging environment with Razorpay **test** keys/plans/webhooks, buy Growth with a test card, see the workspace switch, then cancel from Billing. Production uses live keys: do not use test cards there or initiate a real charge without an owner-controlled acceptance purchase.
+4. In a staging environment with Razorpay **test** keys/plans/webhooks, buy Pro with a test card, see the workspace switch, then cancel from Billing. Production uses live keys: do not use test cards there or initiate a real charge without an owner-controlled acceptance purchase.
 5. Ask for a password reset and finish it.
 6. Invite a teammate and open the invitation email.
 
@@ -132,7 +133,7 @@ The image also carries `/erase-user`. Its use is in
 
 ## Optional credit-pack checkout
 
-Set `BILLING_TOPUP_PACKS` only after approving pack prices, credits and validity (schema in `backend/internal/billing/README.md`). Unset means no purchasable packs. Add `payment.captured` to the existing signed Razorpay webhook event subscription and test captured, duplicate, incorrect-amount and interrupted-browser flows in test mode before enabling live purchases. Subscription webhook events remain required. Refund/dispute handling needs operator reconciliation; checkout does not initiate refunds.
+Credit packs and the site add-on are priced in `backend/internal/plans/catalog.go` (`Packs`); no environment variable configures them and `BILLING_TOPUP_PACKS` is no longer read (remove it). They are one-time Razorpay orders, so no Razorpay plan is needed. Subscribe the signed webhook to `payment.captured` (grants a pack) and `payment.authorized` (captures a payment authorized after Razorpay's 12-minute auto-capture window, so a slow UPI approval is not refunded days later while the customer pays again). Subscription webhook events remain required. The server refunds the payment of a second live subscription automatically; other refunds and disputes need operator reconciliation.
 
 Migration 41 adds provider settlement recovery. Existing open feature holds are marked uncertain and require provider reconciliation if their outcome was never recorded; known outcomes recover automatically. A rollback to an older binary that blindly refunds stale holds restores that old risk, so assess open holds before such a rollback.
 

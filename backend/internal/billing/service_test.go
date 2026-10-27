@@ -561,6 +561,13 @@ type fixture struct {
 	planOverride func(*razorpay.Plan)
 	// cancels are the cancellations the fake Razorpay received, in order.
 	cancels []cancelCall
+	// payments are the capture and refund requests the fake Razorpay
+	// received, as "capture pay_x 149900" or "refund pay_x".
+	payments []string
+	// orders counts top-up orders created at the fake Razorpay.
+	orders atomic.Int32
+	// captureAnswer, when set, is the fake Razorpay's capture answer.
+	captureAnswer func(w http.ResponseWriter)
 }
 
 // cancelCall is one cancellation request as Razorpay saw it.
@@ -610,6 +617,42 @@ func newFixture(ctx context.Context, t *testing.T) *fixture {
 			}
 			if err := json.NewEncoder(w).Encode(got); err != nil {
 				t.Error(err)
+			}
+			return
+		}
+		if r.URL.Path == "/orders" {
+			var req razorpay.Order
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				t.Errorf("decode order: %v", err)
+			}
+			req.ID = fmt.Sprintf("order_%d_%s", f.orders.Add(1), f.org)
+			if err := json.NewEncoder(w).Encode(req); err != nil {
+				t.Errorf("encode order: %v", err)
+			}
+			return
+		}
+		if id, ok := strings.CutSuffix(strings.TrimPrefix(r.URL.Path, "/payments/"), "/capture"); ok && strings.HasPrefix(r.URL.Path, "/payments/") {
+			var req struct {
+				Amount   int64  `json:"amount"`
+				Currency string `json:"currency"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Currency != "INR" {
+				t.Errorf("capture request %+v, %v", req, err)
+			}
+			f.payments = append(f.payments, fmt.Sprintf("capture %s %d", id, req.Amount))
+			if f.captureAnswer != nil {
+				f.captureAnswer(w)
+				return
+			}
+			if err := json.NewEncoder(w).Encode(razorpay.Payment{ID: id, Amount: req.Amount, Currency: "INR", Status: "captured", Captured: true}); err != nil {
+				t.Errorf("encode capture: %v", err)
+			}
+			return
+		}
+		if id, ok := strings.CutSuffix(strings.TrimPrefix(r.URL.Path, "/payments/"), "/refund"); ok && strings.HasPrefix(r.URL.Path, "/payments/") {
+			f.payments = append(f.payments, "refund "+id)
+			if err := json.NewEncoder(w).Encode(map[string]string{"id": "rfnd_" + id, "payment_id": id}); err != nil {
+				t.Errorf("encode refund: %v", err)
 			}
 			return
 		}
@@ -719,7 +762,7 @@ func TestCheckoutPlanUsesSelectedRazorpayPlan(t *testing.T) {
 	f := newFixture(ctx, t)
 	f.sellTiers()
 
-	for i, plan := range []string{PlanBasic, PlanPro, PlanAgency} {
+	for i, plan := range []string{PlanBasic, PlanPro, plans.Business} {
 		if i > 0 {
 			// Razorpay's created state has not charged the customer, so retrying replaces it.
 			if _, err := f.pool.Exec(ctx, `DELETE FROM go_billing_subscriptions WHERE organization_id = $1`, f.org); err != nil {
@@ -904,5 +947,32 @@ func TestASecondLiveSubscriptionIsRetriedUntilItIsCancelled(t *testing.T) {
 	}
 	if got := f.storedSubscriptionID(ctx, t); got != "sub_kept" {
 		t.Fatalf("stored subscription = %q, want sub_kept", got)
+	}
+}
+
+// A customer charged by a second live subscription gets that payment back
+// without anyone at Uplumo noticing it first, and keeps one plan's credits.
+func TestASecondLiveSubscriptionsPaymentIsRefunded(t *testing.T) {
+	ctx := t.Context()
+	f := newFixture(ctx, t)
+	f.deliver(ctx, t, f.event("subscription.charged", "sub_kept", "active", t1))
+	var event map[string]any
+	if err := json.Unmarshal(f.event("subscription.charged", "sub_duplicate", "active", t1.Add(time.Minute)), &event); err != nil {
+		t.Fatal(err)
+	}
+	event["payload"].(map[string]any)["payment"] = map[string]any{"entity": map[string]any{"id": "pay_duplicate"}}
+	body, err := json.Marshal(event)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.deliver(ctx, t, body)
+	if want := []string{"refund pay_duplicate"}; !slices.Equal(f.payments, want) {
+		t.Fatalf("payment calls = %v, want %v", f.payments, want)
+	}
+	if len(f.cancels) != 1 || f.cancels[0].Path != "/subscriptions/sub_duplicate/cancel" {
+		t.Fatalf("cancels = %+v, want sub_duplicate cancelled now", f.cancels)
+	}
+	if got, err := NewCreditLedgerService(f.pool).GetBalance(ctx, f.org); err != nil || got != 10000 {
+		t.Fatalf("balance = %d, %v; want one Pro grant", got, err)
 	}
 }

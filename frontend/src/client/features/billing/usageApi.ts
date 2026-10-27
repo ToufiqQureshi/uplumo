@@ -16,7 +16,7 @@ const featureSchema = z.enum([
 export type CreditFeature = z.infer<typeof featureSchema>;
 
 const usageSchema = z.object({
-  plan: z.enum(["free", "basic", "pro", "business", "agency"]),
+  plan: z.enum(["free", "basic", "pro", "business"]),
   unlimited: z.boolean(),
   chargesCredits: z.boolean(),
   balanceCredits: z.number().int().nonnegative(),

@@ -49,3 +49,10 @@ event. Shared configuration and opt-outs live in the backend site `decision.md`.
 - **Why:** Brand Lookup and Prompt Explorer can charge several times their typical cost; the owner chose to show the most a click can cost before it runs.
 - **Preserve:** The maximum comes only from the server (`backend/internal/billing/costs.go`), never computed in the browser; without it the hint and dialog read as before. See `backend/internal/billing/decision.md`.
 - **Trace:** `credits/CreditCostHint.tsx`, `credits/useConfirmedCost.tsx`, `usageApi.ts` schema and their tests.
+
+## Packs card and plan names (27 Oct 2026)
+
+- **Decision:** the Usage & credits page shows "Buy more credits" with the packs the server lists for the workspace (credit packs on Pro and Business, the 5-website add-on on Business) and how long each lasts. After Razorpay reports a completed payment, the card waits for the signed webhook and offers no second purchase until the grant shows. Plan enums are `basic`, `pro`, `business`; names come from the catalog (Basic, Pro, Business).
+- **Why:** owner decisions of 27 Oct (`DECISIONS.md`). The old card offered "Choose pack again" while a paid order was still being verified, which invited a second payment.
+- **Preserve:** the browser never prices a pack or decides who may buy it; checkout calls are not retried (`retry: false`); a closed payment window leaves the order reusable; paid-status polling stops once granted or after 40 tries.
+- **Trace:** `credits/TopUpsCard.tsx`, `plan/planApi.ts`, `plan/BillingPlanPage.tsx`, `usageApi.ts`, `billingApi.ts`; backend `../../../../../backend/internal/billing/decision.md`.

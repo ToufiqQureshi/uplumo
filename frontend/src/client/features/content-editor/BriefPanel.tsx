@@ -78,7 +78,7 @@ export function BriefPanel({
           </p>
         ) : (
           <p className="text-xs text-muted-foreground">
-            Free if a brief for this topic was made in the last 30 days. Solo
+            Free if a brief for this topic was made in the last 30 days. Basic
             plan and up.
           </p>
         )}

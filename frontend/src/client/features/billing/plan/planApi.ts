@@ -2,7 +2,7 @@ import { z } from "zod";
 import { apiRequest, shouldRetryApiError } from "@/client/lib/uplumoApi";
 
 const statusSchema = z.object({
-  plan: z.enum(["free", "basic", "pro", "business", "agency"]),
+  plan: z.enum(["free", "basic", "pro", "business"]),
   status: z.string(),
   currentPeriodEnd: z.iso.datetime({ offset: true }).nullable(),
   // True once the owner cancelled: Pro runs until currentPeriodEnd, then stops.
@@ -10,7 +10,7 @@ const statusSchema = z.object({
   // True for Uplumo's own workspaces: every feature, nothing to pay.
   unlimited: z.boolean(),
   paymentsConfigured: z.boolean(),
-  availablePlans: z.array(z.enum(["basic", "pro", "business", "agency"])),
+  availablePlans: z.array(z.enum(["basic", "pro", "business"])),
   usage: z.object({
     sites: z.object({
       used: z.number().int().nonnegative(),
@@ -62,7 +62,7 @@ export async function waitForPaidPlan(
 }
 
 export function createCheckout(
-  plan: "basic" | "pro" | "business" | "agency",
+  plan: "basic" | "pro" | "business",
 ): Promise<CheckoutSession> {
   return apiRequest("/api/v1/billing/checkout", checkoutSchema, "POST", {
     plan,
@@ -75,7 +75,7 @@ export function cancelSubscription(): Promise<BillingStatus> {
 }
 
 const planSchema = z.object({
-  id: z.enum(["free", "basic", "pro", "business", "agency"]),
+  id: z.enum(["free", "basic", "pro", "business"]),
   name: z.string().min(1),
   priceInr: z.number().int().nonnegative(),
   summary: z.string(),

@@ -227,7 +227,7 @@ func (s *CreditLedgerService) expireOrganizationCredits(ctx context.Context, org
 		if _, err := tx.Exec(ctx, `UPDATE go_billing_credit_grants SET remaining_credits = 0 WHERE id = $1`, grant.id); err != nil {
 			return 0, err
 		}
-		if _, err := tx.Exec(ctx, `INSERT INTO go_billing_credit_ledger (id, organization_id, amount_credits, type, reason, feature, status) VALUES ($1, $2, $3, 'expire', 'credits expired after two months', 'billing', 'expired')`, generateID("led"), org, -grant.credits); err != nil {
+		if _, err := tx.Exec(ctx, `INSERT INTO go_billing_credit_ledger (id, organization_id, amount_credits, type, reason, feature, status) VALUES ($1, $2, $3, 'expire', 'credits expired', 'billing', 'expired')`, generateID("led"), org, -grant.credits); err != nil {
 			return 0, err
 		}
 	}

@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Uplumo saved AI visibility
   version: 1.0.0
-  description: Project membership is required. Reading stored evidence is free. Save/run require Growth (`pro`) or Agency. Paid checks run through the durable queue with a workspace credit hold; opening this screen never starts one.
+  description: Project membership is required. Reading stored evidence is free. Save/run require Pro (`pro`) or Business (`business`). Paid checks run through the durable queue with a workspace credit hold; opening this screen never starts one.
 servers:
   - url: /api/v1
 paths:

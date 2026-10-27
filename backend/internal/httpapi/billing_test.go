@@ -135,7 +135,7 @@ func TestBillingEndToEnd(t *testing.T) {
 		assertJSON(t, webhook(handler, event, hmacHex(event), eventID), http.StatusOK, `{"status":"duplicate"}`)
 
 		assertJSON(t, as(handler, memberToken, http.MethodGet, "/api/v1/billing/status"), http.StatusOK,
-			`{"plan":"pro","status":"active","currentPeriodEnd":"2026-11-07T00:00:00Z","cancelAtPeriodEnd":false,"unlimited":false,"paymentsConfigured":true,"availablePlans":["pro"],"usage":{"sites":{"used":0,"limit":2,"exceeded":false},"members":{"used":2,"limit":3,"exceeded":false},"trackedKeywords":{"used":0,"limit":500,"exceeded":false}}}`)
+			`{"plan":"pro","status":"active","currentPeriodEnd":"2026-11-07T00:00:00Z","cancelAtPeriodEnd":false,"unlimited":false,"paymentsConfigured":true,"availablePlans":["pro"],"usage":{"sites":{"used":0,"limit":10,"exceeded":false},"members":{"used":2,"limit":3,"exceeded":false},"trackedKeywords":{"used":0,"limit":500,"exceeded":false}}}`)
 		assertError(t, as(handler, ownerToken, http.MethodPost, "/api/v1/billing/checkout"), http.StatusConflict, "already_subscribed")
 	})
 

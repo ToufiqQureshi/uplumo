@@ -8,7 +8,7 @@ contract.
 ## Flow
 
 1. **Connect** (`POST /api/v1/projects/{projectId}/site-connection/save`,
-   owner or admin, Solo and above). The customer gives the site address, a
+   owner or admin, Basic and above). The customer gives the site address, a
    WordPress username and an **application password** (WordPress → Users →
    Profile; built in since WordPress 5.6). Uplumo:
    - finds the REST API at `/wp-json/`, or `/?rest_route=/` for sites on
@@ -19,7 +19,7 @@ contract.
    - signs in to `/wp/v2/users/me` and requires `publish_posts` and
      `upload_files`;
    - only then stores the connection, the password encrypted with AES-GCM.
-2. **Publish** (`POST .../content/drafts/{draftId}/publish`, any member, Solo
+2. **Publish** (`POST .../content/drafts/{draftId}/publish`, any member, Basic
    and above), `{"status": "draft" | "publish", "schema": {"article": true, "faq": true}}`:
    - each image in the draft's Markdown is downloaded and uploaded to the
      site's media library, then the article points at the site's copy; the

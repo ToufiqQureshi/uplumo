@@ -53,7 +53,7 @@ export function IndexNowCard({ projectId }: { projectId: string }) {
   if (!setup.included) {
     return (
       <Notice>
-        IndexNow is part of Basic, Pro and Agency.{" "}
+        IndexNow is part of Basic, Pro and Business.{" "}
         <Link to="/billing/plan" className="underline underline-offset-4">
           See plans
         </Link>

@@ -207,12 +207,14 @@ func TestLoadRazorpay(t *testing.T) {
 
 	plans := maps.Clone(full)
 	maps.Copy(plans, map[string]string{
-		"RAZORPAY_PLAN_ID_BASIC":  "plan_basic",
-		"RAZORPAY_PLAN_ID_PRO":    " plan_pro_tier ",
+		"RAZORPAY_PLAN_ID_BASIC":    "plan_basic",
+		"RAZORPAY_PLAN_ID_PRO":      " plan_pro_tier ",
+		"RAZORPAY_PLAN_ID_BUSINESS": "plan_business",
+		// Agency is no longer sold: a leftover variable must not sell it.
 		"RAZORPAY_PLAN_ID_AGENCY": "plan_agency",
 	})
 	cfg, err = load(plans)
-	if err != nil || cfg.Razorpay.PlanIDs["basic"] != "plan_basic" || cfg.Razorpay.PlanIDs["pro"] != "plan_pro_tier" || cfg.Razorpay.PlanIDs["agency"] != "plan_agency" {
+	if err != nil || cfg.Razorpay.PlanIDs["basic"] != "plan_basic" || cfg.Razorpay.PlanIDs["pro"] != "plan_pro_tier" || cfg.Razorpay.PlanIDs["business"] != "plan_business" || cfg.Razorpay.PlanIDs["agency"] != "" {
 		t.Fatalf("tier Razorpay config = %+v, %v", cfg.Razorpay, err)
 	}
 }
@@ -296,7 +298,7 @@ func TestLoadRazorpayNeedsCredentialsAndAPlanTogether(t *testing.T) {
 	if err := with(credentials); err == nil || !strings.Contains(err.Error(), "RAZORPAY_PLAN_ID_") {
 		t.Errorf("credentials without a plan id: error = %v, want one naming the plan variables", err)
 	}
-	if err := with(map[string]string{"RAZORPAY_PLAN_ID_AGENCY": "plan_agency"}); err == nil || !strings.Contains(err.Error(), "RAZORPAY_KEY_ID") {
+	if err := with(map[string]string{"RAZORPAY_PLAN_ID_BUSINESS": "plan_business"}); err == nil || !strings.Contains(err.Error(), "RAZORPAY_KEY_ID") {
 		t.Errorf("a plan id without credentials: error = %v, want one naming the missing credentials", err)
 	}
 	one := maps.Clone(credentials)

@@ -154,7 +154,7 @@ function statusResponse(plan: string, state: string) {
     cancelAtPeriodEnd: false,
     unlimited: false,
     paymentsConfigured: true,
-    availablePlans: ["basic", "pro", "agency"],
+    availablePlans: ["basic", "pro", "business"],
     usage,
   });
 }

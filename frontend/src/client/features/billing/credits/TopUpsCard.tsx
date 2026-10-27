@@ -4,25 +4,42 @@ import { z } from "zod";
 import { apiRequest } from "@/client/lib/uplumoApi";
 import { Button } from "@/client/components/ui/button";
 import { openTopUpCheckout } from "../plan/razorpay";
+
 const packsSchema = z.array(
   z.object({
     id: z.string(),
     name: z.string(),
     priceInr: z.number(),
     credits: z.number(),
-    expiresAfterDays: z.number(),
+    sites: z.number(),
   }),
 );
 const checkoutSchema = z.object({
   id: z.string(),
+  packId: z.string(),
   orderId: z.string(),
   keyId: z.string(),
   amount: z.number(),
   currency: z.string(),
   credits: z.number(),
-  expiresAfterDays: z.number(),
+  sites: z.number(),
   status: z.string(),
 });
+
+type Pack = z.infer<typeof packsSchema>[number];
+
+function lifetime(pack: Pack) {
+  return pack.sites > 0
+    ? `Adds ${pack.sites} websites for 30 days from payment.`
+    : "Used after your monthly credits. Lasts while your plan is active and ends with it.";
+}
+
+/**
+ * One-time credit packs (Pro and Business) and the site add-on (Business).
+ * The server lists only what the workspace's plan may buy. A payment the
+ * customer completed is only waited on, never offered again, so one
+ * purchase cannot be paid twice.
+ */
 export function TopUpsCard({
   canManageBilling,
   enabled,
@@ -31,7 +48,9 @@ export function TopUpsCard({
   enabled: boolean;
 }) {
   const queryClient = useQueryClient();
-  const [payment, setPayment] = useState<string | null>(null);
+  // The purchase whose payment Razorpay reported as completed, waiting for
+  // the signed webhook to grant it.
+  const [paid, setPaid] = useState<string | null>(null);
   const packs = useQuery({
     queryKey: ["billing", "topups"],
     queryFn: () => apiRequest("/api/v1/billing/topups", packsSchema),
@@ -46,31 +65,32 @@ export function TopUpsCard({
         "POST",
         { packId },
       );
-      setPayment(order.id);
-      await openTopUpCheckout(order);
+      // A closed window leaves the order unpaid; the next click reuses it.
+      if (await openTopUpCheckout(order)) setPaid(order.id);
     },
+    retry: false,
   });
   const status = useQuery({
-    queryKey: ["billing", "topup", payment],
+    queryKey: ["billing", "topup", paid],
     queryFn: () =>
       apiRequest(
-        `/api/v1/billing/topups/${encodeURIComponent(payment!)}`,
+        `/api/v1/billing/topups/${encodeURIComponent(paid!)}`,
         z.object({ status: z.string() }),
       ),
-    enabled: Boolean(payment),
+    enabled: Boolean(paid),
     refetchInterval: (q) =>
-      q.state.data?.status === "paid" ||
-      q.state.data?.status === "failed" ||
-      q.state.dataUpdateCount >= 40
+      q.state.data?.status === "paid" || q.state.dataUpdateCount >= 40
         ? false
         : 3000,
   });
+  const granted = status.data?.status === "paid";
   useEffect(() => {
-    if (status.data?.status === "paid") {
+    if (granted) {
       void queryClient.invalidateQueries({ queryKey: ["billing", "usage"] });
       void queryClient.invalidateQueries({ queryKey: ["billing", "credits"] });
+      void queryClient.invalidateQueries({ queryKey: ["goBillingStatus"] });
     }
-  }, [status.data?.status, queryClient]);
+  }, [granted, queryClient]);
   if (!enabled) return null;
   if (packs.isError)
     return (
@@ -82,36 +102,28 @@ export function TopUpsCard({
       </p>
     );
   if (!packs.data?.length) return null;
+  const waiting = Boolean(paid) && !granted;
   return (
-    <section className="space-y-3 rounded-xl border p-5">
-      <h2 className="text-lg font-semibold">Add usage credits</h2>
+    <section className="space-y-3 rounded-xl border border-border p-5">
+      <h2 className="text-lg font-semibold">Buy more credits</h2>
       <p className="text-sm text-muted-foreground">
-        One-time purchase for an active paid plan. Your current feature and
-        daily spending limits still apply. Credits appear after payment is
-        verified.
+        One-time payment, not a subscription. Every paid action spends credits
+        at its real cost. Packs are not refundable.
       </p>
       <div className="flex flex-wrap gap-3">
         {packs.data.map((p) => (
-          <div key={p.id} className="space-y-2 rounded-lg border p-4">
+          <div
+            key={p.id}
+            className="max-w-xs space-y-2 rounded-lg border border-border p-4"
+          >
             <p className="font-medium">{p.name}</p>
-            <p>
-              {p.credits.toLocaleString()} credits · ₹
-              {p.priceInr.toLocaleString("en-IN")}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Valid for {p.expiresAfterDays} days after purchase.
-            </p>
+            <p>₹{p.priceInr.toLocaleString("en-IN")}</p>
+            <p className="text-xs text-muted-foreground">{lifetime(p)}</p>
             <Button
-              disabled={
-                !canManageBilling ||
-                checkout.isPending ||
-                (Boolean(payment) &&
-                  status.data?.status !== "paid" &&
-                  status.data?.status !== "failed")
-              }
+              disabled={!canManageBilling || checkout.isPending || waiting}
               onClick={() => checkout.mutate(p.id)}
             >
-              Buy credits
+              {p.sites > 0 ? "Add websites" : "Buy credits"}
             </Button>
           </div>
         ))}
@@ -124,12 +136,18 @@ export function TopUpsCard({
           {checkout.error.message}
         </p>
       ) : null}
-      {payment ? (
-        <p role="status" className="text-sm">
-          {status.data?.status === "paid"
-            ? "Payment verified. Credits have been added."
-            : "Waiting for payment verification. If you closed checkout, reopen it to finish."}
-          {status.data?.status !== "paid" ? (
+      {paid ? (
+        <div role="status" className="space-y-2 text-sm">
+          <p>
+            {granted
+              ? "Payment verified. Your pack is active."
+              : "Payment received. Waiting for Razorpay to confirm it; this usually takes under a minute. Do not pay again."}
+          </p>
+          {granted ? (
+            <Button variant="ghost" onClick={() => setPaid(null)}>
+              Buy another pack
+            </Button>
+          ) : (
             <Button
               variant="ghost"
               disabled={status.isFetching}
@@ -137,18 +155,8 @@ export function TopUpsCard({
             >
               Check payment status
             </Button>
-          ) : null}
-          <Button
-            variant="ghost"
-            disabled={checkout.isPending || status.data?.status === "paid"}
-            onClick={() => {
-              setPayment(null);
-              checkout.reset();
-            }}
-          >
-            Choose pack again
-          </Button>
-        </p>
+          )}
+        </div>
       ) : null}
     </section>
   );

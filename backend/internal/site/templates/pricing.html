@@ -5,7 +5,7 @@
 <div class="wrap hero" style="padding-bottom:5rem">
 <span class="sticker">Choose the tools your site needs</span>
 <h1>Plans that fit <em>your work.</em></h1>
-<p class="lead">Start free. Pay only when you want to rank, research competitors or run an agency.</p>
+<p class="lead">Start free. Pay only when you want to rank, research competitors or run an agency. Buy more credits only when you need them.</p>
 </div>
 </div>
 
@@ -38,6 +38,26 @@
 </table>
 </div>
 <p class="note">Each payment adds the plan's monthly credits. Unused credits roll over for up to two months. Actual credit use varies with provider cost; your balance and usage are visible in Billing.</p>
+</div>
+</section>
+
+<section class="band" aria-labelledby="packs">
+<div class="wrap narrow stack">
+<div class="section-head">
+<p class="eyebrow">Add-ons</p>
+<h2 id="packs">Extra credits and websites</h2>
+<p>One-time purchases from Billing, on top of a paid plan. Every paid action spends credits at its real cost, so you pay for what you use.</p>
+</div>
+<div class="table-scroll">
+<table>
+<caption class="skip">Uplumo credit packs and add-ons</caption>
+<thead><tr><th scope="col">Pack</th><th scope="col">Price</th><th scope="col">Who can buy</th><th scope="col">How long it lasts</th></tr></thead>
+<tbody>
+{{range .Packs}}<tr><th scope="row">{{.Name}}</th><td>{{.Price}}</td><td>{{.Who}}</td><td>{{.Detail}}</td></tr>
+{{end}}</tbody>
+</table>
+</div>
+<p class="note">Packs are paid once, not every month, and are not refundable. If your plan ends, unused pack credits expire with it.</p>
 </div>
 </section>
 

@@ -3,7 +3,7 @@
 Two things live here: the plan a workspace is on, and the internal credit
 ledger.
 
-**Plan.** Solo (`basic`), Growth (`pro`), Business (`business`) and Agency (`agency`) are sold as Razorpay subscriptions per
+**Plan.** Basic (`basic`), Pro (`pro`) and Business (`business`) are sold as Razorpay subscriptions per
 workspace (organization), stored in `go_billing_subscriptions`. What each one
 costs, limits and includes is in `internal/plans`; this package only answers
 "which plan is this workspace on" and "does that plan include X".
@@ -47,7 +47,7 @@ must be classified explicitly; unknown tools fail closed when billing is on.
 
 **Staff workspaces.** `STAFF_EMAILS` lists people whose own workspaces are
 never limited: a workspace whose **owner** has one of those **verified**
-addresses reads as Agency with `unlimited: true`, has no limits, and is never
+addresses reads as Business with `unlimited: true`, has no limits, and is never
 refused for credits (it is topped up, and the spend is still in the ledger).
 Being a member of someone else's workspace unlocks nothing there.
 
@@ -55,7 +55,7 @@ Being a member of someone else's workspace unlocks nothing there.
 it) is what one workspace may cost us at the providers. 1,000 credits are one
 US dollar of provider cost before the 1.28 markup, so a credit is 1/1280 of a
 dollar of provider cost. Each paid charge of a plan grants that plan's
-`MonthlyCredits` (`internal/plans`: Solo 4,000, Growth 10,000, Business 15,000, Agency 25,000)
+`MonthlyCredits` (`internal/plans`: Basic 4,000, Pro 10,000, Business 15,000)
 once per signed charge body, deduplicating both the delivery event ID and a
 SHA-256 fingerprint of the verified body in the grant transaction. Changing
 the unsigned delivery header cannot grant credits again, even after spending
@@ -73,8 +73,7 @@ typical cost of each action (`costs.go`, `api/billing.yaml`), and `POST
 /api/v1/billing/usage-events` lists settled spends.
 
 Plan-wise limits beside credits: sites, tracked keywords, members and the
-deepest rank-tracking check (`MaxSerpDepth`: Solo top 30, Growth, Business and Agency
-top 40). `TestWeeklyRankTrackingFitsInTheMonthlyCredits` keeps each plan's
+deepest rank-tracking check (`MaxSerpDepth`: Basic top 30, Pro and Business top 40). `TestWeeklyRankTrackingFitsInTheMonthlyCredits` keeps each plan's
 plain tracked keywords, checked weekly on desktop at its deepest depth, within
 its monthly credit grant using a 4.35-week average. This is not a guarantee
 for a five-run billing month: Business at 1,000 plain keywords, desktop, depth
@@ -210,14 +209,13 @@ may be negative), and `forecastUntil`. It counts configured checks due before
 the next billing refill. These are estimates, not holds: manual work, provider
 fallbacks and grant expiry can change the usable balance.
 
-`BILLING_TOPUP_PACKS` is an optional JSON array of `{id,name,priceInr,credits,
-expiresAfterDays}`. Empty/unset disables offers. Prices are INR, 1–100000;
-credits 1–1000000; validity 1–730 days; IDs must be distinct. The operator must
-approve prices, validity and margin before configuring offers. Subscription
-catalog prices, feature gates and daily workspace limits are unaffected.
+Packs are priced in `internal/plans` (`Packs()`): credit packs on Pro and
+Business, a 5-website add-on on Business. There is no environment variable
+for them.
 
-- `GET /billing/topups`: configured packs; `POST /billing/topups/checkout` accepts
-  only `packId`, requires an active paid plan and an owner/admin, and creates a
+- `GET /billing/topups`: the packs this workspace's plan includes (none while
+  payments are off); `POST /billing/topups/checkout` accepts only `packId`,
+  requires a plan that includes the pack (else 402) and an owner/admin, and creates a
   server-priced INR order. One pending order per workspace is reused across
   duplicate requests for the same pack. A simultaneous creation returns 409
   rather than creating another payable order. Choosing a different pack
@@ -226,7 +224,10 @@ catalog prices, feature gates and daily workspace limits are unaffected.
   webhook matches by order ID, not status.
 - `GET /billing/topups/{topupId}` is scoped to the active workspace. A browser
   checkout callback only starts verification polling; it never grants credits.
-- Subscribe the existing Razorpay webhook to `payment.captured`. Its original
+- Subscribe the existing Razorpay webhook to `payment.captured` and
+  `payment.authorized`. An authorized payment on one of our orders is
+  captured with the stored amount (Razorpay auto-captures only within 12
+  minutes here); an already captured payment is not an error. Its original
   signature is verified before reading the payment. The stored order, captured
   status, amount and currency must match. Locking the top-up row, the grant,
   expiry and paid marker happen in one transaction; even concurrent events with
@@ -234,10 +235,15 @@ catalog prices, feature gates and daily workspace limits are unaffected.
 - Top-up grants are marked `go_billing_credit_grants.top_up`. The monthly
   plan grant's two-month rollover ceiling counts plan credits only, so buying
   a top-up never shrinks the next renewal (`grantUpToTx`).
-- Purchased grant expiry is snapshotted at checkout; changes to pack settings
-  cannot change an existing purchase. Expired grants use the existing ledger
-  expiry worker and FIFO consumption. Refunds/disputes require operator
-  reconciliation before issuing a refund; this checkout does not initiate one.
+- Credit pack grants last while the plan does: the hourly worker
+  (`ExpirePackCreditsOfEndedPlans`) ends them once no subscription has been in
+  a paying state for 24 hours. Rows sold with a fixed validity
+  (`expires_after_days` > 0) keep it. A site add-on sets `sites_until` 30 days
+  after payment; `SiteLimit` adds running add-ons, and paid work pauses only
+  above plan sites plus the most add-on sites ever running at once. Expired grants use the existing ledger
+  expiry worker and FIFO consumption. Refunds and disputes of packs need operator
+  reconciliation. The only automatic refund is a second live subscription's
+  payment (`stopSecondSubscription`).
 - Creation failure grants nothing. A lost browser response reuses the saved
   order. An ambiguous provider response cannot grant anything without a
   captured payment tied to a stored order; reconcile exceptions in Razorpay.
