@@ -416,6 +416,7 @@ func run(logger *slog.Logger) (err error) {
 			ContentAuthors:          contentAuthors,
 			LinkSuggest:             linkSuggestSvc,
 			CiteFix:                 citefix.Store{DB: db},
+			CiteFixAgent:            buildCiteFixAgent(cfg, logger, db, spendGuard.AIMeter(spend.CiteFix, "openrouter/citefix"), billingRoutes.Gate(planCatalog.AIWriting), gscService),
 			SitePublish:             sitePublish,
 			IndexNow:                indexNowService,
 			ContentWriter:           buildContentWriter(cfg, logger, spendGuard.AIMeter(spend.AIWriting, "openrouter/"+contenteditor.WriterModel), billingRoutes.Gate(planCatalog.AIWriting)),
@@ -511,6 +512,25 @@ func buildContentWriter(cfg config.Config, logger *slog.Logger, meter contentedi
 		Plans:  plans,
 		Logger: logger,
 	}
+}
+
+// buildCiteFixAgent wires the paid Cite Fix agent; nil without an OpenRouter
+// key, so the page says it is unavailable and its route answers 503. A nil
+// Search Console service stays a nil interface: the agent then runs without
+// query data instead of calling through it.
+func buildCiteFixAgent(cfg config.Config, logger *slog.Logger, db *pgxpool.Pool, meter citefix.AgentMeter, plans citefix.AgentPlans, gscService *gsc.Service) citefix.AgentRunner {
+	if strings.TrimSpace(cfg.OpenRouterAPIKey) == "" {
+		return nil
+	}
+	agent := &citefix.Agent{
+		Store: citefix.Store{DB: db}, LLM: &openrouter.Client{APIKey: cfg.OpenRouterAPIKey},
+		Meter: meter, Plans: plans, Logger: logger,
+		HTTP: audit.NewGuard().NewClient(15 * time.Second),
+	}
+	if gscService != nil {
+		agent.Queries = gscService
+	}
+	return agent
 }
 
 // buildAISentiment wires answer sentiment; nil without an OpenRouter key, so

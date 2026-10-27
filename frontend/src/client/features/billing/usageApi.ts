@@ -11,6 +11,7 @@ const featureSchema = z.enum([
   "site_audit",
   "ai_assistant",
   "ai_writing",
+  "cite_fix",
 ]);
 
 export type CreditFeature = z.infer<typeof featureSchema>;
@@ -56,6 +57,7 @@ const FEATURE_LABELS: Record<CreditFeature | "other", string> = {
   site_audit: "Site audit page speed",
   ai_assistant: "AI assistant",
   ai_writing: "AI writing",
+  cite_fix: "Cite Fix agent",
   other: "Other",
 };
 

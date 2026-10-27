@@ -37,6 +37,10 @@ func (s Store) Report(ctx context.Context, organizationID, projectID string) (Re
 	if err != nil {
 		return Report{}, err
 	}
+	proof, err := s.proof(ctx, organizationID, projectID)
+	if err != nil {
+		return Report{}, err
+	}
 	var scan Scan
 	err = s.DB.QueryRow(ctx, `SELECT a.id, a.start_url, a.completed_at FROM go_audits a
 		JOIN projects p ON p.id = a.project_id AND p.organization_id = $1
@@ -44,7 +48,7 @@ func (s Store) Report(ctx context.Context, organizationID, projectID string) (Re
 		ORDER BY a.started_at DESC LIMIT 1`, organizationID, projectID).Scan(&scan.AuditID, &scan.StartURL, &scan.CompletedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		report := emptyReport(StateNoScan)
-		report.Running = running
+		report.Running, report.Proof = running, proof
 		return report, nil
 	}
 	if err != nil {
@@ -57,7 +61,7 @@ func (s Store) Report(ctx context.Context, organizationID, projectID string) (Re
 	}
 	if legacy {
 		report := emptyReport(StateNeedsRescan)
-		report.Running, report.Scan, report.PagesTotal = running, &scan, len(pages)
+		report.Running, report.Scan, report.PagesTotal, report.Proof = running, &scan, len(pages), proof
 		return report, nil
 	}
 	issues, err := s.issues(ctx, scan.AuditID)
@@ -65,7 +69,7 @@ func (s Store) Report(ctx context.Context, organizationID, projectID string) (Re
 		return Report{}, err
 	}
 	report := Build(scan, pages, issues)
-	report.Running = running
+	report.Running, report.Proof = running, proof
 	return report, nil
 }
 

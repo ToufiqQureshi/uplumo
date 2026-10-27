@@ -16,6 +16,9 @@ import {
   type CiteFix,
   type CiteFixReport,
 } from "./citeFixApi";
+import { AgentPanel } from "./AgentPanel";
+import { AgentResults } from "./AgentResults";
+import { ProofCard } from "./ProofCard";
 import { scoreBand } from "./scoreBand";
 
 /** While a scan runs, check back this often; the report is free to read. */
@@ -83,13 +86,16 @@ export function CiteFixPage({ projectId }: { projectId: string }) {
           isRetrying={report.isFetching}
         />
       ) : report.data.state === "no_scan" ? (
-        <EmptyState
-          title="Scan your site first"
-          description="Cite Fix reads the pages a site scan collects. Run a free scan from Site Audit; your score appears here when it finishes."
-          action={
-            report.data.running ? null : scanLink("Scan my site", "default")
-          }
-        />
+        <>
+          <EmptyState
+            title="Scan your site first"
+            description="Cite Fix reads the pages a site scan collects. Run a free scan from Site Audit; your score appears here when it finishes."
+            action={
+              report.data.running ? null : scanLink("Scan my site", "default")
+            }
+          />
+          <ProofCard projectId={projectId} proof={report.data.proof} />
+        </>
       ) : report.data.state === "needs_rescan" ? (
         <EmptyState
           title="Scan your site again"
@@ -99,16 +105,21 @@ export function CiteFixPage({ projectId }: { projectId: string }) {
           }
         />
       ) : (
-        <Ready report={report.data} />
+        <Ready projectId={projectId} report={report.data} />
       )}
     </div>
   );
 }
 
-function Ready({ report }: { report: CiteFixReport }) {
+function Ready({
+  projectId,
+  report,
+}: {
+  projectId: string;
+  report: CiteFixReport;
+}) {
   const score = report.score ?? 0;
   const band = scoreBand(score);
-  const titles = new Map(report.fixes.map((fix) => [fix.id, fix.title]));
   return (
     <>
       <section
@@ -157,6 +168,8 @@ function Ready({ report }: { report: CiteFixReport }) {
         </p>
       </section>
 
+      <ProofCard projectId={projectId} proof={report.proof} />
+
       <section aria-labelledby="cite-fix-fixes" className="flex flex-col gap-3">
         <h2 id="cite-fix-fixes" className="font-serif text-2xl">
           What to fix first
@@ -175,57 +188,13 @@ function Ready({ report }: { report: CiteFixReport }) {
         )}
       </section>
 
+      <AgentResults
+        projectId={projectId}
+        titles={new Map(report.pages.map((page) => [page.url, page.title]))}
+      />
+
       {report.pages.length ? (
-        <section
-          aria-labelledby="cite-fix-pages"
-          className="flex flex-col gap-3"
-        >
-          <h2 id="cite-fix-pages" className="font-serif text-2xl">
-            Pages, weakest first
-          </h2>
-          <div className="overflow-x-auto rounded-xl border bg-card">
-            <table className="w-full text-sm">
-              <thead className="text-left text-xs text-muted-foreground">
-                <tr className="border-b">
-                  <th className="p-3 font-medium">Page</th>
-                  <th className="p-3 text-right font-medium">Score</th>
-                  <th className="p-3 font-medium">Missing</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {report.pages.map((page) => (
-                  <tr key={page.url} className="align-top">
-                    <td className="max-w-xs p-3">
-                      <p className="truncate font-medium">
-                        {page.title || page.url}
-                      </p>
-                      <SafeExternalLink
-                        url={page.url}
-                        label={page.url}
-                        className="inline-flex max-w-full items-center gap-1 truncate text-xs text-muted-foreground hover:underline"
-                      />
-                    </td>
-                    <td
-                      className={cn(
-                        "p-3 text-right font-mono tabular-nums",
-                        toneText[scoreBand(page.score).tone],
-                      )}
-                    >
-                      {page.score}
-                    </td>
-                    <td className="p-3 text-xs text-muted-foreground">
-                      {page.failed.length === 0
-                        ? "Nothing"
-                        : page.failed
-                            .map((id) => titles.get(id) ?? id)
-                            .join(" · ")}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+        <AgentPanel projectId={projectId} report={report} />
       ) : null}
     </>
   );

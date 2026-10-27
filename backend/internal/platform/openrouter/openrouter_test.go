@@ -233,3 +233,25 @@ func TestMaxCostUSD(t *testing.T) {
 		t.Fatalf("tool-call arguments must count as input: %v", withCall)
 	}
 }
+
+func TestStreamSendsProviderLimitsAndJSONFormat(t *testing.T) {
+	var seen string
+	client := serve(t, 200, "data: [DONE]\n", func(_ *http.Request, payload []byte) { seen = string(payload) })
+	_, err := client.Stream(context.Background(), Request{
+		Model: "m", MaxTokens: 10, JSONObject: true,
+		Provider: &ProviderPreferences{MaxPrice: &MaxPrice{Prompt: 0.3, Completion: 1.2}, DataCollection: "deny", RequireParameters: true},
+	}, Handler{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`"response_format":{"type":"json_object"}`, `"provider":{"max_price":{"prompt":0.3,"completion":1.2},"data_collection":"deny","require_parameters":true}`} {
+		if !strings.Contains(seen, want) {
+			t.Errorf("request body missing %s: %s", want, seen)
+		}
+	}
+	// A plain request sends neither, so other callers' requests are unchanged.
+	_, _ = client.Stream(context.Background(), Request{Model: "m"}, Handler{})
+	if strings.Contains(seen, "provider") || strings.Contains(seen, "response_format") {
+		t.Fatalf("plain request carries routing fields: %s", seen)
+	}
+}

@@ -51,6 +51,10 @@ var typicalUSD = []struct {
 	{spend.AIVisibility, ActionBrandLookup, "brand lookup (less when AI has no data, more with competitors)", 0.29, dataforseo.BrandLookupCeilingUSD(2, true)},
 	{spend.AIAssistant, "", "AI assistant reply", 0.03, 0},
 	{spend.AIWriting, "", "AI writing action", 0.01, 0},
+	// A Deep page: the Flash analysis (~$0.002) and the Pro rewrite (~$0.025)
+	// at mid provider prices. Quick is the analysis alone. maxUSD is the
+	// 60-credit Deep cap the page shows before the click.
+	{spend.CiteFix, "", "Cite Fix agent page (Deep; Quick costs far less)", 0.027, 60.0 / 1280},
 }
 
 // Actions of the AI visibility feature that ActionCost tells apart.

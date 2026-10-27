@@ -45,9 +45,16 @@ func TestAIVisibilityMaximumIsTheWorstCaseHold(t *testing.T) {
 		ActionPromptExplorer: CreditsForUSD(dataforseo.PromptExplorerCeilingUSD(4, true)),
 	}
 	for _, cost := range ActionCosts() {
+		if cost.Feature == spend.CiteFix {
+			// The Deep cap the Cite Fix page shows (citefix.DeepMaxCredits).
+			if cost.MaxCredits != 60 || cost.MaxCredits <= cost.Credits {
+				t.Errorf("cite fix max = %d credits, want the 60-credit Deep cap above the typical %d", cost.MaxCredits, cost.Credits)
+			}
+			continue
+		}
 		if cost.Feature != spend.AIVisibility {
 			if cost.MaxCredits != 0 {
-				t.Errorf("%s shows a maximum of %d credits; only AI visibility sets one", cost.Feature, cost.MaxCredits)
+				t.Errorf("%s shows a maximum of %d credits; only AI visibility and Cite Fix set one", cost.Feature, cost.MaxCredits)
 			}
 			continue
 		}

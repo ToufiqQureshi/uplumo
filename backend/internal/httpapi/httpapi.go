@@ -149,6 +149,8 @@ type Deps struct {
 	// CiteFix builds the free Cite Fix report from the latest site audit.
 	// Nil answers 503.
 	CiteFix citefix.Reporter
+	// CiteFixAgent runs the paid Cite Fix agent. Nil without OpenRouter.
+	CiteFixAgent citefix.AgentRunner
 	// SAMSessions serves the project chat-session registry.
 	SAMSessions *sam.Service
 	// EmailAuth serves sign-up, sign-in, verification and password reset; nil
@@ -392,7 +394,7 @@ func NewHandler(d Deps) http.Handler {
 		})
 	}
 	citefix.Mount(mux, citefix.Deps{
-		Logger: d.Logger, Reporter: d.CiteFix, WithSession: withSession,
+		Logger: d.Logger, Reporter: d.CiteFix, Agent: d.CiteFixAgent, WithSession: withSession,
 		WithProjectAccess: func(next http.Handler) http.Handler { return requireProjectAccess(d.Logger, d.Auth, next) },
 	})
 	linksuggest.Mount(mux, linksuggest.Deps{

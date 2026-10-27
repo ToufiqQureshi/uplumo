@@ -70,6 +70,30 @@ type Request struct {
 	MaxTokens int
 	// ReasoningEffort is passed through as reasoning.effort when set.
 	ReasoningEffort string
+	// JSONObject asks for a JSON object answer (response_format json_object).
+	JSONObject bool
+	// Provider limits which upstream providers may serve the request. Set it
+	// with MaxPrice for a model whose providers' prices differ widely, so a
+	// request can never be billed above the price its credit ceiling assumed.
+	Provider *ProviderPreferences
+}
+
+// ProviderPreferences is OpenRouter's provider routing object.
+type ProviderPreferences struct {
+	// MaxPrice is the most, in USD per million tokens, a provider may charge.
+	MaxPrice *MaxPrice `json:"max_price,omitempty"`
+	// DataCollection "deny" skips providers that may store or train on the
+	// request: customer pages are not training data.
+	DataCollection string `json:"data_collection,omitempty"`
+	// RequireParameters skips providers that do not support every request
+	// parameter, such as the JSON response format.
+	RequireParameters bool `json:"require_parameters,omitempty"`
+}
+
+// MaxPrice caps a provider's price in USD per million tokens.
+type MaxPrice struct {
+	Prompt     float64 `json:"prompt"`
+	Completion float64 `json:"completion"`
 }
 
 // Usage is the token and cost accounting OpenRouter reports for a response.
@@ -172,6 +196,9 @@ type requestBody struct {
 	MaxTokens int             `json:"max_tokens,omitempty"`
 	Usage     map[string]bool `json:"usage"`
 	Reasoning map[string]any  `json:"reasoning,omitempty"`
+	// ResponseFormat is {"type":"json_object"} for JSONObject requests.
+	ResponseFormat map[string]string    `json:"response_format,omitempty"`
+	Provider       *ProviderPreferences `json:"provider,omitempty"`
 }
 
 type toolEnvelope struct {
@@ -224,6 +251,10 @@ func (c *Client) Stream(ctx context.Context, req Request, h Handler) (Result, er
 	if req.ReasoningEffort != "" {
 		body.Reasoning = map[string]any{"effort": req.ReasoningEffort}
 	}
+	if req.JSONObject {
+		body.ResponseFormat = map[string]string{"type": "json_object"}
+	}
+	body.Provider = req.Provider
 	for _, t := range req.Tools {
 		params := t.Parameters
 		if len(params) == 0 {

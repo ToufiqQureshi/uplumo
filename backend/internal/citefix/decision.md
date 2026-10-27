@@ -19,3 +19,10 @@ Scores how easy a site is for AI assistants to quote, from the latest completed 
   - Freshness is counted in days from the scan day, and judged only on pages with a readable date.
   - Copy never promises a citation.
 - **Trace:** `checks.go`, `citefix.go`, `store.go`, `handler.go`; `audit/aireadiness.go`, `audit/pageanalyzer.go`, `audit/repository.go`, migration `00047_audit_citation_signals.sql`. Tests: `citefix_test.go` works every score and gain by hand; `store_test.go` runs a crawl through `audit.Repository` into a report on Postgres, including the workspace boundary, a legacy audit, a running audit and a failed audit; `handler_test.go` covers 400/404/500/503. Not yet run against a live customer site; weights may need tuning once real scores are seen.
+
+## Paid agent and AI Visibility proof (owner approved 27 Oct 2026)
+
+- **Decision:** `POST .../cite-fix/agent/run` works on one page from the latest scan: Quick (DeepSeek V4.1 Flash analysis, at most 25 credits) or Deep (plus a DeepSeek V4 Pro rewrite, at most 60 credits). Default 5 weakest pages, at most 20 per batch and 20 runs per project per 10 minutes. Spend is labelled `cite_fix`. Gated by the AI writing plan feature (Basic and above). The report also carries `proof` from the latest saved AI Visibility run (free).
+- **Why:** Owner wanted an AI agent with page-specific fixes, cheap models via OpenRouter, user picks pages, cost shown first.
+- **Preserve:** OpenRouter `max_price` and `data_collection: deny` on every call (one Flash provider charged $30.91/M output). One hold per run, ceiling ≤ mode cap, customer charge ≤ hold; unusable answers charge 0; failed Deep rewrite charges only the analysis. Idempotency key replays, same content + mode is cached for 0 credits, one running run per page and mode. Only pages in the workspace's own latest scan are fetched, through the SSRF guard.
+- **Trace:** `agent.go`, `agent_prompts.go`, `agent_store.go`, `proof.go`, migration 48, `platform/openrouter` provider fields; tests `agent_test.go`, `proof_test.go`, `handler_test.go`. Mutation-checked. Not run against real OpenRouter yet; docs (README/flow, ROADMAP) still to update.

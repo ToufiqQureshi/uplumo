@@ -115,6 +115,12 @@ type Report struct {
 	// counts every crawled page.
 	PagesChecked int `json:"pagesChecked"`
 	PagesTotal   int `json:"pagesTotal"`
+	// Proof is the latest saved AI Visibility check, in every state; nil when
+	// the project has none.
+	Proof *Proof `json:"proof"`
+	// Agent says whether and at what price the paid agent can run; the
+	// handler fills it.
+	Agent AgentOffer `json:"agent"`
 }
 
 // emptyReport keeps every list a JSON array, never null.
