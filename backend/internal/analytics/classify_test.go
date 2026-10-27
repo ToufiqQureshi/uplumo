@@ -47,6 +47,44 @@ func TestClassify(t *testing.T) {
 		{name: "hacker news", page: "https://acme.com/", referrer: "https://news.ycombinator.com/", want: source{channelSocial, "", "news.ycombinator.com"}},
 		{name: "social utm without referrer", page: "https://acme.com/?utm_source=facebook", want: source{channelSocial, "", ""}},
 		{name: "search utm loses to a real referrer", page: "https://acme.com/?utm_source=google", referrer: "https://blog.example.org/", want: source{channelReferral, "", "blog.example.org"}},
+		{name: "mobile google", page: "https://acme.com/", referrer: "https://m.google.com/", want: source{channelSearch, "", "m.google.com"}},
+		{name: "country bing", page: "https://acme.com/", referrer: "https://cn.bing.com/", want: source{channelSearch, "", "cn.bing.com"}},
+		{name: "google news", page: "https://acme.com/", referrer: "https://news.google.com/", want: source{channelSearch, "", "news.google.com"}},
+		{name: "google docs is a referral, not search", page: "https://acme.com/", referrer: "https://docs.google.com/document/d/x", want: source{channelReferral, "", "docs.google.com"}},
+		{name: "yahoo answers is not search", page: "https://acme.com/", referrer: "https://answers.yahoo.com/", want: source{channelReferral, "", "answers.yahoo.com"}},
+
+		// Webmail is email, even on a search brand's host.
+		{name: "gmail web", page: "https://acme.com/", referrer: "https://mail.google.com/", want: source{channelEmail, "", "mail.google.com"}},
+		{name: "outlook web", page: "https://acme.com/", referrer: "https://outlook.live.com/mail/0/", want: source{channelEmail, "", "outlook.live.com"}},
+		{name: "yahoo mail", page: "https://acme.com/", referrer: "https://mail.yahoo.com/", want: source{channelEmail, "", "mail.yahoo.com"}},
+
+		// Sign-in and payment hops continue the visit, like internal navigation.
+		{name: "google sign-in return", page: "https://acme.com/dashboard", referrer: "https://accounts.google.com/", want: source{channelInternal, "", ""}},
+		{name: "microsoft sign-in return", page: "https://acme.com/", referrer: "https://login.microsoftonline.com/common", want: source{channelInternal, "", ""}},
+		{name: "razorpay checkout return", page: "https://acme.com/thanks", referrer: "https://api.razorpay.com/v1/payments", want: source{channelInternal, "", ""}},
+		{name: "paypal return", page: "https://acme.com/thanks", referrer: "https://www.paypal.com/checkoutnow", want: source{channelInternal, "", ""}},
+		{name: "pass-through beats a kept utm", page: "https://acme.com/?utm_source=google&utm_medium=cpc", referrer: "https://accounts.google.com/", want: source{channelInternal, "", ""}},
+		{name: "razorpay lookalike is a referral", page: "https://acme.com/", referrer: "https://notrazorpay.com/", want: source{channelReferral, "", "notrazorpay.com"}},
+
+		// Android app referrers.
+		{name: "gmail app", page: "https://acme.com/", referrer: "android-app://com.google.android.gm/", want: source{channelEmail, "", "com.google.android.gm"}},
+		{name: "google app", page: "https://acme.com/", referrer: "android-app://com.google.android.googlequicksearchbox/", want: source{channelSearch, "", "com.google.android.googlequicksearchbox"}},
+		{name: "facebook app", page: "https://acme.com/", referrer: "android-app://com.facebook.katana/", want: source{channelSocial, "", "com.facebook.katana"}},
+		{name: "unknown app is direct", page: "https://acme.com/", referrer: "android-app://com.example.reader/", want: source{channelDirect, "", ""}},
+		{name: "unknown app keeps a utm source", page: "https://acme.com/?utm_source=facebook", referrer: "android-app://com.example.reader/", want: source{channelSocial, "", ""}},
+
+		// GA4 medium rules.
+		{name: "cpc medium", page: "https://acme.com/?utm_source=google&utm_medium=cpc", referrer: "https://www.google.com/", want: source{channelPaid, "", "google.com"}},
+		{name: "any cp medium", page: "https://acme.com/?utm_medium=ecpm", want: source{channelPaid, "", ""}},
+		{name: "paid prefix", page: "https://acme.com/?utm_medium=paid_social", want: source{channelPaid, "", ""}},
+		{name: "retargeting", page: "https://acme.com/?utm_medium=retargeting", want: source{channelPaid, "", ""}},
+		{name: "banner", page: "https://acme.com/?utm_medium=banner", want: source{channelPaid, "", ""}},
+		{name: "email medium variant", page: "https://acme.com/?utm_medium=e-mail", want: source{channelEmail, "", ""}},
+		{name: "email source without medium", page: "https://acme.com/?utm_source=email", want: source{channelEmail, "", ""}},
+		{name: "email source with an unknown medium", page: "https://acme.com/?utm_source=e-mail&utm_medium=blast", want: source{channelEmail, "", ""}},
+		{name: "social medium beats a referral", page: "https://acme.com/?utm_source=partner&utm_medium=social", referrer: "https://blog.example.org/", want: source{channelSocial, "", "blog.example.org"}},
+		{name: "organic medium", page: "https://acme.com/?utm_source=gbp&utm_medium=organic", want: source{channelSearch, "", ""}},
+		{name: "unknown medium falls through", page: "https://acme.com/?utm_medium=qr", referrer: "https://www.bing.com/", want: source{channelSearch, "", "bing.com"}},
 
 		// Referral, direct and internal.
 		{name: "other site", page: "https://acme.com/", referrer: "https://blog.example.org/post", want: source{channelReferral, "", "blog.example.org"}},
@@ -54,7 +92,6 @@ func TestClassify(t *testing.T) {
 		{name: "whitespace referrer", page: "https://acme.com/", referrer: "   ", want: source{channelDirect, "", ""}},
 		{name: "malformed referrer", page: "https://acme.com/", referrer: "http://%zz", want: source{channelDirect, "", ""}},
 		{name: "referrer without scheme", page: "https://acme.com/", referrer: "chatgpt.com", want: source{channelDirect, "", ""}},
-		{name: "app referrer", page: "https://acme.com/", referrer: "android-app://com.google.android.gm/", want: source{channelDirect, "", ""}},
 		{name: "self referral", page: "https://acme.com/b", referrer: "https://acme.com/a", want: source{channelInternal, "", ""}},
 		{name: "self referral across www and case", page: "https://www.acme.com/b", referrer: "https://ACME.com/a", want: source{channelInternal, "", ""}},
 		{name: "self referral ignores a kept utm", page: "https://acme.com/b?utm_source=chatgpt.com", referrer: "https://acme.com/a", want: source{channelInternal, "", ""}},

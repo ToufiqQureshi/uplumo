@@ -3,10 +3,6 @@ import type { AnalyticsSummary } from "./analyticsApi";
 
 type EventRow = AnalyticsSummary["events"][number];
 
-// Event names that mean a visitor tried to reach the business.
-const ENQUIRY =
-  /whats\s*app|wa_|call|phone|tel|form|lead|contact|enquir|inquir|book|quote|submit|sign.?up|purchase|checkout|order/i;
-
 /**
  * Events that differ only by letter case ("whatsapp", "WhatsApp") are one
  * action tagged twice. Merge them, keeping the most used spelling.
@@ -25,12 +21,6 @@ export function mergeEvents(events: EventRow[]) {
     spellings: rows.length,
   }));
   return sortBy(merged, [(row) => row.count, "desc"]);
-}
-
-/** Enquiry-like actions (WhatsApp, calls, forms, bookings) and their total. */
-export function enquiries(events: EventRow[]) {
-  const rows = mergeEvents(events).filter((row) => ENQUIRY.test(row.name));
-  return { rows, total: rows.reduce((sum, row) => sum + row.count, 0) };
 }
 
 /**

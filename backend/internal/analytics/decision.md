@@ -44,3 +44,66 @@ Preserve: enable recognition only after required consent. The host consent manag
 Click capture stores a bounded event label, source path and normalized HTTP(S) destination host/path. No destination query, fragment, credentials or ad ID is retained. Configured outbound links emit one click, and unconfigured outbound links use `outbound_click`; JavaScript buttons may declare `data-uplumo-destination`. Other custom events retain their semantics. Observed arrivals count clicks with a different pageview at the same host/path and tab session within 30 minutes, possibly just beyond the report boundary. This is temporal association, not proof the click caused navigation; external activity, new-tab arrivals and old events stay unknown. Reporting is paged (1–100 rows, page 1–1000), at most 366 UTC days, with a 10-second read timeout; tenant middleware remains mandatory. The collection body is bounded at 8 KiB to accommodate the three bounded URL fields.
 
 Trace: `journey.go`, `repository.go`, `handler.go`, `httpapi/tracker.js`, migration 35, `journey_test.go`, mounted HTTP tests and frontend `scripts/tracker.test.ts`. RLS/no public policies and public/client grant revocation protect browser registry and the existing event tables now carrying these fields. Frontend query caching uses project/date keys and a 60-second stale window; there is no new server cache or paid provider. Verification and rollout details: `AUDIENCE_DESTINATIONS.txt`.
+
+## Accurate sources, enquiries and contact tracking
+
+**Decision:** traffic sources follow GA4's default channel rules
+(support.google.com/analytics/answer/9756891) plus fixes GA4 needs manual
+setup for, and the tracker records contact intent without tagging.
+
+- A search brand counts as search only on its search front ends
+  (`searchPrefixes`, two-letter country labels): `accounts.google.com` and
+  `docs.google.com` are not searches. Webmail hosts (`mail.google.com`,
+  Outlook, Yahoo/Zoho/Proton mail) are email.
+- Sign-in and payment hosts (`passThroughDomains`: Google/Microsoft/Apple
+  sign-in, Razorpay, Stripe checkout, PayPal, PayU, Cashfree, Paytm, PhonePe,
+  CCAvenue, Instamojo, BillDesk) are internal navigation, like GA4's
+  unwanted-referral list but automatic.
+- Known Android app referrers (`appChannels`: Gmail, Google app, Facebook,
+  Instagram, LinkedIn, WhatsApp...) take the app's channel instead of direct.
+- `utm_medium` uses GA4's rules (`mediumChannel`): paid = contains `cp`, ppc,
+  retargeting, `paid*`, display formats, affiliate, sponsored; email in medium
+  or source; social and organic mediums.
+- Acquisition counts every session: a session whose first page has an
+  internal referrer (a tab opened from the site without the copied session)
+  is direct, as GA4 treats self-referrals, so source shares add up to sessions.
+- Enquiries are classified server-side (`isEnquiry`: whole words plus safe
+  substrings, negative words such as `start`/`view`/`error`). The summary
+  returns `enquiries {count, visitors, actions}`; `visitors` is distinct
+  visitor-days across all enquiry actions, so the enquiry rate cannot double
+  count or pass 100%. Sign-up, checkout and purchase events are sales steps,
+  not enquiries (owner to confirm).
+- The tracker sends `call_click`, `sms_click`, `email_click` and
+  `whatsapp_click` (tel:, sms:, mailto:, whatsapp:, wa.me,
+  api/web.whatsapp.com, whatsapp.com/send) with no destination, so numbers and
+  addresses never leave the browser; `form_submit` on non-search forms (no
+  field values; skipped when the form has a tagged button or
+  `data-uplumo-ignore`); `file_download` for GA4's file extensions. An owner's
+  `data-uplumo-event` tag still names the click. `?uplumo_ignore=1` stores an
+  opt-out in localStorage so owners can exclude their own browser.
+- `/collect` logs one warning when the client IP is private or in
+  100.64.0.0/10 while `X-Forwarded-For` is present: `TRUSTED_PROXY_CIDRS` is
+  missing.
+
+**Why:** a live review of uplumo.com (2026-10-27) found Google sign-in
+returns counted as "Search engines" (4 of 6), signup/checkout clicks shown as
+WhatsApp/call enquiries by a substring regex that also matched `facebook`,
+`platform` and `hotel`, source shares computed over 63 of 104 visitors, and
+every stored pageview without a country while visitors (115) exceeded sessions
+(83) with only 6 session-less pageviews: the server saw Railway's proxy
+address, not visitors'. No migration: contact clicks keep type `unknown` and
+the UI labels them by name, because 00045 is taken by an open branch and goose
+refuses out-of-order migrations.
+
+**Preserve:** no phone number, email address or form value is ever sent;
+search forms are never enquiries; one visitor's several enquiry actions count
+once in `visitors`; acquisition rows sum to `sessions`; pass-through and
+webmail lists only grow with evidence. No paid provider is involved.
+
+**Trace:** `classify.go`, `enquiry.go`, `repository.go` (`summary`,
+`enquiryNames`), `handler.go` (`behindUntrustedProxy`),
+`httpapi/tracker.js`; tests `classify_test.go`, `enquiry_test.go`,
+`TestSummarizeEnquiriesCountVisitorsOnce`, `TestAcquisitionCountsEverySession`,
+`TestCollectWarnsOnceAboutAnUntrustedProxy`, `frontend/scripts/tracker.test.ts`.
+Production still needs `TRUSTED_PROXY_CIDRS=100.64.0.0/10` (owner action);
+old rows keep their stored channel and no country.

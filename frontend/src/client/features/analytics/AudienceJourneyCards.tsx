@@ -8,7 +8,16 @@ import {
   analyticsClicksQueryOptions,
   type AnalyticsSummary,
 } from "./analyticsApi";
-import { displayPath } from "./presentation";
+import { actionLabel, displayPath } from "./presentation";
+
+// Taps the tracker records on tel:, sms:, mailto: and WhatsApp links. They
+// carry no destination on purpose: the number or address is never sent.
+const contactActions = new Set([
+  "whatsapp_click",
+  "call_click",
+  "sms_click",
+  "email_click",
+]);
 
 export function DailyAudienceCard({
   days,
@@ -201,15 +210,19 @@ export function ClickDestinationsCard({
                     </span>
                   </td>
                   <td className="max-w-64 py-3 pr-3 break-words">
-                    {row.type === "unknown"
-                      ? "Unknown destination"
-                      : `${row.host}${displayPath(row.path)}`}
+                    {contactActions.has(row.name)
+                      ? actionLabel(row.name)
+                      : row.type === "unknown"
+                        ? "Unknown destination"
+                        : `${row.host}${displayPath(row.path)}`}
                     <span className="block text-xs text-muted-foreground">
-                      {row.type === "external"
-                        ? "External · further activity unavailable"
-                        : row.type === "internal"
-                          ? "Internal"
-                          : "No supported target was provided"}
+                      {contactActions.has(row.name)
+                        ? "Contact tap · the number or address is not stored"
+                        : row.type === "external"
+                          ? "External · further activity unavailable"
+                          : row.type === "internal"
+                            ? "Internal"
+                            : "No supported target was provided"}
                     </span>
                   </td>
                   <td className="px-2 text-right tabular-nums">

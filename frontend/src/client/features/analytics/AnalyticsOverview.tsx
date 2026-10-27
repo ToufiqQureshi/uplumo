@@ -2,8 +2,13 @@ import { ArrowDown } from "lucide-react";
 import { Button } from "@/client/components/ui/button";
 import { formatCount } from "@/client/features/search-performance/SearchPerformanceColumns";
 import type { AnalyticsSummary } from "./analyticsApi";
-import { channelRows, displayPath } from "./presentation";
-import { enquiries, mergeEvents, trackingProblem } from "./visitSummary";
+import {
+  actionLabel,
+  channelRows,
+  displayPath,
+  formatShare,
+} from "./presentation";
+import { mergeEvents, trackingProblem } from "./visitSummary";
 
 const SETUP_STEPS = [
   "Copy the latest tracking code",
@@ -25,21 +30,22 @@ export function AnalyticsOverview({
   onOpenTracking: () => void;
 }) {
   const problem = trackingProblem(summary);
-  const leadingChannel = channelRows(summary.channels)[0];
+  const leadingChannel = channelRows(summary.acquisitionChannels)[0];
   let leadingPage = summary.topPages[0];
   for (const page of summary.topPages) {
     if (!leadingPage || page.pageviews > leadingPage.pageviews)
       leadingPage = page;
   }
-  const leads = enquiries(summary.events);
+  const leads = summary.enquiries;
+  const leadNames = leads.actions.map((row) => actionLabel(row.name));
   const merged = mergeEvents(summary.events).filter((row) => row.spellings > 1);
   const aiVisits = summary.aiSources.reduce(
     (total, source) => total + source.visitors,
     0,
   );
-  const rate = summary.visitors
-    ? Math.round((100 * leads.total) / summary.visitors)
-    : 0;
+  // Both counts are visitor-days, and one visitor who taps WhatsApp and Call
+  // counts once, so the rate can never pass 100%.
+  const rate = summary.visitors ? leads.visitors / summary.visitors : 0;
 
   return (
     <div className="space-y-4">
@@ -83,18 +89,19 @@ export function AnalyticsOverview({
           id="visits-verdict"
           className="text-xl leading-snug font-semibold md:text-2xl"
         >
-          {formatCount(summary.visitors)} people visited.{" "}
-          {leads.total > 0
-            ? `${formatCount(leads.total)} tried to contact you (${leads.rows
+          {formatCount(summary.visitors)} visitors came.{" "}
+          {leads.visitors > 0
+            ? `${formatCount(leads.visitors)} tried to contact you (${leadNames
                 .slice(0, 2)
-                .map((row) => row.name)
-                .join(", ")}).`
-            : "Nobody tapped WhatsApp, call or a form yet."}
+                .join(
+                  ", ",
+                )}${leadNames.length > 2 ? ` +${leadNames.length - 2} more` : ""}).`
+            : "Nobody tapped WhatsApp, call, email or a form yet."}
           {leadingChannel ? ` Most came from ${leadingChannel.label}.` : ""}
         </h2>
         <p className="text-sm text-background/80 md:text-base">
-          {leads.total === 0
-            ? "Tag your WhatsApp, call and enquiry buttons so every enquiry is counted."
+          {leads.visitors === 0
+            ? "WhatsApp, phone, email links and forms are counted on their own. Make sure the latest tracking code is on your site."
             : leadingPage
               ? `Your most viewed page is ${displayPath(leadingPage.path)}. Make sure its WhatsApp or call button is visible without scrolling.`
               : "Keep your contact buttons visible on every page."}
@@ -108,16 +115,16 @@ export function AnalyticsOverview({
         <Tile
           label="Visitors"
           value={formatCount(summary.visitors)}
-          hint="People who opened your site"
+          hint="Counted once per day"
         />
         <Tile
           label="Enquiries"
-          value={formatCount(leads.total)}
-          hint="WhatsApp, call and form taps"
+          value={formatCount(leads.count)}
+          hint="WhatsApp, call, email and form taps"
         />
         <Tile
           label="Enquiry rate"
-          value={`${rate}%`}
+          value={formatShare(rate)}
           hint="Visitors who tried to contact you"
         />
         <Tile

@@ -55,6 +55,8 @@ Last updated: 25 Oct 2026
 - [ ] **WordPress (revmerito.com):** add the 2 `.htaccess` lines on Hostinger (the host drops the Authorization header), then connect with a real application password (24 characters).
 - [ ] **Railway GitHub auto-deploy** is broken: Railway shows "Could not load branches". Reconnect GitHub in Railway Account Settings → Connections. Until then, deploy with `railway up` (see `docs/DEPLOY.md`).
 - [ ] Mark the 2 GitGuardian incidents from PR #122 as false positives.
+- [ ] **`TRUSTED_PROXY_CIDRS=100.64.0.0/10` on Railway:** every stored analytics pageview has no country and visitors outnumber sessions because the server sees Railway's proxy address; per-IP rate limits are also shared by everyone. Set it (see `docs/DEPLOY.md`).
+- [ ] **Enquiry definition:** analytics counts WhatsApp, call, SMS, email and form actions as enquiries; sign-up, checkout and purchase clicks are not. Confirm or change (`backend/internal/analytics/enquiry.go`).
 - [ ] Codex PR 2 (SERP briefs and credits) and PR 3 (AI actions) still have to be built.
 
 ## 3. Keys and settings in Railway (names only)

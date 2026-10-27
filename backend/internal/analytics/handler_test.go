@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"strings"
 	"testing"
 )
@@ -78,5 +80,57 @@ func TestCollectPreflight(t *testing.T) {
 		if got := rec.Header().Get(name); got != want {
 			t.Errorf("%s = %q, want %q", name, got, want)
 		}
+	}
+}
+
+func TestBehindUntrustedProxy(t *testing.T) {
+	tests := []struct {
+		name string
+		ip   string
+		xff  string
+		want bool
+	}{
+		{name: "railway edge without trust", ip: "100.64.0.3", xff: "203.0.113.9", want: true},
+		{name: "private proxy", ip: "10.1.2.3", xff: "203.0.113.9", want: true},
+		{name: "ipv4-mapped shared address", ip: "::ffff:100.100.1.1", xff: "203.0.113.9", want: true},
+		{name: "public visitor address", ip: "203.0.113.9", xff: "203.0.113.9", want: false},
+		{name: "private address without a proxy header", ip: "10.1.2.3", want: false},
+		{name: "just outside the shared range", ip: "100.128.0.1", xff: "203.0.113.9", want: false},
+		{name: "unparseable address", ip: "unix", xff: "203.0.113.9", want: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/collect", nil)
+			if tt.xff != "" {
+				r.Header.Set("X-Forwarded-For", tt.xff)
+			}
+			if got := behindUntrustedProxy(tt.ip, r); got != tt.want {
+				t.Errorf("behindUntrustedProxy(%q) = %v, want %v", tt.ip, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCollectWarnsOnceAboutAnUntrustedProxy(t *testing.T) {
+	var logs strings.Builder
+	h := collect(slog.New(slog.NewTextHandler(&logs, nil)), nil, nil)
+	for range 3 {
+		r := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/collect", strings.NewReader("not json"))
+		r.RemoteAddr = "100.64.0.2:5000"
+		r.Header.Set("X-Forwarded-For", "203.0.113.9")
+		h(httptest.NewRecorder(), r)
+	}
+	if got := strings.Count(logs.String(), "TRUSTED_PROXY_CIDRS"); got != 1 {
+		t.Errorf("proxy warnings = %d, want exactly 1:\n%s", got, logs.String())
+	}
+
+	logs.Reset()
+	trusted := collect(slog.New(slog.NewTextHandler(&logs, nil)), nil, []netip.Prefix{netip.MustParsePrefix("100.64.0.0/10")})
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/collect", strings.NewReader("not json"))
+	r.RemoteAddr = "100.64.0.2:5000"
+	r.Header.Set("X-Forwarded-For", "203.0.113.9")
+	trusted(httptest.NewRecorder(), r)
+	if logs.Len() != 0 {
+		t.Errorf("a trusted proxy must not warn:\n%s", logs.String())
 	}
 }

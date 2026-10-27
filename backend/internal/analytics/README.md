@@ -16,6 +16,12 @@ acquisition, sessions, visible page engagement and custom events.
    can call `window.uplumo("Name")`. To count a successful form, booking or
   purchase, call it only after the action succeeds. A button click alone does
   not confirm a completed outcome.
+   Without any tag the tracker also records `call_click`, `sms_click`,
+   `email_click` and `whatsapp_click` (tel:, sms:, mailto: and WhatsApp
+   links, never the number or address), `form_submit` for non-search forms
+   (never field values; `data-uplumo-ignore` skips a form), `file_download`
+   and `outbound_click`. `?uplumo_ignore=1` on any page excludes that browser
+   (`=0` undoes it).
 4. While a page is visible, cumulative engagement time is upserted every 15
    seconds and on page hide/navigation. Duplicate updates keep the maximum
    duration, so retries do not add time twice. Hidden time is excluded; the
@@ -33,6 +39,15 @@ A tab opened by another page starts with a copy of the opener's
 `sessionStorage`; the tracker drops that copied session on the tab's first
 page only (`history.length === 1`, not a reload), so reloads and later pages
 in the same tab stay one session.
+
+Sources follow GA4's default channel rules (`classify.go`): search only on a
+search engine's search hosts, webmail as email, sign-in and payment hosts as
+internal, Android app referrers by app. Every session gets exactly one
+source (an internal first page is direct). Enquiries (`enquiry.go`) are
+WhatsApp, call, SMS, email and form events, counted per distinct visitor-day.
+Behind a proxy, set `TRUSTED_PROXY_CIDRS` (Railway: `100.64.0.0/10`) or
+visitors, countries and rate limits use the proxy's address; `/collect` logs
+a warning once when that happens.
 
 An engaged session has at least 10 seconds of visible page time or two
 pageviews. Time means the page was visible in the browser; it does not prove

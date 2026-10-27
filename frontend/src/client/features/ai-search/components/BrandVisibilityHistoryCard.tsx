@@ -196,14 +196,14 @@ export function BrandVisibilityHistoryCard({
             ) : (
               <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                 {aiSourceRows(analyticsQuery.data.aiSources)
-                  .filter((source) => source.visitors > 0)
+                  .filter((source) => source.count > 0)
                   .map((source) => (
                     <span key={source.key}>
-                      {source.label}: {formatCount(source.visitors)}
+                      {source.label}: {formatCount(source.count)}
                     </span>
                   ))}
                 {aiSourceRows(analyticsQuery.data.aiSources).every(
-                  (source) => source.visitors === 0,
+                  (source) => source.count === 0,
                 ) ? (
                   <span>
                     No AI referral visits tracked in the last 30 days. Install

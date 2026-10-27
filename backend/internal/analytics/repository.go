@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -132,12 +133,52 @@ const eventsInRange = `
 	WHERE site_id = (SELECT id FROM go_analytics_sites WHERE project_id = $1)
 		AND occurred_at >= $2 AND occurred_at < $3`
 
+// customEventsInRange is eventsInRange for custom events.
+const customEventsInRange = `
+	FROM go_analytics_custom_events
+	WHERE site_id = (SELECT id FROM go_analytics_sites WHERE project_id = $1)
+		AND occurred_at >= $2 AND occurred_at < $3`
+
+// maxEventNames bounds how many distinct custom event names one summary
+// inspects for enquiries. A site with more names is mis-tagged (a unique
+// value in every name); the busiest names are checked first.
+const maxEventNames = 1000
+
+// enquiryNames returns the range's custom event names that are enquiries
+// (isEnquiry). Classification runs in Go so the summary, its tests and the
+// tracker share one definition.
+func (r repository) enquiryNames(ctx context.Context, args []any) ([]string, error) {
+	rows, err := r.db.Query(ctx, `SELECT name`+customEventsInRange+`
+		GROUP BY name ORDER BY count(*) DESC, name LIMIT $4`, append(args, maxEventNames)...)
+	if err != nil {
+		return nil, fmt.Errorf("query custom event names: %w", err)
+	}
+	names, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return nil, fmt.Errorf("read custom event names: %w", err)
+	}
+	return slices.DeleteFunc(names, func(name string) bool { return !isEnquiry(name) }), nil
+}
+
 // summary aggregates the project's events in [start, end), whole UTC days,
 // with every query sent in one round trip.
 func (r repository) summary(ctx context.Context, projectID string, start, end time.Time) (Summary, error) {
-	s := Summary{}
+	s := Summary{Enquiries: EnquirySummary{Actions: []EventCount{}}}
 	args := []any{projectID, start, end}
+	enquiryNames, err := r.enquiryNames(ctx, args)
+	if err != nil {
+		return Summary{}, err
+	}
 	b := &pgx.Batch{}
+	if len(enquiryNames) > 0 {
+		b.Queue(`SELECT count(*), count(DISTINCT visitor_hash)`+customEventsInRange+`
+			AND name = ANY($4)`, append(args, enquiryNames)...).
+			QueryRow(func(row pgx.Row) error { return row.Scan(&s.Enquiries.Count, &s.Enquiries.Visitors) })
+		b.Queue(`SELECT name, count(*), count(DISTINCT visitor_hash)`+customEventsInRange+`
+			AND name = ANY($4)
+			GROUP BY name ORDER BY 2 DESC, name LIMIT $5`, append(args, enquiryNames, topLimit)...).
+			Query(collectInto(&s.Enquiries.Actions, pgx.RowToStructByPos[EventCount]))
+	}
 
 	b.Queue(`SELECT count(DISTINCT visitor_hash), count(*)`+eventsInRange, args...).
 		QueryRow(func(row pgx.Row) error { return row.Scan(&s.Visitors, &s.Pageviews) })
@@ -210,10 +251,9 @@ func (r repository) summary(ctx context.Context, projectID string, start, end ti
 			WHERE e.site_id = (SELECT id FROM go_analytics_sites WHERE project_id = $1)
 			ORDER BY e.session_hash, e.occurred_at, e.pageview_hash
 		)
-		SELECT f.channel, count(*)
+		SELECT CASE WHEN f.channel = $4 THEN $5 ELSE f.channel END, count(*)
 		FROM first_page f
-		WHERE f.channel <> $4
-		GROUP BY f.channel ORDER BY 2 DESC, 1`, append(args, channelInternal)...).
+		GROUP BY 1 ORDER BY 2 DESC, 1`, append(args, channelInternal, channelDirect)...).
 		Query(collectInto(&s.AcquisitionChannels, pgx.RowToStructByPos[AcquisitionCount]))
 
 	b.Queue(`WITH sessions AS (

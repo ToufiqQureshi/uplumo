@@ -98,6 +98,11 @@ const summary = {
   referrers: [{ host: "chatgpt.com", visitors: 3 }],
   devices: [{ device: "mobile", visitors: 3 }],
   events: [{ name: "Signup", count: 4, visitors: 2 }],
+  enquiries: {
+    count: 2,
+    visitors: 1,
+    actions: [{ name: "whatsapp_click", count: 2, visitors: 1 }],
+  },
   campaigns: [],
   entries: [],
   exits: [],

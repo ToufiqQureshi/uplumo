@@ -18,12 +18,11 @@ import {
 import { formatCount } from "@/client/features/search-performance/SearchPerformanceColumns";
 import type { AnalyticsSummary } from "./analyticsApi";
 import {
-  aiShareOfVisitors,
+  aiShareOfVisits,
   aiSourceRows,
   channelRows,
   DEVICE_LABELS,
   formatShare,
-  CHANNEL_LABELS,
   type ShareRow,
 } from "./presentation";
 
@@ -97,7 +96,7 @@ function ShareList({ rows }: { rows: ShareRow[] }) {
               ) : null}
             </span>
             <span className="shrink-0 tabular-nums">
-              {formatCount(row.visitors)}{" "}
+              {formatCount(row.count)}{" "}
               <span className="text-muted-foreground">
                 · {formatShare(row.share)}
               </span>
@@ -117,17 +116,17 @@ function ShareList({ rows }: { rows: ShareRow[] }) {
 
 export function AiTrafficCard({
   aiSources,
-  channels,
-}: Pick<AnalyticsSummary, "aiSources" | "channels">) {
+  acquisitionChannels,
+}: Pick<AnalyticsSummary, "aiSources" | "acquisitionChannels">) {
   const rows = aiSourceRows(aiSources);
-  const aiVisitors = rows.reduce((sum, row) => sum + row.visitors, 0);
+  const aiVisitors = rows.reduce((sum, row) => sum + row.count, 0);
   return (
     <CardShell
       title="AI traffic"
       icon={<Bot className="size-4 text-primary" />}
       stamp={
         aiVisitors > 0
-          ? `${formatShare(aiShareOfVisitors(channels))} of your visitors`
+          ? `${formatShare(aiShareOfVisits(acquisitionChannels))} of your visits`
           : undefined
       }
     >
@@ -152,10 +151,17 @@ export function AiTrafficCard({
   );
 }
 
-export function ChannelsCard({ channels }: Pick<AnalyticsSummary, "channels">) {
-  const rows = channelRows(channels);
+/** Where visits come from: each visit's first source, adding up to 100%. */
+export function ChannelsCard({
+  acquisitionChannels,
+  sessions,
+}: Pick<AnalyticsSummary, "acquisitionChannels" | "sessions">) {
+  const rows = channelRows(acquisitionChannels);
   return (
-    <CardShell title="Where visitors come from">
+    <CardShell
+      title="Where visits come from"
+      stamp={sessions > 0 ? `${formatCount(sessions)} visits` : undefined}
+    >
       {rows.length === 0 ? (
         <EmptyState
           variant="plain"
@@ -164,52 +170,6 @@ export function ChannelsCard({ channels }: Pick<AnalyticsSummary, "channels">) {
         />
       ) : (
         <ShareList rows={rows} />
-      )}
-    </CardShell>
-  );
-}
-
-export function AcquisitionPerformanceCard({
-  rows,
-}: {
-  rows: AnalyticsSummary["acquisitionChannels"];
-}) {
-  return (
-    <CardShell title="Sessions by first source">
-      {rows.length === 0 ? (
-        <EmptyState
-          variant="plain"
-          size="sm"
-          title="Session source data is collecting"
-        />
-      ) : (
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-xs text-muted-foreground">
-              <th scope="col" className="pb-2 font-medium">
-                First source
-              </th>
-              <th scope="col" className="pb-2 text-right font-medium">
-                Sessions
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.channel} className="border-t border-border">
-                <td
-                  className="py-2 pr-3"
-                  title={CHANNEL_LABELS[row.channel].hint}
-                >
-                  {CHANNEL_LABELS[row.channel].label}
-                </td>
-                <td className="py-2 text-right tabular-nums">
-                  {formatCount(row.sessions)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
       )}
     </CardShell>
   );
