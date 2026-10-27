@@ -55,31 +55,31 @@ Last updated: 25 Oct 2026
 - [ ] **WordPress (revmerito.com):** add the 2 `.htaccess` lines on Hostinger (the host drops the Authorization header), then connect with a real application password (24 characters).
 - [ ] **Railway GitHub auto-deploy** is broken: Railway shows "Could not load branches". Reconnect GitHub in Railway Account Settings → Connections. Until then, deploy with `railway up` (see `docs/DEPLOY.md`).
 - [ ] Mark the 2 GitGuardian incidents from PR #122 as false positives.
-- [ ] **`TRUSTED_PROXY_CIDRS=100.64.0.0/10` on Railway:** every stored analytics pageview has no country and visitors outnumber sessions because the server sees Railway's proxy address; per-IP rate limits are also shared by everyone. Set it (see `docs/DEPLOY.md`).
 - [ ] **Enquiry definition:** analytics counts WhatsApp, call, SMS, email and form actions as enquiries; sign-up, checkout and purchase clicks are not. Confirm or change (`backend/internal/analytics/enquiry.go`).
 - [ ] Codex PR 2 (SERP briefs and credits) and PR 3 (AI actions) still have to be built.
 
 ## 3. Keys and settings in Railway (names only)
 
-| Variable                                                                     | Status                                                                      | What it is for                                                               |
-| ---------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `DATABASE_URL`                                                               | set                                                                         | Supabase Postgres                                                            |
-| `REDIS_URL`                                                                  | set                                                                         | Railway Redis                                                                |
-| `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `PUBLIC_URL`                        | set                                                                         | Login and links                                                              |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`                                   | set                                                                         | Google login, Search Console, GA4                                            |
-| `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`          | set (**live**, 22 Oct)                                                      | Billing                                                                      |
-| `RAZORPAY_PLAN_ID_BASIC`, `_PRO`, `_AGENCY`                                  | set; presence verified 23 Oct; terms checked at release                     | Monthly plans; each live plan amount must equal `catalog.go` (Agency ₹9,999) |
-| `RAZORPAY_PLAN_ID_BUSINESS`                                                  | set; presence verified 23 Oct; terms checked at release                     | Business ₹4,999 monthly plan; without it Business cannot be bought           |
-| `LOOPS_API_KEY` + 3 `LOOPS_TRANSACTIONAL_*_ID`                               | set                                                                         | Email                                                                        |
-| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_CONTENT_IMAGE_BUCKET` | set (14 Oct)                                                                | Content editor images (`content-images` bucket)                              |
-| `DATAFORSEO_API_KEY`                                                         | **set 14 Oct**                                                              | SEO data; owner confirms working 23 Oct; intentional $2/day cap              |
-| `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`                                     | set                                                                         | AI writing and assistant                                                     |
-| `PAGESPEED_API_KEY`                                                          | **set 15 Oct**                                                              | Lighthouse in Site Audit (free, 200 checks per workspace per day)            |
-| `CRUX_API_KEY`                                                               | **set 15 Oct** (same key)                                                   | Real-visitor Core Web Vitals                                                 |
-| `SENTRY_DSN`, `STAFF_EMAILS`, `PORT`                                         | set                                                                         | Errors, staff access                                                         |
-| `PROVIDER_DAILY_LIMIT_USD`                                                   | set; **keep until the paid-call bugs are fixed**, then the owner removes it | Global emergency spending brake                                              |
-| `TURNSTILE_SECRET_KEY`                                                       | not set                                                                     | Bot check on sign-up                                                         |
-| `GOOGLE_TOKEN_ENCRYPTION_KEY`                                                | not set (decision above)                                                    | —                                                                            |
+| Variable                                                                     | Status                                                                      | What it is for                                                                                       |
+| ---------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                                                               | set; password rotated and `pool_max_conns=5` added 27 Oct                   | Supabase Postgres (session pooler). The cap lets the old and new server both connect during a deploy |
+| `TRUSTED_PROXY_CIDRS`                                                        | set to Railway's edge range, 27 Oct; countries verified live                | Real visitor IP for analytics and per-IP rate limits (`docs/DEPLOY.md`)                              |
+| `REDIS_URL`                                                                  | set                                                                         | Railway Redis                                                                                        |
+| `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `PUBLIC_URL`                        | set                                                                         | Login and links                                                                                      |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`                                   | set                                                                         | Google login, Search Console, GA4                                                                    |
+| `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`          | set (**live**, 22 Oct)                                                      | Billing                                                                                              |
+| `RAZORPAY_PLAN_ID_BASIC`, `_PRO`, `_AGENCY`                                  | set; presence verified 23 Oct; terms checked at release                     | Monthly plans; each live plan amount must equal `catalog.go` (Agency ₹9,999)                         |
+| `RAZORPAY_PLAN_ID_BUSINESS`                                                  | set; presence verified 23 Oct; terms checked at release                     | Business ₹4,999 monthly plan; without it Business cannot be bought                                   |
+| `LOOPS_API_KEY` + 3 `LOOPS_TRANSACTIONAL_*_ID`                               | set                                                                         | Email                                                                                                |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_CONTENT_IMAGE_BUCKET` | set (14 Oct)                                                                | Content editor images (`content-images` bucket)                                                      |
+| `DATAFORSEO_API_KEY`                                                         | **set 14 Oct**                                                              | SEO data; owner confirms working 23 Oct; intentional $2/day cap                                      |
+| `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`                                     | set                                                                         | AI writing and assistant                                                                             |
+| `PAGESPEED_API_KEY`                                                          | **set 15 Oct**                                                              | Lighthouse in Site Audit (free, 200 checks per workspace per day)                                    |
+| `CRUX_API_KEY`                                                               | **set 15 Oct** (same key)                                                   | Real-visitor Core Web Vitals                                                                         |
+| `SENTRY_DSN`, `STAFF_EMAILS`, `PORT`                                         | set                                                                         | Errors, staff access                                                                                 |
+| `PROVIDER_DAILY_LIMIT_USD`                                                   | set; **keep until the paid-call bugs are fixed**, then the owner removes it | Global emergency spending brake                                                                      |
+| `TURNSTILE_SECRET_KEY`                                                       | not set                                                                     | Bot check on sign-up                                                                                 |
+| `GOOGLE_TOKEN_ENCRYPTION_KEY`                                                | not set (decision above)                                                    | —                                                                                                    |
 
 Railway project `jubilant-kindness`, service `uplumo`. Service settings: healthcheck `/readyz`, region Singapore, 1 replica.
 
@@ -344,3 +344,15 @@ Owner-approved scope: one focused PR adds optional 180-day browser recognition a
 - **Why:** These specs fail when a page load, reload, typing, autosave or double click buys provider work, but no CI job ran them, so a regression could ship. Owner asked for it on 26 Oct.
 - **Preserve:** No real provider is called (routes are mocked). The other specs stay local-only until they are needed; the job uses the runner's Chrome (the config's default `chrome` channel).
 - **Trace:** `.github/workflows/ci.yml`; all 14 tests in these specs passed locally in about 3 minutes. Agent/CI rule change: called out in the PR.
+
+## Production settings fixed on 27 October
+
+- `TRUSTED_PROXY_CIDRS` set: analytics now sees visitors' real addresses (countries
+  showed live right after); before it, every visitor shared Railway's proxy address.
+- Supabase session pooler: pool size raised from 15 to 30 (Nano compute, 60
+  Postgres connections) and `DATABASE_URL` capped at `pool_max_conns=5`. Two
+  deploys failed their health check because the running server held all 15
+  pooler slots and the new one could not connect; pgx's default pool size
+  follows the CPU count. Keep a cap in `DATABASE_URL` whenever the pool or
+  compute changes.
+- The database password was rotated after it appeared in a chat screenshot.
