@@ -17,3 +17,15 @@ Connects Google accounts, selects GA4 and Search Console properties, and disconn
 
 - `ga4ConnectionsApi.test.ts`
 - `googleLinkError.test.ts`
+
+## GA4 picker says why properties are missing
+
+- **Decision:** the property picker shows "Google did not give Uplumo
+  permission to read Analytics… Reconnect and tick the Google Analytics box"
+  with a Reconnect button for `missing_permission`, a contact-support line for
+  `api_disabled`, and the old "Couldn't load properties / Try again" otherwise.
+- **Why:** owner could not connect GA4 and the picker gave no reason.
+- **Preserve:** the reasons come from the API (`unavailableReason`); the UI
+  never promises an alert that does not exist.
+- **Trace:** `GooglePropertyPicker.tsx`, `ga4ConnectionsApi.ts`,
+  `googleProviders.ts`; backend `backend/internal/ga4/decision.md`.

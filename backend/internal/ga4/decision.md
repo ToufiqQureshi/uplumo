@@ -51,3 +51,22 @@ Update this file with the changed decision and its reason in the same commit.
 Preserve tenant isolation, goal denominators, missing-data semantics, cost bounds
 and failure/disable regressions unless the change explicitly revises and verifies
 them. Automated fixtures do not replace real-account Google reconciliation.
+
+## Say why GA4 properties cannot be listed
+
+- **Decision:** `ListProperties` logs every property-list failure (status,
+  reason) and returns `unavailableReason`: `missing_permission` when Google
+  answers `ACCESS_TOKEN_SCOPE_INSUFFICIENT` (the user unticked Analytics on
+  the consent screen), `api_disabled` for `SERVICE_DISABLED`, otherwise empty
+  (temporary). `google.readAPIError` now also reads reasons from
+  `error.details` (`google.rpc.ErrorInfo`), where the Analytics Admin and
+  Data APIs put them.
+- **Why:** the owner could not connect GA4 and saw only "Couldn't load
+  properties": the error was swallowed, nothing was logged, and Admin API
+  reasons were never parsed.
+- **Preserve:** only the two known reasons leave the server; no Google
+  response text is exposed. A missing permission offers Reconnect.
+- **Trace:** `connections.go` (`unavailableReason`), `google/api.go`
+  (`readAPIError`), `TestListGA4PropertiesSaysWhyPropertiesAreUnavailable`,
+  `TestAPIErrorExposesOnlyKnownReasonAndRetryDelay`; UI in
+  `frontend/src/client/features/integrations/GooglePropertyPicker.tsx`.

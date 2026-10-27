@@ -28,6 +28,8 @@ const propertyAccountSchema = z.object({
   email: nullableText,
   requiresReconnect: z.boolean(),
   propertiesUnavailable: z.boolean(),
+  // Why properties could not be listed; absent when it may be temporary.
+  unavailableReason: z.enum(["missing_permission", "api_disabled"]).optional(),
   properties: z.array(propertySchema),
 });
 

@@ -81,6 +81,9 @@ func TestAPIErrorExposesOnlyKnownReasonAndRetryDelay(t *testing.T) {
 		wantReason             string
 	}{
 		{name: "disabled service", body: `{"error":{"errors":[{"reason":"SERVICE_DISABLED"}]}}`, status: http.StatusForbidden, wantReason: "SERVICE_DISABLED"},
+		{name: "disabled service in details", body: `{"error":{"code":403,"status":"PERMISSION_DENIED","details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"SERVICE_DISABLED"}]}}`, status: http.StatusForbidden, wantReason: "SERVICE_DISABLED"},
+		{name: "missing scope", body: `{"error":{"code":403,"status":"PERMISSION_DENIED","details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"ACCESS_TOKEN_SCOPE_INSUFFICIENT"}]}}`, status: http.StatusForbidden, wantReason: "ACCESS_TOKEN_SCOPE_INSUFFICIENT"},
+		{name: "other reason stays hidden", body: `{"error":{"details":[{"reason":"SOMETHING_ELSE"}]}}`, status: http.StatusForbidden, wantReason: ""},
 		{name: "quota retry", body: `{"error":{"message":"private provider text"}}`, retryAfter: "60", status: http.StatusTooManyRequests, wantRetry: 60},
 	} {
 		t.Run(test.name, func(t *testing.T) {

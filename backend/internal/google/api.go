@@ -206,25 +206,47 @@ func readAPIError(resp *http.Response) APIError {
 	if err != nil {
 		return APIError{}
 	}
+	// Older APIs list reasons in error.errors; newer ones (Analytics Admin,
+	// Analytics Data) in error.details as google.rpc.ErrorInfo.
 	var body struct {
 		Error struct {
 			Errors []struct {
 				Reason string `json:"reason"`
 			} `json:"errors"`
+			Details []struct {
+				Reason string `json:"reason"`
+			} `json:"details"`
 		} `json:"error"`
 	}
 	if err := json.Unmarshal(data, &body); err != nil {
 		return APIError{}
 	}
 	result := APIError{}
+	reasons := make([]string, 0, len(body.Error.Errors)+len(body.Error.Details))
 	for _, item := range body.Error.Errors {
-		if item.Reason == "SERVICE_DISABLED" {
-			result.Reason = item.Reason
+		reasons = append(reasons, item.Reason)
+	}
+	for _, item := range body.Error.Details {
+		reasons = append(reasons, item.Reason)
+	}
+	for _, reason := range reasons {
+		if reason == ReasonServiceDisabled || reason == ReasonScopeInsufficient {
+			result.Reason = reason
 			break
 		}
 	}
 	return result
 }
+
+// Google error reasons APIError exposes; any other reason stays empty so no
+// provider text leaks.
+const (
+	// ReasonServiceDisabled: the API is turned off in the Google Cloud project.
+	ReasonServiceDisabled = "SERVICE_DISABLED"
+	// ReasonScopeInsufficient: the user did not grant the scope the call needs
+	// (for example they unticked Analytics on Google's consent screen).
+	ReasonScopeInsufficient = "ACCESS_TOKEN_SCOPE_INSUFFICIENT"
+)
 
 func parseRetryAfterSeconds(raw string) int {
 	seconds, err := strconv.Atoi(raw)

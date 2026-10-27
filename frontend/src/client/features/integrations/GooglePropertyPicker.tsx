@@ -25,6 +25,7 @@ export type GooglePickerAccount = {
   email: string | null;
   requiresReconnect: boolean;
   unavailable?: boolean;
+  unavailableReason?: "missing_permission" | "api_disabled";
   properties: Property[];
 };
 type SecondaryAction = {
@@ -227,6 +228,28 @@ export function GooglePropertyPicker({
                             {linking ? "Opening Google…" : "Reconnect"}
                           </Button>
                         </div>
+                      ) : account.unavailableReason === "missing_permission" ? (
+                        <div className="flex flex-wrap items-center justify-between gap-2 px-2 pb-2 text-sm">
+                          <span className="text-muted-foreground">
+                            Google did not give Uplumo permission to read
+                            Analytics. Reconnect and tick the Google Analytics
+                            box on Google&rsquo;s screen.
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="xs"
+                            onClick={onReconnect}
+                            disabled={linking}
+                            aria-busy={linking}
+                          >
+                            {linking ? "Opening Google…" : "Reconnect"}
+                          </Button>
+                        </div>
+                      ) : account.unavailableReason === "api_disabled" ? (
+                        <p className="px-2 pb-3 text-sm text-muted-foreground">
+                          Google Analytics is not switched on for Uplumo yet.
+                          Please contact support so we can turn it on.
+                        </p>
                       ) : account.unavailable ? (
                         <div className="flex flex-wrap items-center justify-between gap-2 px-2 pb-2 text-sm">
                           <span className="text-muted-foreground">
