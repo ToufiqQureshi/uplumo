@@ -469,24 +469,23 @@ func (s *Service) GetMCPPerformance(ctx context.Context, organizationID, project
 	// Google drops anonymized (rare) queries from query rows, so adding them
 	// up undercounts: a site with 3 clicks can show 0 on every query. Send the
 	// property total for the same range and filters so the total is never
-	// derived from rows. One extra free Search Console read, first page only.
+	// derived from rows: daily rows (Search Analytics needs a dimension, and
+	// date rows keep every click), summed like the Search Performance report.
+	// One extra free Search Console read, first page only. If it fails the
+	// rows are still returned, with a warning not to add them up.
 	if slices.Contains(input.Dimensions, "query") && startRow == 0 {
 		totalRequest := request
-		totalRequest.Dimensions, totalRequest.RowLimit, totalRequest.StartRow = nil, 1, 0
-		totalRows, err := client.QuerySearchAnalytics(ctx, connection.SiteURL, totalRequest)
-		if err != nil {
-			return nil, mapProviderError(err)
-		}
-		total := map[string]any{"clicks": 0.0, "impressions": 0.0, "ctr": 0.0}
-		if len(totalRows) > 0 {
-			row := totalRows[0]
-			total = map[string]any{"clicks": row.Clicks, "impressions": row.Impressions, "ctr": mathRound(row.CTR, 4)}
+		totalRequest.Dimensions, totalRequest.RowLimit, totalRequest.StartRow = []string{"date"}, dailyRowLimit, 0
+		result["totalsNote"] = "query rows leave out anonymized queries, so their sum undercounts; the property total could not be read right now."
+		if dailyRows, totalsErr := client.QuerySearchAnalytics(ctx, connection.SiteURL, totalRequest); totalsErr == nil {
+			sum := sumSearchTotals(dailyRows)
+			total := map[string]any{"clicks": sum.Clicks, "impressions": sum.Impressions, "ctr": mathRound(sum.CTR, 4)}
 			if typeValue != "discover" && typeValue != "googleNews" {
-				total["position"] = mathRound(row.Position, 1)
+				total["position"] = mathRound(sum.Position, 1)
 			}
+			result["totals"] = total
+			result["totalsNote"] = "totals include anonymized queries that Google leaves out of query rows; use totals, not a sum of rows, for overall clicks and impressions."
 		}
-		result["totals"] = total
-		result["totalsNote"] = "totals include anonymized queries that Google leaves out of query rows; use totals, not a sum of rows, for overall clicks and impressions."
 	}
 	return result, nil
 }

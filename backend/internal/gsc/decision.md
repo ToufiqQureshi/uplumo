@@ -67,14 +67,19 @@ still required before claiming live Google reporting works for a customer.
 
 ## MCP and SAM totals include anonymized searches
 
-- **Decision:** `GetMCPPerformance` adds `totals` (no-dimension read with the
-  same range, filters, type and data state) and `totalsNote` when the rows are
-  split by `query`, on the first page only.
+- **Decision:** `GetMCPPerformance` adds `totals` (daily rows for the same
+  range, filters, type and data state, summed like the report) and
+  `totalsNote` when the rows are split by `query`, on the first page only. If
+  that read fails, rows are still returned with a warning not to sum them.
+  Search Analytics refuses a request without a dimension, which is why the
+  first version (no dimension) made every SAM Search Console answer fail in
+  production; the test now runs every request through `ValidateSearchRequest`.
 - **Why:** SAM answered "0 clicks in 28 days" for uplumo.com while the report
   showed 3, because it added up query rows and Google leaves anonymized
   searches out of them.
 - **Preserve:** one extra free read, only for query rows; later pages and
   page/country/device rows do not repeat it.
 - **Trace:** `performance.go`, `TestGetMCPPerformanceAddsPropertyTotalsForQueryRows`,
-  `TestGetMCPPerformanceSkipsTotalsWithoutQueriesOrOnLaterPages`;
+  `TestGetMCPPerformanceSkipsTotalsWithoutQueriesOrOnLaterPages`,
+  `TestGetMCPPerformanceKeepsRowsWhenTotalsFail`;
   text line in `mcp/gsc_tools.go`.
