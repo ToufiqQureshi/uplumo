@@ -17,6 +17,11 @@ feelings, business calls, priorities, corrections. Read it after
 
 ---
 
+## 27 Oct 2026: analytics must be accurate and better than GA4 (Claude)
+
+- Owner asked to test every number and button on Analytics live, then fix all of it and make tracking smarter than GA4, after reading GA4 docs, without building useless features. He wants speed ("jaldi").
+- Shipped in PR #234. Owner still has to set TRUSTED_PROXY_CIDRS on Railway and confirm that sign-ups and checkouts are not enquiries.
+
 ## 26 Oct 2026: theme means public pages too (Codex)
 
 - Owner corrected that the theme control was missing from blogs and public
