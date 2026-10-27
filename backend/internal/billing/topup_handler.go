@@ -10,11 +10,17 @@ import (
 
 func mountTopUps(mux *http.ServeMux, d Deps) {
 	mux.Handle("GET /api/v1/billing/topups", d.WithSession(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, ok := billingUser(w, r, d.Service)
+		user, ok := billingUser(w, r, d.Service)
 		if !ok {
 			return
 		}
-		httpx.WriteJSON(w, 200, d.Service.TopUpPacks())
+		offers, err := d.Service.TopUpOffers(r.Context(), user.OrganizationID)
+		if err != nil {
+			d.Logger.ErrorContext(r.Context(), "list top-up packs", "err", err)
+			httpx.WriteError(w, 500, "internal", "Could not load packs.")
+			return
+		}
+		httpx.WriteJSON(w, 200, offers)
 	})))
 	mux.Handle("POST /api/v1/billing/topups/checkout", d.WithSession(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user, ok := billingUser(w, r, d.Service)
@@ -22,14 +28,14 @@ func mountTopUps(mux *http.ServeMux, d Deps) {
 			return
 		}
 		if user.Role != "owner" && user.Role != "admin" {
-			httpx.WriteError(w, 403, "forbidden", "Only workspace owners and admins can buy credits.")
+			httpx.WriteError(w, 403, "forbidden", "Only workspace owners and admins can buy packs.")
 			return
 		}
 		var in struct {
 			PackID string `json:"packId"`
 		}
 		if err := httpx.DecodeJSONLimit(r.Body, 1024, &in); err != nil {
-			httpx.WriteError(w, 400, "invalid_request", "Choose a credit pack.")
+			httpx.WriteError(w, 400, "invalid_request", "Choose a pack.")
 			return
 		}
 		out, err := d.Service.CheckoutTopUp(r.Context(), user.OrganizationID, in.PackID)

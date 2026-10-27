@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/toufiqqureshi/uplumo/backend/internal/plans"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/pgdb"
 )
 
@@ -85,6 +86,29 @@ func (r repository) lockCheckout(ctx context.Context, orgID string) (q querier, 
 		}
 		conn.Release()
 	}, nil
+}
+
+// addOnSites returns the websites orgID's running site add-ons add now, and
+// the most its add-ons ever added at the same time. A workspace keeps the
+// sites it added under an add-on after the add-on runs out, but cannot add
+// new ones; buying many add-ons one after another does not stack.
+func (r repository) addOnSites(ctx context.Context, orgID string) (active, peak int, err error) {
+	err = r.db.QueryRow(ctx, `
+		WITH addon AS (
+			SELECT sites, sites_until FROM go_billing_topups
+			WHERE organization_id = $1 AND status = 'paid' AND sites > 0 AND sites_until IS NOT NULL)
+		SELECT
+			COALESCE((SELECT sum(sites) FROM addon WHERE sites_until > now()), 0),
+			COALESCE((SELECT max(running) FROM (
+				SELECT (SELECT sum(b.sites) FROM addon b
+					WHERE b.sites_until >= a.sites_until AND b.sites_until - make_interval(days => $2) < a.sites_until) AS running
+				FROM addon a) totals), 0)`,
+		orgID, plans.SiteAddOnDays,
+	).Scan(&active, &peak)
+	if err != nil {
+		return 0, 0, fmt.Errorf("load site add-ons of organization %s: %w", orgID, err)
+	}
+	return active, peak, nil
 }
 
 // subscription returns orgID's subscription, and false when it has none.

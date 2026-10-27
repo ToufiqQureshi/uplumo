@@ -67,7 +67,7 @@ DataForSEO SERP; Postgres configs/runs/tasks/snapshots; Redis jobs/locks; billin
 - **Decision:** `create_rank_tracker` defaults to depth 10, the lowest supported
   depth and one allowed on every paid tier. Users can request a deeper crawl
   explicitly when their plan allows it.
-- **Why:** The old default of 40 made the tool fail for Solo accounts, whose
+- **Why:** The old default of 40 made the tool fail for Basic accounts, whose
   maximum depth is 30, before the user had a chance to choose a valid setting.
 - **Preserve:** Creating a tracker remains manual by default and starts no paid
   check; configured checks still pass through plan and credit guards.

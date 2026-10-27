@@ -22,7 +22,7 @@ PORT=8080 go run ./cmd/server
 | `PORT` | no | Listen port, default `8080`. |
 | `TRUSTED_PROXY_CIDRS` | no | Comma-separated CIDRs of reverse proxies that overwrite `CF-Connecting-IP` and append `X-Forwarded-For`. If unset, forwarded IP headers are ignored. Never include untrusted client ranges. |
 | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` | no | Set all three, with at least one plan id below, or none. Without them billing status and credits remain read-only, and checkout, cancellation and webhooks answer `503`. The webhook secret belongs to the webhook pointed at `/webhooks/razorpay`. |
-| `RAZORPAY_PLAN_ID_BASIC`, `RAZORPAY_PLAN_ID_PRO`, `RAZORPAY_PLAN_ID_BUSINESS`, `RAZORPAY_PLAN_ID_AGENCY` | no | The monthly Razorpay plan (`plan_...`) that bills each plan. Its amount must equal the price in `internal/plans/catalog.go`. A plan without an id cannot be bought. |
+| `RAZORPAY_PLAN_ID_BASIC`, `RAZORPAY_PLAN_ID_PRO`, `RAZORPAY_PLAN_ID_BUSINESS` | no | The monthly Razorpay plan (`plan_...`) that bills each plan. Its amount must equal the price in `internal/plans/catalog.go`. A plan without an id cannot be bought. |
 | `PROVIDER_DAILY_LIMIT_USD` | no | Emergency limit, default 100, 1 to 10000. Once today's (UTC) DataForSEO and AI spend across every workspace reaches it, all paid lookups and AI answer `usage_paused` until midnight UTC. There is no per-workspace daily cap; set this emergency brake above expected aggregate usage. Monthly credits per plan are in `internal/plans/catalog.go`. |
 | `STAFF_EMAILS` | no | Comma-separated addresses. A workspace owned by one of them, verified, gets every feature with no limits and pays nothing. For the owner and the team only. |
 | `DATAFORSEO_API_KEY` | no | Base64 `login:password`. Without it keywords, rank tracking, backlinks, domain and AI search answer `503`. |
@@ -112,7 +112,7 @@ are in its own `internal/<feature>/README.md` and, where one exists,
   See `internal/domain/README.md`.
 - `POST /api/v1/projects/{projectId}/site-connection/get`, `/save`,
   `/delete` and `.../content/drafts/{draftId}/publish`: connect the
-  project's WordPress site and publish drafts to it; `402` below Solo when
+  project's WordPress site and publish drafts to it; `402` below Basic when
   billing is configured. See `internal/sitepublish/README.md`.
 - `/api/v1/...`: needs a valid session cookie, otherwise 401.
   `/api/v1/projects/{projectId}/...` also needs membership of the project's
@@ -188,7 +188,7 @@ Hosts compare case-insensitively without `www.`. The tables are in
 
 ## Billing
 
-Solo (`basic`), Growth (`pro`), Business (`business`) and Agency (`agency`), each sold as a Razorpay subscription per workspace
+Basic (`basic`), Pro (`pro`) and Business (`business`), each sold as a Razorpay subscription per workspace
 (organization). What they cost and include is in `internal/plans/README.md`.
 More, including cancelling and the credit ledger, is in
 `internal/billing/README.md`.

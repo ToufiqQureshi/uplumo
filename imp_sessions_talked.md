@@ -17,6 +17,14 @@ feelings, business calls, priorities, corrections. Read it after
 
 ---
 
+## 27 Oct 2026: three plans, credit packs, "jitna use utne credit" (Claude)
+
+- Owner: the whole SaaS runs on credits; sell only Basic, Pro, Business (Agency removed, no customers on it). Pro 10 sites, Business 20 sites; above that a +5 sites add-on (Rs 999, owner chose; built as 30 days from payment so a late buy is not wasted).
+- Credit packs only for Pro and Business (Rs 1,499 / 5,000 and Rs 3,999 / 15,000); pack credits last while the plan is active and end with it (owner's choice). Must be stated on legal pages.
+- White-label moves to Business. Limits must stay locked in code.
+- "credit sahi se cut hone chahiye ... double payment issue solve it": found late UPI authorizations not captured (12-minute auto-capture) and second-subscription charges needing manual refunds; both fixed in the PR.
+- Owner wants it fast, one PR; asked to wait while a deploy/merge ran, then continue.
+
 ## 27 Oct 2026: analytics must be accurate and better than GA4 (Claude)
 
 - Owner asked to test every number and button on Analytics live, then fix all of it and make tracking smarter than GA4, after reading GA4 docs, without building useless features. He wants speed ("jaldi").

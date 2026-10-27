@@ -100,6 +100,7 @@ type page struct {
 	Phone       string
 	Compare     []CompareRow
 	Plans       []Plan
+	Packs       []PackOffer
 	FAQ         []QA
 	JSONLD      any
 	// Posts is the blog index; Post is the post on a post page.
@@ -172,22 +173,22 @@ func build(publicURL *url.URL, blogFiles fs.FS) (*Site, error) {
 	base := page{
 		OGImage: origin + ogImage, SignUp: signUpPath, Support: SupportEmail, Updated: policyUpdated,
 		Operator: operatorName, Address: operatorAddress, Phone: supportPhone,
-		Plans: plans, Compare: comparison(),
+		Plans: plans, Packs: packOffers(), Compare: comparison(),
 	}
 
 	landing := base
 	landing.Path = "/"
 	landing.Title = "Uplumo: SEO and AI search analytics with honest INR pricing"
-	landing.Description = "Track Google rankings, audit your site and see where AI assistants mention you and send visitors. Choose Free, Solo, Growth, Business or Agency pricing in rupees."
+	landing.Description = "Track Google rankings, audit your site and see where AI assistants mention you and send visitors. Choose Free, Basic, Pro or Business pricing in rupees."
 	landing.Canonical = origin + "/"
 	landing.FAQ = landingFAQ()
 	landing.JSONLD = jsonLD(origin, landing.Description, plans)
 
 	pricing := base
 	pricing.Path = "/pricing"
-	pricing.Title = "Uplumo pricing: Free, Solo, Growth, Business and Agency plans"
-	pricing.Description = fmt.Sprintf("Start free. Solo is %s, Growth is %s, Business is %s and Agency is %s a month in rupees. See what each plan includes, cancel in one click.",
-		formatINR(price(planCatalog.Basic)), formatINR(price(planCatalog.Pro)), formatINR(price(planCatalog.Business)), formatINR(price(planCatalog.Agency)))
+	pricing.Title = "Uplumo pricing: Free, Basic, Pro and Business plans"
+	pricing.Description = fmt.Sprintf("Start free. Basic is %s, Pro is %s and Business is %s a month in rupees. Buy extra credits when you need them, cancel in one click.",
+		formatINR(price(planCatalog.Basic)), formatINR(price(planCatalog.Pro)), formatINR(price(planCatalog.Business)))
 	pricing.Canonical = origin + "/pricing"
 	pricing.FAQ = pricingFAQ()
 	pricing.JSONLD = jsonLD(origin, pricing.Description, plans)
@@ -464,6 +465,13 @@ func planLimits(plan planCatalog.Definition) []string {
 		fmt.Sprintf("%d %s", plan.Sites, plural(plan.Sites, "website", "websites")),
 		fmt.Sprintf("%d %s", plan.Members, plural(plan.Members, "team member", "team members")),
 	}
+	if plan.Allows(planCatalog.SiteAddOn) {
+		for _, pack := range planCatalog.Packs() {
+			if pack.Feature == planCatalog.SiteAddOn {
+				limits = append(limits, fmt.Sprintf("Add %d more websites for %s a month", pack.Sites, formatINR(int(pack.PriceINR))))
+			}
+		}
+	}
 	if plan.TrackedKeywords > 0 {
 		limits = append(limits, fmt.Sprintf("%s tracked keywords, checked %s", formatNumber(int64(plan.TrackedKeywords)), plan.RankSchedule))
 	}
@@ -505,6 +513,8 @@ func includedTools(plan planCatalog.Definition) []string {
 		{planCatalog.AIVisibility, "AI Visibility"},
 		{planCatalog.AIWriting, "AI writing assistant"},
 		{planCatalog.WhiteLabel, "White-label reports"},
+		{planCatalog.CreditPacks, "Extra credit packs"},
+		{planCatalog.SiteAddOn, "Extra websites add-on"},
 	} {
 		if plan.Allows(item.feature) {
 			tools = append(tools, item.label)
@@ -582,6 +592,8 @@ func comparison() []CompareRow {
 		row("IndexNow: tell Bing and other engines about new pages (not Google)", included(planCatalog.IndexNow)),
 		row("AI writing assistant", included(planCatalog.AIWriting)),
 		row("White-label reports", included(planCatalog.WhiteLabel)),
+		row("Buy extra credits", included(planCatalog.CreditPacks)),
+		row("Add more websites", included(planCatalog.SiteAddOn)),
 		row("Monthly price", func(plan planCatalog.Definition) string {
 			if plan.PriceINR == 0 {
 				return "Free"
@@ -610,25 +622,55 @@ func pricingFAQ() []QA {
 	basic, _ := planCatalog.Get(planCatalog.Basic)
 	pro, _ := planCatalog.Get(planCatalog.Pro)
 	business, _ := planCatalog.Get(planCatalog.Business)
-	agency, _ := planCatalog.Get(planCatalog.Agency)
+	sites, _ := planCatalog.GetPack("sites_5")
 	return []QA{
 		{"Is the Free plan really free?", "Yes. It costs " + formatINR(0) +
 			" and needs no card. Paid plans start at " + formatINR(basic.PriceINR) + " a month."},
-		{"What is the difference between Solo and Growth?", "Solo is for ranking one site: keyword research, rank tracking and your Google data. " +
-			"Growth adds what you need to beat competitors: backlink and competitor research, AI Visibility, " +
+		{"What is the difference between Basic and Pro?", "Basic is for ranking one site: keyword research, rank tracking and your Google data. " +
+			"Pro adds what you need to beat competitors: backlink and competitor research, AI Visibility, " +
 			strconv.Itoa(pro.Sites) + " websites, " + strconv.Itoa(pro.TrackedKeywords) + " tracked keywords and " + strconv.Itoa(pro.Members) + " team members."},
-		{"Business or Agency?", "Both include everything in Growth. Business is for several brands or a freelancer's clients: " +
-			strconv.Itoa(business.Sites) + " websites and " + strconv.Itoa(business.Members) + " team members. Agency adds white-label reports " +
-			"with your own name, logo and colour, " + strconv.Itoa(agency.Sites) + " websites and " + strconv.Itoa(agency.Members) + " team members."},
-		{"How do site limits work?", fmt.Sprintf("Free and Solo include one active website, Growth includes %d, Business %d and Agency %d. "+
-			"Archiving a site frees a slot; your data stays in the workspace.", pro.Sites, business.Sites, agency.Sites)},
+		{"Who is Business for?", "Several brands, freelancers and agencies. It includes everything in Pro, plus white-label reports with your own name, logo and colour, " +
+			strconv.Itoa(business.Sites) + " websites, " + strconv.Itoa(business.Members) + " team members and " + formatNumber(business.MonthlyCredits) + " credits a month."},
+		{"How do site limits work?", fmt.Sprintf("Free and Basic include one active website, Pro includes %d and Business %d. "+
+			"On Business you can add %d more websites for %s, valid for %d days from payment. "+
+			"Archiving a site frees a slot; your data stays in the workspace.", pro.Sites, business.Sites, sites.Sites, formatINR(int(sites.PriceINR)), planCatalog.SiteAddOnDays)},
+		{"What happens when my credits run out?", "Paid data and AI actions stop until you have credits again: wait for the next month's credits, " +
+			"or, on Pro and Business, buy a credit pack from Billing. Pack credits are used after your monthly credits, " +
+			"last while your paid plan is active and expire when the plan ends. Packs are not refundable."},
 		{"How do I cancel a paid plan?", "In one click from Billing. You keep the plan until the end of the month you paid for, " +
-			"and you are never charged again."},
+			"and you are never charged again. Credit packs expire when the plan ends."},
 		{"How do I change plan?", "Write to us from your account's email address and we move you. Changing plan from Billing is not built yet."},
 		{"Will the price change without notice?", "No. If prices ever change, we tell you before your next bill " +
 			"and you can cancel in one click."},
 		{"How do I pay?", "Through Razorpay with UPI, cards or netbanking. Prices are in Indian rupees."},
 	}
+}
+
+// PackOffer is one credit pack or add-on as the pricing page shows it.
+type PackOffer struct {
+	Name, Price, Detail, Who string
+}
+
+// packOffers describes every one-time purchase from the catalog.
+func packOffers() []PackOffer {
+	var offers []PackOffer
+	for _, pack := range planCatalog.Packs() {
+		var who []string
+		for _, plan := range planCatalog.Catalog() {
+			if plan.Allows(pack.Feature) {
+				who = append(who, plan.Name)
+			}
+		}
+		detail := "Used after your monthly credits. Lasts while your paid plan is active and expires when it ends."
+		if pack.Sites > 0 {
+			detail = fmt.Sprintf("Raises your website limit by %d for %d days from payment.", pack.Sites, planCatalog.SiteAddOnDays)
+		}
+		offers = append(offers, PackOffer{
+			Name: pack.Name, Price: formatINR(int(pack.PriceINR)), Detail: detail,
+			Who: "On " + strings.Join(who, " and "),
+		})
+	}
+	return offers
 }
 
 // jsonLD describes the organization and the product, with each plan as an

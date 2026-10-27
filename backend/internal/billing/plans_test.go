@@ -12,7 +12,7 @@ import (
 )
 
 // Not testPlanID, which a test below uses as a plan nobody configured.
-var tierPlanIDs = map[string]string{PlanBasic: "plan_tier_basic", PlanPro: "plan_tier_pro", PlanAgency: "plan_tier_agency"}
+var tierPlanIDs = map[string]string{PlanBasic: "plan_tier_basic", PlanPro: "plan_tier_pro", plans.Business: "plan_tier_business"}
 
 // sellTiers makes the fixture sell all three plans.
 func (f *fixture) sellTiers() {
@@ -33,7 +33,7 @@ func TestPlanDecidesFeaturesAndLimits(t *testing.T) {
 	ctx := context.Background()
 	all := []plans.Feature{
 		plans.GoogleData, plans.Keywords, plans.RankTracking, plans.FullAudit, plans.Publishing, plans.AIWriting, plans.IndexNow,
-		plans.Backlinks, plans.DomainResearch, plans.AIVisibility, plans.WhiteLabel,
+		plans.Backlinks, plans.DomainResearch, plans.AIVisibility, plans.CreditPacks, plans.WhiteLabel, plans.SiteAddOn,
 	}
 	for _, test := range []struct {
 		plan                     string
@@ -42,8 +42,8 @@ func TestPlanDecidesFeaturesAndLimits(t *testing.T) {
 	}{
 		{PlanFree, 0, 1, 0, 1},
 		{PlanBasic, 7, 1, 100, 1},
-		{PlanPro, 10, 2, 500, 3},
-		{PlanAgency, 11, 10, 1500, 10},
+		{PlanPro, 11, 10, 500, 3},
+		{plans.Business, 13, 20, 1000, 5},
 	} {
 		t.Run(test.plan, func(t *testing.T) {
 			f := newFixture(ctx, t)
@@ -99,21 +99,21 @@ func TestThePlanComesFromRazorpayNotFromCheckout(t *testing.T) {
 	f := newFixture(ctx, t)
 	f.sellTiers()
 
-	// The browser asks for Basic; Razorpay then reports an Agency subscription.
+	// The browser asks for Basic; Razorpay then reports a Business subscription.
 	checkout, err := f.svc.CheckoutPlan(ctx, f.org, PlanBasic)
 	if err != nil {
 		t.Fatal(err)
 	}
-	f.deliver(ctx, t, f.eventOnPlan(PlanAgency, "subscription.activated", checkout.SubscriptionID, "active"))
-	f.assertStatus(ctx, t, Status{Plan: PlanAgency, Status: "active"})
+	f.deliver(ctx, t, f.eventOnPlan(plans.Business, "subscription.activated", checkout.SubscriptionID, "active"))
+	f.assertStatus(ctx, t, Status{Plan: plans.Business, Status: "active"})
 }
 
 func TestCheckoutRefusesAPlanThatIsNotSold(t *testing.T) {
 	ctx := context.Background()
 	f := newFixture(ctx, t)
-	f.svc = NewPlanService(f.pool, f.svc.razorpay, map[string]string{PlanPro: "plan_tier_pro", PlanAgency: ""}, testWebhookSecret)
+	f.svc = NewPlanService(f.pool, f.svc.razorpay, map[string]string{PlanPro: "plan_tier_pro", plans.Business: ""}, testWebhookSecret)
 
-	for _, plan := range []string{PlanBasic, PlanAgency, PlanFree, "enterprise", ""} {
+	for _, plan := range []string{PlanBasic, plans.Business, PlanFree, "agency", "enterprise", ""} {
 		if _, err := f.svc.CheckoutPlan(ctx, f.org, plan); !errors.Is(err, ErrPlanUnavailable) {
 			t.Errorf("CheckoutPlan(%q) error = %v, want ErrPlanUnavailable", plan, err)
 		}
@@ -143,7 +143,7 @@ func TestWebhookForAnUnknownPlanFailsAndChangesNothing(t *testing.T) {
 func TestEachPlanGrantsItsOwnCredits(t *testing.T) {
 	ctx := context.Background()
 	// Basic grants credits too: its keyword research and rank tracking spend them.
-	for plan, want := range map[string]int64{PlanBasic: 4000, PlanPro: 10000, PlanAgency: 25000} {
+	for plan, want := range map[string]int64{PlanBasic: 4000, PlanPro: 10000, plans.Business: 15000} {
 		t.Run(plan, func(t *testing.T) {
 			f := newFixture(ctx, t)
 			f.sellTiers()
@@ -183,8 +183,8 @@ func TestStaffWorkspaceIsNeverLimited(t *testing.T) {
 	f.addMember(ctx, t, staff, "owner", true)
 
 	status, err := f.svc.Status(ctx, f.org)
-	if err != nil || !status.Unlimited || status.Plan != PlanAgency || status.Status != "none" {
-		t.Fatalf("Status() = %+v, %v; want an unlimited Agency workspace with no subscription", status, err)
+	if err != nil || !status.Unlimited || status.Plan != plans.Business || status.Status != "none" {
+		t.Fatalf("Status() = %+v, %v; want an unlimited Business workspace with no subscription", status, err)
 	}
 	if ok, err := f.svc.Gate(plans.WhiteLabel).HasPaidPlan(ctx, f.org); err != nil || !ok {
 		t.Errorf("staff workspace includes white-label = %v, %v; want true", ok, err)
@@ -349,5 +349,19 @@ func TestDowngradeKeepsDataAndMarksWorkspaceOverLimit(t *testing.T) {
 	var retained int
 	if err := f.pool.QueryRow(ctx, `SELECT count(*) FROM projects WHERE organization_id=$1`, f.org).Scan(&retained); err != nil || retained != 2 {
 		t.Fatalf("retained projects = %d, %v; want 2", retained, err)
+	}
+}
+
+// Agency is no longer sold. A subscription row still naming it unlocks
+// nothing and reads as Free, so no screen meets a plan it does not know.
+func TestARetiredPlanReadsAsFree(t *testing.T) {
+	ctx := t.Context()
+	f := newFixture(ctx, t)
+	if _, err := f.pool.Exec(ctx, `INSERT INTO go_billing_subscriptions (organization_id, razorpay_subscription_id, plan, status, event_at) VALUES ($1, 'sub_old', 'agency', 'active', now())`, f.org); err != nil {
+		t.Fatal(err)
+	}
+	f.assertStatus(ctx, t, Status{Plan: PlanFree, Status: "active"})
+	if ok, err := f.svc.Allows(ctx, f.org, plans.WhiteLabel); err != nil || ok {
+		t.Fatalf("a retired plan allows white-label: %v, %v", ok, err)
 	}
 }

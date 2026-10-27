@@ -8,7 +8,7 @@ speeds up Google. Read this before touching IndexNow, the publish hook in
 
 ## Rules that must never break
 
-- **Basic, Pro and Agency only** (`plans.IndexNow` in
+- **Basic, Pro and Business only** (`plans.IndexNow` in
   `backend/internal/plans/catalog.go`). Free gets `402 plan_required` on
   setup, check and submit; `get` answers `included: false` so the screen can
   show the plans link instead of a form.

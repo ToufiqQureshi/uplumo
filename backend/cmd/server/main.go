@@ -150,6 +150,9 @@ func run(logger *slog.Logger) (err error) {
 
 	credits := billing.NewCreditLedgerService(db)
 	reconcileCredits := func() {
+		if _, err := credits.ExpirePackCreditsOfEndedPlans(ctx); err != nil {
+			logger.Error("end pack credits of ended plans", "err", err)
+		}
 		if expired, err := credits.ExpireCredits(ctx); err != nil {
 			logger.Error("expire billing credits", "err", err)
 		} else if expired > 0 {
@@ -196,9 +199,6 @@ func run(logger *slog.Logger) (err error) {
 	// The owner's and staff's own workspaces are never limited by a plan,
 	// with or without payments configured.
 	billingRoutes.SetStaffEmails(cfg.StaffEmails)
-	if err := billingRoutes.ConfigureTopUps(cfg.TopUpPacks); err != nil {
-		return err
-	}
 	// A live deployment must enforce entitlements even while checkout is
 	// unavailable. The read-only service still knows the stored subscription.
 	gateSvc := planGateService(cfg.Environment, billingSvc, billingRoutes)

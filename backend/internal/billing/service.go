@@ -48,10 +48,9 @@ var ErrUnknownPlan = errors.New("razorpay plan id matches no configured plan")
 
 // Plans.
 const (
-	PlanFree   = plans.Free
-	PlanBasic  = plans.Basic
-	PlanPro    = plans.Pro
-	PlanAgency = plans.Agency
+	PlanFree  = plans.Free
+	PlanBasic = plans.Basic
+	PlanPro   = plans.Pro
 )
 
 // totalCount is how many billing cycles a subscription runs before Razorpay
@@ -137,7 +136,6 @@ type Service struct {
 	planIDs       map[string]string
 	webhookSecret string
 	staffEmails   []string
-	topUpPacks    []TopUpPack
 	Forecast      func(context.Context, string, time.Time) (int64, error)
 }
 
@@ -221,7 +219,7 @@ func (s *Service) SetStaffEmails(emails []string) {
 }
 
 // Status returns orgID's plan. Without a subscription it is the free plan.
-// A staff workspace reads as Agency and unlimited whatever it subscribed to.
+// A staff workspace reads as Business and unlimited whatever it subscribed to.
 func (s *Service) Status(ctx context.Context, orgID string) (Status, error) {
 	status, err := s.subscribedStatus(ctx, orgID)
 	if err != nil || len(s.staffEmails) == 0 {
@@ -247,7 +245,8 @@ func (s *Service) subscribedStatus(ctx context.Context, orgID string) (Status, e
 		return Status{Plan: PlanFree, Status: "none"}, nil
 	}
 	plan := PlanFree
-	if slices.Contains(proStatuses, sub.Status) {
+	if _, sold := plans.Get(sub.Plan); sold && slices.Contains(proStatuses, sub.Status) {
+		// A plan that left the catalog (Agency) reads as Free, as it unlocks.
 		plan = sub.Plan
 	}
 	periodEnd := sub.CurrentPeriodEnd
@@ -306,8 +305,19 @@ func (s *Service) UsageAgainstPlan(ctx context.Context, orgID string) (PlanUsage
 	item := func(used, limit int) LimitUsage {
 		return LimitUsage{Used: used, Limit: limit, Exceeded: limit > 0 && used > limit}
 	}
+	sites := item(usage.Sites, definition.Sites)
+	if definition.Allows(plans.SiteAddOn) && definition.Sites > 0 {
+		active, peak, err := s.repo.addOnSites(ctx, orgID)
+		if err != nil {
+			return PlanUsage{}, err
+		}
+		// New sites need a running add-on; sites added under an add-on that
+		// has since run out keep working, so paid work does not pause.
+		sites.Limit += active
+		sites.Exceeded = usage.Sites > definition.Sites+max(active, peak)
+	}
 	return PlanUsage{
-		Sites:           item(usage.Sites, definition.Sites),
+		Sites:           sites,
 		Members:         item(usage.Members, definition.Members),
 		TrackedKeywords: item(usage.TrackedKeywords, definition.TrackedKeywords),
 	}, nil
@@ -347,10 +357,15 @@ func (g FeatureGate) HasPaidPlan(ctx context.Context, orgID string) (bool, error
 	return g.service.Allows(ctx, orgID, g.feature)
 }
 
-// SiteLimit returns how many active sites orgID may have; 0 is no limit.
+// SiteLimit returns how many active sites orgID may have, including running
+// site add-ons; 0 is no limit.
 func (s *Service) SiteLimit(ctx context.Context, orgID string) (int, error) {
 	definition, err := s.entitlement(ctx, orgID)
-	return definition.Sites, err
+	if err != nil || definition.Sites == 0 || !definition.Allows(plans.SiteAddOn) {
+		return definition.Sites, err
+	}
+	active, _, err := s.repo.addOnSites(ctx, orgID)
+	return definition.Sites + active, err
 }
 
 // KeywordLimit returns how many keywords orgID may track; 0 is no limit.
@@ -514,8 +529,11 @@ func (s *Service) HandleWebhook(ctx context.Context, body []byte, signature, eve
 	if err := json.Unmarshal(body, &event); err != nil {
 		return "", fmt.Errorf("%w: %w", ErrInvalidEvent, err)
 	}
-	if event.Event == "payment.captured" {
+	switch event.Event {
+	case "payment.captured":
 		return s.applyTopUpPayment(ctx, body)
+	case "payment.authorized":
+		return s.captureTopUpPayment(ctx, body)
 	}
 	if !slices.Contains(handledEvents, event.Event) {
 		return WebhookIgnored, nil
@@ -572,23 +590,36 @@ func (s *Service) HandleWebhook(ctx context.Context, body []byte, signature, eve
 	case eventDuplicateDelivery:
 		return WebhookDuplicate, nil
 	case eventSecondLiveSubscription:
-		return s.stopSecondSubscription(ctx, orgID, sub.ID, event.Event, eventID)
+		paymentID := ""
+		if event.Payload.Payment != nil {
+			paymentID = event.Payload.Payment.Entity.ID
+		}
+		return s.stopSecondSubscription(ctx, orgID, sub.ID, paymentID, event.Event, eventID)
 	}
 	return WebhookProcessed, nil
 }
 
 // stopSecondSubscription handles a workspace that went live on a second
 // subscription while another is live: it earns no credits and is cancelled
-// now, so it cannot charge again. If it was charged, that payment needs a
-// manual refund, so the error log (which reaches Sentry) says so. The event
-// is recorded only once the cancel succeeded; until then Razorpay's
-// redelivery retries it.
-func (s *Service) stopSecondSubscription(ctx context.Context, orgID, subID, eventName, eventID string) (WebhookResult, error) {
+// now, so it cannot charge again, and the payment the event carries is
+// refunded in full, so the customer is not charged twice. A failed refund
+// is logged as an error (it reaches Sentry) to refund by hand; Razorpay
+// refuses to refund more than was paid, so a redelivery cannot refund
+// twice. The event is recorded only once the cancel succeeded; until then
+// Razorpay's redelivery retries it.
+func (s *Service) stopSecondSubscription(ctx context.Context, orgID, subID, paymentID, eventName, eventID string) (WebhookResult, error) {
 	if _, err := s.razorpay.CancelSubscription(ctx, subID, false); err != nil {
 		return "", fmt.Errorf("cancel second live subscription %s of organization %s: %w: %w", subID, orgID, ErrPaymentProvider, err)
 	}
-	slog.ErrorContext(ctx, "cancelled a second live subscription; refund any charge on it by hand",
-		"organization", orgID, "subscription", subID, "event", eventName)
+	if paymentID != "" {
+		if err := s.razorpay.RefundPayment(ctx, paymentID); err != nil {
+			slog.ErrorContext(ctx, "cancelled a second live subscription; refund its payment by hand",
+				"organization", orgID, "subscription", subID, "payment", paymentID, "event", eventName, "err", err)
+		} else {
+			slog.WarnContext(ctx, "cancelled a second live subscription and refunded its payment",
+				"organization", orgID, "subscription", subID, "payment", paymentID, "event", eventName)
+		}
+	}
 	if err := s.repo.recordEvent(ctx, eventID); err != nil {
 		return "", err
 	}

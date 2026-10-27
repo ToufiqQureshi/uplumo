@@ -56,7 +56,7 @@ To reconcile a paid workspace, compare `go_dataforseo_usage` task costs with
 per organization, feature, endpoint and time window. Include pending holds,
 refunded tasks, self-hosted/staff workspaces, credit expiry and rounding when
 explaining a difference. The user's provider CSV is needed to confirm any
-specific $1 discrepancy and Basic/Pro/Agency margins.
+specific $1 discrepancy and Basic/Pro/Business margins.
 
 ## One action, several paid calls
 

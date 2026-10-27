@@ -72,7 +72,7 @@ mean each one has been tried on production with real provider keys.
 | IndexNow             | Key file setup and check, submit changed URLs to Bing and other IndexNow engines; live WordPress publishes are submitted automatically (Basic and above; Google does not use IndexNow)                 |
 | Assistant (SAM)      | Chat with tools over the project's data                                                                                                                                                                |
 | MCP server           | Tools for Claude, ChatGPT and Cursor, with OAuth                                                                                                                                                       |
-| Billing              | Free, Solo, Growth, Business and Agency on Razorpay Subscriptions, with site, tracked-keyword and member limits; webhooks, cancel, monthly credits with a spend guard on every paid lookup and AI call |
+| Billing              | Free, Basic, Pro and Business on Razorpay Subscriptions, one-time credit packs (Pro, Business) and a 5-website add-on (Business), with site, tracked-keyword and member limits; webhooks, cancel, monthly credits with a spend guard on every paid lookup and AI call |
 | Privacy              | `cmd/erase-user` erases one account                                                                                                                                                                    |
 
 ## Not built yet
@@ -80,7 +80,7 @@ mean each one has been tried on production with real provider keys.
 | Feature                                                                                                  | Status                                             |
 | -------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
 | Changing from one paid plan to another without writing to support                                        | ⏳                                                 |
-| Agency: client access, and extra sites at ₹400 each                                                      | ⏳                                                 |
+| Business: client access (extra sites shipped as the 5-website add-on)                                                      | ⏳                                                 |
 | AI Visibility: saved prompts, daily/weekly/monthly checks, history and in-app drop warnings              | ✅ built; real-provider acceptance pending         |
 | AI Visibility sentiment classification                                                                   | ⏳                                                 |
 | "Seen in AI" next to "visitors from AI" (AI Visibility joined with Analytics)                            | ⏳                                                 |
@@ -133,34 +133,34 @@ Secrets go into Railway variables only, never into the repo or chat.
 - Credits (owner, 13 October 2026; public pricing clarified 15 October 2026).
   Every paid data lookup and AI call spends credits; customers see each plan's
   monthly grant on the pricing page and see their balance and estimated action
-  costs in the app. Monthly credits: Solo 4,000, Growth 10,000, Business 15,000,
-  Agency 25,000 (1 credit represents $1/1,280 of provider cost at the current
+  costs in the app. Monthly credits: Basic 4,000, Pro 10,000, Business 15,000
+  (1 credit represents $1/1,280 of provider cost at the current
   markup). New paid work stops when the shared workspace balance cannot cover
   it. There is no per-workspace daily credit cap; `PROVIDER_DAILY_LIMIT_USD`
   (default $100) is a provider-wide emergency brake. Unused plan credits roll
-  over for up to two months. Rank depth is Solo top 30 and Growth, Business,
-  Agency top 40; those are plan ceilings, not a guarantee that the maximum
+  over for up to two months. Rank depth is Basic top 30 and Pro and Business
+  top 40; those are plan ceilings, not a guarantee that the maximum
   keyword list can run weekly. Billing forecasts scheduled spend, and each
   provider request still passes the shared spend guard. See
   `backend/internal/billing/README.md`.
-- Plans (owner, 12 October 2026, confirmed 13 October). Built: the table
-  below is `backend/internal/plans/catalog.go`. Free is one site with
-  analytics and a starter audit.
+- Plans (owner, 27 October 2026). Built: the table below is
+  `backend/internal/plans/catalog.go`. Free is one site with analytics and a
+  starter audit. Credits, not sites, cap what a workspace costs Uplumo.
 
-  | Limit               | Solo | Growth | Business | Agency             |
-  | ------------------- | ---- | ------ | -------- | ------------------ |
-  | Price per month     | ₹999 | ₹2,499 | ₹4,999   | ₹9,999             |
-  | Sites               | 1    | 2      | 5        | 10, then ₹400 each |
-  | Tracked keywords    | 100  | 500    | 1,000    | 1,500              |
-  | White-label reports | no   | no     | no       | yes                |
-  | Client access       | no   | no     | no       | yes                |
-  | Team members        | 1    | 3      | 5        | 10                 |
+  | Limit               | Basic | Pro    | Business                         |
+  | ------------------- | ----- | ------ | -------------------------------- |
+  | Price per month     | ₹999  | ₹2,499 | ₹4,999                           |
+  | Monthly credits     | 4,000 | 10,000 | 15,000                           |
+  | Sites               | 1     | 10     | 20, then +5 for ₹999 per 30 days |
+  | Tracked keywords    | 100   | 500    | 1,000                            |
+  | Credit packs        | no    | yes    | yes                              |
+  | White-label reports | no    | no     | yes                              |
+  | Team members        | 1     | 3      | 5                                |
 
-  Sites and white-label are what separate Pro from Agency: a small agency
-  with four client sites must not fit in Pro. Basic and Pro differ by
-  feature: Basic is keywords, rankings, Google data, search briefs and AI
-  writing for one site; Pro adds backlinks, competitor research and AI
-  Visibility.
+  Credit packs: 5,000 for ₹1,499 and 15,000 for ₹3,999, one-time, lasting
+  while the plan is active. Basic and Pro differ by feature: Basic is
+  keywords, rankings, Google data, search briefs and AI writing for one site;
+  Pro adds backlinks, competitor research and AI Visibility.
 
 - The owner's and the team's own workspaces are never limited by a plan
   (`STAFF_EMAILS`).

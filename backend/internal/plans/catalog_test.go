@@ -1,6 +1,7 @@
 package plans
 
 import (
+	"fmt"
 	"math"
 	"slices"
 	"testing"
@@ -16,9 +17,8 @@ func TestCatalogMatchesTheOwnersPlanTable(t *testing.T) {
 	}{
 		{Free, 0, 1, 0, 1, 0},
 		{Basic, 999, 1, 100, 1, 4000},
-		{Pro, 2499, 2, 500, 3, 10000},
-		{Business, 4999, 5, 1000, 5, 15000},
-		{Agency, 9999, 10, 1500, 10, 25000},
+		{Pro, 2499, 10, 500, 3, 10000},
+		{Business, 4999, 20, 1000, 5, 15000},
 	}
 	got := Catalog()
 	if len(got) != len(want) {
@@ -37,18 +37,18 @@ func TestCatalogMatchesTheOwnersPlanTable(t *testing.T) {
 			t.Errorf("plan %s rank schedule = %q, want weekly", g.ID, g.RankSchedule)
 		}
 	}
-	if !slices.Equal(Paid(), []string{Basic, Pro, Business, Agency}) {
+	if !slices.Equal(Paid(), []string{Basic, Pro, Business}) {
 		t.Errorf("Paid() = %v", Paid())
 	}
 }
 
 func TestEachPlanIncludesExactlyItsFeatures(t *testing.T) {
-	all := []Feature{GoogleData, Keywords, RankTracking, FullAudit, Publishing, Backlinks, DomainResearch, AIVisibility, AIWriting, WhiteLabel, IndexNow}
+	all := []Feature{GoogleData, Keywords, RankTracking, FullAudit, Publishing, Backlinks, DomainResearch, AIVisibility, AIWriting, WhiteLabel, IndexNow, CreditPacks, SiteAddOn}
 	want := map[string][]Feature{
-		Free:   nil,
-		Basic:  {GoogleData, Keywords, RankTracking, FullAudit, Publishing, AIWriting, IndexNow},
-		Pro:    {GoogleData, Keywords, RankTracking, FullAudit, Publishing, AIWriting, IndexNow, Backlinks, DomainResearch, AIVisibility},
-		Agency: all,
+		Free:     nil,
+		Basic:    {GoogleData, Keywords, RankTracking, FullAudit, Publishing, AIWriting, IndexNow},
+		Pro:      {GoogleData, Keywords, RankTracking, FullAudit, Publishing, AIWriting, IndexNow, Backlinks, DomainResearch, AIVisibility, CreditPacks},
+		Business: all,
 	}
 	for id, included := range want {
 		plan, ok := Get(id)
@@ -67,7 +67,7 @@ func TestEachPlanIncludesExactlyItsFeatures(t *testing.T) {
 }
 
 func TestUnlimitedAllowsEverythingAndHasNoLimits(t *testing.T) {
-	for _, feature := range agencyFeatures {
+	for _, feature := range businessFeatures {
 		if !Unlimited.Allows(feature) {
 			t.Errorf("Unlimited does not allow %s", feature)
 		}
@@ -87,8 +87,8 @@ func TestCallersCannotChangeTheCatalog(t *testing.T) {
 	if second.Highlights[0] == "mutated" || second.Highlights[1] == "mutated" || !second.Allows(GoogleData) {
 		t.Fatal("a caller's change reached the shared catalog")
 	}
-	// Basic's list is the base of Pro's and Agency's; they must not share it.
-	if basic, _ := Get(Basic); basic.Allows(Backlinks) || basic.Allows(WhiteLabel) {
+	// Basic's list is the base of Pro's and Business's; they must not share it.
+	if basic, _ := Get(Basic); basic.Allows(Backlinks) || basic.Allows(WhiteLabel) || basic.Allows(CreditPacks) {
 		t.Fatal("Basic picked up a feature of a higher plan")
 	}
 }
@@ -123,5 +123,75 @@ func TestWeeklyRankTrackingFitsInTheMonthlyCredits(t *testing.T) {
 		if credits > float64(plan.MonthlyCredits) {
 			t.Errorf("%s: weekly rank tracking costs %.0f credits a month, over the %d it grants", plan.ID, credits, plan.MonthlyCredits)
 		}
+	}
+}
+
+func TestPacksMatchTheOwnersPrices(t *testing.T) {
+	want := []Pack{
+		{ID: "credits_5000", PriceINR: 1499, Credits: 5000, Feature: CreditPacks},
+		{ID: "credits_15000", PriceINR: 3999, Credits: 15000, Feature: CreditPacks},
+		{ID: "sites_5", PriceINR: 999, Sites: 5, Feature: SiteAddOn},
+	}
+	got := Packs()
+	if len(got) != len(want) {
+		t.Fatalf("Packs() has %d packs, want %d", len(got), len(want))
+	}
+	for i, w := range want {
+		g := got[i]
+		if g.ID != w.ID || g.PriceINR != w.PriceINR || g.Credits != w.Credits || g.Sites != w.Sites || g.Feature != w.Feature || g.Name == "" {
+			t.Errorf("pack %d = %+v, want %+v", i, g, w)
+		}
+		if (g.Credits > 0) == (g.Sites > 0) {
+			t.Errorf("pack %s must add credits or sites, not both or neither", g.ID)
+		}
+		if p, ok := GetPack(g.ID); !ok || p != g {
+			t.Errorf("GetPack(%q) = %+v, %v", g.ID, p, ok)
+		}
+	}
+	if _, ok := GetPack("agency"); ok {
+		t.Error("GetPack found a pack that is not sold")
+	}
+	for _, id := range []string{Basic, Free} {
+		plan, _ := Get(id)
+		if plan.Allows(CreditPacks) || plan.Allows(SiteAddOn) {
+			t.Errorf("%s may buy packs; only Pro and Business may", id)
+		}
+	}
+	if pro, _ := Get(Pro); pro.Allows(SiteAddOn) {
+		t.Error("Pro may buy a site add-on; only Business may")
+	}
+}
+
+// Only plans that include CreditPacks may buy one, so a pack must not sell a
+// credit for less than the cheapest such plan's grant does, and its credits
+// must never cost Uplumo more than a third of its price at the provider.
+func TestCreditPacksKeepTheMargin(t *testing.T) {
+	const inrPerUSD = 90.0
+	cheapest := math.Inf(1)
+	for _, plan := range Catalog() {
+		if plan.Allows(CreditPacks) {
+			cheapest = min(cheapest, float64(plan.PriceINR)/float64(plan.MonthlyCredits))
+		}
+	}
+	for _, pack := range Packs() {
+		if pack.Credits == 0 {
+			continue
+		}
+		if perCredit := float64(pack.PriceINR) / float64(pack.Credits); perCredit < cheapest {
+			t.Errorf("%s costs ₹%.3f a credit, less than a plan's ₹%.3f", pack.ID, perCredit, cheapest)
+		}
+		if providerINR := float64(pack.Credits) / 1280 * inrPerUSD; providerINR > float64(pack.PriceINR)/3 {
+			t.Errorf("%s can cost ₹%.0f at the provider, more than a third of ₹%d", pack.ID, providerINR, pack.PriceINR)
+		}
+	}
+}
+
+// The Business card states the site add-on's price; it must be the pack's.
+func TestBusinessCardStatesTheSiteAddOnPrice(t *testing.T) {
+	business, _ := Get(Business)
+	addOn, _ := GetPack("sites_5")
+	want := fmt.Sprintf("Add %d more websites for ₹%d a month", addOn.Sites, addOn.PriceINR)
+	if !slices.Contains(business.Highlights, want) {
+		t.Errorf("Business highlights do not contain %q", want)
 	}
 }
