@@ -21,6 +21,12 @@ Flow of `Client.Do(ctx, organizationID, feature, method, path, body, retrySafe)`
 
 `DoUnmetered` is only for free calls that still carry a cost field, such as
 collecting a queued task that was charged when it was posted.
+`DoBudgetedWithDelivery` is for bounded paid work where the customer receives
+fewer usable results than DataForSEO billed tasks: it holds the full published
+ceiling, records every provider-reported task cost, then settles only the
+actual successful delivered portion (for example, Cite Fix's JavaScript page
+rendering). Unusable results return `ErrNothingDelivered` and charge no
+customer credits.
 
 Rules that must never break:
 
@@ -36,6 +42,12 @@ Rules that must never break:
   Labs tasks with `include_clickstream_data: true` hold twice the complete
   ordinary task price, including task and result-row charges.
   `pricing_test.go` pins them.
+- On-Page JavaScript task-post ceilings are $0.0015 per opted-in rendered page;
+  queued Google SERP adds $0.0006 per task when
+  `load_async_ai_overview: true`. Google AI Overview batch holds multiply the
+  queued task and async retrieval prices by at most 10 questions. The free
+  `/v3/on_page/raw_html` endpoint has a zero estimate. See the linked provider
+  docs and exact feature behavior in `docs/integrations/DATAFORSEO.md`.
 - Never send a request the provider would reject. If it still fails, refund
   that task's customer credits while retaining the actual provider cost.
 - Never return a provider error body or the API key to a client.

@@ -35,7 +35,12 @@ For orphan-page issues, `results/IssuesView.tsx` displays up to 100 orphan rows.
 - Every crawl URL must pass the SSRF guard; never let redirect targets bypass it.
 - Lighthouse/CrUX unavailability is a partial result, not proof that a page has no field data.
 - At-least-once jobs must remain idempotent so retries do not duplicate audit rows.
+- JavaScript rendering is an explicit launch opt-in, available only when the
+  server advertises a wired DataForSEO renderer. The UI shows “Render JavaScript
+  pages (at most 39 credits)” and passes the flag only after the user checks it.
+  The backend renders at most 20 app-shell URLs, charges actual successful
+  provider cost within that ceiling and charges zero for an unusable render.
+  No automatic retry occurs; normal audit reads/polls do not buy rendering.
 
-JavaScript rendering is not wired into the crawler. Capabilities report false;
-rendering starts fail before persistence/dispatch even when legacy environment
-hints are set. Audits inspect initial HTTP HTML; PSI runs separately on Google.
+Rendered HTML runs through the regular page analyzer; PSI runs separately on
+Google. Without the renderer, the opt-in stays disabled and no price is shown.

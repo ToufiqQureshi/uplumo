@@ -45,6 +45,18 @@ func TestAIVisibilityMaximumIsTheWorstCaseHold(t *testing.T) {
 		ActionPromptExplorer: CreditsForUSD(dataforseo.PromptExplorerCeilingUSD(4, true)),
 	}
 	for _, cost := range ActionCosts() {
+		if cost.Feature == spend.SiteAudit && cost.Action == ActionJavaScriptRender {
+			if cost.Credits != CreditsForUSD(dataforseo.OnPageJavaScriptCostUSD(1)) || cost.MaxCredits != 39 {
+				t.Errorf("JavaScript rendering price = %d/%d credits, want %d/39", cost.Credits, cost.MaxCredits, CreditsForUSD(dataforseo.OnPageJavaScriptCostUSD(1)))
+			}
+			continue
+		}
+		if cost.Feature == spend.CiteFix && cost.Action == ActionGoogleAIOverview {
+			if cost.Credits != CreditsForUSD(dataforseo.GoogleAIOverviewCostUSD(10)) || cost.MaxCredits != 16 {
+				t.Errorf("Google AI Overview price = %d/%d credits, want %d/16", cost.Credits, cost.MaxCredits, CreditsForUSD(dataforseo.GoogleAIOverviewCostUSD(10)))
+			}
+			continue
+		}
 		if cost.Feature == spend.CiteFix {
 			// The Deep cap the Cite Fix page shows (citefix.DeepMaxCredits).
 			if cost.MaxCredits != 60 || cost.MaxCredits <= cost.Credits {
@@ -65,6 +77,12 @@ func TestAIVisibilityMaximumIsTheWorstCaseHold(t *testing.T) {
 	}
 	if len(want) != 0 {
 		t.Fatalf("missing AI visibility actions: %v", want)
+	}
+}
+
+func TestJavaScriptRenderPriceIsFromThePublishedBatchCost(t *testing.T) {
+	if got := ActionMaxCredits(spend.SiteAudit, ActionJavaScriptRender); got != 39 {
+		t.Fatalf("JavaScript rendering max = %d credits, want 39", got)
 	}
 }
 

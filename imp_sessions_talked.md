@@ -17,6 +17,18 @@ feelings, business calls, priorities, corrections. Read it after
 
 ---
 
+## 28 Oct 2026: Cite Fix PR 2 (owner decisions)
+
+- Use DataForSEO On-Page JavaScript only for app-shell pages the crawler flags: explicit opt-in, at most 20 pages per audit, with the credit ceiling shown first.
+- Google AI Overview citations are approved at $0.0012 per queued question, up to 10 per click and 16 credits max, actual cost charged. Results are cached for 7 days.
+- AI mentions must reuse the LLM-mentions result AI Visibility already saved, at 0 credits. Refresh it from the AI Visibility page at that feature's existing price; no new Cite Fix purchase. Any Cite Fix-only refresh needs a separate proposal of at most two calls with real observed costs and another yes.
+- On-Page JavaScript is approved at $0.0015 per page, up to 20 app-shell pages and 39 credits max per audit, actual cost charged.
+- Build the free rival signal table and pass rival evidence into the existing Quick/Deep agent prompt without changing its 25/60 credit caps.
+- Show latest critical/warning Site Audit issues as “Also fix for Google”; expose rival and free report data through `get_cite_fix_report`, with no paid MCP tools.
+- A 50-page site with 20 JS shells, 10 Google AI Overview questions, and saved mentions costs at most 55 credits in these new actions.
+
+---
+
 ## 27 Oct 2026: Cite Fix, "sabko AI me cite hona ha" (Claude)
 
 - Owner wants a crawler that reads the whole site and shows "kyu cite nahi hore, ye fixes karo, cite honge", A to Z content quality, and opens the content in the editor in one click. "muje uplumo ko bhohat advance software banana ha jo logo ke kaam aaye".

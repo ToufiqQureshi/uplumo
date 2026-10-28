@@ -19,6 +19,8 @@ import {
 import { AgentPanel } from "./AgentPanel";
 import { AgentResults } from "./AgentResults";
 import { ProofCard } from "./ProofCard";
+import { AIMentionsSection, RivalComparisonsSection } from "./EvidenceSections";
+import { GoogleAIOverviewSection, SEOIssuesSection } from "./CitationSections";
 import { scoreBand } from "./scoreBand";
 
 /** While a scan runs, check back this often; the report is free to read. */
@@ -95,18 +97,42 @@ export function CiteFixPage({ projectId }: { projectId: string }) {
             }
           />
           <ProofCard projectId={projectId} proof={report.data.proof} />
+          <RivalComparisonsSection
+            proof={report.data.proof}
+            comparisons={report.data.rivals}
+          />
         </>
       ) : report.data.state === "needs_rescan" ? (
-        <EmptyState
-          title="Scan your site again"
-          description="Your last scan ran before Cite Fix existed, so it did not read authors, dates or answers on your pages. A new scan is free."
-          action={
-            report.data.running ? null : scanLink("Scan again", "default")
-          }
-        />
+        <>
+          <EmptyState
+            title="Scan your site again"
+            description="Your last scan ran before Cite Fix existed, so it did not read authors, dates or answers on your pages. A new scan is free."
+            action={
+              report.data.running ? null : scanLink("Scan again", "default")
+            }
+          />
+          <ProofCard projectId={projectId} proof={report.data.proof} />
+          <RivalComparisonsSection
+            proof={report.data.proof}
+            comparisons={report.data.rivals}
+          />
+        </>
       ) : (
         <Ready projectId={projectId} report={report.data} />
       )}
+      {report.data ? (
+        <>
+          <AIMentionsSection
+            projectId={projectId}
+            mentions={report.data.mentions}
+          />
+          <GoogleAIOverviewSection
+            projectId={projectId}
+            initial={report.data.googleAiOverview}
+          />
+          <SEOIssuesSection projectId={projectId} report={report.data} />
+        </>
+      ) : null}
     </div>
   );
 }
@@ -169,6 +195,10 @@ function Ready({
       </section>
 
       <ProofCard projectId={projectId} proof={report.proof} />
+      <RivalComparisonsSection
+        proof={report.proof}
+        comparisons={report.rivals}
+      />
 
       <section aria-labelledby="cite-fix-fixes" className="flex flex-col gap-3">
         <h2 id="cite-fix-fixes" className="font-serif text-2xl">

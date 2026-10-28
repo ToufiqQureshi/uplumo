@@ -129,6 +129,7 @@ func TestPaidLookupsSpendTheWorkspacesCreditsEndToEnd(t *testing.T) {
 		} `json:"spent"`
 		Costs []struct {
 			Feature string `json:"feature"`
+			Action  string `json:"action"`
 			Credits int64  `json:"credits"`
 		} `json:"costs"`
 	}
@@ -138,13 +139,13 @@ func TestPaidLookupsSpendTheWorkspacesCreditsEndToEnd(t *testing.T) {
 	if usage.BalanceCredits != balance || len(usage.Spent) != 1 || usage.Spent[0].Feature != "domain_research" || usage.Spent[0].Credits != spentCredits {
 		t.Fatalf("usage = %+v, want %d credits left and %d spent on domain_research", usage, balance, spentCredits)
 	}
-	// Site audit's page speed test runs on Google's free API, so it has no cost.
-	if len(usage.Costs) != 9 { // AI visibility lists brand lookup and prompt explorer apart; Cite Fix agent is one row
-		t.Fatalf("usage lists %d action costs, want 9", len(usage.Costs))
+	// Site Audit's page speed test is free; only opt-in JavaScript rendering has a cost.
+	if len(usage.Costs) != 11 { // AI visibility lists brand lookup and prompt explorer apart; rendering and AI Overview add two rows
+		t.Fatalf("usage lists %d action costs, want 11", len(usage.Costs))
 	}
 	for _, cost := range usage.Costs {
-		if cost.Feature == "site_audit" {
-			t.Fatalf("usage lists a cost for site_audit, which uses no credits: %+v", cost)
+		if cost.Feature == "site_audit" && cost.Action == "" {
+			t.Fatalf("usage lists a generic cost for site_audit instead of the opt-in render action: %+v", cost)
 		}
 	}
 }

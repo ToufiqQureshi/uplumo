@@ -81,7 +81,9 @@ Successful external tool calls now persist the first authorized/call timestamps 
   confirmed price (`backend/internal/citefix/decision.md`).
 - **Preserve:** `authorizeProject` runs before `citefix.Store.Report`, so
   another workspace's project is FORBIDDEN. The output leaves out the agent
-  offer, which depends on plan and server and is priced only on the page.
+  offer, which depends on plan and server and is priced only on the page. It
+  includes saved mentions, rival signal tables and free audit issues; it never
+  submits Google AI Overview or other paid work.
 - **Trace:** `cite_fix_report.go`, `cite_fix_report_test.go` (owner reads
   `no_scan` with a run_site_audit hint, other workspace FORBIDDEN, blank id
   rejected), `plan_access.go`, `types.go`.

@@ -65,6 +65,7 @@ const trackingAnswersSchema = z.array(
         matchedBrand: z.boolean(),
         source: z.string().nullable().optional(),
         publishedAt: z.string().nullable().optional(),
+        text: z.string().nullable().optional(),
       }),
     ),
     brands: z.array(

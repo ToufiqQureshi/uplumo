@@ -388,15 +388,16 @@ func (a *Agent) settle(ctx context.Context, hold spend.Hold, providerUSD, custom
 type agentEvidence struct {
 	Queries []gsc.SearchRow
 	Proof   *Proof
+	Rivals  []RivalComparison
 }
 
 func (a *Agent) evidence(ctx context.Context, organizationID, projectID, pageURL string) agentEvidence {
-	ctx, cancel := context.WithTimeout(ctx, contextTimeout)
+	evidenceCtx, cancel := context.WithTimeout(ctx, contextTimeout)
 	defer cancel()
 	var evidence agentEvidence
 	if a.Queries != nil {
 		end := a.now().AddDate(0, 0, -3)
-		rows, err := a.Queries.GetPageQueryRows(ctx, organizationID, projectID, end.AddDate(0, 0, -90).Format(time.DateOnly), end.Format(time.DateOnly), pageURL)
+		rows, err := a.Queries.GetPageQueryRows(evidenceCtx, organizationID, projectID, end.AddDate(0, 0, -90).Format(time.DateOnly), end.Format(time.DateOnly), pageURL)
 		if err != nil {
 			// No Search Console connection is normal; the page is still worked on.
 			a.logger().InfoContext(ctx, "cite fix agent runs without Search Console queries", "err", err)
@@ -404,11 +405,35 @@ func (a *Agent) evidence(ctx context.Context, organizationID, projectID, pageURL
 		slices.SortFunc(rows, func(x, y gsc.SearchRow) int { return int(y.Impressions - x.Impressions) })
 		evidence.Queries = rows[:min(len(rows), maxGSCQueries)]
 	}
-	proof, err := a.Store.proof(ctx, organizationID, projectID)
+	proof, err := a.Store.proof(evidenceCtx, organizationID, projectID)
 	if err != nil {
 		a.logger().WarnContext(ctx, "cite fix agent runs without AI visibility evidence", "err", err)
 	}
 	evidence.Proof = proof
+	if proof != nil && len(proof.Misses) > 0 {
+		mentions, mentionErr := a.Store.mentions(evidenceCtx, organizationID, projectID)
+		if mentionErr != nil {
+			a.logger().WarnContext(ctx, "cite fix agent runs without saved Brand Lookup pages", "err", mentionErr)
+		}
+		var auditID string
+		var pages []Page
+		var legacy bool
+		var scanErr error
+		scanErr = a.Store.DB.QueryRow(evidenceCtx, `SELECT a.id FROM go_audits a JOIN projects p ON p.id=a.project_id AND p.organization_id=$1
+			WHERE a.project_id=$2 AND a.status='completed' AND a.completed_at IS NOT NULL ORDER BY a.started_at DESC LIMIT 1`,
+			organizationID, projectID).Scan(&auditID)
+		if scanErr == nil {
+			pages, legacy, scanErr = a.Store.pages(evidenceCtx, auditID)
+		}
+		if scanErr == nil && !legacy {
+			rivalCtx, rivalCancel := context.WithTimeout(ctx, 40*time.Second)
+			evidence.Rivals, scanErr = a.Store.rivalComparisons(rivalCtx, organizationID, projectID, proof, mentions, pages)
+			rivalCancel()
+		}
+		if scanErr != nil {
+			a.logger().WarnContext(ctx, "cite fix agent runs without rival page evidence", "err", scanErr)
+		}
+	}
 	return evidence
 }
 

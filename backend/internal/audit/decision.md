@@ -20,12 +20,34 @@ Postgres audit tables; Redis progress/cache/quota; PageSpeed Insights and CrUX; 
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.
 
-## Honest rendering capability and reachable code
+## Opt-in JavaScript rendering for app shells (owner approved 28 Oct 2026)
 
-- **Decision:** Keep rendering unavailable until an actual renderer is wired into the crawler. Environment flags alone cannot advertise it. Reject requests before rows, jobs or credit holds. Remove unreachable renderer pricing and orphan crawl helpers, retaining the active credit lifecycle tests.
-- **Why:** The HTTP crawler never executed JavaScript; accepting rendering requests misrepresented the work performed. Test-only port helpers duplicated inactive behavior.
-- **Preserve:** HTTP crawl, SSRF checks, plan limits, job idempotency and credit cleanup remain intact. Existing rendering interfaces are retained for the runner lifecycle; they do not imply a usable renderer.
-- **Trace:** `rendering.go`, `service_test.go` (`TestEnvironmentFlagsCannotAdvertiseAnUnwiredRenderer`, reproduced failing before the fix); `crawleraccess.go`, `crawlwindow.go`, `htmlresponse.go`, `issues_test.go`. `handler_test.go` checks the mounted capabilities/start responses and no rows/jobs; a forced-true mutation fails both service and HTTP regressions. No browser renderer/provider was added.
+- **Decision:** Capabilities advertise JavaScript rendering only when the
+  DataForSEO On-Page renderer is actually wired. Site Audit offers an opt-in
+  checkbox, sends only pages flagged as app shells by the initial crawl, and
+  caps a run at 20 pages. Rendered HTML goes through the same analyzer and
+  replaces the page's shell signals/issues. Price is $0.0015 per page (max 39
+  credits for 20 pages, actual cost charged); failed/unusable rendering is 0
+  customer credits. DataForSEO `instant_pages` requests are capped at 20 tasks
+  and five per registrable domain; raw HTML is retrieved once for successful
+  IDs through the free seven-day `raw_html` endpoint.
+- **Why:** React/Next app shells otherwise fail only the `pages-readable` Cite
+  Fix check even though the browser can display their content. The owner
+  approved the actual published price and a concrete 50-page-site scenario
+  before enabling this paid path.
+- **Preserve:** Explicit opt-in; render only crawler-detected shells; max 20
+  URLs/audit; spend hold before the paid call; actual price ≤ displayed max;
+  call with `retry:false`; unique per-audit URL claim so an ambiguous worker
+  restart never repeats the purchase. No rival page is rendered. Environment
+  flags alone cannot advertise capability. Keep normal HTTP crawl and SSRF
+  checks intact.
+- **Trace:** `dataforseo_renderer.go`, `rendering.go`, `runner.go`, `service.go`,
+  `repository.go`, migration `00049_citefix_evidence.sql`,
+  `frontend/tests/audit-capabilities.spec.ts`. The fake provider asserts exact
+  counts: 20 same-domain pages make four paid task POSTs, one free HTML POST,
+  and one $0.03 hold/actual delivery; failed, 500, timeout and garbage
+  responses dispatch once without automatic retry. Mutating the 20-page guard
+  to allow 21 or enabling POST retries makes its focused test fail.
 
 ## AI access checks: blocked AI crawlers and llms.txt
 

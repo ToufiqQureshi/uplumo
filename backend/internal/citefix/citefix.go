@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/toufiqqureshi/uplumo/backend/internal/aisearch"
 	"github.com/toufiqqureshi/uplumo/backend/internal/audit"
 )
 
@@ -118,6 +119,17 @@ type Report struct {
 	// Proof is the latest saved AI Visibility check, in every state; nil when
 	// the project has none.
 	Proof *Proof `json:"proof"`
+	// Mentions is the most recent user-requested AI Visibility Brand Lookup.
+	// Cite Fix reads it without buying a refresh.
+	Mentions *MentionsSnapshot `json:"mentions"`
+	// GoogleAIOverview contains saved, explicitly purchased AI Overview
+	// evidence. Reading this field never starts a provider request.
+	GoogleAIOverview *GoogleAIOverviewState `json:"googleAiOverview"`
+	// Rivals are the free, guarded comparisons for up to three pages AI cited
+	// instead of the customer's domain.
+	Rivals []RivalComparison `json:"rivals"`
+	// SEOIssues are the latest critical and warning issues from Site Audit.
+	SEOIssues []SEOIssue `json:"seoIssues"`
 	// Agent says whether and at what price the paid agent can run; the
 	// handler fills it.
 	Agent AgentOffer `json:"agent"`
@@ -125,7 +137,13 @@ type Report struct {
 
 // emptyReport keeps every list a JSON array, never null.
 func emptyReport(state string) Report {
-	return Report{State: state, Categories: []CategoryScore{}, Fixes: []Fix{}, Pages: []PageScore{}}
+	return Report{State: state, Categories: []CategoryScore{}, Fixes: []Fix{}, Pages: []PageScore{}, Rivals: []RivalComparison{}, SEOIssues: []SEOIssue{}}
+}
+
+// MentionsSnapshot is the saved AI Visibility Brand Lookup shown in Cite Fix.
+type MentionsSnapshot struct {
+	FetchedAt time.Time                  `json:"fetchedAt"`
+	Result    aisearch.BrandLookupResult `json:"result"`
 }
 
 // isContentPage reports whether a page can be quoted: fetched, indexable

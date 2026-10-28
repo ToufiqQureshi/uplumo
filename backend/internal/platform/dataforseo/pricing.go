@@ -18,6 +18,9 @@ const (
 	contentParsePageUSD = 0.00015
 	serpQueuedPageUSD   = 0.0006
 	serpQueuedExtraUSD  = 0.0006
+	serpQueuedAIOUSD    = 0.0006
+	onPageBasicPageUSD  = 0.00015
+	onPageJSPageUSD     = 0.0015
 	serpPriorityFactor  = 2
 	serpOperatorFactor  = 5
 	// DataForSEO Labs and Backlinks rates reflect their July 1, 2026 updates.
@@ -44,7 +47,7 @@ const (
 var serpOperator = regexp.MustCompile(`(?i)(allinanchor|allintext|allintitle|allinurl|cache|define|definition|filetype|id|inanchor|info|intext|intitle|inurl|link|site):`)
 
 // freePaths are lookups DataForSEO does not charge for.
-var freePaths = []string{"/v3/appendix/", "/v3/serp/google/locations"}
+var freePaths = []string{"/v3/appendix/", "/v3/serp/google/locations", "/v3/on_page/raw_html"}
 
 // EstimateUSD returns the most a request to path with body can cost.
 func EstimateUSD(path string, body []byte) float64 {
@@ -95,6 +98,32 @@ func SerpCostUSD(depth int, queued bool) float64 {
 	return serpCeiling(path, map[string]any{"depth": float64(depth)})
 }
 
+// GoogleAIOverviewCostUSD returns the cheapest queued Google SERP price with
+// asynchronous AI Overview references enabled.
+func GoogleAIOverviewCostUSD(depth int) float64 {
+	return serpCeiling("/v3/serp/google/organic/task_post", map[string]any{
+		"depth": float64(depth), "load_async_ai_overview": true,
+	})
+}
+
+// GoogleAIOverviewBatchCostUSD returns the queued maximum for questionCount
+// Google AI Overview tasks at the requested depth.
+func GoogleAIOverviewBatchCostUSD(questionCount, depth int) float64 {
+	if questionCount <= 0 {
+		return 0
+	}
+	return math.Round(float64(questionCount)*GoogleAIOverviewCostUSD(depth)*1e6) / 1e6
+}
+
+// OnPageJavaScriptCostUSD returns the published JavaScript-rendered On-Page
+// price for the requested pages.
+func OnPageJavaScriptCostUSD(pages int) float64 {
+	if pages <= 0 {
+		return 0
+	}
+	return math.Round(float64(pages)*onPageJSPageUSD*1e6) / 1e6
+}
+
 // taskBodies splits a request body into its tasks. DataForSEO takes a JSON
 // array of tasks; anything else is one task.
 func taskBodies(body []byte) []map[string]any {
@@ -123,6 +152,11 @@ func taskCeiling(path string, task map[string]any) float64 {
 		return AIResponseCeilingUSD
 	case strings.HasPrefix(path, "/v3/ai_optimization/"):
 		return AIMentionsCeilingUSD
+	case strings.HasPrefix(path, "/v3/on_page/instant_pages"):
+		if javascript, _ := task["enable_javascript"].(bool); javascript {
+			return onPageJSPageUSD
+		}
+		return onPageBasicPageUSD
 	case strings.HasPrefix(path, "/v3/on_page/content_parsing/live"):
 		return contentParsePageUSD
 	case strings.HasPrefix(path, "/v3/on_page/lighthouse"):
@@ -138,6 +172,9 @@ func serpCeiling(path string, task map[string]any) float64 {
 		price = serpQueuedPageUSD + (pages-1)*serpQueuedExtraUSD
 		if number(task, "priority", 1) >= 2 {
 			price *= serpPriorityFactor
+		}
+		if async, _ := task["load_async_ai_overview"].(bool); async {
+			price += serpQueuedAIOUSD
 		}
 	}
 	if keyword, _ := task["keyword"].(string); serpOperator.MatchString(keyword) {

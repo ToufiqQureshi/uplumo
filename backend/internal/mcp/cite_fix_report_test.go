@@ -59,6 +59,11 @@ func TestCiteFixReportToolReadsOnlyTheCallersProject(t *testing.T) {
 	if _, leaked := structured["agent"]; leaked {
 		t.Fatal("the tool must not report an agent offer it did not price")
 	}
+	for _, freeField := range []string{"mentions", "rivals", "seoIssues"} {
+		if _, exists := structured[freeField]; !exists {
+			t.Fatalf("free report output missing %q", freeField)
+		}
+	}
 
 	_, err = handleCiteFixReport(t.Context(), args, &callEnv{h: h, deps: h.deps, auth: Auth{OrganizationID: other}})
 	if appErr, ok := errors.AsType[*appError](err); !ok || appErr.code != "FORBIDDEN" {

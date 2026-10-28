@@ -242,7 +242,11 @@ const lighthouseExportSchema = z.object({
 
 const startAuditSchema = z.object({ auditId: z.string() });
 const deleteAuditSchema = z.object({ success: z.boolean() });
-const capabilitiesSchema = z.object({ canRenderJavaScript: z.boolean() });
+const capabilitiesSchema = z.object({
+  canRenderJavaScript: z.boolean(),
+  maxRenderedPages: z.number().int().positive().optional(),
+  maxJavaScriptCredits: z.number().int().nonnegative().optional(),
+});
 
 function auditPath(projectId: string, endpoint: string) {
   return `/api/v1/projects/${encodeURIComponent(projectId)}/audit/${endpoint}`;

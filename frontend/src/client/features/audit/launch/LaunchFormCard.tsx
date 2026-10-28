@@ -15,11 +15,12 @@ import {
   FieldLabel,
 } from "@/client/components/ui/field";
 import { Input } from "@/client/components/ui/input";
+import { Checkbox } from "@/client/components/ui/checkbox";
 import { Switch } from "@/client/components/ui/switch";
 import { MIN_PAGES } from "@/client/features/audit/launch/types";
 import type { useLaunchController } from "@/client/features/audit/launch/useLaunchController";
 import { getFieldError, getFormError } from "@/client/lib/forms";
-import { RENDERED_MAX_AUDIT_PAGES } from "@/shared/audit-limits";
+import { MAX_RENDERED_PAGES_PER_AUDIT } from "@/shared/audit-limits";
 import { SUBSCRIBE_ROUTE } from "@/shared/billing";
 
 type Props = {
@@ -28,6 +29,7 @@ type Props = {
   maxPagesLimit: number;
   paidMaxPagesLimit: number;
   canRenderJavaScript?: boolean;
+  maxJavaScriptCredits: number;
   isFreePlan: boolean;
 };
 
@@ -37,6 +39,7 @@ export function LaunchFormCard({
   maxPagesLimit,
   paidMaxPagesLimit,
   canRenderJavaScript,
+  maxJavaScriptCredits,
   isFreePlan,
 }: Props) {
   return (
@@ -104,6 +107,7 @@ export function LaunchFormCard({
               <RenderingOptions
                 launchForm={launchForm}
                 canRenderJavaScript={canRenderJavaScript}
+                maxJavaScriptCredits={maxJavaScriptCredits}
               />
             </div>
           </div>
@@ -120,7 +124,7 @@ function LaunchOptions({
   commitMaxPagesInput,
   maxPagesLimit,
   paidMaxPagesLimit,
-}: Omit<Props, "isFreePlan">) {
+}: Omit<Props, "isFreePlan" | "maxJavaScriptCredits">) {
   return (
     <Field className="rounded-lg border border-border p-3">
       <FieldLabel htmlFor="audit-max-pages">Max pages</FieldLabel>
@@ -147,9 +151,6 @@ function LaunchOptions({
       </launchForm.Field>
       <FieldDescription>
         Enter any value from {MIN_PAGES} to {maxPagesLimit.toLocaleString()}.
-        {maxPagesLimit === RENDERED_MAX_AUDIT_PAGES
-          ? " Audits that render JavaScript are limited to this many pages."
-          : null}
         {maxPagesLimit < paidMaxPagesLimit ? (
           <>
             {" "}
@@ -217,13 +218,14 @@ function LighthouseOptions({
 function RenderingOptions({
   launchForm,
   canRenderJavaScript,
-}: Pick<Props, "launchForm" | "canRenderJavaScript">) {
+  maxJavaScriptCredits,
+}: Pick<Props, "launchForm" | "canRenderJavaScript" | "maxJavaScriptCredits">) {
   return (
     <Field className="rounded-lg border border-border p-3">
       <div className="flex items-center gap-2">
         <launchForm.Field name="renderJavaScript">
           {(field) => (
-            <Switch
+            <Checkbox
               id="audit-render-javascript"
               checked={field.state.value}
               disabled={canRenderJavaScript !== true}
@@ -233,9 +235,11 @@ function RenderingOptions({
         </launchForm.Field>
         <FieldLabel
           htmlFor="audit-render-javascript"
-          title="Loads each page in a browser before auditing it. Slower."
+          title={`Renders only flagged app-shell pages, up to ${MAX_RENDERED_PAGES_PER_AUDIT} per audit. You pay actual cost; failed renders are free.`}
         >
-          Render JavaScript
+          {canRenderJavaScript === true
+            ? `Render JavaScript pages (at most ${maxJavaScriptCredits} credits)`
+            : "Render JavaScript pages"}
         </FieldLabel>
       </div>
 
@@ -244,6 +248,18 @@ function RenderingOptions({
           JavaScript rendering isn&apos;t available right now.
         </FieldDescription>
       )}
+      {canRenderJavaScript === undefined && (
+        <FieldDescription>
+          Checking rendering availability and price.
+        </FieldDescription>
+      )}
+      {canRenderJavaScript === true ? (
+        <FieldDescription>
+          Renders only pages flagged as app shells, up to{" "}
+          {MAX_RENDERED_PAGES_PER_AUDIT} per audit. Actual cost is charged;
+          failed renders are free.
+        </FieldDescription>
+      ) : null}
     </Field>
   );
 }

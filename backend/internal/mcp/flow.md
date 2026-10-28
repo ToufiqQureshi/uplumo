@@ -20,6 +20,9 @@ API keys, OAuth/Postgres token tables, project auth, feature services and provid
 - Never forward an unregistered call to legacy/other backend code.
 - Tool project IDs are untrusted; authorize every call and hide IDs from schemas when server-bound.
 - Bound JSON bodies, tool output, call ceilings and OAuth tokens; classify read-only vs spend/mutation tools explicitly.
+- `get_cite_fix_report` includes saved mentions, rival comparisons and audit
+  issue summaries from its free report path. It does not trigger JavaScript
+  rendering, AI mentions refresh or Google AI Overview refresh.
 
 Search growth calls validate dates/brand terms, authorize the project, then reuse
 `ga4.Service.GetGrowthReport`, its scoped ten-minute cache and standard/expanded read bounds in `ga4/README.md`.

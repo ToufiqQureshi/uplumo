@@ -20,6 +20,42 @@ Scores how easy a site is for AI assistants to quote, from the latest completed 
   - Copy never promises a citation.
 - **Trace:** `checks.go`, `citefix.go`, `store.go`, `handler.go`; `audit/aireadiness.go`, `audit/pageanalyzer.go`, `audit/repository.go`, migration `00047_audit_citation_signals.sql`. Tests: `citefix_test.go` works every score and gain by hand; `store_test.go` runs a crawl through `audit.Repository` into a report on Postgres, including the workspace boundary, a legacy audit, a running audit and a failed audit; `handler_test.go` covers 400/404/500/503. Not yet run against a live customer site; weights may need tuning once real scores are seen.
 
+## Evidence additions approved 28 Oct 2026 (Cite Fix PR 2)
+
+- **Decision:** Site Audit may opt into DataForSEO On-Page JavaScript rendering
+  for only flagged app-shell URLs, at most 20 per audit. The published price is
+  $0.0015/page: the approved maximum is 39 credits for 20 pages, while actual
+  delivered cost is charged. Google AI Overview uses the cheapest queued Google
+  SERP task-post that returns asynchronous AI Overview references, up to 10
+  tracked questions per explicit refresh, at most 16 credits with actual cost
+  charged. Both results are cached for seven days. The customer can read the
+  saved AI Visibility Brand Lookup from Cite Fix at zero credits; refresh stays
+  on the existing AI Visibility page and price. Cite Fix-specific mentions
+  refresh is not approved; any proposal must be at most two calls and use real
+  observed costs before asking again.
+- **Why:** The owner approved these two provider actions only after seeing
+  provider prices and the concrete scenario: 50-page site, 20 app shells,
+  10 Overview questions, saved mentions = at most 55 credits. Reusing saved
+  mentions avoids duplicate purchases.
+- **Preserve:** Nothing paid on Cite Fix page load. Google refresh confirms
+  price first, has no automatic POST retry, and charges at most the displayed
+  cap. JavaScript is opt-in and only after shell detection; provider errors and
+  unusable render output charge 0 credits. Never render a rival page. Rival
+  signals are free, fetched only through the guarded audit client with
+  robots.txt respected, capped at 3 URLs/report and cached by project,
+  URL/content hash for 7 days. Saved Brand Lookup top pages join a missed
+  question's comparison only when their sampled question matches it; own-domain
+  pages and unrelated questions are excluded. AI prompt evidence does not change the 25/60 caps, models or
+  `go_citefix_agent_runs`. Also show latest critical/warning audit issues with
+  no provider call. `get_cite_fix_report` includes these free parts and does
+  not expose paid triggers.
+- **Trace:** migration `00049_citefix_evidence.sql`; `overview.go`,
+  `rivals.go`, `mentions.go`, `seo_issues.go`; Site Audit rendering and
+  `frontend/tests/cite-fix.spec.ts`. Mutating the Google question cap to 11,
+  enabling paid POST retries or raising the rival-page cap to four makes the
+  corresponding fake-provider/integration test fail. Real DataForSEO calls are
+  intentionally not part of acceptance testing.
+
 ## Paid agent and AI Visibility proof (owner approved 27 Oct 2026)
 
 - **Decision:** `POST .../cite-fix/agent/run` works on one page from the latest scan: Quick (DeepSeek V4.1 Flash analysis, at most 25 credits) or Deep (plus a DeepSeek V4 Pro rewrite, at most 60 credits). Default 5 weakest pages, at most 20 per batch and 20 runs per project per 10 minutes. Spend is labelled `cite_fix`. Gated by the AI writing plan feature (Basic and above). The report also carries `proof` from the latest saved AI Visibility run (free).

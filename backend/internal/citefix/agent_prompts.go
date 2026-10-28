@@ -127,8 +127,30 @@ func evidencePrompt(evidence agentEvidence) string {
 			fmt.Fprintf(&b, "- Question %q on %s cited %s, not this site\n", miss.Prompt, miss.Engine, strings.Join(miss.Cited, ", "))
 		}
 	}
+	if len(evidence.Rivals) > 0 {
+		b.WriteString("Free page evidence for missed questions (do not assume this proves why an AI ranked a page):\n")
+		for _, comparison := range evidence.Rivals {
+			fmt.Fprintf(&b, "- Question %q on %s; cited rival %q (%s): %s\n", clip(comparison.Prompt, 300), clip(comparison.Engine, 40), clip(comparison.Rival.Title, 180), clip(comparison.Rival.URL, 1000), formatRivalSignals(comparison.Rival.Signals))
+			if comparison.Yours != nil {
+				fmt.Fprintf(&b, "  Your scanned page %q (%s): %s\n", clip(comparison.Yours.Title, 180), clip(comparison.Yours.URL, 1000), formatRivalSignals(comparison.Yours.Signals))
+			}
+		}
+	}
 	b.WriteString("```")
 	return b.String()
+}
+
+func formatRivalSignals(signals SignalSnapshot) string {
+	schema := clip(strings.Join(signals.Schema, ", "), 160)
+	if schema == "" {
+		schema = "none detected"
+	}
+	date := clip(signals.Date, 40)
+	if date == "" {
+		date = "none detected"
+	}
+	return fmt.Sprintf("answer-first paragraph %d words; author %t; date %s; schema %s; statistics %d; FAQ %t; word count %d",
+		signals.AnswerFirstWords, signals.Author, date, schema, signals.Statistics, signals.FAQ, signals.WordCount)
 }
 
 // parseAnalystOutput validates the analyst's JSON and trims every field. An
