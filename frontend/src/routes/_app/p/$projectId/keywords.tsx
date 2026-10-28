@@ -1,12 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { KeywordResearchPage } from "@/client/features/keywords/page/KeywordResearchPage";
-import {
-  isResultLimit,
-  normalizeKeywordMode,
-  normalizeLegacyKeywordSearch,
-  normalizeSortDir,
-  normalizeSortField,
-} from "@/client/features/keywords/keywordSearchParams";
+import { KeywordAgentPage } from "@/client/features/keywords/agent/KeywordAgentPage";
+import { normalizeLegacyKeywordSearch } from "@/client/features/keywords/keywordSearchParams";
 import { keywordsSearchSchema } from "@/types/schemas/keywords";
 
 export const Route = createFileRoute("/_app/p/$projectId/keywords")({
@@ -29,27 +23,8 @@ export const Route = createFileRoute("/_app/p/$projectId/keywords")({
 
 function KeywordResearchPageRoute() {
   const { projectId } = Route.useParams();
-  const search = Route.useSearch();
-  const {
-    q: keywordInput = "",
-    loc: locationCode,
-    kLimit: resultLimit = 150,
-    mode: keywordMode = "auto",
-    sort: sortField = "searchVolume",
-    order: sortDir = "desc",
-  } = search;
+  const { q } = Route.useSearch();
   return (
-    <KeywordResearchPage
-      projectId={projectId}
-      keywordInput={keywordInput}
-      locationCode={locationCode}
-      locationName={search.locName}
-      resultLimit={isResultLimit(resultLimit) ? resultLimit : 150}
-      keywordMode={normalizeKeywordMode(keywordMode)}
-      clickstream={search.cs ?? false}
-      groupKeywords={search.grp ?? false}
-      sortField={normalizeSortField(sortField)}
-      sortDir={normalizeSortDir(sortDir)}
-    />
+    <KeywordAgentPage projectId={projectId} initialPrompt={q || undefined} />
   );
 }

@@ -82,6 +82,12 @@ type ResearchRow struct {
 	// ai_overview or local_pack: they tell the customer whether an article, a
 	// Google Business Profile or an AI answer is the way to win it.
 	SerpFeatures []string `json:"serpFeatures"`
+	// CoreKeyword groups close variants that share one Google volume; null
+	// when Labs did not cluster the keyword.
+	CoreKeyword *string `json:"coreKeyword"`
+	// TopPagesDomainRank is the average domain rank (0-1000) of the page-one
+	// results: how strong the sites to beat are.
+	TopPagesDomainRank *int `json:"topPagesDomainRank"`
 }
 
 // roundedInt rounds a provider average to a whole number, or nil when absent.
@@ -177,7 +183,7 @@ func labsRows(items []LabsItem) []ResearchRow {
 	seen := map[string]bool{}
 	for _, it := range items {
 		k := NormalizeKeyword(it.Keyword)
-		if k == "" || seen[k] {
+		if k == "" || seen[k] || it.OtherLanguage {
 			continue
 		}
 		seen[k] = true
@@ -196,6 +202,7 @@ func labsRows(items []LabsItem) []ResearchRow {
 			CompetitionLevel: it.Info.CompetitionLevel, LastUpdatedTime: it.Info.LastUpdatedTime,
 			DetectedLanguage: it.DetectedLanguage, WordsCount: it.WordsCount, SecondaryIntents: it.ForeignIntent,
 			SerpFeatures: nonNilStrings(it.SerpFeatures),
+			CoreKeyword:  it.CoreKeyword, TopPagesDomainRank: roundedInt(it.TopPagesDomainRank),
 		})
 	}
 	return rows

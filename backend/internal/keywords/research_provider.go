@@ -49,6 +49,16 @@ type LabsItem struct {
 	// DetectedLanguage and WordsCount describe the keyword itself.
 	DetectedLanguage *string
 	WordsCount       *int
+	// CoreKeyword is the close-variant group Labs puts the keyword in
+	// ("hotel revenue management" for "revenue management hotel"). Variants
+	// share one Google volume, so a list must show one row per group.
+	CoreKeyword *string
+	// OtherLanguage marks a keyword Labs detected as written in another
+	// language than the one requested; it is dropped before rows are built.
+	OtherLanguage bool
+	// TopPagesDomainRank is the average domain rank (0-1000) of the pages on
+	// page one: how strong the sites are that a new page must beat.
+	TopPagesDomainRank *float64
 	// ForeignIntent lists the search intents that are secondary to MainIntent.
 	ForeignIntent []string
 	// SerpFeatures are the result types Google shows for the keyword
@@ -213,6 +223,8 @@ type wireLabsItem struct {
 		KeywordDifficulty *int    `json:"keyword_difficulty"`
 		DetectedLanguage  *string `json:"detected_language"`
 		WordsCount        *int    `json:"words_count"`
+		CoreKeyword       *string `json:"core_keyword"`
+		IsAnotherLanguage bool    `json:"is_another_language"`
 	} `json:"keyword_properties"`
 	SearchIntentInfo *struct {
 		MainIntent    *string         `json:"main_intent"`
@@ -223,6 +235,7 @@ type wireLabsItem struct {
 		Backlinks            *float64 `json:"backlinks"`
 		Dofollow             *float64 `json:"dofollow"`
 		ReferringPages       *float64 `json:"referring_pages"`
+		MainDomainRank       *float64 `json:"main_domain_rank"`
 	} `json:"avg_backlinks_info"`
 	SerpInfo *struct {
 		ItemTypes []string `json:"serp_item_types"`
@@ -261,6 +274,8 @@ func (w wireLabsItem) item() (LabsItem, bool) {
 		out.Difficulty = w.KeywordProperties.KeywordDifficulty
 		out.DetectedLanguage = w.KeywordProperties.DetectedLanguage
 		out.WordsCount = w.KeywordProperties.WordsCount
+		out.CoreKeyword = w.KeywordProperties.CoreKeyword
+		out.OtherLanguage = w.KeywordProperties.IsAnotherLanguage
 	}
 	if w.SearchIntentInfo != nil {
 		out.MainIntent = w.SearchIntentInfo.MainIntent
@@ -271,6 +286,7 @@ func (w wireLabsItem) item() (LabsItem, bool) {
 		out.Backlinks = w.AvgBacklinksInfo.Backlinks
 		out.DofollowBacklinks = w.AvgBacklinksInfo.Dofollow
 		out.ReferringPages = w.AvgBacklinksInfo.ReferringPages
+		out.TopPagesDomainRank = w.AvgBacklinksInfo.MainDomainRank
 	}
 	if w.SerpInfo != nil {
 		out.SerpFeatures = w.SerpInfo.ItemTypes
@@ -322,26 +338,39 @@ func (p DataForSEOProvider) LabsKeywords(ctx context.Context, org string, req La
 		// SERP info (which result types Google shows) is free with the task.
 		"include_clickstream_data": req.Clickstream, "include_serp_info": true, "ignore_synonyms": req.IgnoreSynonyms,
 	}
-	// Only rows that pass the filter are returned and billed.
-	mustContain := func(field string) {
-		if req.MustContain != "" {
-			body["filters"] = []any{field, "ilike", "%" + req.MustContain + "%"}
+	// Only rows that pass the filters are returned and billed. Every source
+	// drops zero-volume rows: nobody can rank for searches that do not exist,
+	// and each row is paid for. Ideas and related also keep only rows naming
+	// the place the seed names.
+	var filters []any
+	addFilter := func(condition []any) {
+		if len(filters) > 0 {
+			filters = append(filters, "and")
 		}
+		filters = append(filters, condition)
 	}
+	prefix := ""
 	switch req.Source {
 	case SourceRelated:
-		path = labsRelatedPath
+		path, prefix = labsRelatedPath, "keyword_data."
 		body["keyword"], body["depth"] = req.Seed, 3
-		mustContain("keyword_data.keyword")
 	case SourceSuggestions:
 		path = labsSuggestionsPath
 		body["keyword"], body["include_seed_keyword"], body["exact_match"] = req.Seed, true, false
 	case SourceIdeas:
 		path = labsIdeasPath
 		body["keywords"], body["closely_variants"] = []string{req.Seed}, false
-		mustContain("keyword")
 	default:
 		return nil, fmt.Errorf("unknown Labs source %q", req.Source)
+	}
+	if req.MustContain != "" && req.Source != SourceSuggestions {
+		addFilter([]any{prefix + "keyword", "ilike", "%" + req.MustContain + "%"})
+	}
+	addFilter([]any{prefix + "keyword_info.search_volume", ">", 0})
+	if len(filters) == 1 {
+		body["filters"] = filters[0]
+	} else {
+		body["filters"] = filters
 	}
 	results, err := p.post(ctx, org, path, body)
 	if err != nil {

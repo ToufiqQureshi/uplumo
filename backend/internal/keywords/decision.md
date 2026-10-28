@@ -8,6 +8,9 @@ Owns keyword/serp research, location resolution, saved keywords and local busine
 
 ## Decisions to preserve
 
+
+- **Decision:** Labs research now sends `keyword_info.search_volume > 0` on every source (combined with the place filter where it applies), drops rows Labs marks `is_another_language`, and keeps `core_keyword` (variant group) and the page-one `main_domain_rank` as `coreKeyword` and `topPagesDomainRank`. **Why:** a raw DataForSEO comparison showed zero-volume rows billed per item, a Malayalam-detected row in an English result, and five rows that were one Google keyword; the fields arrive in the same task at no extra cost. **Preserve:** filters only narrow what is billed; no extra call; the research cache version was not bumped, so cached results stay served (old entries lack the new fields until they expire in 24h). **Trace:** `research_provider.go`, `research.go`, `research_provider_test.go`; the MCP `research_keywords` rows now also carry `monthlyVolumes`, `latestMonth`, `yearlyChange`, `serpFeatures`, `coreKeyword`, `topPagesDomainRank`.
+
 - Validate every billed task before provider call; no blind retries of paid task-post endpoints. _Why:_ This work consumes paid quota or shared capacity, so authorization and bounds must be checked before dispatch.
 - Cache keys include project/organization, geography and all result-changing options. _Why:_ A cache can be stale or absent, so it must not replace the authoritative source or change the result silently.
 - Keep saved keyword rows and tags project-scoped; guard batches/caps and null metrics. _Why:_ Callers can tamper with IDs and UI state, so server-verified ownership must prevent cross-customer access.

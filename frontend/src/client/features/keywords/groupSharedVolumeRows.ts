@@ -1,7 +1,7 @@
 import type { KeywordResearchRow } from "@/types/keywords";
 
 /** A visible keyword row, optionally indented beneath a shared-volume parent. */
-export type KeywordResearchDisplayRow = KeywordResearchRow & {
+type KeywordResearchDisplayRow = KeywordResearchRow & {
   parentKeyword: string | null;
 };
 

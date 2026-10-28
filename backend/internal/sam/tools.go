@@ -95,9 +95,11 @@ type localTool struct {
 // session's project, plus the local tools.
 type toolset struct {
 	growthOnly bool
-	runner     ToolRunner
-	auth       mcp.Auth
-	project    projectInfo
+	// keywords is set in Keywords mode: its tool limits and bought rows.
+	keywords *keywordTurn
+	runner   ToolRunner
+	auth     mcp.Auth
+	project  projectInfo
 	// binds records which MCP tools had projectId stripped from their schema.
 	binds map[string]bool
 	defs  []openrouter.Tool
@@ -157,6 +159,14 @@ func (ts *toolset) Run(ctx context.Context, name string, arguments json.RawMessa
 	if ts.growthOnly && !growthReadTool(name) {
 		return nil, true, fmt.Errorf("tool %s is unavailable in read-only search analyst mode", name)
 	}
+	if ts.keywords != nil {
+		if !keywordsModeTool(name) {
+			return nil, true, fmt.Errorf("tool %s is unavailable on the Keywords page", name)
+		}
+		if err := ts.keywords.reserve(name, arguments); err != nil {
+			return nil, true, err
+		}
+	}
 	if local, ok := ts.local[name]; ok {
 		out, err := local.run(ctx, arguments)
 		if err != nil {
@@ -180,6 +190,9 @@ func (ts *toolset) Run(ctx context.Context, name string, arguments json.RawMessa
 	}
 	if result.IsError {
 		return nil, true, errors.New(result.Text)
+	}
+	if ts.keywords != nil && name == "research_keywords" {
+		ts.keywords.record(result)
 	}
 	return capToolOutput(toModelOutput(result), maxToolOutputChars), false, nil
 }

@@ -43,48 +43,6 @@ const researchKeywordsSchema = z.object({
   groupKeywords: z.boolean().optional().default(false),
 });
 
-const savedKeywordMetricSchema = z.object({
-  keyword: z.string().min(1),
-  searchVolume: z.number().int().nonnegative().nullable().optional(),
-  cpc: z.number().nonnegative().nullable().optional(),
-  competition: z.number().min(0).max(1).nullable().optional(),
-  keywordDifficulty: z.number().int().min(0).max(100).nullable().optional(),
-  intent: z
-    .enum([
-      "informational",
-      "commercial",
-      "transactional",
-      "navigational",
-      "unknown",
-    ])
-    .nullable()
-    .optional(),
-  monthlySearches: z
-    .array(
-      z.object({
-        year: z.number().int().positive(),
-        month: z.number().int().min(1).max(12),
-        searchVolume: z.number().int().nonnegative(),
-      }),
-    )
-    .optional(),
-});
-
-export const saveKeywordsSchema = z
-  .object({
-    projectId: z.string().min(1),
-    keywords: z.array(z.string().min(1)).min(1).max(500),
-    locationCode: z.number().int().positive().optional(),
-    languageCode: z.string().min(2).max(8).optional(),
-    tags: z.array(savedKeywordTagSchema).max(20).optional(),
-    tagMode: z.enum(["append", "replace"]).optional(),
-    metrics: z.array(savedKeywordMetricSchema).max(500).optional(),
-  })
-  .refine(
-    (value) => value.tagMode !== "replace" || (value.tags?.length ?? 0) > 0,
-    "Replacement tags are required when tagMode is replace.",
-  );
-
 export const getSavedKeywordsSchema = z.object({
   projectId: z.string().min(1),
   search: z.string().trim().max(200).optional(),
@@ -136,7 +94,6 @@ export const exportSavedKeywordsSchema = getSavedKeywordsSchema.omit({
 });
 
 type ResearchKeywordsInput = z.infer<typeof researchKeywordsSchema>;
-export type SaveKeywordsInput = z.infer<typeof saveKeywordsSchema>;
 type ResolvedMarket = { locationCode: number; languageCode: string };
 export type ResolvedResearchKeywordsInput = Omit<
   ResearchKeywordsInput,

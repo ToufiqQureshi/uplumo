@@ -92,7 +92,7 @@ func (d Deps) chat(w http.ResponseWriter, r *http.Request) {
 		writeInvalid(w)
 		return
 	}
-	if in.Mode != "" && in.Mode != "search_growth" {
+	if in.Mode != "" && in.Mode != "search_growth" && in.Mode != "keywords" {
 		writeInvalid(w)
 		return
 	}
@@ -106,6 +106,7 @@ func (d Deps) chat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sc.SearchGrowth = in.Mode == "search_growth"
+	sc.Keywords = in.Mode == "keywords"
 	ctx, release, ok := d.Chat.turns.begin(r.Context(), sc.SessionID)
 	if !ok {
 		httpx.WriteError(w, http.StatusConflict, "sam_turn_in_progress", "SAM is still answering. Wait for the reply or stop it first.")

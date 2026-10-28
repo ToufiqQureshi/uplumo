@@ -102,7 +102,7 @@ paths:
               additionalProperties: false
               required: [sessionId, message]
               properties:
-                mode: { type: string, enum: [search_growth], description: Optional read-only analyst tool mode; AI completions still use credits. }
+                mode: { type: string, enum: [search_growth, keywords], description: "Optional tool mode. search_growth is the read-only analyst; keywords is the Keywords page agent (keyword tools only, at most 3 research seeds, 2 SERP queries of depth 20 and 1 metric lookup per reply). AI completions still use credits." }
                 sessionId: { type: string, minLength: 1, maxLength: 128 }
                 message:
                   type: object

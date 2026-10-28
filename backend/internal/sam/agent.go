@@ -71,6 +71,9 @@ type SessionContext struct {
 	OrganizationID string
 	Role           string
 	SearchGrowth   bool
+	// Keywords is the Keywords page agent: keyword tools only, with per-reply
+	// purchase limits.
+	Keywords bool
 }
 
 // SessionTitler names and touches the registry row.
@@ -311,6 +314,10 @@ func (t *turnState) run(ctx context.Context) error {
 	if t.sc.SearchGrowth {
 		toolset.restrictToGrowth()
 		system += "\nThis turn is Search growth analyst mode. Only read-only first-party Google reporting and guarded site-reading tools are available. No paid research, writes, jobs or site changes are authorized. Start with the requested evidence analysis instead of onboarding."
+	}
+	if t.sc.Keywords {
+		toolset.restrictToKeywords()
+		system += keywordsModePrompt
 	}
 	conversation := append([]openrouter.Message{{Role: "system", Content: system}}, history...)
 	for step := 0; step < maxSteps; step++ {

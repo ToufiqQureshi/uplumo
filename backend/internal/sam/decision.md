@@ -8,6 +8,9 @@ Streams model turns, persists bounded history, invokes registered project tools 
 
 ## Decisions to preserve
 
+
+- **Decision:** Chat `mode: "keywords"` runs the Keywords page agent: only keyword, Search Console, site-reading and saving tools; at most 3 research seeds, 2 SERP queries (depth ≤20) and 1 metric lookup (≤50 keywords) per reply; and a free `present_keywords` tool whose metrics are joined server-side from that reply's research rows. **Why:** one prompt must not buy unbounded DataForSEO tasks, and the screen must never show a number the model typed. **Preserve:** limits are checked at execution, so a guessed or repeated call is refused before it reaches the provider; a counted call stays counted even if it fails (a failed task can still be billed); data ceiling = 3×$0.06 + 2×$0.004 + $0.018 ≈ $0.206 ≈ 265 credits, shown on the page. AI tokens keep the existing $1 per-reply stop. Free plans are refused by the MCP plan gate and have no credits; the page also hides the chat for Free. **Trace:** `keywords_mode.go`, `keywords_mode_test.go`, `chat.go`, `agent.go`, `api/sam.yaml`. Real-provider validation of a full reply not run.
+
 - Require a per-turn cost ceiling and stop mid-turn if credits/limits are exhausted. _Why:_ This work consumes paid quota or shared capacity, so authorization and bounds must be checked before dispatch.
 - Never let a model-selected project ID change authorization scope. _Why:_ Callers can tamper with IDs and UI state, so server-verified ownership must prevent cross-customer access.
 - Persist partial answers and settle real usage on provider/tool error; avoid charging reported-zero usage as free. _Why:_ Unavailable or partial data is not a measured zero; keeping status visible prevents false customer decisions.
