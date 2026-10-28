@@ -21,7 +21,9 @@
    report. Add saved Brand Lookup top pages only when their sampled question
    matches that same miss; label their source separately. Fetch only through
    `audit.NewGuard().NewClient()` after checking robots.txt, with a 12 s timeout
-   and bounded HTML; use `audit.AnalyzeHTML` for the same citation signals as
+   per page, all stale pages fetched together under one 8 s report budget, and
+   a failed fetch remembered for 24 h (no refetch on every report read) and
+   bounded HTML; use `audit.AnalyzeHTML` for the same citation signals as
    the customer's page. Cache by project, URL and content hash, reuse for seven
    days, and label app shells without rendering them.
 5. No completed audit: `no_scan`. Any page row with `citation_signals_json`

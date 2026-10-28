@@ -29,8 +29,9 @@ Postgres audit tables; Redis progress/cache/quota; PageSpeed Insights and CrUX; 
   delivered price is settled. A failed/unusable render charges zero customer
   credits. The paid request uses `retry:false`, a unique page claim prevents
   duplicate rendering within the audit, and returned HTML cannot bypass the
-  normal analyzer. The free seven-day `raw_html` retrieval is used only for
-  successful DataForSEO task IDs.
+  normal analyzer. The free seven-day `raw_html` retrieval runs after each
+  batch, only for that batch's successful task IDs, so a later failed batch
+  never discards pages already paid for.
 
 JavaScript rendering is opt-in and limited to app-shell pages; without a wired
 DataForSEO renderer, capabilities report false and the start request fails

@@ -103,94 +103,22 @@ func (r DataForSEORenderer) Render(ctx context.Context, organizationID, auditID 
 	ctx = spend.WithStableIdempotencyKey(ctx, "site-audit-javascript:"+auditID)
 	pages := map[string]RenderedHTML{}
 	err := r.Client.DoBudgetedWithDelivery(ctx, organizationID, spend.SiteAudit, dataforseo.OnPageJavaScriptCostUSD(len(unique)), func(request dataforseo.DoBudgetedRequest) (float64, error) {
-		taskIDs := map[string]string{}
-		taskCosts := map[string]float64{}
-		pageStatuses := map[string]int{}
+		// Each batch's raw HTML is read right after it is rendered, so a later
+		// batch failing never throws away pages that were already paid for.
+		var stopErr error
 		for _, batch := range batches {
-			inputs := make([]renderTaskInput, len(batch))
-			for i, pageURL := range batch {
-				inputs[i] = renderTaskInput{URL: pageURL, EnableJavaScript: true, StoreRawHTML: true}
-			}
-			body, err := json.Marshal(inputs)
-			if err != nil {
-				return 0, errors.Join(dataforseo.ErrNothingDelivered, fmt.Errorf("encode On-Page JavaScript request: %w", err))
-			}
-			paidResponse, err := request(http.MethodPost, onPageInstantPagesPath, body, false)
-			if err != nil {
-				return 0, errors.Join(dataforseo.ErrNothingDelivered, err)
-			}
-			var taskResult renderTaskResponse
-			if err := json.Unmarshal(paidResponse, &taskResult); err != nil {
-				return 0, errors.Join(dataforseo.ErrNothingDelivered, err)
-			}
-			if taskResult.StatusCode != 20000 {
-				continue
-			}
-			for _, task := range taskResult.Tasks {
-				if task.ID == "" || task.StatusCode != 20000 || !slices.Contains(batch, task.Data.URL) {
-					continue
-				}
-				pageURL := task.Data.URL
-				for _, result := range task.Result {
-					for _, item := range result.Items {
-						if item.ResourceType != "html" || item.StatusCode < 200 || item.StatusCode >= 300 || task.Cost <= 0 {
-							continue
-						}
-						taskIDs[task.ID] = pageURL
-						taskCosts[pageURL] = task.Cost
-						pageStatuses[pageURL] = item.StatusCode
-						break
-					}
-					if taskIDs[task.ID] != "" {
-						break
-					}
-				}
+			if stopErr = renderBatch(request, batch, pages); stopErr != nil {
+				break
 			}
 		}
-		if len(taskIDs) == 0 {
-			return 0, dataforseo.ErrNothingDelivered
-		}
-		rawInputs := make([]rawHTMLInput, 0, len(taskIDs))
-		for id := range taskIDs {
-			rawInputs = append(rawInputs, rawHTMLInput{ID: id})
-		}
-		slices.SortFunc(rawInputs, func(a, b rawHTMLInput) int { return strings.Compare(a.ID, b.ID) })
-		rawBody, err := json.Marshal(rawInputs)
-		if err != nil {
-			return 0, errors.Join(dataforseo.ErrNothingDelivered, fmt.Errorf("encode raw HTML request: %w", err))
-		}
-		rawResponse, err := request(http.MethodPost, onPageRawHTMLPath, rawBody, false)
-		if err != nil {
-			return 0, errors.Join(dataforseo.ErrNothingDelivered, err)
-		}
-		var htmlResult rawHTMLResponse
-		if err := json.Unmarshal(rawResponse, &htmlResult); err != nil || htmlResult.StatusCode != 20000 {
-			return 0, errors.Join(dataforseo.ErrNothingDelivered, err)
-		}
-		for _, task := range htmlResult.Tasks {
-			pageURL := taskIDs[task.ID]
-			if pageURL == "" || task.StatusCode != 20000 || len(task.Result) == 0 || strings.TrimSpace(task.Result[0].Items.HTML) == "" {
-				continue
-			}
-			html := task.Result[0].Items.HTML
-			if len(html) > MaxHTMLBytes {
-				html = html[:MaxHTMLBytes]
-			}
-			status := pageStatuses[pageURL]
-			analysis := AnalyzeHTML(html, pageURL, status, 0, "")
-			if analysis.JavaScriptShell {
-				continue
-			}
-			pages[pageURL] = RenderedHTML{URL: pageURL, StatusCode: status, HTML: html, CostUSD: taskCosts[pageURL]}
+		if len(pages) == 0 {
+			return 0, errors.Join(dataforseo.ErrNothingDelivered, stopErr)
 		}
 		var deliveredUSD float64
 		for _, page := range pages {
 			deliveredUSD += page.CostUSD
 		}
-		if len(pages) == 0 {
-			return 0, dataforseo.ErrNothingDelivered
-		}
-		return deliveredUSD, nil
+		return deliveredUSD, stopErr
 	})
 	if err != nil {
 		return pages, err
@@ -198,10 +126,96 @@ func (r DataForSEORenderer) Render(ctx context.Context, organizationID, auditID 
 	return pages, nil
 }
 
+// renderBatch buys one Instant Pages request and reads the raw HTML of its
+// successful tasks through the free retrieval endpoint, adding every usable
+// page to pages. An error means no further batch should be bought.
+func renderBatch(request dataforseo.DoBudgetedRequest, batch []string, pages map[string]RenderedHTML) error {
+	inputs := make([]renderTaskInput, len(batch))
+	for i, pageURL := range batch {
+		inputs[i] = renderTaskInput{URL: pageURL, EnableJavaScript: true, StoreRawHTML: true}
+	}
+	body, err := json.Marshal(inputs)
+	if err != nil {
+		return fmt.Errorf("encode On-Page JavaScript request: %w", err)
+	}
+	paidResponse, err := request(http.MethodPost, onPageInstantPagesPath, body, false)
+	if err != nil {
+		return err
+	}
+	var taskResult renderTaskResponse
+	if err := json.Unmarshal(paidResponse, &taskResult); err != nil {
+		return fmt.Errorf("decode On-Page JavaScript response: %w", err)
+	}
+	if taskResult.StatusCode != 20000 {
+		return nil
+	}
+	taskIDs := map[string]string{}
+	taskCosts := map[string]float64{}
+	pageStatuses := map[string]int{}
+	for _, task := range taskResult.Tasks {
+		if task.ID == "" || task.StatusCode != 20000 || !slices.Contains(batch, task.Data.URL) {
+			continue
+		}
+		pageURL := task.Data.URL
+		for _, result := range task.Result {
+			for _, item := range result.Items {
+				if item.ResourceType != "html" || item.StatusCode < 200 || item.StatusCode >= 300 || task.Cost <= 0 {
+					continue
+				}
+				taskIDs[task.ID] = pageURL
+				taskCosts[pageURL] = task.Cost
+				pageStatuses[pageURL] = item.StatusCode
+				break
+			}
+			if taskIDs[task.ID] != "" {
+				break
+			}
+		}
+	}
+	if len(taskIDs) == 0 {
+		return nil
+	}
+	rawInputs := make([]rawHTMLInput, 0, len(taskIDs))
+	for id := range taskIDs {
+		rawInputs = append(rawInputs, rawHTMLInput{ID: id})
+	}
+	slices.SortFunc(rawInputs, func(a, b rawHTMLInput) int { return strings.Compare(a.ID, b.ID) })
+	rawBody, err := json.Marshal(rawInputs)
+	if err != nil {
+		return fmt.Errorf("encode raw HTML request: %w", err)
+	}
+	rawResponse, err := request(http.MethodPost, onPageRawHTMLPath, rawBody, false)
+	if err != nil {
+		return err
+	}
+	var htmlResult rawHTMLResponse
+	if err := json.Unmarshal(rawResponse, &htmlResult); err != nil {
+		return fmt.Errorf("decode raw HTML response: %w", err)
+	}
+	if htmlResult.StatusCode != 20000 {
+		return fmt.Errorf("DataForSEO raw HTML request failed with status %d", htmlResult.StatusCode)
+	}
+	for _, task := range htmlResult.Tasks {
+		pageURL := taskIDs[task.ID]
+		if pageURL == "" || task.StatusCode != 20000 || len(task.Result) == 0 || strings.TrimSpace(task.Result[0].Items.HTML) == "" {
+			continue
+		}
+		html := task.Result[0].Items.HTML
+		if len(html) > MaxHTMLBytes {
+			html = html[:MaxHTMLBytes]
+		}
+		status := pageStatuses[pageURL]
+		if AnalyzeHTML(html, pageURL, status, 0, "").JavaScriptShell {
+			continue
+		}
+		pages[pageURL] = RenderedHTML{URL: pageURL, StatusCode: status, HTML: html, CostUSD: taskCosts[pageURL]}
+	}
+	return nil
+}
+
 // batchRenderURLs respects DataForSEO's Instant Pages limit of 20 tasks and
 // five URLs per domain in one request. A site's twenty same-domain shells are
-// therefore four paid requests, while the raw HTML retrieval remains one free
-// request for all successful task IDs.
+// therefore four paid requests, each followed by one free raw HTML retrieval.
 func batchRenderURLs(urls []string) [][]string {
 	batches := make([][]string, 0, (len(urls)+onPageMaxTasksPerRequest-1)/onPageMaxTasksPerRequest)
 	batch := make([]string, 0, onPageMaxTasksPerRequest)

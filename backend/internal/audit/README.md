@@ -67,8 +67,10 @@ safely escaped link snippet for review and manual placement.
   retried. URL claims are unique per audit, so a replay cannot buy the same
   URL again. DataForSEO allows at most 20 tasks and five identical registrable
   domains in each `instant_pages` request. Twenty same-domain pages use four
-  paid task POSTs, followed by one free `raw_html` retrieval POST for successful
-  task IDs (available for seven days).
+  paid task POSTs, each followed by one free `raw_html` retrieval POST for that
+  batch's successful task IDs (available for seven days). A later batch that
+  fails stops new batches but keeps, and charges only, the pages already
+  delivered.
 - `PAGESPEED_API_KEY` (a Google Cloud API key with the PageSpeed Insights API
   enabled) is needed for Lighthouse. Without it audits still run; Lighthouse is
   skipped.

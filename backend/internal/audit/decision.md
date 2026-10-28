@@ -94,3 +94,18 @@ Use the package tests next to the source files in `README.md`. For changes cross
 - **Why:** Cite Fix explains why AI assistants do not quote a site. These facts are in HTML the crawl already fetched, so storing them costs one text column, not a second crawl or a provider call.
 - **Preserve:** No extra request or credits. Every page of a new crawl gets a non-NULL value (an empty schema list is `[]`), so NULL means "crawled before Cite Fix" and is reported as "scan again", never as zero. Dates are kept as written, at most 40 characters. JSON-LD keys are walked in sorted order, so "the first date" is the same on every crawl. A paragraph closed by the next `<p>` or a heading still counts. `noscript` content never opens or closes navigation.
 - **Trace:** `aireadiness.go` (`AIPageSignals`, `jsonLDFacts`, `countStatistics`), `pageanalyzer.go`, `repository.go` (`pageArgs`, column 36), `types.go`, migration `00047_audit_citation_signals.sql`. Tests: `aireadiness_test.go` (`TestAnalyzeHTMLCollectsCitationSignals`, `TestAnalyzeHTMLCitationSignalsAbsent`, `TestAnalyzeHTMLAuthorSources`, `TestJSONLDFactsKeepsTheSameFirstDate`), `repository_helpers_test.go` (`TestPageArgsFlattensLinks`), and `citefix/store_test.go` for the round trip through Postgres. Not run against a live site yet.
+
+## Keep paid JavaScript renders when a later batch fails
+
+- **Decision:** `DataForSEORenderer.Render` reads each batch's raw HTML right
+  after that batch (`renderBatch`). A failed later batch stops new batches but
+  keeps the pages already rendered and settles only their cost.
+- **Why:** review of PR #244: raw HTML was read once after all batches, so a
+  failure in batch 2 of 4 returned nothing and threw away renders DataForSEO had
+  already billed ("show what we paid for").
+- **Preserve:** at most 20 pages, `retry:false`, one hold per audit, customer
+  charge = delivered pages only; an uncertain (5xx/timeout) outcome stays
+  unsettled for reconciliation but the delivered pages are still saved.
+- **Trace:** `dataforseo_renderer.go`,
+  `TestDataForSEORendererKeepsPaidPagesWhenALaterBatchFails` (fails on the
+  previous code); `raw_html` calls are now one per batch, all free.

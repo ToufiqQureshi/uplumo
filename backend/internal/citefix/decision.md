@@ -74,3 +74,16 @@ Scores how easy a site is for AI assistants to quote, from the latest completed 
 - **Trace:** `backend/internal/mcp/cite_fix_report.go` and its test. Step 4
   (fix → editor → re-scan) is the "Open in Content Editor" button plus "Scan
   again"; publishing happens in the customer's own CMS.
+
+## Rival fetches never slow the report
+
+- **Decision:** stale rival pages are fetched concurrently under one 8 s budget
+  per report, and a failed fetch is cached (empty content hash) for 24 h.
+- **Why:** review of PR #244: the report runs on page load and every 15 s while
+  a scan runs; sequential 12 s fetches could hold it ~36 s, and failures were
+  refetched on every read, hitting third-party sites repeatedly.
+- **Preserve:** max 3 rivals, SSRF guard, robots.txt, 7-day refresh, no paid
+  call, no rendering of rivals.
+- **Trace:** `rivals.go` (`rivalNeedsFetch`),
+  `TestRivalComparisonsRememberFailuresAndNeverWaitPastTheBudget` (mutation of
+  the 24 h retry fails it).

@@ -193,3 +193,79 @@ func TestRivalComparisonsUseMatchedBrandLookupPagesCapAtThreeAndCache(t *testing
 		t.Fatalf("saved proof source was lost: %+v", seen["https://proof.example/proof"])
 	}
 }
+
+func TestRivalComparisonsRememberFailuresAndNeverWaitPastTheBudget(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	pool := testPool(ctx, t)
+	organizationID, projectID := seedProject(ctx, t, pool)
+	var brokenGets, slowGets atomic.Int32
+	release := make(chan struct{})
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/robots.txt":
+			_, _ = w.Write([]byte("User-agent: *\nAllow: /\n"))
+		case "/broken":
+			if r.Method == http.MethodGet {
+				brokenGets.Add(1)
+			}
+			w.WriteHeader(http.StatusInternalServerError)
+		case "/slow":
+			if r.Method == http.MethodGet {
+				slowGets.Add(1)
+				select {
+				case <-release:
+				case <-r.Context().Done():
+				}
+				return
+			}
+			w.Header().Set("Content-Type", "text/html")
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+	defer close(release)
+	target, _ := url.Parse(server.URL)
+	client := &http.Client{
+		Transport:     rivalTestTransport{serverURL: target, base: server.Client().Transport},
+		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
+	}
+	guard := &audit.Guard{Resolver: publicRivalResolver{}, Client: client}
+	now := time.Date(2026, 10, 28, 12, 0, 0, 0, time.UTC)
+	store := Store{DB: pool, Guard: guard, HTTP: client, Now: func() time.Time { return now }}
+	proof := &Proof{Domain: "shop.example", Misses: []Miss{
+		{Prompt: "Best booking tool?", Engine: "perplexity", CitedPages: []CitedPage{
+			{URL: "https://broken.example/broken", Domain: "broken.example"},
+			{URL: "https://slow.example/slow", Domain: "slow.example"},
+		}},
+	}}
+
+	started := time.Now()
+	comparisons, err := store.rivalComparisons(ctx, organizationID, projectID, proof, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if elapsed := time.Since(started); elapsed > rivalFetchBudget+2*time.Second {
+		t.Fatalf("report waited %v on rival sites; budget is %v", elapsed, rivalFetchBudget)
+	}
+	if len(comparisons) != 0 || brokenGets.Load() != 1 || slowGets.Load() != 1 {
+		t.Fatalf("comparisons=%d broken GETs=%d slow GETs=%d; want none shown and one GET each", len(comparisons), brokenGets.Load(), slowGets.Load())
+	}
+
+	// The next report, minutes later, must not hit the failed sites again.
+	now = now.Add(15 * time.Minute)
+	if _, err := store.rivalComparisons(ctx, organizationID, projectID, proof, nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	if brokenGets.Load() != 1 || slowGets.Load() != 1 {
+		t.Fatalf("failed rivals were fetched again within %v: broken=%d slow=%d", rivalRetryInterval, brokenGets.Load(), slowGets.Load())
+	}
+	now = now.Add(rivalRetryInterval)
+	if _, err := store.rivalComparisons(ctx, organizationID, projectID, proof, nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	if brokenGets.Load() != 2 {
+		t.Fatalf("broken rival GETs=%d after %v; want one retry", brokenGets.Load(), rivalRetryInterval)
+	}
+}

@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -22,7 +23,14 @@ const (
 	rivalRefreshInterval = 7 * 24 * time.Hour
 	rivalPageLimit       = 3
 	rivalFetchTimeout    = 12 * time.Second
-	rivalRobotsMaxBytes  = 512 << 10
+	// rivalFetchBudget caps the whole rival step of one report: the report is
+	// read on page load (and every 15 s while a scan runs), so a slow
+	// third-party site must never hold it up.
+	rivalFetchBudget = 8 * time.Second
+	// rivalRetryInterval is how long a failed fetch is remembered, so a blocked
+	// or broken rival site is not hit again on every report read.
+	rivalRetryInterval  = 24 * time.Hour
+	rivalRobotsMaxBytes = 512 << 10
 )
 
 // AuditResults reuses the Site Audit service's scoped result reader for the
@@ -96,41 +104,81 @@ func (s Store) rivalComparisons(ctx context.Context, organizationID, projectID s
 		now = s.Now
 	}
 	yours := bestOwnPage(pages)
+	type pick struct {
+		prompt, engine string
+		cited          CitedPage
+		cached         *cachedRivalPage
+		fetched        *RivalPage
+	}
+	picks := make([]*pick, 0, rivalPageLimit)
 	seen := map[string]bool{}
-	comparisons := make([]RivalComparison, 0, rivalPageLimit)
-	considered := 0
 	for _, miss := range proof.Misses {
 		for _, candidate := range rivalCandidates(miss, proof.Domain, mentions) {
-			if considered >= rivalPageLimit {
-				return comparisons, nil
+			if len(picks) >= rivalPageLimit {
+				break
 			}
-			cited := candidate.page
-			if seen[cited.URL] || !isPublicHTTPURL(cited.URL) {
+			if seen[candidate.page.URL] || !isPublicHTTPURL(candidate.page.URL) {
 				continue
 			}
-			seen[cited.URL] = true
-			considered++
-			cached, err := s.rivalCache(ctx, organizationID, projectID, cited.URL)
+			seen[candidate.page.URL] = true
+			cached, err := s.rivalCache(ctx, organizationID, projectID, candidate.page.URL)
 			if err != nil {
 				return nil, err
 			}
-			if cached == nil || now().Sub(cached.FetchedAt) >= rivalRefreshInterval {
-				fetched, fetchErr := fetchRivalPage(ctx, guard, client, cited, now())
-				if fetchErr != nil {
-					// A blocked, disallowed, or unavailable public page is omitted;
-					// a future report can try again without affecting its score.
-					continue
-				}
-				if err := s.saveRivalCache(ctx, organizationID, projectID, fetched); err != nil {
-					return nil, err
-				}
-				cached = &cachedRivalPage{RivalPage: fetched}
-			}
-			comparison := RivalComparison{Prompt: miss.Prompt, Engine: candidate.engine, Rival: cached.RivalPage, Yours: yours}
-			comparisons = append(comparisons, comparison)
+			picks = append(picks, &pick{prompt: miss.Prompt, engine: candidate.engine, cited: candidate.page, cached: cached})
 		}
 	}
+
+	// Stale or missing pages are fetched together under one budget; a page
+	// that does not answer in time is left out of this report only.
+	fetchCtx, cancel := context.WithTimeout(ctx, rivalFetchBudget)
+	var wg sync.WaitGroup
+	for _, p := range picks {
+		if !rivalNeedsFetch(p.cached, now()) {
+			continue
+		}
+		wg.Go(func() {
+			fetched, err := fetchRivalPage(fetchCtx, guard, client, p.cited, now())
+			if err != nil {
+				// Remember the failure so the next report does not try again
+				// before rivalRetryInterval.
+				fetched = RivalPage{URL: p.cited.URL, Domain: p.cited.Domain, FetchedAt: now()}
+			}
+			p.fetched = &fetched
+		})
+	}
+	wg.Wait()
+	cancel()
+
+	comparisons := make([]RivalComparison, 0, len(picks))
+	for _, p := range picks {
+		page := p.cached
+		if p.fetched != nil {
+			if err := s.saveRivalCache(ctx, organizationID, projectID, *p.fetched); err != nil {
+				return nil, err
+			}
+			page = &cachedRivalPage{RivalPage: *p.fetched}
+		}
+		// An empty content hash marks a failed fetch: nothing to compare.
+		if page == nil || page.ContentHash == "" {
+			continue
+		}
+		comparisons = append(comparisons, RivalComparison{Prompt: p.prompt, Engine: p.engine, Rival: page.RivalPage, Yours: yours})
+	}
 	return comparisons, nil
+}
+
+// rivalNeedsFetch says whether a rival page must be fetched for this report:
+// it was never fetched, its snapshot is older than rivalRefreshInterval, or
+// its last fetch failed more than rivalRetryInterval ago.
+func rivalNeedsFetch(cached *cachedRivalPage, now time.Time) bool {
+	if cached == nil {
+		return true
+	}
+	if cached.ContentHash == "" {
+		return now.Sub(cached.FetchedAt) >= rivalRetryInterval
+	}
+	return now.Sub(cached.FetchedAt) >= rivalRefreshInterval
 }
 
 type rivalCandidate struct {
