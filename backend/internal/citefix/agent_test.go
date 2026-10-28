@@ -385,6 +385,37 @@ func TestAgentLimitsRunsPerProject(t *testing.T) {
 	}
 }
 
+func TestAgentStopsAfterUnpaidFailures(t *testing.T) {
+	f := newAgentFixture(t)
+	ctx := context.Background()
+	insert := func(i int, status, code string, credits int) {
+		t.Helper()
+		if _, err := f.pool.Exec(ctx, `INSERT INTO go_citefix_agent_runs (id, organization_id, project_id, url, mode, idempotency_key, status, error_code, credits)
+			VALUES ($1, $2, $3, $4, 'quick', $1, $5, NULLIF($6, ''), $7)`, fmt.Sprintf("fail-%s-%d", f.projectID, i), f.organizationID, f.projectID,
+			fmt.Sprintf("%s?f=%d", f.pageURL, i), status, code, credits); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Restart-stale and paid failures do not count.
+	insert(100, "failed", "stale", 0)
+	insert(101, "failed", "unusable", 3)
+	for i := range maxUnpaidFailures - 1 {
+		insert(i, "failed", "unusable", 0)
+	}
+	if _, err := f.run(t, ModeQuick, "key-1"); err != nil {
+		t.Fatalf("below the unpaid-failure limit: %v", err)
+	}
+	insert(maxUnpaidFailures, "failed", "unusable", 0)
+	calls := len(f.llm.calls())
+	// Deep, so the unchanged page is not served from the Quick cache.
+	if _, err := f.run(t, ModeDeep, "key-2"); !errors.Is(err, ErrAgentRateLimited) {
+		t.Fatalf("err = %v, want ErrAgentRateLimited after %d unpaid failures", err, maxUnpaidFailures)
+	}
+	if len(f.llm.calls()) != calls {
+		t.Fatal("a refused run reached the model")
+	}
+}
+
 func TestAgentEmptyPageIsNotPaidFor(t *testing.T) {
 	f := newAgentFixture(t)
 	f.pageText.Store("<script>render()</script>")

@@ -37,16 +37,16 @@ paid feature, so this ceiling holds whatever the customer clicks.
 
 ## Where Uplumo could still lose money, and the guard for each
 
-| Scenario                                                   | Guard                                                                                              |
-| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| AI or provider call runs free, on page load or a re-render | Never allowed: paid calls only after an explicit, priced click (Playwright counts requests)        |
-| A provider charges far above list price                    | OpenRouter `max_price` + `data_collection: deny` on every call                                     |
-| Retries, double clicks, two tabs                           | `retry: false`, idempotency keys, one running run per page/mode, advisory locks                    |
-| Unusable AI answer / failed Deep rewrite                   | Customer pays 0 / only the analysis; Uplumo absorbs that provider cost (small, capped)             |
-| JS render: a later batch fails                             | Paid pages are kept and charged (fixed in PR #244); an uncertain 5xx stays held for reconciliation |
-| Workspace on an unlimited / not-charged plan               | Provider cost is absorbed; keep such plans internal only                                           |
-| A runaway bug                                              | `PROVIDER_DAILY_LIMIT_USD` global brake plus per-workspace credit holds                            |
-| Third-party sites (rivals, external links)                 | Free HTTP only, SSRF guard, robots.txt, timeouts, failures cached 24 h                             |
+| Scenario                                                   | Guard                                                                                                                                       |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| AI or provider call runs free, on page load or a re-render | Never allowed: paid calls only after an explicit, priced click (Playwright counts requests)                                                 |
+| A provider charges far above list price                    | OpenRouter `max_price` + `data_collection: deny` on every call                                                                              |
+| Retries, double clicks, two tabs                           | `retry: false`, idempotency keys, one running run per page/mode, advisory locks                                                             |
+| Unusable AI answer / failed Deep rewrite                   | Customer pays 0 / only the analysis; Uplumo absorbs that provider cost (small, capped); at most 5 uncharged failures per workspace per 24 h |
+| JS render: a later batch fails                             | Paid pages are kept and charged (fixed in PR #244); an uncertain 5xx stays held for reconciliation                                          |
+| Workspace on an unlimited / not-charged plan               | Provider cost is absorbed; keep such plans internal only                                                                                    |
+| A runaway bug                                              | `PROVIDER_DAILY_LIMIT_USD` global brake plus per-workspace credit holds                                                                     |
+| Third-party sites (rivals, external links)                 | Free HTTP only, SSRF guard, robots.txt, timeouts, failures cached 24 h                                                                      |
 
 Rule: a new AI feature is safe when it is charged in credits, capped, priced
 before the click and never automatic. Free AI is the only way to lose money.

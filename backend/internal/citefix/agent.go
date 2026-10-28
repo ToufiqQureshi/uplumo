@@ -64,6 +64,12 @@ const (
 	// agentRateWindow with MaxAgentPages stops a loop or a script from
 	// buying the same project's pages again and again.
 	agentRateWindow = 10 * time.Minute
+	// maxUnpaidFailures runs per workspace may fail without a charge in
+	// unpaidFailureWindow. An unusable answer costs the customer nothing but
+	// Uplumo pays the model, so a page built to break the agent must not buy
+	// free model calls without end. Restart-stale runs do not count.
+	maxUnpaidFailures   = 5
+	unpaidFailureWindow = 24 * time.Hour
 	// staleRunAfter frees a page whose run was cut off (a restart) so it
 	// can be run again.
 	staleRunAfter = 10 * time.Minute

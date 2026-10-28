@@ -118,3 +118,18 @@ Scores how easy a site is for AI assistants to quote, from the latest completed 
 - **Trace:** `rivals.go`, `audit/urlpolicy.go` (`UserAgent`),
   `TestFetchRivalPageRespectsRobotsTxt` (asserts the header and an
   agent-specific rule).
+
+## Cap on uncharged agent failures per workspace
+
+- **Decision:** a workspace may have at most 5 uncharged failed agent runs in
+  24 h (`maxUnpaidFailures`, `unpaidFailureWindow`); after that `claimRun`
+  refuses new runs with `ErrAgentRateLimited` (the UI stops the batch).
+  Restart-stale runs and runs that charged credits do not count.
+- **Why:** security review of #243: an unusable answer charges the customer 0
+  but Uplumo still pays the model, so a page built to break the agent could buy
+  free model calls in a loop (20 per project per 10 min across many projects).
+  The cap bounds that at about 5 × the Quick hold ceiling per workspace per day.
+- **Preserve:** unusable answers stay free for the customer; the per-project
+  rate limit and cache rules are unchanged.
+- **Trace:** `agent.go`, `agent_store.go` (`claimRun`),
+  `TestAgentStopsAfterUnpaidFailures` (fails with the cap removed).

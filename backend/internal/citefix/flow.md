@@ -47,7 +47,7 @@ same analyzer.
 2. Find the URL in the workspace's latest completed scan (else 404).
 3. Fetch the live page (15 s, 2 MB, must be 200 HTML with text) → content hash.
 4. Cached completed run for same page, mode, hash → return it, 0 credits.
-5. Claim the run (advisory lock per project, stale >10 min freed, rate 20/10 min, unique running per page+mode).
+5. Claim the run (advisory lock per project, stale >10 min freed, rate 20/10 min, at most 5 uncharged failures per workspace per 24 h, unique running per page+mode).
 6. Evidence: Search Console queries, AI Visibility proof (free, failures logged).
 7. Hold the ceiling (≤ cap) → Flash call → (Deep) Pro call → settle provider vs customer cost → save result.
 

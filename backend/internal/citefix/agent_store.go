@@ -124,7 +124,9 @@ func (s Store) recordCachedRun(ctx context.Context, organizationID, projectID st
 
 // claimRun starts a run. It refuses a second run on the same page and mode
 // while one is running, and more than MaxAgentPages runs per project in
-// agentRateWindow. A run cut off by a restart is freed after staleRunAfter.
+// agentRateWindow, and any run once the workspace had maxUnpaidFailures
+// uncharged failures in unpaidFailureWindow. A run cut off by a restart is
+// freed after staleRunAfter.
 func (s Store) claimRun(ctx context.Context, organizationID, projectID string, input AgentInput, hash string, now time.Time) (string, error) {
 	tx, err := s.DB.Begin(ctx)
 	if err != nil {
@@ -146,6 +148,16 @@ func (s Store) claimRun(ctx context.Context, organizationID, projectID string, i
 		return "", fmt.Errorf("count recent agent runs: %w", err)
 	}
 	if recent >= MaxAgentPages {
+		return "", ErrAgentRateLimited
+	}
+	var unpaid int
+	if err := tx.QueryRow(ctx, `SELECT count(*) FROM go_citefix_agent_runs
+		WHERE organization_id = $1 AND created_at > $2 AND status = 'failed'
+			AND credits = 0 AND NOT cached AND error_code IS DISTINCT FROM 'stale'`,
+		organizationID, now.Add(-unpaidFailureWindow)).Scan(&unpaid); err != nil {
+		return "", fmt.Errorf("count unpaid agent failures: %w", err)
+	}
+	if unpaid >= maxUnpaidFailures {
 		return "", ErrAgentRateLimited
 	}
 	id, err := ids.New()
