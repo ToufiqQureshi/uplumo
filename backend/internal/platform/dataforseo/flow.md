@@ -11,6 +11,13 @@
 
 Caller validates inputs and ownership; spend guard reserves/attributes the task; transport sends bounded request with timeout; response/task status is parsed; usage is persisted for the responsible organization.
 
+For multi-request On-Page rendering, the shared client holds the full maximum
+once before the first `instant_pages` POST, records each task cost, and settles
+the successfully delivered HTML cost. The following `raw_html` POST is free.
+For Google AI Overview, one queued SERP task-post action holds up to ten
+question task costs plus the async AI Overview surcharge; advanced task-get
+collection is unmetered because task-post already paid for it.
+
 ## Dependencies and cost boundary
 
 DataForSEO API, platform spend guard, Postgres usage ledger, Redis worker/cache as caller requires.

@@ -29,6 +29,7 @@ type memoryStore struct {
 	projectOf      map[string]string
 	pages          map[string][]CrawledPageResult
 	issues         map[string][]DetectedIssue
+	renderClaims   map[string]map[string]string
 	lighthouse     map[string][]LighthouseRecord
 	failCreate     bool
 	failInsert     bool
@@ -42,7 +43,7 @@ func newMemoryStore() *memoryStore {
 		projectOf:  map[string]string{},
 		pages:      map[string][]CrawledPageResult{},
 		issues:     map[string][]DetectedIssue{},
-		lighthouse: map[string][]LighthouseRecord{},
+		lighthouse: map[string][]LighthouseRecord{}, renderClaims: map[string]map[string]string{},
 	}
 }
 
@@ -193,6 +194,7 @@ func (m *memoryStore) DeleteAuditForProject(_ context.Context, auditID, projectI
 	delete(m.projectOf, auditID)
 	delete(m.pages, auditID)
 	delete(m.issues, auditID)
+	delete(m.renderClaims, auditID)
 	delete(m.lighthouse, auditID)
 	return nil
 }
@@ -203,8 +205,28 @@ func (m *memoryStore) InsertCrawledBatch(_ context.Context, auditID string, page
 	if m.failInsert {
 		return errors.New("insert failed")
 	}
-	m.pages[auditID] = append(m.pages[auditID], pages...)
-	m.issues[auditID] = append(m.issues[auditID], issues...)
+	for _, page := range pages {
+		if m.renderClaims[auditID][page.URL] == "completed" {
+			continue
+		}
+		found := false
+		for i := range m.pages[auditID] {
+			if m.pages[auditID][i].URL == page.URL {
+				m.pages[auditID][i] = page
+				found = true
+				break
+			}
+		}
+		if !found {
+			m.pages[auditID] = append(m.pages[auditID], page)
+		}
+	}
+	for _, issue := range issues {
+		if issue.IssueType == IssueJavaScriptRenderingSuspected && m.renderClaims[auditID][issue.PageURL] == "completed" {
+			continue
+		}
+		m.issues[auditID] = append(m.issues[auditID], issue)
+	}
 	return nil
 }
 
@@ -252,6 +274,8 @@ func (m *memoryStore) ListSlimPages(_ context.Context, auditID string) ([]SlimPa
 			Title: page.Title, MetaDescription: page.MetaDescription, ContentHash: page.ContentHash,
 			RedirectURL: page.RedirectURL, WordCount: page.WordCount, IsIndexable: page.IsIndexable,
 			CanonicalURL: page.CanonicalURL, HeaderCanonicalURL: page.HeaderCanonicalURL,
+			XRobotsTag: page.XRobotsTag, RobotsMeta: page.RobotsMeta, CrawlDepth: page.CrawlDepth,
+			InSitemap: page.InSitemap, ResponseTimeMs: page.ResponseTimeMs,
 		})
 	}
 	return slim, nil
@@ -267,6 +291,54 @@ func (m *memoryStore) ShellPageIDs(_ context.Context, auditID string) (map[strin
 		}
 	}
 	return ids, nil
+}
+
+func (m *memoryStore) ClaimJavaScriptRenderPages(_ context.Context, auditID string, urls []string) ([]string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.renderClaims[auditID] == nil {
+		m.renderClaims[auditID] = map[string]string{}
+	}
+	claimed := []string{}
+	for _, pageURL := range urls {
+		if _, exists := m.renderClaims[auditID][pageURL]; exists {
+			continue
+		}
+		m.renderClaims[auditID][pageURL] = "claimed"
+		claimed = append(claimed, pageURL)
+	}
+	return claimed, nil
+}
+
+func (m *memoryStore) SaveJavaScriptRenderedPage(_ context.Context, auditID string, page CrawledPageResult, _ float64) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for i := range m.pages[auditID] {
+		if m.pages[auditID][i].URL == page.URL {
+			m.pages[auditID][i] = page
+			m.renderClaims[auditID][page.URL] = "completed"
+			filtered := m.issues[auditID][:0]
+			for _, issue := range m.issues[auditID] {
+				if issue.PageID != nil && *issue.PageID == page.ID {
+					continue
+				}
+				filtered = append(filtered, issue)
+			}
+			m.issues[auditID] = append(filtered, runPageReporters(page)...)
+			return nil
+		}
+	}
+	return ErrAuditNotFound
+}
+
+func (m *memoryStore) MarkJavaScriptRenderFailed(_ context.Context, auditID, pageURL string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.renderClaims[auditID] == nil {
+		m.renderClaims[auditID] = map[string]string{}
+	}
+	m.renderClaims[auditID][pageURL] = "failed"
+	return nil
 }
 
 func (m *memoryStore) RunMultipageChecks(ctx context.Context, auditID string) ([]DetectedIssue, bool, error) {

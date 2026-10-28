@@ -42,6 +42,12 @@ func parseRobotsTxt(origin string, text *string) RobotsResult {
 	}
 }
 
+// RobotsAllows reports whether auditUserAgent may fetch rawURL according to
+// the supplied robots.txt body. An empty body means the host allows crawling.
+func RobotsAllows(origin, rawURL, body string) bool {
+	return parseRobotsTxt(origin, &body).IsAllowed(rawURL)
+}
+
 // parseRobotsGroups splits a robots.txt body into groups and collects the
 // document's Sitemap directives.
 func parseRobotsGroups(text string, origin string) ([]robotsGroup, []string) {

@@ -17,6 +17,34 @@ feelings, business calls, priorities, corrections. Read it after
 
 ---
 
+## 28 Oct 2026: Cite Fix follow-ups (Claude)
+
+- Owner chose DataForSEO for JavaScript rendering; approved JS render (max 39 credits for 20 pages) and Google AI Overview (max 16 for 10 questions); refused AI mentions at 960 credits, so Cite Fix reuses AI Visibility's saved data. Codex built it in PR #244; Claude fixed two money/perf bugs there.
+- Asked "is the analysis AI or hardcoded?": the score and checks are rule-based and free; the DeepSeek agent runs on picked pages only. Asked whether whole-site AI analysis would cost him on a ₹2,499 Pro plan: no, if charged in credits with caps (numbers in docs/audits/2026-10-28-cite-fix-costs-and-references.md).
+- Wants the reference repos (seonaut, geo-optimizer, opencite) used as references for PR 3 and credited; geo-checker has no licence, so it is not used. Plans to merge #243, #244 and PR 3 and go live.
+
+## 28 Oct 2026: Cite Fix PR 2 (owner decisions)
+
+- Use DataForSEO On-Page JavaScript only for app-shell pages the crawler flags: explicit opt-in, at most 20 pages per audit, with the credit ceiling shown first.
+- Google AI Overview citations are approved at $0.0012 per queued question, up to 10 per click and 16 credits max, actual cost charged. Results are cached for 7 days.
+- AI mentions must reuse the LLM-mentions result AI Visibility already saved, at 0 credits. Refresh it from the AI Visibility page at that feature's existing price; no new Cite Fix purchase. Any Cite Fix-only refresh needs a separate proposal of at most two calls with real observed costs and another yes.
+- On-Page JavaScript is approved at $0.0015 per page, up to 20 app-shell pages and 39 credits max per audit, actual cost charged.
+- Build the free rival signal table and pass rival evidence into the existing Quick/Deep agent prompt without changing its 25/60 credit caps.
+- Show latest critical/warning Site Audit issues as “Also fix for Google”; expose rival and free report data through `get_cite_fix_report`, with no paid MCP tools.
+- A 50-page site with 20 JS shells, 10 Google AI Overview questions, and saved mentions costs at most 55 credits in these new actions.
+
+---
+
+## 27 Oct 2026: Cite Fix, "sabko AI me cite hona ha" (Claude)
+
+- Owner wants a crawler that reads the whole site and shows "kyu cite nahi hore, ye fixes karo, cite honge", A to Z content quality, and opens the content in the editor in one click. "muje uplumo ko bhohat advance software banana ha jo logo ke kaam aaye".
+- On cost: "paise ki chinta mat kar ... user ko batayenge ki ye costly ha ... if needed vo karega warna chod dega". Paid parts show credits before the click.
+- "baar baar nai bana sakte, ek hi baar me" -> agreed: one full design, shipped in 5 PRs. Name: **Cite Fix**, its own UI. He asked for the blueprint in PR 1; it went into the feature docs (repo rule: no plan files).
+- Asked whether the GitHub repos are copied: no, ideas and check lists only (GEO Optimizer MIT rubric, SEOnaut checks).
+- After PR 1: "kuch value dere ha hum? isme ai hai?" -> wanted a real AI agent (not SAM) giving page-specific fixes. Chose cheap models: "not opus, Deepseek v4 through open router". Worried about cost on big sites: "50 page ha to? in urls ko hi kar" -> user picks pages, top 5 default, max 20, cost shown first.
+- Approved: Quick 25 / Deep 60 credits per page, Basic+, Flash for analysis + Pro for rewrite. Found one Flash provider at $30.91/M output, so every call caps provider price.
+- "har ek cheez value de, kuch bhi bekar nai" and "future agent ko samjhe kitna effort" -> decisions, flows and this story are recorded in the citefix docs, DECISIONS.md and here. He is short on tokens: keep replies very short.
+
 ## 27 Oct 2026: Ubersuggest features, AI on every page (Claude)
 
 - Owner compared open-seo, Uplumo and Ubersuggest and wants 8 features: Next Actions, AI Opportunities, AI Sentiment, AI Prompt Ideas, Local SEO grid, Backlink Opportunity, Content Ideas, Pixel Rank. "pura kaam do pr me khatam chahiye"; "jaldi bhai".

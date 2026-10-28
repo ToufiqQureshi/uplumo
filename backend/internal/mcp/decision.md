@@ -70,3 +70,20 @@ Successful external tool calls now persist the first authorized/call timestamps 
 - **Preserve:** structured `rows` are unchanged; `totals` and `totalsNote`
   are additional fields.
 - **Trace:** `gsc_tools.go`.
+
+## `get_cite_fix_report` is free and read-only
+
+- **Decision:** MCP (and SAM, through its allowlist in `sam/tools.go`) reads
+  the Cite Fix report with `get_cite_fix_report`; no plan gate, like the other
+  audit reads. The paid per-page agent has no MCP tool.
+- **Why:** owner's Cite Fix plan, step 5 (SAM, MCP, reports). The report costs
+  nothing; the agent spends credits and must stay behind the page's
+  confirmed price (`backend/internal/citefix/decision.md`).
+- **Preserve:** `authorizeProject` runs before `citefix.Store.Report`, so
+  another workspace's project is FORBIDDEN. The output leaves out the agent
+  offer, which depends on plan and server and is priced only on the page. It
+  includes saved mentions, rival signal tables and free audit issues; it never
+  submits Google AI Overview or other paid work.
+- **Trace:** `cite_fix_report.go`, `cite_fix_report_test.go` (owner reads
+  `no_scan` with a run_site_audit hint, other workspace FORBIDDEN, blank id
+  rejected), `plan_access.go`, `types.go`.

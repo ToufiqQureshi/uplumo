@@ -80,6 +80,31 @@ mean each one has been tried on production with real provider keys.
 - Built (PR 1): Next Actions, AI Opportunities, AI Sentiment, AI Prompt Ideas (`frontend/src/client/features/insights`). Reads are free; AI buttons use the content writer (max 15 credits per click).
 - Not built (PR 2, waiting on owner's credit/plan choices): Local SEO grid, Backlink Opportunity, Content Ideas, Pixel Rank.
 
+## Cite Fix
+
+- Built (PR 1 of 5): Cite Fix page (sidebar "Your website") with a free 0-100
+  score for how easy the site is for AI assistants to quote, six categories,
+  fixes ranked by points gained and the weakest pages. It scores the latest
+  site audit; the crawler now stores each page's citation signals (migration
+  47). No paid call (`backend/internal/citefix`,
+  `frontend/src/client/features/cite-fix`).
+- Built: paid AI agent per page (Quick ≤25, Deep ≤60 credits, DeepSeek via
+  OpenRouter), page picker, AI Visibility proof card, results into the
+  Content Editor. Real-provider acceptance pending.
+- Implemented in the Cite Fix PR 2 draft: opt-in DataForSEO On-Page JavaScript
+  rendering for at most 20 app shells (39-credit cap); queued Google AI
+  Overview citations for up to 10 tracked questions (16-credit cap); free
+  reuse of saved AI Visibility mentions; at most 3 free guarded rival-page
+  comparisons per report, also passed as evidence to the existing Quick/Deep
+  agent without changing its 25/60 caps; and latest critical/warning audit
+  issues. Approved actual costs are charged; no paid provider acceptance was
+  run. The PR must merge and pass CI before this ships.
+- Built: free `get_cite_fix_report` MCP tool, also in SAM's allowlist; it now
+  returns saved mentions, rivals and audit issues and has no paid triggers.
+- Remaining: real DataForSEO and OpenRouter acceptance after merge. Cite Fix
+  does not purchase a new mentions refresh; a possible Cite Fix-only refresh
+  needs a separate at-most-two-call, real-cost proposal and owner approval.
+
 ## Not built yet
 
 | Feature                                                                                                  | Status                                                         |

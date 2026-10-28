@@ -15,6 +15,11 @@ Session/project middleware identifies the owning organization; handler validates
 
 Redis cache; DataForSEO AI endpoints; plans/billing.
 
+After a successful Brand Lookup response (including a service-cache hit),
+`service.go` best-effort writes the complete result to
+`go_citefix_ai_mentions`. Cite Fix reads this project-scoped snapshot without
+refreshing it; the only refresh remains the existing AI Visibility action.
+
 ## Monthly Brand Lookup history
 
 `POST /api/v1/projects/{projectId}/ai-search/brand-lookup/history` uses the same session, project and paid-plan guards as Brand Lookup. It validates the same lookup inputs, derives the organization/project/target/competitor/market/scope Redis key and returns stored aggregates only; it never calls DataForSEO. `BrandLookup` saves a single `YYYY-MM` snapshot only after every platform/cross-brand call completes and the result contains data. Redis reads/writes are best effort: read failure logs and returns empty history without failing the current lookup. The hash keeps at most 13 months, removes older fields and expires after 400 days.

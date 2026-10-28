@@ -14,6 +14,11 @@ type SlimPage struct {
 	IsIndexable        bool
 	CanonicalURL       string
 	HeaderCanonicalURL string
+	XRobotsTag         string
+	RobotsMeta         string
+	CrawlDepth         *int
+	InSitemap          bool
+	ResponseTimeMs     int64
 }
 
 // duplicateGroupSample caps the other URLs listed per duplicate issue.

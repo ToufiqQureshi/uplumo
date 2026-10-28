@@ -1,6 +1,7 @@
 package audit
 
 import (
+	"reflect"
 	"slices"
 	"testing"
 )
@@ -149,5 +150,85 @@ func TestIsHomePage(t *testing.T) {
 		if got := isHomePage(raw); got != want {
 			t.Errorf("isHomePage(%q) = %v, want %v", raw, got, want)
 		}
+	}
+}
+
+func TestAnalyzeHTMLCollectsCitationSignals(t *testing.T) {
+	page := `<!doctype html><html><head>
+<meta name="author" content="Asha Rao">
+<script type="application/ld+json">{"@graph":[{"@type":"Article","datePublished":"2026-01-05","author":{"@type":"Person","name":"Asha"}}]}</script>
+</head><body>
+<header><p>Free shipping on orders above ₹999</p><ul><li>Home</li></ul></header>
+<nav><noscript><footer>x</footer></noscript><ul><li>Menu</li></ul><p>Menu text</p></nav>
+<main><h1>Best time to visit Goa</h1>
+<p> </p>
+<p>November to February is the best time, with 28°C days and 40% fewer rain days
+<p>Second paragraph.</p>
+<span itemprop="dateModified" content="2026-03-01"></span>
+<ul><li>Beaches</li></ul><ol><li>Forts</li></ol>
+<table><tr><td>Month</td></tr></table>
+<blockquote>Goa is magic.</blockquote>
+<p>Hotels start at Rs. 2,500 and the state gets 1 crore visitors.</p>
+</main>
+<footer><ul><li>Contact</li></ul></footer>
+</body></html>`
+	got := AnalyzeHTML(page, "https://goa.example/guide", 200, 10, "").AI
+	want := AIPageSignals{
+		SchemaTypes: []string{"Article", "Person"}, Author: true,
+		Published: "2026-01-05", Modified: "2026-03-01",
+		LeadWords: 15, Lists: 2, Tables: 1, Quotes: 1,
+		// ₹999 in the header, 40%, Rs. 2,500 and 1 crore.
+		Statistics: 4,
+	}
+	if !slices.Equal(got.SchemaTypes, want.SchemaTypes) {
+		t.Fatalf("schema types = %q, want %q", got.SchemaTypes, want.SchemaTypes)
+	}
+	got.SchemaTypes, want.SchemaTypes = nil, nil
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("signals = %+v\nwant      %+v", got, want)
+	}
+}
+
+func TestAnalyzeHTMLCitationSignalsAbsent(t *testing.T) {
+	page := `<html><body><nav><ul><li>Home</li></ul><p>Nav words only</p></nav>
+<h1>Rooms</h1><div>Our rooms are big.</div><a href="/about" rel="nofollow">About</a></body></html>`
+	got := AnalyzeHTML(page, "https://x.example/", 200, 1, "").AI
+	if got.Author || got.Published != "" || got.Modified != "" || got.LeadWords != 0 ||
+		got.Lists != 0 || got.Tables != 0 || got.Quotes != 0 || got.Statistics != 0 {
+		t.Fatalf("signals = %+v, want none", got)
+	}
+}
+
+func TestAnalyzeHTMLAuthorSources(t *testing.T) {
+	for name, page := range map[string]string{
+		"rel author link":   `<html><head><link rel="author" href="/team/asha"></head><body></body></html>`,
+		"rel author anchor": `<html><body><a rel="author external" href="/asha">Asha</a></body></html>`,
+		"itemprop author":   `<html><body><span itemprop="author">Asha</span></body></html>`,
+		"article author":    `<html><head><meta property="article:author" content="https://x.example/asha"></head></html>`,
+	} {
+		if !AnalyzeHTML(page, "https://x.example/", 200, 1, "").AI.Author {
+			t.Errorf("%s: author not found", name)
+		}
+	}
+	for name, page := range map[string]string{
+		"empty meta author":  `<html><head><meta name="author" content=" "></head></html>`,
+		"empty JSON author":  `<html><head><script type="application/ld+json">{"@type":"Article","author":""}</script></head></html>`,
+		"nofollow is not it": `<html><body><a rel="nofollow" href="/asha">Asha</a></body></html>`,
+	} {
+		if AnalyzeHTML(page, "https://x.example/", 200, 1, "").AI.Author {
+			t.Errorf("%s: author reported", name)
+		}
+	}
+}
+
+func TestJSONLDFactsKeepsTheSameFirstDate(t *testing.T) {
+	block := `{"b":{"datePublished":"2026-02-02"},"a":{"datePublished":"2026-01-01"},"datePublished":"2025-12-31"}`
+	for range 20 {
+		if got := jsonLDFacts(block).published; got != "2025-12-31" {
+			t.Fatalf("published = %q, want the top-level date", got)
+		}
+	}
+	if got := jsonLDFacts(`{"a":{"datePublished":"2026-01-01"},"b":{"datePublished":"2026-02-02"}}`).published; got != "2026-01-01" {
+		t.Fatalf("published = %q, want the first key's date", got)
 	}
 }

@@ -6,6 +6,61 @@ Paid POSTs use `Client.Do(..., false)` and must not be automatically retried on 
 
 A domain overview may use one Labs operation; a Backlinks domain overview legitimately calls both summary and history. The initial Backlinks screen also loads a selected table. Assert provider operations separately in tests, rather than assuming one click equals one request. Validate tenant, scope, market, filters and pagination before reaching the provider. Recheck authorization on every HTTP request, even on cache hits. No test should consume live provider credits.
 
+## Cite Fix / Site Audit evidence endpoints (owner approved 28 Oct 2026)
+
+### On-Page JavaScript rendering
+
+Site Audit's explicit `renderJavaScript` opt-in uses
+[`POST /v3/on_page/instant_pages`](https://docs.dataforseo.com/v3/on_page-instant_pages/)
+with `enable_javascript: true` and `store_raw_html: true`. It only sends URLs
+the normal crawler already flagged as app shells, at most 20 per audit. The
+endpoint accepts no more than 20 tasks and no more than five tasks for the same
+domain in one request; Uplumo batches by registrable domain. A 20-page,
+same-domain audit therefore sends four paid `instant_pages` requests, five
+tasks per request. Successful task IDs are read once through the free
+[`POST /v3/on_page/raw_html`](https://docs.dataforseo.com/v3/on_page-raw_html/)
+endpoint, which keeps raw HTML available for seven days.
+
+The published JavaScript-rendered task price is **$0.0015/page** (DataForSEO
+[On-Page pricing](https://dataforseo.com/pricing/on-page/onpage-api)); 20 pages
+cost at most $0.03 provider-side, which is a **39-credit maximum** at Uplumo's
+current credit conversion. The UI shows that cap and Uplumo charges actual
+successful delivered cost. Unusable or known failed rendering charges the
+customer zero credits; provider-billed failed tasks are recorded and absorbed
+by Uplumo. Each paid POST uses `retry:false`; a per-audit URL claim prevents a
+worker replay from buying a page again. Raw HTML retrieval is free.
+
+### Google AI Overview citations
+
+Cite Fix submits up to ten saved, unpaused AI Visibility questions in one
+standard, non-priority queued Google SERP request:
+[`POST /v3/serp/google/organic/task_post`](https://docs.dataforseo.com/v3/serp-google-type-task_post/)
+with `depth: 10` and `load_async_ai_overview: true`. This uses the lowest-cost
+queued mode that returns AI Overview references. The asynchronous results are
+collected through the advanced task-get endpoint
+[`GET /v3/serp/google/organic/task_get/advanced/{id}`](https://docs.dataforseo.com/v3/serp/google/organic/task_get/advanced/).
+Paid references are taken only from the `items` entry where
+`type: "ai_overview"`; Uplumo retains the Overview markdown and each
+reference's `source`, `domain`, `url`, `title`, `text` and publication date,
+then shows them beside whether the customer's domain was cited.
+
+The queued SERP task costs **$0.0006/question** plus **$0.0006/question** for
+asynchronous AI Overview retrieval, or **$0.0012/question** total (DataForSEO
+[SERP pricing](https://dataforseo.com/pricing/serp)). Ten questions cost at
+most $0.012 provider-side / **16 credits maximum**. The screen confirms that
+cap before one paid task-post action; actual provider cost is charged. Results
+are cached per project and question for seven days. Same-project clicks
+serialize and a fresh cache makes zero paid requests. Task-get polls are free;
+the paid task-post is never retried automatically.
+
+### AI mentions reuse
+
+Cite Fix does not call AI Optimization mentions endpoints. It reads the
+successful Brand Lookup snapshot AI Visibility already saved in
+`go_citefix_ai_mentions`, including top mentioned domains and pages. Refresh
+links to AI Visibility's existing priced action. No second mentions purchase,
+price or call path is created for Cite Fix.
+
 Brand Lookup buys one `target_metrics` task and stops when AI never mentions
 the target; otherwise one prompt sample per bought platform (ChatGPT only in
 its US English market), `top_pages` only when the sample is incomplete, and one

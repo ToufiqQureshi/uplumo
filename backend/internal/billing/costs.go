@@ -43,6 +43,8 @@ var typicalUSD = []struct {
 	maxUSD  float64
 }{
 	{spend.RankTracking, "", "keyword check (top 30, scheduled)", dataforseo.SerpCostUSD(30, true), 0},
+	{spend.SiteAudit, ActionJavaScriptRender, "JavaScript-rendered page (up to 20 app shells per audit)", dataforseo.OnPageJavaScriptCostUSD(1), dataforseo.OnPageJavaScriptCostUSD(20)},
+	{spend.CiteFix, ActionGoogleAIOverview, "Google AI Overview citations (per question; up to 10 per refresh)", dataforseo.GoogleAIOverviewCostUSD(10), dataforseo.GoogleAIOverviewBatchCostUSD(10, 10)},
 	{spend.KeywordResearch, "", "keyword search", 0.047, 0},
 	{spend.DomainResearch, "", "domain report tab", 0.031, 0},
 	// Summary $0.024 + history $0.024 + the first 1,000 table rows $0.06.
@@ -51,12 +53,18 @@ var typicalUSD = []struct {
 	{spend.AIVisibility, ActionBrandLookup, "brand lookup (less when AI has no data, more with competitors)", 0.29, dataforseo.BrandLookupCeilingUSD(2, true)},
 	{spend.AIAssistant, "", "AI assistant reply", 0.03, 0},
 	{spend.AIWriting, "", "AI writing action", 0.01, 0},
+	// A Deep page: the Flash analysis (~$0.002) and the Pro rewrite (~$0.025)
+	// at mid provider prices. Quick is the analysis alone. maxUSD is the
+	// 60-credit Deep cap the page shows before the click.
+	{spend.CiteFix, "", "Cite Fix agent page (Deep; Quick costs far less)", 0.027, 60.0 / 1280},
 }
 
 // Actions of the AI visibility feature that ActionCost tells apart.
 const (
-	ActionPromptExplorer = "prompt_explorer"
-	ActionBrandLookup    = "brand_lookup"
+	ActionPromptExplorer   = "prompt_explorer"
+	ActionBrandLookup      = "brand_lookup"
+	ActionJavaScriptRender = "javascript_render"
+	ActionGoogleAIOverview = "google_ai_overview"
 )
 
 // ActionCosts lists the typical cost of every feature that spends credits.
@@ -66,6 +74,16 @@ func ActionCosts() []ActionCost {
 		out[i] = ActionCost{Feature: c.feature, Action: c.action, Unit: c.unit, Credits: CreditsForUSD(c.usd), MaxCredits: CreditsForUSD(c.maxUSD)}
 	}
 	return out
+}
+
+// ActionMaxCredits returns the catalog's maximum shown before one action.
+func ActionMaxCredits(feature spend.Feature, action string) int64 {
+	for _, cost := range ActionCosts() {
+		if cost.Feature == feature && cost.Action == action {
+			return cost.MaxCredits
+		}
+	}
+	return 0
 }
 
 func featureNames() []string {

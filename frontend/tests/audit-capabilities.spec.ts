@@ -21,7 +21,7 @@ for (const width of [390, 1280]) {
     });
     await page.goto("/p/e2e-project/audit");
     await expect(
-      page.getByRole("switch", { name: "Render JavaScript" }),
+      page.getByRole("checkbox", { name: "Render JavaScript pages" }),
     ).toBeDisabled();
     await expect(
       page.getByText("JavaScript rendering isn't available right now."),

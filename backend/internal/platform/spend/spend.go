@@ -66,6 +66,8 @@ const (
 	SiteAudit       Feature = "site_audit"
 	AIAssistant     Feature = "ai_assistant"
 	AIWriting       Feature = "ai_writing"
+	// CiteFix is the Cite Fix agent's page analyses and rewrites.
+	CiteFix Feature = "cite_fix"
 	// Reference is free lookup data such as location lists. It is held and
 	// recorded like any other request, but never needs credits.
 	Reference Feature = "reference"
@@ -74,7 +76,7 @@ const (
 // Features lists every feature that can spend credits, in the order the
 // Billing screen shows them.
 func Features() []Feature {
-	return []Feature{RankTracking, KeywordResearch, DomainResearch, Backlinks, AIVisibility, SiteAudit, AIAssistant, AIWriting}
+	return []Feature{RankTracking, KeywordResearch, DomainResearch, Backlinks, AIVisibility, SiteAudit, AIAssistant, AIWriting, CiteFix}
 }
 
 // Request is one billed piece of provider work about to be sent.

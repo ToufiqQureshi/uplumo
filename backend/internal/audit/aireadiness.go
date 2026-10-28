@@ -2,7 +2,9 @@ package audit
 
 import (
 	"encoding/json"
+	"maps"
 	"net/url"
+	"regexp"
 	"slices"
 	"strings"
 	"unicode"
@@ -15,14 +17,47 @@ import (
 // maxLDJSONBytes caps the JSON-LD kept per page; real blocks are a few KB.
 const maxLDJSONBytes = 256 * 1024
 
-// AIPageSignals are the per-page facts the site-wide AI checks need.
+// AIPageSignals are the per-page facts the AI checks need. Everything but
+// Phones is stored with the page (citation_signals_json) for Cite Fix.
 type AIPageSignals struct {
 	// SchemaTypes are the JSON-LD @type values on the page, @graph included.
-	SchemaTypes []string
+	SchemaTypes []string `json:"schemaTypes"`
 	// QuestionHeadings counts H2/H3 headings phrased as a question.
-	QuestionHeadings int
-	// Phones are tel: link numbers, reduced to their last 10 digits.
-	Phones []string
+	QuestionHeadings int `json:"questionHeadings"`
+	// Phones are tel: link numbers, reduced to their last 10 digits. Only the
+	// site-wide phone check reads them, during the crawl.
+	Phones []string `json:"-"`
+	// Author is true when the page names who wrote it: a meta or itemprop
+	// author, a rel=author link, or a JSON-LD author.
+	Author bool `json:"author"`
+	// Published and Modified are the first publish and update dates the page
+	// states (meta, itemprop or JSON-LD), as written, at most 40 characters.
+	Published string `json:"published,omitempty"`
+	Modified  string `json:"modified,omitempty"`
+	// LeadWords counts the words of the first paragraph of the main content
+	// (outside nav, header, footer and aside): is the answer up front?
+	LeadWords int `json:"leadWords"`
+	// Lists and Tables count ul/ol and table elements in the main content;
+	// Quotes counts blockquote elements.
+	Lists  int `json:"lists"`
+	Tables int `json:"tables"`
+	Quotes int `json:"quotes"`
+	// Statistics counts percent, currency and lakh/crore figures in the body.
+	Statistics int `json:"statistics"`
+}
+
+// maxDateChars bounds a stored date; real ones are ISO dates or short text.
+const maxDateChars = 40
+
+// statisticPattern finds the figures an assistant can quote as a fact.
+var statisticPattern = regexp.MustCompile(`(?i)\d[\d,.]*\s?%|[₹$€£]\s?\d|\brs\.?\s?\d|\d[\d,.]*\s?(?:lakh|crore|million|billion)\b`)
+
+// maxCountedStatistics caps the count; a price list is not more evidence.
+const maxCountedStatistics = 100
+
+// countStatistics returns how many quotable figures the text holds.
+func countStatistics(text string) int {
+	return len(statisticPattern.FindAllStringIndex(text, maxCountedStatistics))
 }
 
 // businessTypes are schema.org types that say who the business is. Local
@@ -45,14 +80,23 @@ var questionWords = []string{
 	"can ", "is ", "are ", "does ", "do ", "should ",
 }
 
-// schemaTypes returns every @type in one JSON-LD block. Invalid JSON yields
-// none: a block AI cannot parse does not describe the business.
-func schemaTypes(block string) []string {
+// ldFacts are what one JSON-LD block says about the page.
+type ldFacts struct {
+	types     []string
+	author    bool
+	published string
+	modified  string
+}
+
+// jsonLDFacts reads every @type, any author and the first publish and update
+// dates in one JSON-LD block. Invalid JSON yields nothing: a block AI cannot
+// parse describes nothing.
+func jsonLDFacts(block string) ldFacts {
 	var value any
 	if err := json.Unmarshal([]byte(block), &value); err != nil {
-		return nil
+		return ldFacts{}
 	}
-	var types []string
+	var facts ldFacts
 	var walk func(any)
 	walk = func(node any) {
 		switch v := node.(type) {
@@ -63,23 +107,33 @@ func schemaTypes(block string) []string {
 		case map[string]any:
 			switch t := v["@type"].(type) {
 			case string:
-				types = append(types, t)
+				facts.types = append(facts.types, t)
 			case []any:
 				for _, item := range t {
 					if s, ok := item.(string); ok {
-						types = append(types, s)
+						facts.types = append(facts.types, s)
 					}
 				}
 			}
-			for key, child := range v {
+			if author, ok := v["author"]; ok && author != nil && author != "" {
+				facts.author = true
+			}
+			if date, ok := v["datePublished"].(string); ok && facts.published == "" {
+				facts.published = truncateChars(strings.TrimSpace(date), maxDateChars)
+			}
+			if date, ok := v["dateModified"].(string); ok && facts.modified == "" {
+				facts.modified = truncateChars(strings.TrimSpace(date), maxDateChars)
+			}
+			// Sorted, so "the first date" is the same on every crawl.
+			for _, key := range slices.Sorted(maps.Keys(v)) {
 				if key != "@type" {
-					walk(child)
+					walk(v[key])
 				}
 			}
 		}
 	}
 	walk(value)
-	return types
+	return facts
 }
 
 // isQuestionHeading reports whether a heading reads as a question.

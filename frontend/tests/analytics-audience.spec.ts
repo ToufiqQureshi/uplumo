@@ -42,6 +42,7 @@ async function installAnalytics(page: Page, failClicks = false) {
           referrers: [],
           devices: [],
           events: [],
+          enquiries: { count: 0, visitors: 0, actions: [] },
           campaigns: [],
           entries: [],
           exits: [],
@@ -102,7 +103,7 @@ test("daily audience and destination counts render with scoped paging and option
   const requests = await installAnalytics(page);
   await page.goto("/p/e2e-project/analytics");
   await expect(
-    page.getByRole("region", { name: "Traffic overview" }),
+    page.getByRole("heading", { name: "Visitors over time" }),
   ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Daily new and returning" }),

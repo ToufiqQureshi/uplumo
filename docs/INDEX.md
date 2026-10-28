@@ -17,6 +17,7 @@ Code and tests are the source of truth. Feature docs are colocated with their so
 - [Launch readiness and unit economics](audits/2026-10-23-launch-readiness.md)
 - [Credits audit](audits/2026-10-25-credits-audit.md)
 - [DataForSEO audit](audits/2026-10-26-dataforseo-audit.md)
+- [Cite Fix costs, loss scenarios and reference repos](audits/2026-10-28-cite-fix-costs-and-references.md)
 - [Wiring, test strength and code size audit](audits/2026-10-26-wiring-tests-size-audit.md)
 - [Ubersuggest competitor review](audits/2026-10-26-ubersuggest-competitor.md)
 
