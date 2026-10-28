@@ -73,7 +73,7 @@ export async function installGrowthFixtures(page: Page) {
     const path = new URL(route.request().url()).pathname;
     requests.push(path);
     if (
-      /sam\/sessions\/chat|assistant\/generate|content\/brief|ai-search\/tracking\/run|keywords\/research/u.test(
+      /sam\/sessions\/chat|assistant\/generate|content\/brief|ai-search\/tracking\/run|keywords\/research|cite-fix\/google-ai-overview\/refresh/u.test(
         path,
       )
     )

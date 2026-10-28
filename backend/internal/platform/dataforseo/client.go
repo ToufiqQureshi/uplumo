@@ -206,6 +206,29 @@ func (c *Client) Do(ctx context.Context, organizationID string, feature spend.Fe
 // settled once after all requests, including successful partial work, finish.
 // Use only for bounded operations whose complete worst-case price is known.
 func (c *Client) DoBudgeted(ctx context.Context, organizationID string, feature spend.Feature, ceilingUSD float64, work func(DoBudgetedRequest) error) error {
+	if work == nil {
+		return fmt.Errorf("%w: invalid budgeted operation", ErrInvalidRequest)
+	}
+	return c.doBudgeted(ctx, organizationID, feature, ceilingUSD, func(request DoBudgetedRequest) (float64, bool, error) {
+		return 0, false, work(request)
+	})
+}
+
+// DoBudgetedWithDelivery reserves one ceiling for a bounded provider operation
+// whose customer-delivered portion can be smaller than the provider's billed
+// tasks. The returned customer cost must be calculated from successful usable
+// results; provider spend is still recorded from every response task.
+func (c *Client) DoBudgetedWithDelivery(ctx context.Context, organizationID string, feature spend.Feature, ceilingUSD float64, work func(DoBudgetedRequest) (float64, error)) error {
+	if work == nil {
+		return fmt.Errorf("%w: invalid budgeted operation", ErrInvalidRequest)
+	}
+	return c.doBudgeted(ctx, organizationID, feature, ceilingUSD, func(request DoBudgetedRequest) (float64, bool, error) {
+		customerUSD, err := work(request)
+		return customerUSD, true, err
+	})
+}
+
+func (c *Client) doBudgeted(ctx context.Context, organizationID string, feature spend.Feature, ceilingUSD float64, work func(DoBudgetedRequest) (float64, bool, error)) error {
 	if strings.TrimSpace(organizationID) == "" || len(organizationID) > 128 || strings.TrimSpace(string(feature)) == "" || math.IsNaN(ceilingUSD) || math.IsInf(ceilingUSD, 0) || ceilingUSD <= 0 || work == nil {
 		return fmt.Errorf("%w: invalid budgeted operation", ErrInvalidRequest)
 	}
@@ -272,7 +295,7 @@ func (c *Client) DoBudgeted(ctx context.Context, organizationID string, feature 
 			panic(recovered)
 		}
 	}()
-	workErr := work(request)
+	deliveredUSD, hasDeliveryCost, workErr := work(request)
 	mu.Lock()
 	open = false
 	providerTotal, customerTotal := providerCost, customerCost
@@ -285,6 +308,13 @@ func (c *Client) DoBudgeted(ctx context.Context, organizationID string, feature 
 		// The provider was paid but the customer got nothing they can use;
 		// Uplumo absorbs the recorded provider cost.
 		customerTotal = 0
+	} else if hasDeliveryCost {
+		if math.IsNaN(deliveredUSD) || math.IsInf(deliveredUSD, 0) || deliveredUSD < 0 {
+			customerTotal = 0
+			workErr = errors.Join(workErr, fmt.Errorf("%w: invalid delivered customer cost", ErrInvalidRequest))
+		} else {
+			customerTotal = deliveredUSD
+		}
 	}
 	if customerTotal > ceilingUSD {
 		// The customer was quoted the ceiling and the provider already did the

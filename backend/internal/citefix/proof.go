@@ -45,9 +45,17 @@ type URLCount struct {
 
 // Miss is one question where the AI cited others instead of the customer.
 type Miss struct {
-	Prompt string   `json:"prompt"`
-	Engine string   `json:"engine"`
-	Cited  []string `json:"cited"`
+	Prompt     string      `json:"prompt"`
+	Engine     string      `json:"engine"`
+	Cited      []string    `json:"cited"`
+	CitedPages []CitedPage `json:"citedPages"`
+}
+
+// CitedPage is one rival page saved by AI Visibility for a missed question.
+type CitedPage struct {
+	URL    string `json:"url"`
+	Domain string `json:"domain"`
+	Title  string `json:"title,omitempty"`
 }
 
 const (
@@ -64,6 +72,7 @@ const (
 type storedCitation struct {
 	URL    string  `json:"url"`
 	Domain *string `json:"domain"`
+	Title  *string `json:"title"`
 }
 
 // proofAnswer is one saved answer's citations.
@@ -128,6 +137,8 @@ func buildProof(checkedAt time.Time, domain string, answers []proofAnswer) *Proo
 	for _, answer := range answers {
 		seenURL, seenHost := map[string]bool{}, map[string]bool{}
 		cited := []string{}
+		citedPages := []CitedPage{}
+		seenPage := map[string]bool{}
 		citesYou := false
 		for _, citation := range answer.citations {
 			host := citationHost(citation)
@@ -143,6 +154,14 @@ func buildProof(checkedAt time.Time, domain string, answers []proofAnswer) *Proo
 				rivals[host]++
 				cited = append(cited, host)
 			}
+			if !isOwnHost(host, own) && !seenPage[citation.URL] && len(citedPages) < maxMissCited {
+				seenPage[citation.URL] = true
+				page := CitedPage{URL: citation.URL, Domain: host}
+				if citation.Title != nil {
+					page.Title = *citation.Title
+				}
+				citedPages = append(citedPages, page)
+			}
 		}
 		if len(seenURL) == 0 {
 			continue
@@ -151,7 +170,7 @@ func buildProof(checkedAt time.Time, domain string, answers []proofAnswer) *Proo
 		if citesYou {
 			proof.CitingYou++
 		} else if len(proof.Misses) < maxProofMisses {
-			proof.Misses = append(proof.Misses, Miss{Prompt: answer.prompt, Engine: answer.engine, Cited: cited[:min(len(cited), maxMissCited)]})
+			proof.Misses = append(proof.Misses, Miss{Prompt: answer.prompt, Engine: answer.engine, Cited: cited[:min(len(cited), maxMissCited)], CitedPages: citedPages})
 		}
 	}
 	for host, count := range rivals {

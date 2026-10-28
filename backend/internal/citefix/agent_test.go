@@ -455,7 +455,11 @@ func TestAgentCeilingsFitTheCaps(t *testing.T) {
 	for range maxProofMisses {
 		proof.Misses = append(proof.Misses, Miss{Prompt: strings.Repeat("w", 400), Engine: "chatgpt", Cited: []string{"a.com", "b.com", "c.com"}})
 	}
-	evidence := agentEvidence{Queries: rows, Proof: proof}
+	evidence := agentEvidence{Queries: rows, Proof: proof, Rivals: []RivalComparison{{
+		Prompt: strings.Repeat("q", 300), Engine: "google_ai_overview",
+		Rival: RivalPage{URL: "https://rival.example/guide", Title: "Rival guide", Signals: SignalSnapshot{AnswerFirstWords: 48, Author: true, Date: "2026-10-01", Schema: []string{"Article"}, Statistics: 4, FAQ: true, WordCount: 900}},
+		Yours: &RivalPageSummary{URL: "https://x.example/page", Title: "Own page", Signals: SignalSnapshot{WordCount: 300}},
+	}}}
 	quick, err := holdCeiling(ModeQuick, analystRequest(ModeQuick, target, page, evidence), target, page)
 	if err != nil || quick <= 0 {
 		t.Fatalf("quick ceiling = %v, %v", quick, err)
@@ -463,6 +467,12 @@ func TestAgentCeilingsFitTheCaps(t *testing.T) {
 	deep, err := holdCeiling(ModeDeep, analystRequest(ModeDeep, target, page, evidence), target, page)
 	if err != nil || deep <= quick {
 		t.Fatalf("deep ceiling = %v, %v; want above quick %v", deep, err, quick)
+	}
+	if QuickMaxCredits != 25 || DeepMaxCredits != 60 || billing.CreditsForUSD(quick) > QuickMaxCredits || billing.CreditsForUSD(deep) > DeepMaxCredits {
+		t.Fatalf("agent caps/holds changed: Quick %d credits at $%v, Deep %d credits at $%v", QuickMaxCredits, quick, DeepMaxCredits, deep)
+	}
+	if prompt := evidencePrompt(evidence); !strings.Contains(prompt, "rival.example/guide") || !strings.Contains(prompt, "answer-first paragraph 48 words") {
+		t.Fatalf("rival evidence missing from analyst prompt: %s", prompt)
 	}
 	// A page the fetch did not cut (a future change to the limits) is refused
 	// rather than held above the cap.

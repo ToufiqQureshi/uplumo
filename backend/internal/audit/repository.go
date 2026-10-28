@@ -349,6 +349,89 @@ func (r *Repository) InsertCrawledBatch(ctx context.Context, auditID string, pag
 	return nil
 }
 
+// ClaimJavaScriptRenderPages permanently claims the URLs this audit is about
+// to send to DataForSEO. Claims are never released: an uncertain provider
+// outcome must not result in an automatic second paid call.
+func (r *Repository) ClaimJavaScriptRenderPages(ctx context.Context, auditID string, urls []string) ([]string, error) {
+	claimed := make([]string, 0, len(urls))
+	for _, pageURL := range urls {
+		tag, err := r.pool.Exec(ctx, `INSERT INTO go_audit_javascript_render_pages (audit_id, page_url, status)
+			VALUES ($1, $2, 'claimed') ON CONFLICT (audit_id, page_url) DO NOTHING`, auditID, pageURL)
+		if err != nil {
+			return nil, fmt.Errorf("claim JavaScript render page: %w", err)
+		}
+		if tag.RowsAffected() == 1 {
+			claimed = append(claimed, pageURL)
+		}
+	}
+	return claimed, nil
+}
+
+// SaveJavaScriptRenderedPage replaces the shell's extracted fields and issues
+// in the same transaction as marking the paid result complete.
+func (r *Repository) SaveJavaScriptRenderedPage(ctx context.Context, auditID string, page CrawledPageResult, costUSD float64) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin rendered page update: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	internal, external := 0, 0
+	for _, link := range page.Links {
+		if link.IsInternal {
+			internal++
+		} else {
+			external++
+		}
+	}
+	headingOrder, _ := json.Marshal(defaultIntSlice(page.HeadingOrder))
+	images, _ := json.Marshal(defaultImageSlice(page.Images))
+	hreflang, _ := json.Marshal(defaultStringSlice(page.HreflangTags))
+	citation, _ := json.Marshal(page.AI)
+	command, err := tx.Exec(ctx, `UPDATE go_audit_pages SET status_code=$3, redirect_url=NULL, title=$4, meta_description=$5,
+		canonical_url=$6, robots_meta=$7, og_title=$8, og_description=$9, og_image=$10,
+		h1_count=$11, h2_count=$12, h3_count=$13, h4_count=$14, h5_count=$15, h6_count=$16,
+		heading_order_json=$17, word_count=$18, content_hash=$19, images_total=$20, images_missing_alt=$21,
+		images_json=$22, internal_link_count=$23, external_link_count=$24, has_structured_data=$25,
+		hreflang_tags_json=$26, is_indexable=$27, fetch_class='ok', citation_signals_json=$28
+		WHERE audit_id=$1 AND url=$2`, auditID, page.URL, nullableInt(page.StatusCode), nullableString(page.Title),
+		nullableString(page.MetaDescription), nullableString(page.CanonicalURL), nullableString(page.RobotsMeta),
+		nullableString(page.OgTitle), nullableString(page.OgDescription), nullableString(page.OgImage),
+		page.H1Count, page.H2Count, page.H3Count, page.H4Count, page.H5Count, page.H6Count,
+		string(headingOrder), page.WordCount, nullableString(page.ContentHash), page.ImagesTotal, page.ImagesMissingAlt,
+		string(images), internal, external, page.HasStructuredData, string(hreflang), page.IsIndexable, string(citation))
+	if err != nil {
+		return fmt.Errorf("update rendered audit page: %w", err)
+	}
+	if command.RowsAffected() == 0 {
+		return fmt.Errorf("rendered audit page %q was not found", page.URL)
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM go_audit_issues WHERE audit_id=$1 AND page_id=$2`, auditID, page.ID); err != nil {
+		return fmt.Errorf("replace shell audit issues: %w", err)
+	}
+	if err := insertIssuesTx(ctx, tx, auditID, runPageReporters(page)); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `UPDATE go_audit_javascript_render_pages SET status='completed', cost_usd=$3, completed_at=now()
+		WHERE audit_id=$1 AND page_url=$2 AND status='claimed'`, auditID, page.URL, costUSD); err != nil {
+		return fmt.Errorf("complete JavaScript render record: %w", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit rendered audit page: %w", err)
+	}
+	return nil
+}
+
+// MarkJavaScriptRenderFailed closes a claimed attempt without making it
+// eligible for a background retry.
+func (r *Repository) MarkJavaScriptRenderFailed(ctx context.Context, auditID, pageURL string) error {
+	_, err := r.pool.Exec(ctx, `UPDATE go_audit_javascript_render_pages SET status='failed', completed_at=now()
+		WHERE audit_id=$1 AND page_url=$2 AND status='claimed'`, auditID, pageURL)
+	if err != nil {
+		return fmt.Errorf("mark JavaScript render failed: %w", err)
+	}
+	return nil
+}
+
 const upsertPageSQL = `
 	INSERT INTO go_audit_pages (
 		id, audit_id, url, status_code, redirect_url, title, meta_description, canonical_url, robots_meta,
@@ -372,7 +455,11 @@ const upsertPageSQL = `
 		has_structured_data = EXCLUDED.has_structured_data, hreflang_tags_json = EXCLUDED.hreflang_tags_json,
 		is_indexable = EXCLUDED.is_indexable, fetch_class = EXCLUDED.fetch_class, crawl_depth = EXCLUDED.crawl_depth,
 		in_sitemap = EXCLUDED.in_sitemap, response_time_ms = EXCLUDED.response_time_ms,
-		citation_signals_json = EXCLUDED.citation_signals_json`
+		citation_signals_json = EXCLUDED.citation_signals_json
+	WHERE NOT EXISTS (
+		SELECT 1 FROM go_audit_javascript_render_pages rendered
+		WHERE rendered.audit_id=EXCLUDED.audit_id AND rendered.page_url=EXCLUDED.url AND rendered.status='completed'
+	)`
 
 // pageArgs flattens a crawled page into the upsert column order.
 func pageArgs(auditID string, page CrawledPageResult) []any {
@@ -466,9 +553,14 @@ func insertIssuesTx(ctx context.Context, tx pgx.Tx, auditID string, issues []Det
 		}
 		batch.Queue(`
 			INSERT INTO go_audit_issues (id, audit_id, page_id, page_url, issue_type, severity, details_json)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
+			SELECT $1, $2, $3, $4, $5, $6, $7
+			WHERE NOT ($5::text=$8::text AND EXISTS (
+				SELECT 1 FROM go_audit_javascript_render_pages rendered
+				WHERE rendered.audit_id=$2 AND rendered.page_url=$4 AND rendered.status='completed'
+			))
 			ON CONFLICT (id) DO NOTHING`,
-			id, auditID, issue.PageID, issue.PageURL, string(issue.IssueType), string(severityOf(issue.IssueType)), detailsJSON)
+			id, auditID, issue.PageID, issue.PageURL, string(issue.IssueType), string(severityOf(issue.IssueType)), detailsJSON,
+			string(IssueJavaScriptRenderingSuspected))
 	}
 	if err := tx.SendBatch(ctx, batch).Close(); err != nil {
 		return fmt.Errorf("insert issues: %w", err)
@@ -648,7 +740,8 @@ func (r *Repository) listLighthouse(ctx context.Context, auditID string) ([]Ligh
 func (r *Repository) ListSlimPages(ctx context.Context, auditID string) ([]SlimPage, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id, url, status_code, fetch_class, redirect_url, title, meta_description, content_hash, word_count,
-			is_indexable, canonical_url, header_canonical_url
+			is_indexable, canonical_url, header_canonical_url, x_robots_tag, robots_meta, crawl_depth, in_sitemap,
+			response_time_ms
 		FROM go_audit_pages WHERE audit_id = $1`, auditID)
 	if err != nil {
 		return nil, fmt.Errorf("list slim pages: %w", err)
@@ -657,9 +750,11 @@ func (r *Repository) ListSlimPages(ctx context.Context, auditID string) ([]SlimP
 	pages := []SlimPage{}
 	for rows.Next() {
 		var page SlimPage
-		var title, metaDescription, contentHash, redirectURL, canonicalURL, headerCanonicalURL *string
+		var title, metaDescription, contentHash, redirectURL, canonicalURL, headerCanonicalURL, xRobotsTag, robotsMeta *string
+		var responseTime *int
 		if err := rows.Scan(&page.ID, &page.URL, &page.StatusCode, &page.FetchClass, &redirectURL, &title,
-			&metaDescription, &contentHash, &page.WordCount, &page.IsIndexable, &canonicalURL, &headerCanonicalURL); err != nil {
+			&metaDescription, &contentHash, &page.WordCount, &page.IsIndexable, &canonicalURL, &headerCanonicalURL,
+			&xRobotsTag, &robotsMeta, &page.CrawlDepth, &page.InSitemap, &responseTime); err != nil {
 			return nil, fmt.Errorf("scan slim page: %w", err)
 		}
 		page.Title = derefString(title)
@@ -668,6 +763,11 @@ func (r *Repository) ListSlimPages(ctx context.Context, auditID string) ([]SlimP
 		page.RedirectURL = derefString(redirectURL)
 		page.CanonicalURL = derefString(canonicalURL)
 		page.HeaderCanonicalURL = derefString(headerCanonicalURL)
+		page.XRobotsTag = derefString(xRobotsTag)
+		page.RobotsMeta = derefString(robotsMeta)
+		if responseTime != nil {
+			page.ResponseTimeMs = int64(*responseTime)
+		}
 		pages = append(pages, page)
 	}
 	if err := rows.Err(); err != nil {

@@ -20,19 +20,34 @@ Starts an asynchronous crawl and presents technical SEO findings, crawl progress
 
 - `auditApi.test.ts`
 
-## Show supported audit work
+## Opt-in rendering when the real provider is wired (owner approved 28 Oct)
 
-- **Decision:** Use the backend capability to disable JavaScript rendering; remove the unused local render-price estimate and its special credit-error calculation. Remediation describes initial-HTML coverage and recommends independent browser verification.
-- **Why:** The server has no JavaScript renderer. Displaying a price or telling users to enable it implied a capability they could not use.
-- **Preserve:** Keep ordinary crawl and Lighthouse controls, server error handling and existing launch/result contracts. No provider work, new charge or layout redesign.
-- **Trace:** `launch/LaunchFormCard.tsx`, `launch/useLaunchController.ts`, shared `audit-issues.ts`; backend audit decision and regression tests; `frontend/tests/audit-capabilities.spec.ts` checks the disabled control, explanation and absence of automatic audit/paid work on mobile and desktop using API fixtures.
+- **Decision:** Use backend capabilities to show the JavaScript render checkbox
+  only when DataForSEO is wired. The control states the 39-credit maximum for
+  up to 20 flagged app-shell pages; actual delivered cost is charged.
+- **Why:** The owner approved the published On-Page JS price ($0.0015/page)
+  after seeing the 20-page and 50-page-site scenarios.
+- **Preserve:** Rendering stays opt-in, occurs only after the standard crawl
+  identifies app shells, charges zero on failed/unusable rendering and has no
+  automatic retry. Audit page load, results and poll actions do not render.
+- **Trace:** `launch/LaunchFormCard.tsx`, `launch/useLaunchController.ts`,
+  `auditApi.ts`; `frontend/tests/audit-capabilities.spec.ts` checks the
+  capability-controlled opt-in, cost copy and no request before a confirmed
+  audit start.
 
-## Usable guidance for initial-HTML and historical audits
+## Usable guidance for rendered and initial-HTML audits
 
-- **Decision:** Results warnings never tell users to enable the unavailable renderer. Stored render flags describe a request, not evidence of execution. Bot-block advice offers browser/host checks without inferring that Google is blocked.
-- **Why:** Review caught a second results alert that contradicted launch capabilities; legacy flags could also make false execution claims.
-- **Preserve:** Existing audit data stays unchanged. Keep failed-page evidence and explicit limitations; guidance must describe actions users can actually take.
-- **Trace:** `results/RenderingWarnings.tsx`, `shared.tsx`, their callers and `RenderingWarnings.test.ts` (both cases failed before fixing the copy).
+- **Decision:** Results distinguish an initial-HTML-only audit from one that
+  opted into rendering. If a JavaScript app shell remains flagged, the warning
+  says rendered content was not confirmed for that page and recommends checking
+  crawler-readable content; it does not claim Google is blocked.
+- **Why:** A requested render can fail, and audits above the render cap may
+  leave shells unrendered. A saved config flag alone does not prove a given URL
+  produced usable rendered HTML.
+- **Preserve:** Keep the failed-page evidence and avoid suggesting unavailable
+  controls. Guidance reflects the stored audit state.
+- **Trace:** `results/RenderingWarnings.tsx`, `shared.tsx`, their callers and
+  `RenderingWarnings.test.ts` (both states assert accurate, usable copy).
 
 ## Issue detail lists
 

@@ -15,5 +15,8 @@ Read [flow.md](flow.md) for the request path and [decision.md](decision.md) for 
 - `launch/AuditChangeGuard.tsx` and `compare.ts` (read-only saved-audit comparison)
 - `orphanLinkCandidates.ts` (local, review-only link suggestions)
 
-Audits inspect initial HTTP HTML. JavaScript rendering is unavailable and its
-launch control is disabled by server capabilities; no rendering price is quoted.
+Audits inspect initial HTTP HTML, then can optionally render only pages the
+crawler flagged as app shells through DataForSEO On-Page JavaScript. The launch
+control appears only when backend capabilities confirm the renderer is wired.
+It is opt-in, capped at 20 pages, and shows the 39-credit maximum (actual
+delivered cost is charged). See [flow.md](flow.md) for the paid-call boundary.

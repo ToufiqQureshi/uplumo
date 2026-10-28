@@ -228,6 +228,7 @@ func run(logger *slog.Logger) (err error) {
 		}
 		dfClient = client
 		aiSearchSvc = aisearch.NewService(client, rdb, logger)
+		aiSearchSvc.DB = db
 		backlinksSvc = backlinks.NewService(client, rdb, logger)
 		backlinksSvc.DB = db // persist the overview so a cache miss does not re-buy
 		domainSvc = domain.NewService(client, rdb, logger)
@@ -303,7 +304,7 @@ func run(logger *slog.Logger) (err error) {
 		return err
 	}
 	crawlerAccessSvc := &crawleraccess.Service{DB: db, Secret: cfg.BetterAuthSecret}
-	auditSvc, err := buildAuditService(ctx, logger, db, rdb, gateSvc, cfg.PageSpeedAPIKey, cfg.CrUXAPIKey, crawlerAccessSvc)
+	auditSvc, err := buildAuditService(ctx, logger, db, rdb, gateSvc, cfg.PageSpeedAPIKey, cfg.CrUXAPIKey, crawlerAccessSvc, dfClient)
 	if err != nil {
 		return err
 	}
@@ -316,6 +317,10 @@ func run(logger *slog.Logger) (err error) {
 	aiTracking := &aisearch.Tracking{DB: db, Search: aiSearchSvc}
 	if gateSvc != nil {
 		aiTracking.Plans = gateSvc.Gate(planCatalog.AIVisibility)
+	}
+	var citeFixGoogleAIOverview citefix.GoogleAIOverviewRunner
+	if dfClient != nil {
+		citeFixGoogleAIOverview = citefix.GoogleAIOverview{DB: db, Client: dfClient, Plans: aiTracking.Plans}
 	}
 	if err := aiTracking.RunWorkers(ctx, logger); err != nil {
 		return err
@@ -415,7 +420,8 @@ func run(logger *slog.Logger) (err error) {
 			ContentEditor:           &contenteditor.Repository{DB: db},
 			ContentAuthors:          contentAuthors,
 			LinkSuggest:             linkSuggestSvc,
-			CiteFix:                 citefix.Store{DB: db},
+			CiteFix:                 citefix.Store{DB: db, Audit: auditSvc, GoogleAIOConfigured: dfClient != nil},
+			CiteFixGoogleAIOverview: citeFixGoogleAIOverview,
 			CiteFixAgent:            buildCiteFixAgent(cfg, logger, db, spendGuard.AIMeter(spend.CiteFix, "openrouter/citefix"), billingRoutes.Gate(planCatalog.AIWriting), gscService),
 			SitePublish:             sitePublish,
 			IndexNow:                indexNowService,
@@ -700,7 +706,7 @@ func buildRankChecks(ctx context.Context, logger *slog.Logger, db *pgxpool.Pool,
 // buildAuditService wires the audit engine: the SSRF-guarded crawler, the
 // Lighthouse provider, the Postgres-backed job scheduler and the background
 // worker that runs audits.
-func buildAuditService(ctx context.Context, logger *slog.Logger, db *pgxpool.Pool, rdb *redis.Client, billingSvc *billing.Service, pageSpeedAPIKey, cruxAPIKey string, crawlerAccess audit.CrawlerAccessResolver) (*audit.Service, error) {
+func buildAuditService(ctx context.Context, logger *slog.Logger, db *pgxpool.Pool, rdb *redis.Client, billingSvc *billing.Service, pageSpeedAPIKey, cruxAPIKey string, crawlerAccess audit.CrawlerAccessResolver, dfClient *dataforseo.Client) (*audit.Service, error) {
 	repository := audit.NewRepository(db)
 	progress := audit.NewProgress(rdb)
 	guard := audit.NewGuard()
@@ -713,6 +719,10 @@ func buildAuditService(ctx context.Context, logger *slog.Logger, db *pgxpool.Poo
 	var fieldData audit.FieldDataProvider
 	if cruxAPIKey != "" {
 		fieldData = audit.NewCrUXProvider(cruxAPIKey, audit.RedisFieldDataCache{Client: rdb}, logger)
+	}
+	var renderer audit.JavaScriptRenderer
+	if dfClient != nil {
+		renderer = audit.DataForSEORenderer{Client: dfClient}
 	}
 
 	queue, err := jobs.New(db)
@@ -730,21 +740,22 @@ func buildAuditService(ctx context.Context, logger *slog.Logger, db *pgxpool.Poo
 	service := audit.NewService(audit.ServiceConfig{
 		Repository: repository, Progress: progress, Guard: guard, Crawler: crawler,
 		Lighthouse: lighthouseProvider, Scheduler: audit.NewQueueScheduler(queue), Plans: plans,
-		Resolver: crawlerAccess,
-		Hosted:   billingSvc != nil, Env: os.Getenv, Logger: logger,
+		Resolver: crawlerAccess, Renderer: renderer,
+		RendererMaxCredits: billing.ActionMaxCredits(spend.SiteAudit, billing.ActionJavaScriptRender),
+		Hosted:             billingSvc != nil, Env: os.Getenv, Logger: logger,
 	})
 
-	startAuditWorker(ctx, logger, queue, repository, progress, guard, crawler, lighthouseProvider, fieldData, crawlerAccess)
+	startAuditWorker(ctx, logger, queue, repository, progress, guard, crawler, lighthouseProvider, fieldData, crawlerAccess, renderer)
 	return service, nil
 }
 
 // startAuditWorker consumes audits from the jobs queue until ctx ends. The
 // worker's jobs are at-least-once, so a crashed worker's audit is retried and
 // its deterministic row ids keep the retry idempotent.
-func startAuditWorker(ctx context.Context, logger *slog.Logger, queue *jobs.Queue, repository *audit.Repository, progress *audit.Progress, guard *audit.Guard, crawler *audit.Crawler, lighthouseProvider audit.LighthouseProvider, fieldData audit.FieldDataProvider, crawlerAccess audit.CrawlerAccessResolver) {
+func startAuditWorker(ctx context.Context, logger *slog.Logger, queue *jobs.Queue, repository *audit.Repository, progress *audit.Progress, guard *audit.Guard, crawler *audit.Crawler, lighthouseProvider audit.LighthouseProvider, fieldData audit.FieldDataProvider, crawlerAccess audit.CrawlerAccessResolver, renderer audit.JavaScriptRenderer) {
 	runner := audit.NewRunner(audit.RunnerConfig{
 		Repository: repository, Progress: progress, Guard: guard, Crawler: crawler,
-		Lighthouse: lighthouseProvider, FieldData: fieldData, Logger: logger, Resolver: crawlerAccess,
+		Lighthouse: lighthouseProvider, FieldData: fieldData, Renderer: renderer, Logger: logger, Resolver: crawlerAccess,
 	})
 	worker := jobs.Worker{
 		Queue: queue, QueueName: audit.AuditQueueName, Handle: audit.RunnerHandler(runner),

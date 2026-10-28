@@ -47,16 +47,18 @@ type JobPayload struct {
 
 // ServiceConfig configures the audit Service.
 type ServiceConfig struct {
-	Repository Store
-	Progress   *Progress
-	Guard      *Guard
-	Crawler    *Crawler
-	Lighthouse LighthouseProvider
-	Scheduler  Scheduler
-	Plans      PaidPlans
-	Access     ManagedAccess
-	Rendering  RenderingMeter
-	Resolver   CrawlerAccessResolver
+	Repository         Store
+	Progress           *Progress
+	Guard              *Guard
+	Crawler            *Crawler
+	Lighthouse         LighthouseProvider
+	Scheduler          Scheduler
+	Plans              PaidPlans
+	Access             ManagedAccess
+	Rendering          RenderingMeter
+	Renderer           JavaScriptRenderer
+	RendererMaxCredits int64
+	Resolver           CrawlerAccessResolver
 	// Hosted is true when audits are metered and plan-gated (the hosted
 	// product). Self-hosted deployments are not gated.
 	Hosted bool
@@ -69,21 +71,23 @@ type ServiceConfig struct {
 
 // Service holds the audit rules.
 type Service struct {
-	repo       Store
-	progress   *Progress
-	guard      *Guard
-	crawler    *Crawler
-	lighthouse LighthouseProvider
-	scheduler  Scheduler
-	plans      PaidPlans
-	access     ManagedAccess
-	rendering  RenderingMeter
-	resolver   CrawlerAccessResolver
-	hosted     bool
-	env        func(string) string
-	logger     *slog.Logger
-	now        func() time.Time
-	newID      func() string
+	repo               Store
+	progress           *Progress
+	guard              *Guard
+	crawler            *Crawler
+	lighthouse         LighthouseProvider
+	scheduler          Scheduler
+	plans              PaidPlans
+	access             ManagedAccess
+	rendering          RenderingMeter
+	renderer           JavaScriptRenderer
+	rendererMaxCredits int64
+	resolver           CrawlerAccessResolver
+	hosted             bool
+	env                func(string) string
+	logger             *slog.Logger
+	now                func() time.Time
+	newID              func() string
 }
 
 // NewService builds a Service. A nil logger uses the default; a nil clock uses
@@ -104,7 +108,8 @@ func NewService(config ServiceConfig) *Service {
 	return &Service{
 		repo: config.Repository, progress: config.Progress, guard: config.Guard, crawler: config.Crawler,
 		lighthouse: config.Lighthouse, scheduler: config.Scheduler, plans: config.Plans, access: config.Access,
-		rendering: config.Rendering, resolver: config.Resolver, hosted: config.Hosted, env: config.Env,
+		rendering: config.Rendering, renderer: config.Renderer, rendererMaxCredits: config.RendererMaxCredits,
+		resolver: config.Resolver, hosted: config.Hosted, env: config.Env,
 		logger: logger, now: now, newID: newID,
 	}
 }
@@ -167,7 +172,7 @@ func (s *Service) StartAudit(ctx context.Context, input StartAuditInput) (StartA
 	if s.guard == nil {
 		return StartAuditResult{}, errors.New("audit service: SSRF guard is required")
 	}
-	if input.RenderJavaScript && !IsAuditRenderingAllowed(s.env) {
+	if input.RenderJavaScript && s.renderer == nil {
 		return StartAuditResult{}, fmt.Errorf("%w: JavaScript rendering is not available on this deployment", ErrRenderingUnavailable)
 	}
 	limits, ok := auditLimits[input.LimitTier]
@@ -177,9 +182,6 @@ func (s *Service) StartAudit(ctx context.Context, input StartAuditInput) (StartA
 	maxPages := clampMaxPages(input.MaxPages)
 	if maxPages > limits.MaxPagesPerAudit {
 		return StartAuditResult{}, fmt.Errorf("%w: at most %d pages for this plan", ErrAuditPageLimitExceeded, limits.MaxPagesPerAudit)
-	}
-	if input.RenderJavaScript && maxPages > RenderedMaxAuditPages {
-		return StartAuditResult{}, fmt.Errorf("%w: audits that render JavaScript are limited to %d pages", ErrAuditPageLimitExceeded, RenderedMaxAuditPages)
 	}
 
 	strategy := input.LighthouseStrategy
@@ -474,12 +476,17 @@ func (s *Service) Remove(ctx context.Context, auditID, projectID string) error {
 
 // CapabilitiesResult reports which optional audit features this deployment has.
 type CapabilitiesResult struct {
-	CanRenderJavaScript bool `json:"canRenderJavaScript"`
+	CanRenderJavaScript  bool  `json:"canRenderJavaScript"`
+	MaxRenderedPages     int   `json:"maxRenderedPages,omitempty"`
+	MaxJavaScriptCredits int64 `json:"maxJavaScriptCredits,omitempty"`
 }
 
 // Capabilities reports the deployment's audit capabilities.
 func (s *Service) Capabilities() CapabilitiesResult {
-	return CapabilitiesResult{CanRenderJavaScript: IsAuditRenderingAllowed(s.env)}
+	if s.renderer == nil {
+		return CapabilitiesResult{}
+	}
+	return CapabilitiesResult{CanRenderJavaScript: true, MaxRenderedPages: MaxRenderedPagesPerAudit, MaxJavaScriptCredits: s.rendererMaxCredits}
 }
 
 // formatISO renders a time the way JavaScript's Date.toISOString does.

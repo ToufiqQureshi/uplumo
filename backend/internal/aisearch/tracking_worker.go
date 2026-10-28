@@ -305,9 +305,12 @@ func (s *Tracking) failAnswer(ctx context.Context, id, code string) error {
 
 type trackingSource struct {
 	URL             string  `json:"url"`
+	Domain          string  `json:"domain"`
 	Title           *string `json:"title"`
+	Source          string  `json:"source"`
 	SourceName      *string `json:"source_name"`
 	PublicationDate *string `json:"publication_date"`
+	Text            string  `json:"text"`
 }
 
 type trackingBrandEntity struct {
@@ -370,13 +373,33 @@ func parseTrackingAnswer(raw []byte, engine string) (string, []Citation, []Recom
 			continue
 		}
 		seen[safe] = true
+		publisher := strings.TrimSpace(source.Source)
+		if publisher == "" && source.SourceName != nil {
+			publisher = strings.TrimSpace(*source.SourceName)
+		}
+		var sourceName *string
+		if publisher != "" {
+			sourceName = truncatedPtr(&publisher, maxTitleLength)
+		}
+		var snippet *string
+		if strings.TrimSpace(source.Text) != "" {
+			snippet = truncatedPtr(&source.Text, 2000)
+		}
 		citations = append(citations, Citation{URL: safe, Domain: safeHostname(safe), Title: source.Title,
-			Source: truncatedPtr(source.SourceName, maxTitleLength), PublishedAt: truncatedPtr(source.PublicationDate, 40)})
+			Source: sourceName, PublishedAt: truncatedPtr(source.PublicationDate, 40), Text: snippet})
 		if len(citations) >= maxCitations {
 			break
 		}
 	}
 	return truncate(text, 64000), citations, recommendedBrands(entities), nil
+}
+
+// ParseGoogleAIOverview extracts the answer and only the references inside the
+// Google AI Overview result. It is shared by AI Visibility Tracking and Cite
+// Fix so both surfaces show the same provider evidence.
+func ParseGoogleAIOverview(raw []byte) (string, []Citation, error) {
+	answer, citations, _, err := parseTrackingAnswer(raw, "google_ai_overview")
+	return answer, citations, err
 }
 
 // recommendedBrands keeps the distinct brands the AI named, first mention first.

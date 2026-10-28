@@ -53,10 +53,24 @@ safely escaped link snippet for review and manual placement.
 
 ## Env vars
 
-- JavaScript rendering is unavailable: the wired crawler fetches initial HTTP
-  HTML. `AUDIT_BROWSER_RENDERING` and `CONTEXT_API_KEY` cannot enable an unwired
-  renderer. Capabilities return false and rendering requests answer 403 before
-  creating an audit or job.
+- **JavaScript rendering:** the wired DataForSEO On-Page renderer is available
+  only when the provider client is configured. Capabilities then return true,
+  with a 20-page limit and a 39-credit maximum. The customer must opt in at
+  audit launch; after the ordinary crawl flags app shells, only those pages
+  are sent to DataForSEO. Rendered HTML goes through the same `AnalyzeHTML`
+  and page check path, refreshing `citation_signals_json`. Rival pages never
+  use this paid renderer. `AUDIT_BROWSER_RENDERING` and `CONTEXT_API_KEY` do
+  not control the wired provider.
+- DataForSEO publishes JavaScript rendering at $0.0015/page. The spend guard
+  holds up to 39 credits for 20 shells and settles the actual cost; unusable or
+  failed render results charge 0 credits. No paid POST is automatically
+  retried. URL claims are unique per audit, so a replay cannot buy the same
+  URL again. DataForSEO allows at most 20 tasks and five identical registrable
+  domains in each `instant_pages` request. Twenty same-domain pages use four
+  paid task POSTs, each followed by one free `raw_html` retrieval POST for that
+  batch's successful task IDs (available for seven days). A later batch that
+  fails stops new batches but keeps, and charges only, the pages already
+  delivered.
 - `PAGESPEED_API_KEY` (a Google Cloud API key with the PageSpeed Insights API
   enabled) is needed for Lighthouse. Without it audits still run; Lighthouse is
   skipped.

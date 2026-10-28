@@ -20,6 +20,9 @@ type Store interface {
 	GetLighthouseForProject(ctx context.Context, resultID, projectID string) (LighthouseDetail, error)
 	ListSlimPages(ctx context.Context, auditID string) ([]SlimPage, error)
 	ShellPageIDs(ctx context.Context, auditID string) (map[string]struct{}, error)
+	ClaimJavaScriptRenderPages(ctx context.Context, auditID string, urls []string) ([]string, error)
+	SaveJavaScriptRenderedPage(ctx context.Context, auditID string, page CrawledPageResult, costUSD float64) error
+	MarkJavaScriptRenderFailed(ctx context.Context, auditID, pageURL string) error
 	RunMultipageChecks(ctx context.Context, auditID string) ([]DetectedIssue, bool, error)
 	CountPagesByFetchClass(ctx context.Context, auditID string, class PageFetchClass) (int, error)
 }

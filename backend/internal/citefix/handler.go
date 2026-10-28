@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/toufiqqureshi/uplumo/backend/internal/auth"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/httpx"
@@ -34,6 +35,7 @@ type Deps struct {
 	Logger            *slog.Logger
 	Reporter          Reporter
 	Agent             AgentRunner
+	GoogleAIOverview  GoogleAIOverviewRunner
 	WithSession       func(http.Handler) http.Handler
 	WithProjectAccess func(http.Handler) http.Handler
 }
@@ -49,6 +51,8 @@ func Mount(mux *http.ServeMux, deps Deps) {
 	mux.Handle("POST /api/v1/projects/{projectId}/cite-fix/report", protect(h.report))
 	mux.Handle("POST /api/v1/projects/{projectId}/cite-fix/agent/run", protect(h.run))
 	mux.Handle("POST /api/v1/projects/{projectId}/cite-fix/agent/results", protect(h.results))
+	mux.Handle("POST /api/v1/projects/{projectId}/cite-fix/google-ai-overview/refresh", protect(h.refreshGoogleAIOverview))
+	mux.Handle("POST /api/v1/projects/{projectId}/cite-fix/google-ai-overview/results", protect(h.collectGoogleAIOverview))
 }
 
 type handler struct{ Deps }
@@ -145,6 +149,59 @@ func (h handler) results(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, map[string]any{"results": results})
+}
+
+func (h handler) refreshGoogleAIOverview(w http.ResponseWriter, r *http.Request) {
+	if h.GoogleAIOverview == nil {
+		httpx.WriteError(w, http.StatusServiceUnavailable, "google_ai_overview_unavailable", "Google AI Overview checks are not available on this server.")
+		return
+	}
+	var input struct{}
+	organizationID, ok := h.begin(w, r, &input)
+	if !ok {
+		return
+	}
+	key := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if len(key) < 8 || len(key) > 128 {
+		httpx.WriteError(w, http.StatusBadRequest, "invalid_request", "A valid request key is required.")
+		return
+	}
+	state, err := h.GoogleAIOverview.Refresh(r.Context(), organizationID, r.PathValue("projectId"), key)
+	if err == nil {
+		httpx.WriteJSON(w, http.StatusOK, state)
+		return
+	}
+	if spend.WriteHTTPError(w, err) {
+		return
+	}
+	switch {
+	case errors.Is(err, ErrGoogleAIOUnavailable):
+		httpx.WriteError(w, http.StatusServiceUnavailable, "google_ai_overview_unavailable", "Google AI Overview checks are not available on this server.")
+	case errors.Is(err, ErrGoogleAIOPlanRequired):
+		httpx.WriteError(w, http.StatusPaymentRequired, "plan_required", "Google AI Overview checks are available with an AI Visibility plan.")
+	case errors.Is(err, ErrGoogleAIONotConfigured):
+		httpx.WriteError(w, http.StatusConflict, "tracked_questions_required", "Save tracked questions in AI Visibility first.")
+	default:
+		h.internal(w, r, "refresh Google AI Overview evidence", err)
+	}
+}
+
+func (h handler) collectGoogleAIOverview(w http.ResponseWriter, r *http.Request) {
+	if h.GoogleAIOverview == nil {
+		httpx.WriteError(w, http.StatusServiceUnavailable, "google_ai_overview_unavailable", "Google AI Overview checks are not available on this server.")
+		return
+	}
+	var input struct{}
+	organizationID, ok := h.begin(w, r, &input)
+	if !ok {
+		return
+	}
+	state, err := h.GoogleAIOverview.Collect(r.Context(), organizationID, r.PathValue("projectId"))
+	if err != nil {
+		h.internal(w, r, "collect Google AI Overview results", err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, state)
 }
 
 // begin decodes the body and returns the project's workspace.

@@ -14,6 +14,11 @@ background job queue, and optional Lighthouse/rendering controls. `whoami`
 reads the active organization's credit balance without charging credits. If
 the balance cannot be read, the response reports it as unknown.
 
+`get_cite_fix_report` also returns saved AI Visibility mentions, free bounded
+rival-page comparisons and the latest critical/warning audit issues. The tool
+does not start JavaScript rendering, refresh mentions or submit Google AI
+Overview tasks; paid actions remain in their confirmed product flows.
+
 Keep tool names and JSON schemas compatible with MCP clients. Tools without a
 Go registration fail locally; there is no other backend to forward them to.
 Tests: `oauth_test.go`, `registry_test.go` (plan gating for every tool),

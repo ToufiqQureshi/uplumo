@@ -272,6 +272,13 @@ func TestCapabilities(t *testing.T) {
 	if enabled.Capabilities().CanRenderJavaScript {
 		t.Fatal("a configured key cannot supply a renderer")
 	}
+	wired := newTestService(newMemoryStore(), nil, nil, nil, nil, false, nil)
+	wired.renderer = &testJavaScriptRenderer{}
+	wired.rendererMaxCredits = 39
+	capabilities := wired.Capabilities()
+	if !capabilities.CanRenderJavaScript || capabilities.MaxRenderedPages != MaxRenderedPagesPerAudit || capabilities.MaxJavaScriptCredits != 39 {
+		t.Fatalf("wired renderer capabilities = %+v", capabilities)
+	}
 }
 
 func TestStartAuditRejectsBadStrategy(t *testing.T) {

@@ -40,6 +40,9 @@ func TestBuildProofCountsCitationsPerAnswer(t *testing.T) {
 	if len(proof.Misses) != 2 || proof.Misses[0].Prompt != "goa hotel price" || !slices.Equal(proof.Misses[0].Cited, []string{"rival.example", "other.example"}) {
 		t.Fatalf("misses = %+v", proof.Misses)
 	}
+	if got := proof.Misses[0].CitedPages; len(got) != 3 || got[0].URL != "https://rival.example/a" || got[1].URL != "https://rival.example/b" {
+		t.Fatalf("miss cited pages = %+v, want the three saved rival URLs", got)
+	}
 	// A look-alike domain is not the customer's.
 	if isOwnHost("notshop.example", "shop.example") || !isOwnHost("shop.example", "shop.example") {
 		t.Fatal("own host matching is wrong")
@@ -52,8 +55,8 @@ func TestBuildProofCapsItsLists(t *testing.T) {
 		answers = append(answers, proofAnswer{prompt: string(rune('a' + i)), engine: "chatgpt", citations: cite("https://r"+string(rune('a'+i))+".example/", "https://x1.example/", "https://x2.example/", "https://x3.example/")})
 	}
 	proof := buildProof(time.Unix(0, 0), "shop.example", answers)
-	if len(proof.Rivals) != maxProofRivals || len(proof.Misses) != maxProofMisses || len(proof.Misses[0].Cited) != maxMissCited {
-		t.Fatalf("rivals %d misses %d cited %d", len(proof.Rivals), len(proof.Misses), len(proof.Misses[0].Cited))
+	if len(proof.Rivals) != maxProofRivals || len(proof.Misses) != maxProofMisses || len(proof.Misses[0].Cited) != maxMissCited || len(proof.Misses[0].CitedPages) != maxMissCited {
+		t.Fatalf("rivals %d misses %d cited %d citedPages %d", len(proof.Rivals), len(proof.Misses), len(proof.Misses[0].Cited), len(proof.Misses[0].CitedPages))
 	}
 }
 

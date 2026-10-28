@@ -91,12 +91,21 @@ export function ProofCard({
             Questions where you were not cited
           </p>
           <ul className="flex flex-col gap-1 text-sm">
-            {proof.misses.map((miss) => (
-              <li key={`${miss.prompt}:${miss.engine}`}>
+            {proof.misses.map((miss, index) => (
+              <li
+                key={`${miss.prompt}:${miss.engine}`}
+                className="flex flex-wrap items-center gap-x-2 gap-y-1"
+              >
                 “{miss.prompt}”{" "}
                 <span className="text-muted-foreground">
                   ({miss.engine}) cited {miss.cited.join(", ")}
                 </span>
+                <a
+                  className="text-primary underline"
+                  href={`#cite-fix-rival-${index}`}
+                >
+                  Compare with rival
+                </a>
               </li>
             ))}
           </ul>

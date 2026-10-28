@@ -2,9 +2,26 @@ package audit
 
 import "context"
 
-// IsAuditRenderingAllowed is shared by capabilities and start validation.
-// Environment hints alone cannot enable rendering: the Go crawler currently
-// fetches HTTP HTML and has no JavaScript renderer wired into execution.
+// MaxRenderedPagesPerAudit caps the paid pages rendered by DataForSEO. The
+// audit's total crawl limit remains controlled by its plan.
+const MaxRenderedPagesPerAudit = 20
+
+// RenderedHTML is the HTML DataForSEO returned after JavaScript execution.
+type RenderedHTML struct {
+	URL        string
+	StatusCode int
+	HTML       string
+	CostUSD    float64
+}
+
+// JavaScriptRenderer is available only when a paid provider implementation is
+// wired into both audit launch capabilities and the worker.
+type JavaScriptRenderer interface {
+	Render(ctx context.Context, organizationID, auditID string, urls []string) (map[string]RenderedHTML, error)
+}
+
+// IsAuditRenderingAllowed is retained for environment-only compatibility.
+// Rendering availability now comes only from Service's wired renderer.
 func IsAuditRenderingAllowed(_ func(string) string) bool { return false }
 
 // RenderUsage counts the provider units one audit's rendering used.

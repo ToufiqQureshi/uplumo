@@ -149,6 +149,9 @@ type Deps struct {
 	// CiteFix builds the free Cite Fix report from the latest site audit.
 	// Nil answers 503.
 	CiteFix citefix.Reporter
+	// CiteFixGoogleAIOverview submits the explicit paid SERP refresh and reads
+	// its saved results; nil disables the provider action.
+	CiteFixGoogleAIOverview citefix.GoogleAIOverviewRunner
 	// CiteFixAgent runs the paid Cite Fix agent. Nil without OpenRouter.
 	CiteFixAgent citefix.AgentRunner
 	// SAMSessions serves the project chat-session registry.
@@ -394,7 +397,7 @@ func NewHandler(d Deps) http.Handler {
 		})
 	}
 	citefix.Mount(mux, citefix.Deps{
-		Logger: d.Logger, Reporter: d.CiteFix, Agent: d.CiteFixAgent, WithSession: withSession,
+		Logger: d.Logger, Reporter: d.CiteFix, Agent: d.CiteFixAgent, GoogleAIOverview: d.CiteFixGoogleAIOverview, WithSession: withSession,
 		WithProjectAccess: func(next http.Handler) http.Handler { return requireProjectAccess(d.Logger, d.Auth, next) },
 	})
 	linksuggest.Mount(mux, linksuggest.Deps{
