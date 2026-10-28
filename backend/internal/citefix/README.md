@@ -19,7 +19,9 @@ way.
   copy the customer reads, and the thresholds.
 - `citefix.go`: `Build`, the pure scoring of one scan; report types.
 - `store.go`: `Store.Report`, the Postgres reads, scoped to the workspace.
-- `handler.go`: `Mount` and the route.
+- `handler.go`: `Mount` and the routes.
+- MCP and SAM read the same report through `get_cite_fix_report`
+  (`backend/internal/mcp/cite_fix_report.go`); the paid agent has no tool.
 
 ## API
 

@@ -26,3 +26,15 @@ Scores how easy a site is for AI assistants to quote, from the latest completed 
 - **Why:** Owner wanted an AI agent with page-specific fixes, cheap models via OpenRouter, user picks pages, cost shown first.
 - **Preserve:** OpenRouter `max_price` and `data_collection: deny` on every call (one Flash provider charged $30.91/M output). One hold per run, ceiling ≤ mode cap, customer charge ≤ hold; unusable answers charge 0; failed Deep rewrite charges only the analysis. Idempotency key replays, same content + mode is cached for 0 credits, one running run per page and mode. Only pages in the workspace's own latest scan are fetched, through the SSRF guard.
 - **Trace:** `agent.go`, `agent_prompts.go`, `agent_store.go`, `proof.go`, migration 48, `platform/openrouter` provider fields; tests `agent_test.go`, `proof_test.go`, `handler_test.go`. Mutation-checked. Not run against real OpenRouter yet. The owner conversation behind these choices is in `imp_sessions_talked.md` (27 Oct 2026, Cite Fix).
+
+## Report over MCP and SAM; agent stays on the page (PR 5 of 5)
+
+- **Decision:** the free report is exposed as MCP tool `get_cite_fix_report`
+  and in SAM's tool allowlist. No tool runs the agent.
+- **Why:** owner's step 5. A model calling a paid agent would skip the
+  confirmed batch price the owner asked for.
+- **Preserve:** report stays free and workspace-scoped; agent spend only after
+  the page's confirm dialog.
+- **Trace:** `backend/internal/mcp/cite_fix_report.go` and its test. Step 4
+  (fix → editor → re-scan) is the "Open in Content Editor" button plus "Scan
+  again"; publishing happens in the customer's own CMS.

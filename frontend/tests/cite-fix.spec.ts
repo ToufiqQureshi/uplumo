@@ -43,6 +43,40 @@ const ready = {
   ],
   pagesChecked: 35,
   pagesTotal: 40,
+  proof: null,
+  agent: {
+    available: true,
+    planAllowed: true,
+    quickMaxCredits: 25,
+    deepMaxCredits: 60,
+    maxPages: 20,
+    defaultPages: 5,
+  },
+};
+
+const agentResult = {
+  url: "https://example.com/page-0",
+  mode: "quick",
+  cached: false,
+  credits: 7,
+  createdAt: "2026-10-28T10:00:00Z",
+  partial: false,
+  summary: "The page never answers its main question.",
+  targetQuestion: "What does Page 0 cost?",
+  recommendations: [
+    {
+      title: "Answer first",
+      detail: "Lead with the price.",
+      check: "answer-first",
+    },
+  ],
+  answerFirst: "Page 0 costs Rs 999 a month.",
+  faq: [],
+  titleTag: "Page 0 pricing",
+  metaDescription: "What Page 0 costs.",
+  schemaJsonLd: "",
+  verify: [],
+  draft: "# Page 0",
 };
 
 for (const width of [390, 1280]) {
@@ -96,5 +130,57 @@ test("cite fix asks for a new scan instead of scoring an old one", async ({
   await expect(
     page.getByRole("button", { name: "Scan again" }),
   ).toHaveAttribute("href", "/p/e2e-project/audit");
+  expect(paid).toEqual([]);
+});
+
+test("cite fix agent buys nothing until the cost is confirmed, then one run per page", async ({
+  page,
+}) => {
+  const { paid } = await installGrowthFixtures(page);
+  const runs: unknown[] = [];
+  let saved: unknown[] = [];
+  await page.route("**/api/v1/projects/*/cite-fix/report", (route) =>
+    route.fulfill({ json: ready }),
+  );
+  await page.route("**/api/v1/projects/*/cite-fix/agent/results", (route) =>
+    route.fulfill({ json: { results: saved } }),
+  );
+  await page.route("**/api/v1/projects/*/cite-fix/agent/run", (route) => {
+    runs.push(route.request().postDataJSON());
+    saved = [agentResult];
+    return route.fulfill({ json: agentResult });
+  });
+  await page.goto("/p/e2e-project/cite-fix");
+
+  // The weakest page is picked by default and the cap is shown first.
+  await expect(
+    page.getByRole("checkbox", { name: "Fix Page 0 with the agent" }),
+  ).toBeChecked();
+  await expect(
+    page.getByText("at most 25 credits", { exact: false }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Fix 1 page" }).click();
+  await expect(
+    page.getByText("costs at most 25 credits", { exact: false }),
+  ).toBeVisible();
+  expect(runs).toEqual([]);
+
+  // Cancel buys nothing.
+  await page.getByRole("button", { name: "Cancel" }).click();
+  expect(runs).toEqual([]);
+
+  await page.getByRole("button", { name: "Fix 1 page" }).click();
+  await page.getByRole("button", { name: "Start" }).click();
+  await expect(page.getByText("7 credits").first()).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Agent results" }),
+  ).toBeVisible();
+  await expect(page.getByText("Page 0 costs Rs 999 a month.")).toBeVisible();
+
+  expect(runs).toHaveLength(1);
+  expect(runs[0]).toMatchObject({
+    url: "https://example.com/page-0",
+    mode: "quick",
+  });
   expect(paid).toEqual([]);
 });

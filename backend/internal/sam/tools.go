@@ -77,6 +77,7 @@ var samMCPTools = []string{
 	"get_audit_status",
 	"get_audit_issues",
 	"get_audit_pages",
+	"get_cite_fix_report",
 }
 
 // ToolRunner runs the MCP tool handlers in process. *mcp.Runner implements it.

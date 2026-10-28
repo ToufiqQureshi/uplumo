@@ -14,3 +14,15 @@
 - **Decision:** Checkboxes on the weakest pages (top 5 preselected, max 20), Quick/Deep toggle with per-page caps, total max and balance shown and confirmed before the run; pages run one at a time with `retry: false`; results open as a Content Editor draft. A proof card shows who AI answers cite.
 - **Preserve:** Never start paid work without the confirm dialog; stop the batch on credit/plan/rate errors.
 - **Trace:** `AgentPanel.tsx`, `AgentResults.tsx`, `ProofCard.tsx`, `agentSelection.ts` (+ test). Playwright spec not yet extended for the agent.
+
+## Browser test covers the paid agent
+
+- **Decision:** `frontend/tests/cite-fix.spec.ts` also proves the agent buys
+  nothing on load or on Cancel, and exactly one `agent/run` request per page
+  after Start. The report fixture carries `proof` and `agent`, which the Zod
+  schema requires.
+- **Why:** the fixture lacked those fields after the agent landed, so the page
+  failed to parse and CI went red; the money rule needs a browser-level count.
+- **Preserve:** confirm before any paid call; `retry: false`.
+- **Trace:** the spec fails if the button skips the confirm dialog (checked by
+  mutation).

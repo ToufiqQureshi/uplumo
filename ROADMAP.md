@@ -91,8 +91,10 @@ mean each one has been tried on production with real provider keys.
 - Built: paid AI agent per page (Quick ≤25, Deep ≤60 credits, DeepSeek via
   OpenRouter), page picker, AI Visibility proof card, results into the
   Content Editor. Real-provider acceptance pending.
-- Not built: SAM and MCP tools for Cite Fix; JavaScript rendering (owner
-  decision).
+- Built: free `get_cite_fix_report` MCP tool, also in SAM's allowlist (the
+  paid agent stays page-only).
+- Not built: JavaScript rendering (owner decision). Real-provider run of the
+  agent still pending.
 
 ## Not built yet
 

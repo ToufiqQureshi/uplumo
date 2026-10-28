@@ -8,7 +8,7 @@ func toolFeature(name string) (plans.Feature, bool) {
 	switch name {
 	case "whoami", "list_projects", "create_project", "get_project_context", "update_project_context",
 		"search_serp_locations", "list_site_audits", "get_audit_status", "get_audit_pages",
-		"get_audit_issues", "delete_site_audit", "run_site_audit", "list_saved_keywords",
+		"get_audit_issues", "get_cite_fix_report", "delete_site_audit", "run_site_audit", "list_saved_keywords",
 		"save_keywords", "remove_saved_keywords", "save_report", "list_reports", "get_report",
 		"delete_report", "set_report_sharing", "list_report_templates", "save_report_template",
 		"delete_report_template":
