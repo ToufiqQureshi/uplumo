@@ -23,6 +23,10 @@ const CHANCE_STYLE: Record<ReportKeyword["chance"], string> = {
   low: "bg-rose-100 text-rose-950",
 };
 
+function formatNumber(value: number | null | undefined): string {
+  return value == null ? "—" : value.toLocaleString("en-IN");
+}
+
 export function KeywordReportView({
   report,
   projectId,

@@ -16,10 +16,6 @@ const MONTHS = [
   "Dec",
 ];
 
-function formatNumber(value: number | null | undefined): string {
-  return value == null ? "—" : value.toLocaleString("en-IN");
-}
-
 export function Sparkline({
   values,
   label,

@@ -1,4 +1,3 @@
-import type { UIMessage } from "ai";
 import { z } from "zod";
 
 // The present_keywords tool's output (backend/internal/sam/keywords_mode.go).
@@ -68,10 +67,11 @@ export type ReportKeyword = KeywordReport["keywords"][number];
 export const PRESENT_PART = "tool-present_keywords";
 
 /** The report a finished present_keywords call carries, or null. */
-export function reportFromPart(
-  part: UIMessage["parts"][number],
-): KeywordReport | null {
-  if (part.type !== PRESENT_PART || !("output" in part)) return null;
+export function reportFromPart(part: {
+  type: string;
+  output?: unknown;
+}): KeywordReport | null {
+  if (part.type !== PRESENT_PART) return null;
   const parsed = reportSchema.safeParse(part.output);
   return parsed.success ? parsed.data : null;
 }

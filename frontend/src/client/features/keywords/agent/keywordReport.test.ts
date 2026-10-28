@@ -22,16 +22,16 @@ describe("keyword report", () => {
       input: {},
       output,
     };
-    expect(reportFromPart(part as never)?.keywords).toHaveLength(2);
+    expect(reportFromPart(part)?.keywords).toHaveLength(2);
     expect(
-      reportFromPart({ ...part, type: "tool-research_keywords" } as never),
+      reportFromPart({ ...part, type: "tool-research_keywords" }),
     ).toBeNull();
-    expect(reportFromPart({ type: "text", text: "hi" } as never)).toBeNull();
+    expect(reportFromPart({ type: "text" })).toBeNull();
     expect(
       reportFromPart({
         ...part,
         output: { keywords: [{ keyword: "a", chance: "maybe" }] },
-      } as never),
+      }),
     ).toBeNull();
   });
 
@@ -39,7 +39,7 @@ describe("keyword report", () => {
     const report = reportFromPart({
       type: "tool-present_keywords",
       output,
-    } as never);
+    });
     expect(reportTotals(report!.keywords)).toEqual({
       volume: 390,
       averageDifficulty: 13,
