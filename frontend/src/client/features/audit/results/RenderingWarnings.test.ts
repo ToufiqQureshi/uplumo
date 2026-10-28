@@ -38,12 +38,14 @@ describe("audit rendering guidance", () => {
       const html = renderToStaticMarkup(
         createElement(RenderingWarnings, { data: results(rendered) }),
       );
-      expect(html).toContain("checks initial HTML");
+      expect(html).toContain("still look like JavaScript app shells");
       expect(html).toContain("browser");
       expect(html).not.toContain("Turn on Render JavaScript");
-      expect(html).not.toContain("rendering was enabled");
       if (rendered)
-        expect(html).toContain("does not prove JavaScript was executed");
+        expect(html).toContain(
+          "Rendering was requested for up to 20 flagged pages",
+        );
+      else expect(html).toContain("checked initial HTML only");
     },
   );
 });

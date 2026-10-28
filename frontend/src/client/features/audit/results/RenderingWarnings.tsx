@@ -22,13 +22,12 @@ export function RenderingWarnings({ data }: { data: AuditResultsData }) {
         <Alert variant="warning">
           <ShieldAlert />
           <AlertTitle>
-            Some pages may need JavaScript to show their content.
+            Some pages still look like JavaScript app shells.
           </AlertTitle>
           <AlertDescription>
-            This audit checks initial HTML. JavaScript rendering is unavailable;
-            inspect the affected pages in a browser and serve essential content
-            in the initial HTML. This warning does not prove Google cannot index
-            them.
+            {rendered
+              ? "Rendering was requested for up to 20 flagged pages, but these pages still did not return readable rendered content. Check them in a browser and make sure crawlers can read the main text."
+              : "This audit checked initial HTML only. Check the affected pages and make sure crawlers can read the main text; a browser displaying content does not show what the crawler received."}
           </AlertDescription>
         </Alert>
       )}
@@ -48,8 +47,8 @@ export function RenderingWarnings({ data }: { data: AuditResultsData }) {
 
       {rendered && (
         <p className="text-sm text-muted-foreground">
-          This saved audit requested rendering. That setting does not prove
-          JavaScript was executed; verify the page in a browser.
+          This audit opted into JavaScript rendering for flagged app-shell pages
+          only, with a 20-page maximum.
         </p>
       )}
     </>

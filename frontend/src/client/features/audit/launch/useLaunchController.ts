@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { useForm, useStore } from "@tanstack/react-form";
+import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -78,7 +78,7 @@ export function useLaunchController({
     onSubmit: async ({ formApi, value }) => {
       const effectiveMaxPages = commitMaxPagesInput(
         launchForm,
-        getMaxPagesLimit(isFreePlan, value.renderJavaScript),
+        getMaxPagesLimit(isFreePlan),
       );
       formApi.setErrorMap({ onSubmit: undefined });
 
@@ -107,19 +107,16 @@ export function useLaunchController({
     },
   });
 
-  const renderJavaScript = useStore(
-    launchForm.store,
-    (state) => state.values.renderJavaScript,
-  );
-  const maxPagesLimit = getMaxPagesLimit(isFreePlan, renderJavaScript);
+  const maxPagesLimit = getMaxPagesLimit(isFreePlan);
   // What an upgrade offers with the current options, so the upgrade hint
   // never promises pages a rendered audit cannot crawl.
-  const paidMaxPagesLimit = getMaxPagesLimit(false, renderJavaScript);
+  const paidMaxPagesLimit = getMaxPagesLimit(false);
 
   return {
     launchForm,
     historyQuery,
     canRenderJavaScript: capabilitiesQuery.data?.canRenderJavaScript,
+    maxJavaScriptCredits: capabilitiesQuery.data?.maxJavaScriptCredits ?? 0,
     maxPagesLimit,
     paidMaxPagesLimit,
     commitMaxPagesInput: () => commitMaxPagesInput(launchForm, maxPagesLimit),

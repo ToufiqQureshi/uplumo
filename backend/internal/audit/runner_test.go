@@ -101,6 +101,74 @@ func TestRunnerCrawlsAndCompletes(t *testing.T) {
 	}
 }
 
+type testJavaScriptRenderer struct {
+	calls int
+	urls  [][]string
+	html  string
+	err   error
+}
+
+func (r *testJavaScriptRenderer) Render(_ context.Context, _, _ string, urls []string) (map[string]RenderedHTML, error) {
+	r.calls++
+	r.urls = append(r.urls, append([]string(nil), urls...))
+	if r.err != nil {
+		return nil, r.err
+	}
+	pages := make(map[string]RenderedHTML, len(urls))
+	for _, pageURL := range urls {
+		pages[pageURL] = RenderedHTML{URL: pageURL, StatusCode: http.StatusOK, HTML: r.html, CostUSD: 0.0015}
+	}
+	return pages, nil
+}
+
+func TestRunnerRendersOnlyFlaggedShellOnceAndStoresAnalyzerSignals(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/robots.txt" {
+			_, _ = w.Write([]byte("User-agent: *\nAllow: /\n"))
+			return
+		}
+		if r.URL.Path == "/llms.txt" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = w.Write([]byte(`<html><body><div id="root"></div><script src="/app.js"></script></body></html>`))
+	}))
+	t.Cleanup(server.Close)
+	store := newMemoryStore()
+	seedAudit(t, store, Config{MaxPages: 10, LighthouseStrategy: LighthouseNone, RenderJavaScript: true})
+	renderedHTML := `<!doctype html><html><head><title>Rendered answer page</title><meta name="description" content="A detailed rendered answer page with enough words to make this description useful for the audit checks."><meta name="author" content="Nina Shah"><script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage"}</script></head><body><h1>How does the product work?</h1><p>The product works by keeping the answer in the HTML after JavaScript has loaded.</p><p>It also includes several supporting details for people and assistants to read.</p></body></html>`
+	renderer := &testJavaScriptRenderer{html: renderedHTML}
+	runner := newTestRunner(store, server, nil, nil)
+	runner.renderer = renderer
+	job := JobPayload{
+		AuditID: "audit-1", ProjectID: "proj-1", StartURL: "http://audit.test/", OrganizationID: "org-1",
+		Config: Config{MaxPages: 10, LighthouseStrategy: LighthouseNone, RenderJavaScript: true},
+	}
+	if err := runner.Run(context.Background(), job); err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if renderer.calls != 1 || len(renderer.urls) != 1 || len(renderer.urls[0]) != 1 || renderer.urls[0][0] != "http://audit.test/" {
+		t.Fatalf("renderer calls = %d URLs = %v; want one flagged shell URL", renderer.calls, renderer.urls)
+	}
+	if len(store.pages["audit-1"]) != 1 {
+		t.Fatalf("saved page count = %d, want one upserted page", len(store.pages["audit-1"]))
+	}
+	page := store.pages["audit-1"][0]
+	if page.JavaScriptShell || page.Title != "Rendered answer page" || page.WordCount == 0 || len(page.AI.SchemaTypes) == 0 || page.AI.SchemaTypes[0] != "FAQPage" || page.AI.Author != true {
+		t.Fatalf("rendered page did not pass through AnalyzeHTML: %+v signals=%+v", page, page.AI)
+	}
+	if shellIDs, err := store.ShellPageIDs(context.Background(), "audit-1"); err != nil || len(shellIDs) != 0 {
+		t.Fatalf("rendered shell remains flagged: ids=%v err=%v", shellIDs, err)
+	}
+	if err := runner.Run(context.Background(), job); err != nil {
+		t.Fatalf("replay: %v", err)
+	}
+	if renderer.calls != 1 || len(store.pages["audit-1"]) != 1 || store.pages["audit-1"][0].Title != "Rendered answer page" {
+		t.Fatalf("replay repeated rendering or overwrote the rendered page: calls=%d pages=%+v", renderer.calls, store.pages["audit-1"])
+	}
+}
+
 func TestRunnerRunsLighthouse(t *testing.T) {
 	server := auditTestServer(t)
 	store := newMemoryStore()

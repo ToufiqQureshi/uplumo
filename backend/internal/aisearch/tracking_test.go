@@ -103,11 +103,14 @@ func TestTrackingEvidenceSeparatesCitationsFromMentions(t *testing.T) {
 	// plain keywords. Failing to parse them kept the answer "pending" until
 	// the run timed out, so the customer paid for an answer never shown.
 	text, citations, _, err = parseTrackingAnswer([]byte(`{"items":[
-		{"type":"ai_overview","markdown":"Acme leads.","references":[{"url":"https://acme.example/a"}]},
+		{"type":"ai_overview","markdown":"Acme leads.","references":[{"url":"https://acme.example/a","domain":"acme.example","source":"Acme Press","title":"Acme guide","text":"A short citation passage."}]},
 		{"type":"related_searches","items":["acme pricing","acme reviews"]},
 		{"type":"people_also_search","items":["acme vs rival"]}]}`), "google_ai_overview")
 	if err != nil || text != "Acme leads." || len(citations) != 1 {
 		t.Fatalf("text=%q citations=%+v err=%v, want the overview despite keyword-only items", text, citations, err)
+	}
+	if citations[0].Source == nil || *citations[0].Source != "Acme Press" || citations[0].Title == nil || *citations[0].Title != "Acme guide" || citations[0].Text == nil || *citations[0].Text != "A short citation passage." || citations[0].Domain == nil || *citations[0].Domain != "acme.example" {
+		t.Fatalf("Google AI Overview reference fields = %+v; want source, domain, URL, title and text retained", citations[0])
 	}
 }
 func trackingDB(t *testing.T) *pgxpool.Pool {

@@ -3,6 +3,9 @@ package audit
 import (
 	"context"
 	"log/slog"
+	"net/http"
+	"slices"
+	"strings"
 	"time"
 )
 
@@ -20,6 +23,7 @@ type Runner struct {
 	crawler    *Crawler
 	lighthouse LighthouseProvider
 	fieldData  FieldDataProvider
+	renderer   JavaScriptRenderer
 	rendering  RenderingMeter
 	logger     *slog.Logger
 	now        func() time.Time
@@ -38,6 +42,7 @@ type RunnerConfig struct {
 	// FieldData looks up real-visitor data for each check; nil uses only
 	// what PageSpeed Insights embeds.
 	FieldData FieldDataProvider
+	Renderer  JavaScriptRenderer
 	Rendering RenderingMeter
 	Logger    *slog.Logger
 	Now       func() time.Time
@@ -64,7 +69,8 @@ func NewRunner(config RunnerConfig) *Runner {
 	}
 	return &Runner{
 		repo: config.Repository, progress: config.Progress, guard: guard, crawler: crawler,
-		lighthouse: config.Lighthouse, fieldData: config.FieldData, rendering: config.Rendering, logger: logger, now: now,
+		lighthouse: config.Lighthouse, fieldData: config.FieldData, renderer: config.Renderer,
+		rendering: config.Rendering, logger: logger, now: now,
 		minCheckTime: minLighthouseCheckTime,
 		resolver:     config.Resolver,
 	}
@@ -130,9 +136,14 @@ func (r *Runner) run(ctx, jobCtx context.Context, job JobPayload) error {
 		return err
 	}
 
-	// The crawl may have used its whole deadline. What follows runs on the
-	// job's clock, so a full-length crawl is still finalized and saved.
+	// The crawl may have used its whole deadline. Optional paid rendering and
+	// final checks run on the job's clock, so a full crawl is still finalized.
 	ctx = jobCtx
+	if job.Config.RenderJavaScript && r.renderer != nil {
+		if err := r.renderJavaScriptPages(ctx, job, ai); err != nil {
+			r.logger.WarnContext(ctx, "render app-shell pages for Site Audit", "audit_id", job.AuditID, "err", err)
+		}
+	}
 	if err := r.finalizeChecks(ctx, job); err != nil {
 		return err
 	}
@@ -154,6 +165,71 @@ func (r *Runner) run(ctx, jobCtx context.Context, job JobPayload) error {
 		_ = r.rendering.Settle(ctx, job.OrganizationID, job.AuditID, job.RenderingLocks, RenderUsage{})
 	}
 	return nil
+}
+
+// renderJavaScriptPages sends only pages already flagged as app shells. The
+// repository claim is permanent, so a worker restart cannot buy the same URL
+// again after an ambiguous provider outcome.
+func (r *Runner) renderJavaScriptPages(ctx context.Context, job JobPayload, ai *aiSiteSignals) error {
+	shellIDs, err := r.repo.ShellPageIDs(ctx, job.AuditID)
+	if err != nil {
+		return err
+	}
+	if len(shellIDs) == 0 {
+		return nil
+	}
+	pages, err := r.repo.ListSlimPages(ctx, job.AuditID)
+	if err != nil {
+		return err
+	}
+	byURL := make(map[string]SlimPage, len(pages))
+	urls := make([]string, 0, min(len(shellIDs), MaxRenderedPagesPerAudit))
+	for _, page := range pages {
+		if _, shell := shellIDs[page.ID]; !shell || !isOKHTMLPage(page) {
+			continue
+		}
+		byURL[page.URL] = page
+		urls = append(urls, page.URL)
+	}
+	slices.Sort(urls)
+	urls = urls[:min(len(urls), MaxRenderedPagesPerAudit)]
+	claimed, err := r.repo.ClaimJavaScriptRenderPages(ctx, job.AuditID, urls)
+	if err != nil {
+		return err
+	}
+	if len(claimed) == 0 {
+		return nil
+	}
+	if err := r.setPhase(ctx, job, "javascript_rendering"); err != nil {
+		return err
+	}
+	rendered, renderErr := r.renderer.Render(ctx, job.OrganizationID, job.AuditID, claimed)
+	for _, pageURL := range claimed {
+		entry, ok := rendered[pageURL]
+		if !ok || strings.TrimSpace(entry.HTML) == "" || entry.StatusCode < 200 || entry.StatusCode >= 300 {
+			if markErr := r.repo.MarkJavaScriptRenderFailed(ctx, job.AuditID, pageURL); markErr != nil {
+				r.logger.WarnContext(ctx, "record failed JavaScript render", "audit_id", job.AuditID, "url", pageURL, "err", markErr)
+			}
+			continue
+		}
+		slim := byURL[pageURL]
+		analysis := AnalyzeHTML(entry.HTML, pageURL, entry.StatusCode, slim.ResponseTimeMs, "")
+		page := CrawledPageResult{
+			ID: slim.ID, URL: pageURL, StatusCode: entry.StatusCode, FetchClass: FetchOK,
+			XRobotsTag: slim.XRobotsTag, HeaderCanonicalURL: slim.HeaderCanonicalURL,
+			ResponseTimeMs: slim.ResponseTimeMs, CrawlDepth: slim.CrawlDepth, InSitemap: slim.InSitemap,
+			IsHTML: true, HTMLBytes: len(entry.HTML),
+		}
+		applyAnalysis(&page, analysis, http.Header{})
+		page.XRobotsTag = slim.XRobotsTag
+		page.HeaderCanonicalURL = slim.HeaderCanonicalURL
+		page.IsIndexable = computeIsIndexable(page.RobotsMeta, page.XRobotsTag)
+		if err := r.repo.SaveJavaScriptRenderedPage(ctx, job.AuditID, page, entry.CostUSD); err != nil {
+			return err
+		}
+		ai.add(page, page.URL == job.StartURL || isHomePage(page.URL))
+	}
+	return renderErr
 }
 
 // crawlQueueItem is one URL waiting to be fetched.

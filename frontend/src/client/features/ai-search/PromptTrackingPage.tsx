@@ -281,6 +281,11 @@ export function PromptTrackingPage({ projectId }: { projectId: string }) {
                           : ""}
                       </span>
                     ) : null}
+                    {c.text ? (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {c.text}
+                      </p>
+                    ) : null}
                   </li>
                 ))}
               </ul>

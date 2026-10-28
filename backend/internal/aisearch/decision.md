@@ -20,6 +20,19 @@ Runs Brand Lookup and Prompt Explorer, shapes answer-engine data, and caches suc
 
 Redis cache; DataForSEO AI endpoints; plans/billing.
 
+## Cite Fix reads the existing Brand Lookup snapshot
+
+- **Decision:** Copy each successful AI Visibility Brand Lookup result into
+  project-scoped `go_citefix_ai_mentions` storage after the existing lookup or
+  cache read. Cite Fix reads that saved result for free and links refreshes to
+  the existing AI Visibility action; it never buys a mentions refresh.
+- **Why:** The owner explicitly declined a new Cite Fix mentions charge and
+  approved reuse of AI Visibility's already-saved data.
+- **Preserve:** No provider call is added. Do not change Brand Lookup pricing,
+  its existing cache or its provider sequence to serve Cite Fix.
+- **Trace:** `service.go` (`saveCiteFixMentions`), migration
+  `00049_citefix_evidence.sql`, `citefix/mentions.go`.
+
 ## Brand Lookup: one totals task first, keep what it returns
 
 - **Decision:** Replace the per-platform `aggregated_metrics` and the always-bought

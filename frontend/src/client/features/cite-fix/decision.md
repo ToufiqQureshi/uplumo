@@ -6,7 +6,10 @@
 
 - **Decision:** Cite Fix gets its own sidebar row ("Your website", badge "New") and page. The page only reads the report; to scan, it links to Site Audit instead of starting an audit itself. Fix copy comes from the API. The page polls every 15 s only while a scan is running.
 - **Why:** The owner asked for its own UI from the first PR. Site Audit already owns the start form, plan page limits, capacity errors and crawler access; a second start button would duplicate that logic and its errors. Keeping copy on the server means later SAM and MCP tools say the same thing as the page.
-- **Preserve:** The only paid action is the agent (next entry): cost shown and confirmed before the click, `retry: false`. Never word the score as a promise of citations. Keep empty states honest: an old scan says "scan again", not a low score.
+- **Preserve:** Paid actions show cost and require confirmation before work;
+  agent uses `retry: false`, and Google Overview refresh has browser retries
+  disabled. Never word the score as a promise of citations. Keep empty states
+  honest: an old scan says "scan again", not a low score.
 - **Trace:** `CiteFixPage.tsx`, `citeFixApi.ts`, `scoreBand.ts`, `routes/_app/p/$projectId/cite-fix.tsx`, `navigation/items.ts`. Tests: `scoreBand.test.ts`, `navigation/items.test.ts` (18 routes, 12 rows), `frontend/tests/cite-fix.spec.ts` (added to the CI browser job: mocked report at 390 and 1280 px, one free request, no paid call). Not yet rendered against a real production report.
 
 ## Agent panel, results and proof
@@ -26,3 +29,26 @@
 - **Preserve:** confirm before any paid call; `retry: false`.
 - **Trace:** the spec fails if the button skips the confirm dialog (checked by
   mutation).
+
+## Saved AI evidence and Google AI Overview (owner approved 28 Oct 2026)
+
+- **Decision:** Add saved Brand Lookup mentions, free comparisons of up to
+  three cited rival pages, Google AI Overview citations and an “Also fix for
+  Google” audit-issue section. AI mentions are read from AI Visibility's saved
+  result at 0 credits; the refresh link stays on that page and its existing
+  price. Google Overview refresh has its own button and cost confirmation,
+  sends no more than ten tracked questions, caps at 16 credits and charges
+  actual cost. Results cache seven days.
+- **Why:** The owner approved the $0.0012/question queue price only for Google
+  AI Overview and expressly declined a new Cite Fix mentions purchase.
+- **Preserve:** No paid request on load, no Cite Fix mentions refresh, no paid
+  MCP trigger. Browser retries stay off. Rival pages use the free guarded audit
+  fetch, respect robots.txt, are capped at three/report and never auto-render.
+  App-shell rivals say so. The UI shows the paid AI Overview fields stored:
+  answer text and citation source, domain, URL, title and snippet. Free audit
+  issues link to Site Audit.
+- **Trace:** `EvidenceSections.tsx`, `citeFixApi.ts`, Playwright
+  `frontend/tests/cite-fix.spec.ts` (no load purchase, confirmation, exact one
+  paid request, a failed confirmed request with no retry, rival table, mention
+  reuse); mutating the refresh retry setting makes the failed-request call
+  count fail. `audit-capabilities.spec.ts` covers render opt-in and its price.

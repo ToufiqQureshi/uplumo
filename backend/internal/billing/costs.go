@@ -43,6 +43,8 @@ var typicalUSD = []struct {
 	maxUSD  float64
 }{
 	{spend.RankTracking, "", "keyword check (top 30, scheduled)", dataforseo.SerpCostUSD(30, true), 0},
+	{spend.SiteAudit, ActionJavaScriptRender, "JavaScript-rendered page (up to 20 app shells per audit)", dataforseo.OnPageJavaScriptCostUSD(1), dataforseo.OnPageJavaScriptCostUSD(20)},
+	{spend.CiteFix, ActionGoogleAIOverview, "Google AI Overview citations (per question; up to 10 per refresh)", dataforseo.GoogleAIOverviewCostUSD(10), dataforseo.GoogleAIOverviewBatchCostUSD(10, 10)},
 	{spend.KeywordResearch, "", "keyword search", 0.047, 0},
 	{spend.DomainResearch, "", "domain report tab", 0.031, 0},
 	// Summary $0.024 + history $0.024 + the first 1,000 table rows $0.06.
@@ -59,8 +61,10 @@ var typicalUSD = []struct {
 
 // Actions of the AI visibility feature that ActionCost tells apart.
 const (
-	ActionPromptExplorer = "prompt_explorer"
-	ActionBrandLookup    = "brand_lookup"
+	ActionPromptExplorer   = "prompt_explorer"
+	ActionBrandLookup      = "brand_lookup"
+	ActionJavaScriptRender = "javascript_render"
+	ActionGoogleAIOverview = "google_ai_overview"
 )
 
 // ActionCosts lists the typical cost of every feature that spends credits.
@@ -70,6 +74,16 @@ func ActionCosts() []ActionCost {
 		out[i] = ActionCost{Feature: c.feature, Action: c.action, Unit: c.unit, Credits: CreditsForUSD(c.usd), MaxCredits: CreditsForUSD(c.maxUSD)}
 	}
 	return out
+}
+
+// ActionMaxCredits returns the catalog's maximum shown before one action.
+func ActionMaxCredits(feature spend.Feature, action string) int64 {
+	for _, cost := range ActionCosts() {
+		if cost.Feature == feature && cost.Action == action {
+			return cost.MaxCredits
+		}
+	}
+	return 0
 }
 
 func featureNames() []string {

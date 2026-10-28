@@ -28,7 +28,7 @@ paths:
                 lighthouseStrategy: { type: string, enum: [auto, none] }
                 renderJavaScript:
                   type: boolean
-                  description: Currently unavailable; true returns 403 before an audit or job is created.
+                  description: Explicitly opt in to DataForSEO On-Page JavaScript rendering for crawler-flagged app-shell pages only (maximum 20; price is shown in audit capabilities). Requires a wired renderer.
       responses:
         "200":
           description: The audit was queued.
@@ -99,7 +99,11 @@ paths:
       parameters:
         - $ref: "#/components/parameters/ProjectId"
       responses:
-        "200": { $ref: "#/components/responses/Json" }
+        "200":
+          description: Capability flags and supported action limits/prices, including the 20-page JavaScript-render maximum and credit ceiling when wired.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
   /projects/{projectId}/audit/lighthouse/issues:
     post:
       operationId: getLighthouseIssues

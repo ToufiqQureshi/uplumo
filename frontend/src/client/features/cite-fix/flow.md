@@ -17,7 +17,28 @@
    scan runs.
 4. `ready`: score card (score, band, pages checked, scan date, category bars),
    "What to fix first" (first row open; each row shows impact, points, pages,
-   then why, how and up to 20 affected pages), then "Pages, weakest first".
+   then why, how and up to 20 affected pages), then "Pages, weakest first";
+   saved mentions, proof-linked rival comparisons, Google AI Overview results,
+   and latest critical/warning audit issues appear below.
+
+## Evidence actions
+
+- **AI mentions:** display the saved AI Visibility Brand Lookup, including top
+  domains and pages. No Cite Fix refresh call exists; the link opens AI
+  Visibility at its established price.
+- **Rival comparison:** show up to three fetched/cached AI-cited pages for
+  missed questions. Saved Brand Lookup top pages join a comparison only when
+  their sampled question matches the miss; source labels distinguish them from
+  AI Visibility proof. Signals compare answer-first length, author, date,
+  schema, statistics, FAQ and word count against the customer's best audited page.
+  Blocked/unavailable pages are omitted; app shells are labeled and never
+  rendered. “Compare with rival” scrolls to the evidence for that miss.
+- **Google AI Overview:** click the action to open a price confirmation. Only
+  after confirmation, send one non-retrying paid refresh for at most ten tracked
+  questions (up to 16 credits, actual cost charged). Results cache for seven
+  days; background collection uses free task-get reads.
+- **Also fix for Google:** latest audit critical/warning issues are free and
+  link to Site Audit.
 
 ## Agent flow
 
@@ -27,8 +48,10 @@ balance shown) → pages run one at a time with live status → results refresh
 
 ## Paid calls per user action
 
-Opening the page, polling, expanding rows and loading results: none. Each
-confirmed page: one agent run (see `backend/internal/citefix/flow.md`).
+Opening the page and reading saved evidence: no paid calls. A confirmed agent
+page runs once; a confirmed Overview click sends one paid task-post (see
+`backend/internal/citefix/flow.md`). Collection/poll requests are free and do
+not use browser retries.
 
 ## Failure paths
 

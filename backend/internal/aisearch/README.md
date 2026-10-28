@@ -7,6 +7,10 @@ Gemini and Perplexity, answers side by side). Both lookups store no rows of thei
 Redis cache; saved prompt tracking (below) keeps its own tables. Successful, user-triggered Brand Lookups also save one
 aggregate visibility snapshot per month in Redis for a 13-month trend; history
 reads use saved snapshots and do not call DataForSEO.
+The latest successful Brand Lookup is also copied into the private
+`go_citefix_ai_mentions` table for Cite Fix. This adds no provider call and
+lets Cite Fix display the existing mention totals, rival sites and top pages;
+it never triggers a mentions refresh from the Cite Fix page.
 The Brand Lookup page can also show first-party AI referral totals from Uplumo
 Analytics. Those site-wide visits are kept separate from citation counts and
 are not matched to specific cited URLs.

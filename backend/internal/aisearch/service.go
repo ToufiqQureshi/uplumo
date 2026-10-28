@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/sync/singleflight"
 
@@ -48,6 +49,7 @@ const (
 type Service struct {
 	provider *provider
 	redis    *redis.Client
+	DB       *pgxpool.Pool
 	logger   *slog.Logger
 	now      func() time.Time
 	flights  singleflight.Group
@@ -109,6 +111,7 @@ func (s *Service) BrandLookup(ctx context.Context, organizationID, projectID str
 		if research != nil {
 			cached.ResolvedTarget = research.Display
 		}
+		s.saveCiteFixMentions(ctx, organizationID, projectID, cached)
 		return cached, nil
 	}
 
@@ -140,7 +143,34 @@ func (s *Service) BrandLookup(ctx context.Context, organizationID, projectID str
 		if research != nil {
 			result.ResolvedTarget = research.Display
 		}
+		s.saveCiteFixMentions(ctx, organizationID, projectID, result)
 		return result, nil
+	}
+}
+
+// saveCiteFixMentions makes the last user-requested Brand Lookup available to
+// Cite Fix as a free saved result. It never initiates a provider call.
+func (s *Service) saveCiteFixMentions(ctx context.Context, organizationID, projectID string, result BrandLookupResult) {
+	if s.DB == nil || organizationID == "" || projectID == "" {
+		return
+	}
+	raw, err := json.Marshal(result)
+	if err != nil {
+		s.logger.ErrorContext(ctx, "encode saved AI mentions for Cite Fix", "err", err)
+		return
+	}
+	writeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer cancel()
+	_, err = s.DB.Exec(writeCtx, `INSERT INTO go_citefix_ai_mentions
+		(organization_id, project_id, fetched_at, source, result_json)
+		SELECT $1, p.id, $3, 'brand_lookup', $4 FROM projects p
+		WHERE p.id=$2 AND p.organization_id=$1 AND p.archived_at IS NULL
+		ON CONFLICT(project_id) DO UPDATE SET organization_id=EXCLUDED.organization_id,
+			fetched_at=EXCLUDED.fetched_at,source=EXCLUDED.source,result_json=EXCLUDED.result_json
+		WHERE EXCLUDED.fetched_at >= go_citefix_ai_mentions.fetched_at`,
+		organizationID, projectID, s.now(), raw)
+	if err != nil {
+		s.logger.WarnContext(ctx, "save AI mentions for Cite Fix", "err", err)
 	}
 }
 

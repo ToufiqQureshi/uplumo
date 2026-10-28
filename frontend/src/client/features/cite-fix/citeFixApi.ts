@@ -1,7 +1,53 @@
 import { z } from "zod";
 import { apiRequest } from "@/client/lib/uplumoApi";
+import { brandLookupResultSchema } from "@/types/schemas/ai-search";
 
 const pageRefSchema = z.object({ url: z.string(), title: z.string() });
+const rivalSignalsSchema = z.object({
+  answerFirstWords: z.number(),
+  author: z.boolean(),
+  date: z.string(),
+  schema: z.array(z.string()),
+  statistics: z.number(),
+  faq: z.boolean(),
+  wordCount: z.number(),
+});
+const googleAIOverviewCitationSchema = z.object({
+  url: z.string(),
+  domain: z.string().nullable(),
+  title: z.string().nullable(),
+  matchedBrand: z.boolean(),
+  source: z.string().optional(),
+  publishedAt: z.string().optional(),
+  text: z.string().optional(),
+});
+const googleAIOverviewStateSchema = z.object({
+  available: z.boolean(),
+  providerConfigured: z.boolean().default(false),
+  domain: z.string(),
+  questions: z.array(z.string()),
+  maxQuestions: z.number().int().nonnegative(),
+  maxCredits: z.number().int().nonnegative(),
+  results: z.array(
+    z.object({
+      prompt: z.string(),
+      topic: z.string(),
+      status: z.enum([
+        "not_checked",
+        "unknown",
+        "pending",
+        "completed",
+        "failed",
+        "stale",
+      ]),
+      requestedAt: z.string().nullable(),
+      cachedUntil: z.string().nullable(),
+      answer: z.string(),
+      citations: z.array(googleAIOverviewCitationSchema),
+      customerCited: z.boolean(),
+    }),
+  ),
+});
 
 const reportSchema = z.object({
   state: z.enum(["ready", "no_scan", "needs_rescan"]),
@@ -58,10 +104,62 @@ const reportSchema = z.object({
           prompt: z.string(),
           engine: z.string(),
           cited: z.array(z.string()),
+          citedPages: z
+            .array(
+              z.object({
+                url: z.string(),
+                domain: z.string(),
+                title: z.string(),
+              }),
+            )
+            .default([]),
         }),
       ),
     })
     .nullable(),
+  mentions: z
+    .object({
+      fetchedAt: z.string(),
+      result: brandLookupResultSchema,
+    })
+    .nullable()
+    .default(null),
+  googleAiOverview: googleAIOverviewStateSchema.nullable().default(null),
+  rivals: z
+    .array(
+      z.object({
+        prompt: z.string(),
+        engine: z.string(),
+        rival: z.object({
+          url: z.string(),
+          domain: z.string(),
+          title: z.string(),
+          appShell: z.boolean(),
+          fetchedAt: z.string(),
+          contentHash: z.string(),
+          signals: rivalSignalsSchema,
+        }),
+        yours: z
+          .object({
+            url: z.string(),
+            title: z.string(),
+            signals: rivalSignalsSchema,
+          })
+          .nullable(),
+      }),
+    )
+    .default([]),
+  seoIssues: z
+    .array(
+      z.object({
+        type: z.string(),
+        title: z.string(),
+        severity: z.enum(["critical", "warning"]),
+        pageUrl: z.string(),
+        howToFix: z.string(),
+      }),
+    )
+    .default([]),
   agent: z.object({
     available: z.boolean(),
     planAllowed: z.boolean(),
@@ -77,6 +175,7 @@ export type CiteFix = CiteFixReport["fixes"][number];
 export type CiteFixProof = NonNullable<CiteFixReport["proof"]>;
 export type AgentOffer = CiteFixReport["agent"];
 export type AgentMode = "quick" | "deep";
+export type GoogleAIOverviewState = z.infer<typeof googleAIOverviewStateSchema>;
 
 const agentResultSchema = z.object({
   url: z.string(),
@@ -113,6 +212,26 @@ const base = (projectId: string) =>
 /** Free: scores the latest completed site audit, no provider call. */
 export function getCiteFixReport(projectId: string) {
   return apiRequest(`${base(projectId)}/report`, reportSchema, "POST", {});
+}
+
+/** Paid: refresh up to ten tracked Google AI Overview questions after confirmation. */
+export function refreshCiteFixGoogleAIOverview(projectId: string) {
+  return apiRequest(
+    `${base(projectId)}/google-ai-overview/refresh`,
+    googleAIOverviewStateSchema,
+    "POST",
+    {},
+  );
+}
+
+/** Free: collect already-paid asynchronous Google SERP tasks and read results. */
+export function collectCiteFixGoogleAIOverview(projectId: string) {
+  return apiRequest(
+    `${base(projectId)}/google-ai-overview/results`,
+    googleAIOverviewStateSchema,
+    "POST",
+    {},
+  );
 }
 
 /** Free: the agent's saved results, newest per page and mode. */
