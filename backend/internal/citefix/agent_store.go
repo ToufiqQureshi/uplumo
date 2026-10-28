@@ -133,8 +133,9 @@ func (s Store) claimRun(ctx context.Context, organizationID, projectID string, i
 		return "", fmt.Errorf("begin agent claim: %w", err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
-	// One claim per project at a time, so the rate count cannot race.
-	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext('citefix-agent:' || $1))`, projectID); err != nil {
+	// One claim per workspace at a time, so neither the per-project rate nor
+	// the workspace's unpaid-failure count can race.
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext('citefix-agent-org:' || $1))`, organizationID); err != nil {
 		return "", fmt.Errorf("lock agent claims: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `UPDATE go_citefix_agent_runs SET status = 'failed', error_code = 'stale', finished_at = now()

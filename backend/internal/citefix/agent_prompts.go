@@ -81,7 +81,7 @@ func writerRequest(target agentTarget, page fetchedPage, analystJSON string) ope
 		Model: WriterModel,
 		Messages: []openrouter.Message{
 			{Role: "system", Content: writerSystem},
-			{Role: "user", Content: pagePrompt(target, page) + "\n\nAnalyst plan (JSON):\n```untrusted-data\n" + analystJSON + "\n```"},
+			{Role: "user", Content: pagePrompt(target, page) + "\n\nAnalyst plan (JSON):\n" + fence(analystJSON)},
 		},
 		MaxTokens:  writerMaxTokens,
 		JSONObject: true,
@@ -97,13 +97,24 @@ func pagePrompt(target agentTarget, page fetchedPage) string {
 	if len(failed) == 0 {
 		failed = append(failed, "- none")
 	}
-	return fmt.Sprintf("Page URL: %s\nChecks this page fails in Uplumo's scan:\n%s\n\nPage (untrusted):\n```untrusted-data\nTitle: %s\nMeta description: %s\nH1: %s\n\n%s\n```",
-		target.URL, strings.Join(failed, "\n"), page.Title, page.MetaDescription, strings.Join(page.H1s, " | "), page.Text)
+	return fmt.Sprintf("Page URL: %s\nChecks this page fails in Uplumo's scan:\n%s\n\nPage (untrusted):\n%s",
+		strings.Join(strings.Fields(defuseFence(target.URL)), " "), strings.Join(failed, "\n"),
+		fence(fmt.Sprintf("Title: %s\nMeta description: %s\nH1: %s\n\n%s", page.Title, page.MetaDescription, strings.Join(page.H1s, " | "), page.Text)))
+}
+
+// fence wraps untrusted text in an untrusted-data block. Any ``` inside it is
+// defused first, so a page, a stored query or a rival's signals cannot close
+// the block and address the model as part of the request.
+func fence(content string) string {
+	return "```untrusted-data\n" + defuseFence(content) + "\n```"
+}
+
+func defuseFence(content string) string {
+	return strings.ReplaceAll(content, "```", "'''")
 }
 
 func evidencePrompt(evidence agentEvidence) string {
 	var b strings.Builder
-	b.WriteString("Evidence (untrusted):\n```untrusted-data\n")
 	if len(evidence.Queries) == 0 {
 		b.WriteString("Google Search Console: no query data for this page.\n")
 	} else {
@@ -136,8 +147,7 @@ func evidencePrompt(evidence agentEvidence) string {
 			}
 		}
 	}
-	b.WriteString("```")
-	return b.String()
+	return "Evidence (untrusted):\n" + fence(strings.TrimSuffix(b.String(), "\n"))
 }
 
 func formatRivalSignals(signals SignalSnapshot) string {

@@ -108,7 +108,8 @@ Scores how easy a site is for AI assistants to quote, from the latest completed 
 
 ## Rival fetches announce the agent robots.txt was judged for
 
-- **Decision:** rival robots.txt and page requests send `audit.UserAgent`
+- **Decision:** rival robots.txt and page requests, and the agent's page
+  fetch, send `audit.UserAgent`
   (`Uplumo-Audit/1.0`), the same agent `audit.RobotsAllows` evaluates.
 - **Why:** security review of #243: the fetch said `UplumoBot/1.0` while
   robots.txt was judged for `Uplumo-Audit`, so a site's rule for the announced
@@ -123,7 +124,9 @@ Scores how easy a site is for AI assistants to quote, from the latest completed 
 
 - **Decision:** a workspace may have at most 5 uncharged failed agent runs in
   24 h (`maxUnpaidFailures`, `unpaidFailureWindow`); after that `claimRun`
-  refuses new runs with `ErrAgentRateLimited` (the UI stops the batch).
+  refuses new runs with `ErrAgentRateLimited` (the UI stops the batch). Claims
+  take a per-workspace advisory lock so concurrent runs across projects cannot
+  race past the count.
   Restart-stale runs and runs that charged credits do not count.
 - **Why:** security review of #243: an unusable answer charges the customer 0
   but Uplumo still pays the model, so a page built to break the agent could buy
@@ -133,3 +136,17 @@ Scores how easy a site is for AI assistants to quote, from the latest completed 
   rate limit and cache rules are unchanged.
 - **Trace:** `agent.go`, `agent_store.go` (`claimRun`),
   `TestAgentStopsAfterUnpaidFailures` (fails with the cap removed).
+
+## Untrusted text cannot close the prompt fence
+
+- **Decision:** every block of page, evidence and analyst text sent to the
+  models goes through `fence`, which turns any ``` inside it into ''' before
+  wrapping it in an untrusted-data block; the page URL outside the block is
+  defused and kept on one line.
+- **Why:** security review of #243: a cited rival page or the customer's own
+  page could close the fence and address the model as part of the request,
+  steering the drafts and JSON-LD the customer is invited to publish.
+- **Preserve:** all untrusted text reaches the model only inside a fence that
+  Uplumo opened and closed.
+- **Trace:** `agent_prompts.go` (`fence`, `defuseFence`),
+  `TestPromptsKeepUntrustedTextInsideItsFence` (fails without the defuse).

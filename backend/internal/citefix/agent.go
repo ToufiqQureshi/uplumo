@@ -285,7 +285,7 @@ func (a *Agent) fetchPage(ctx context.Context, pageURL string) (fetchedPage, err
 	if err != nil {
 		return fetchedPage{}, fmt.Errorf("%w: %w", ErrAgentPageFetch, err)
 	}
-	req.Header.Set("User-Agent", "UplumoBot/1.0 (+https://uplumo.com)")
+	req.Header.Set("User-Agent", audit.UserAgent)
 	req.Header.Set("Accept", "text/html")
 	resp, err := a.HTTP.Do(req)
 	if err != nil {
