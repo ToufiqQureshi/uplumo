@@ -65,10 +65,25 @@ func TestFetchRivalPageExtractsSignalsAndFlagsAppShellWithoutRendering(t *testin
 }
 
 func TestFetchRivalPageRespectsRobotsTxt(t *testing.T) {
+	for _, robots := range []string{
+		"User-agent: *\nDisallow: /page\n",
+		// A rule for Uplumo alone must hold too, and the fetch must announce
+		// the same agent the rule was judged for.
+		"User-agent: Uplumo-Audit\nDisallow: /page\n\nUser-agent: *\nAllow: /\n",
+	} {
+		t.Run(robots, func(t *testing.T) { testRivalRobots(t, robots) })
+	}
+}
+
+func testRivalRobots(t *testing.T, robots string) {
+	t.Helper()
 	var pageGets atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.Header.Get("User-Agent"); got != audit.UserAgent {
+			t.Errorf("User-Agent = %q, want %q", got, audit.UserAgent)
+		}
 		if r.URL.Path == "/robots.txt" {
-			_, _ = w.Write([]byte("User-agent: *\nDisallow: /page\n"))
+			_, _ = w.Write([]byte(robots))
 			return
 		}
 		if r.URL.Path == "/page" && r.Method == http.MethodGet {

@@ -289,7 +289,7 @@ func fetchRivalPage(ctx context.Context, guard *audit.Guard, client *http.Client
 	if err != nil {
 		return RivalPage{}, err
 	}
-	robotsRequest.Header.Set("User-Agent", "UplumoBot/1.0 (+https://uplumo.com)")
+	robotsRequest.Header.Set("User-Agent", audit.UserAgent)
 	robotsResponse, err := client.Do(robotsRequest)
 	if err != nil {
 		return RivalPage{}, err
@@ -312,7 +312,7 @@ func fetchRivalPage(ctx context.Context, guard *audit.Guard, client *http.Client
 	if err != nil {
 		return RivalPage{}, err
 	}
-	request.Header.Set("User-Agent", "UplumoBot/1.0 (+https://uplumo.com)")
+	request.Header.Set("User-Agent", audit.UserAgent)
 	request.Header.Set("Accept", "text/html")
 	response, err := client.Do(request)
 	if err != nil {

@@ -105,3 +105,16 @@ Scores how easy a site is for AI assistants to quote, from the latest completed 
 - **Trace:** `rivals.go` (`rivalNeedsFetch`),
   `TestRivalComparisonsRememberFailuresAndNeverWaitPastTheBudget` (mutation of
   the 24 h retry fails it).
+
+## Rival fetches announce the agent robots.txt was judged for
+
+- **Decision:** rival robots.txt and page requests send `audit.UserAgent`
+  (`Uplumo-Audit/1.0`), the same agent `audit.RobotsAllows` evaluates.
+- **Why:** security review of #243: the fetch said `UplumoBot/1.0` while
+  robots.txt was judged for `Uplumo-Audit`, so a site's rule for the announced
+  name could be bypassed, and site owners could not allowlist one Uplumo agent.
+- **Preserve:** one Uplumo user agent for every public-page fetch; robots.txt
+  checked before the page.
+- **Trace:** `rivals.go`, `audit/urlpolicy.go` (`UserAgent`),
+  `TestFetchRivalPageRespectsRobotsTxt` (asserts the header and an
+  agent-specific rule).
