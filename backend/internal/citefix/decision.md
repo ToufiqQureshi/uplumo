@@ -6,6 +6,24 @@
 
 Scores how easy a site is for AI assistants to quote, from the latest completed site audit, and ranks the fixes. Free; no provider call.
 
+## Money ceiling and reference repositories (28 Oct 2026)
+
+- **Decision:** Cite Fix's analysis stays rule-based and free; AI runs only
+  on paid, priced, confirmed clicks. The worst-case cost per action, the
+  scenarios where Uplumo could still lose money, the proposed site-wide AI
+  analysis and the open-source projects that informed the checks (with
+  licences) are recorded in
+  [docs/audits/2026-10-28-cite-fix-costs-and-references.md](../../../docs/audits/2026-10-28-cite-fix-costs-and-references.md).
+- **Why:** the owner asked whether whole-site AI analysis would cost him money
+  on a ₹2,499 Pro plan (10,000 credits). At the agent's price caps a full Pro
+  month is at most about $6.10 of provider cost; only free or uncapped AI loses
+  money.
+- **Preserve:** no free AI call; credits = provider USD × 1.28 × 1000; no code
+  from repositories without a licence (geo-checker); a ported file brings its
+  licence file to the repository root.
+- **Trace:** `agent.go` price caps, `billing.CreditsForUSD`,
+  `plans/catalog.go`. Docs only; site-wide AI analysis is not built.
+
 ## Free citation-readiness score from the existing crawl (PR 1 of 5)
 
 - **Decision:** Cite Fix is its own sidebar page and API, but it reads the site audit instead of crawling again. The crawler stores per-page citation signals; this package turns them into a 0-100 score in six weighted categories, a fix list ranked by points gained, and the 50 weakest pages. The owner named the feature "Cite Fix" and asked for it to ship in five PRs: (1) free checks, signals and the page; (2) a paid per-page LLM citability score with cost shown first; (3) citation proof from AI Visibility; (4) one click from a fix into the Content Editor, publish and re-scan; (5) SAM, MCP and report tools. JavaScript rendering is a separate owner decision.

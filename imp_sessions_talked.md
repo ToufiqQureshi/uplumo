@@ -17,6 +17,12 @@ feelings, business calls, priorities, corrections. Read it after
 
 ---
 
+## 28 Oct 2026: Cite Fix follow-ups (Claude)
+
+- Owner chose DataForSEO for JavaScript rendering; approved JS render (max 39 credits for 20 pages) and Google AI Overview (max 16 for 10 questions); refused AI mentions at 960 credits, so Cite Fix reuses AI Visibility's saved data. Codex built it in PR #244; Claude fixed two money/perf bugs there.
+- Asked "is the analysis AI or hardcoded?": the score and checks are rule-based and free; the DeepSeek agent runs on picked pages only. Asked whether whole-site AI analysis would cost him on a ₹2,499 Pro plan: no, if charged in credits with caps (numbers in docs/audits/2026-10-28-cite-fix-costs-and-references.md).
+- Wants the reference repos (seonaut, geo-optimizer, opencite) used as references for PR 3 and credited; geo-checker has no licence, so it is not used. Plans to merge #243, #244 and PR 3 and go live.
+
 ## 27 Oct 2026: Cite Fix, "sabko AI me cite hona ha" (Claude)
 
 - Owner wants a crawler that reads the whole site and shows "kyu cite nahi hore, ye fixes karo, cite honge", A to Z content quality, and opens the content in the editor in one click. "muje uplumo ko bhohat advance software banana ha jo logo ke kaam aaye".
