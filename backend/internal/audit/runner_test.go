@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -98,6 +99,75 @@ func TestRunnerCrawlsAndCompletes(t *testing.T) {
 		if page.IsHTML && page.WordCount == 0 {
 			t.Errorf("page %s has no word count", page.URL)
 		}
+	}
+}
+
+func TestRunnerDoesNotFetchBlockedSitemapURLs(t *testing.T) {
+	var privateRequests atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/robots.txt":
+			_, _ = w.Write([]byte("User-agent: *\nDisallow: /private\nSitemap: http://audit.test/sitemap.xml\n"))
+		case "/sitemap.xml":
+			w.Header().Set("Content-Type", "application/xml")
+			_, _ = w.Write([]byte(`<urlset><url><loc>http://audit.test/private</loc></url><url><loc>http://audit.test/public</loc></url></urlset>`))
+		case "/private":
+			privateRequests.Add(1)
+		default:
+			w.Header().Set("Content-Type", "text/html")
+			_, _ = w.Write([]byte(`<html><body><h1>Welcome</h1><a href="/private">Private</a><a href="/public">Public</a></body></html>`))
+		}
+	}))
+	defer server.Close()
+	store := newMemoryStore()
+	config := Config{MaxPages: 10, LighthouseStrategy: LighthouseNone}
+	seedAudit(t, store, config)
+	runner := newTestRunner(store, server, nil, nil)
+	job := JobPayload{AuditID: "audit-1", ProjectID: "proj-1", StartURL: "http://audit.test/", OrganizationID: "org-1", Config: config}
+	if err := runner.Run(context.Background(), job); err != nil {
+		t.Fatal(err)
+	}
+	if privateRequests.Load() != 0 || !hasIssue(store.issues["audit-1"], IssueSitemapBlocked) {
+		t.Fatalf("private requests %d, issues %+v", privateRequests.Load(), store.issues["audit-1"])
+	}
+	for _, page := range store.pages["audit-1"] {
+		if page.URL == "http://audit.test/public" {
+			if !page.InSitemap {
+				t.Fatal("public sitemap membership was not saved")
+			}
+			return
+		}
+	}
+	t.Fatal("public sitemap URL was not crawled")
+}
+
+func TestRunnerChecksUnlinkedInternalCanonicalAndHreflangTargets(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/robots.txt":
+			_, _ = w.Write([]byte("User-agent: *\nAllow: /\n"))
+		case "/canonical":
+			w.Header().Set("Location", "/final")
+			w.WriteHeader(http.StatusMovedPermanently)
+		case "/hi":
+			w.WriteHeader(http.StatusNotFound)
+		default:
+			w.Header().Set("Content-Type", "text/html")
+			_, _ = w.Write([]byte(`<html lang="en"><head><link rel="canonical" href="/canonical"><link rel="alternate" hreflang="hi" href="/hi"></head><body><h1>Rooms</h1><p>Useful details for readers.</p></body></html>`))
+		}
+	}))
+	defer server.Close()
+	store := newMemoryStore()
+	config := Config{MaxPages: 10, LighthouseStrategy: LighthouseNone}
+	seedAudit(t, store, config)
+	runner := newTestRunner(store, server, nil, nil)
+	job := JobPayload{AuditID: "audit-1", ProjectID: "proj-1", StartURL: "http://audit.test/", OrganizationID: "org-1", Config: config}
+	if err := runner.Run(context.Background(), job); err != nil {
+		t.Fatal(err)
+	}
+	issues := store.issues["audit-1"]
+	if !hasIssue(issues, IssueBadCanonicalTarget) || !hasIssue(issues, IssueHreflangBadTarget) {
+		t.Fatalf("unlinked target issues = %+v", issues)
 	}
 }
 

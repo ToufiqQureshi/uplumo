@@ -34,3 +34,54 @@ for (const width of [390, 1280]) {
     expect(paid).toEqual([]);
   });
 }
+
+test("an older audit asks for a rescan instead of scoring missing checks", async ({
+  page,
+}) => {
+  const { paid } = await installGrowthFixtures(page);
+  const audit = {
+    id: "old-audit",
+    startUrl: "https://example.com/",
+    status: "completed",
+    pagesCrawled: 2,
+    pagesTotal: 2,
+    startedAt: "2026-10-27T00:00:00Z",
+    completedAt: "2026-10-27T00:01:00Z",
+  };
+  await page.route("**/api/v1/projects/*/audit/status", (route) =>
+    route.fulfill({
+      json: {
+        ...audit,
+        lighthouseTotal: 0,
+        lighthouseCompleted: 0,
+        lighthouseFailed: 0,
+        currentPhase: null,
+        errorCode: null,
+      },
+    }),
+  );
+  await page.route("**/api/v1/projects/*/audit/results", (route) =>
+    route.fulfill({
+      json: {
+        audit: {
+          ...audit,
+          config: { maxPages: 10, lighthouseStrategy: "none" },
+        },
+        pages: [],
+        issues: [],
+        lighthouse: [],
+        checksNeedRescan: true,
+      },
+    }),
+  );
+  await page.goto("/p/e2e-project/audit?auditId=old-audit");
+  await expect(
+    page.getByText("Scan your site again for the latest checks."),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Missing findings here do not mean those checks passed.", {
+      exact: false,
+    }),
+  ).toBeVisible();
+  expect(paid).toEqual([]);
+});

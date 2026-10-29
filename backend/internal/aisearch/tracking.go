@@ -124,10 +124,11 @@ type TrackingAnswer struct {
 
 // TrackingState contains configuration and free-to-read recent history.
 type TrackingState struct {
-	Configuration      *TrackingConfig `json:"configuration"`
-	NextCheckAt        *time.Time      `json:"nextCheckAt"`
-	Runs               []TrackingRun   `json:"runs"`
-	ProviderConfigured bool            `json:"providerConfigured"`
+	Configuration      *TrackingConfig    `json:"configuration"`
+	NextCheckAt        *time.Time         `json:"nextCheckAt"`
+	Runs               []TrackingRun      `json:"runs"`
+	ProviderConfigured bool               `json:"providerConfigured"`
+	Visibility         *VisibilityMetrics `json:"visibility"`
 }
 
 // Tracking reuses the existing project middleware, paid provider and jobs queue.

@@ -1,3 +1,5 @@
+import { AUDIT_TECHNICAL_ISSUE_TYPES } from "./audit-technical-issues";
+
 /**
  * Registry of site-audit issue types.
  *
@@ -16,6 +18,7 @@ interface AuditIssueDescriptor {
 }
 
 export const AUDIT_ISSUE_TYPES = {
+  ...AUDIT_TECHNICAL_ISSUE_TYPES,
   "blocked-page": {
     severity: "critical",
     title: "Crawler was blocked",

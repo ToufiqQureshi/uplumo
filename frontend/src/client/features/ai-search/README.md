@@ -48,3 +48,7 @@ Source titles may be null; link labels fall back to the safe URL. Vitest discove
 `starterQuestions.ts` suggests local customer questions (business type + city, brand, two competitors) for the tracker form; free, it only edits the unsaved form.
 
 `whyNotCited.ts` and `components/WhyNotCitedCard.tsx` explain why AI did not cite the site, from a check's saved answers only (no credits): listing sites, competitor pages, named-not-linked, recommended rivals and community sites, each with one action.
+
+`components/VisibilityInsights.tsx` renders saved citation history, source
+positions, observed inline URL positions and comparable-run momentum. The UI
+states the 30-run sample limit when reached; it never starts a new check.

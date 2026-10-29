@@ -6,6 +6,7 @@ package citefix
 
 import (
 	"cmp"
+	"fmt"
 	"math"
 	"slices"
 	"strings"
@@ -68,8 +69,9 @@ type Issue struct {
 
 // PageRef names a page in a fix.
 type PageRef struct {
-	URL   string `json:"url"`
-	Title string `json:"title"`
+	URL      string   `json:"url"`
+	Title    string   `json:"title"`
+	Evidence []string `json:"evidence,omitempty"`
 }
 
 // CategoryScore is one category's score out of 100.
@@ -130,6 +132,8 @@ type Report struct {
 	Rivals []RivalComparison `json:"rivals"`
 	// SEOIssues are the latest critical and warning issues from Site Audit.
 	SEOIssues []SEOIssue `json:"seoIssues"`
+	// Topics uses only the audit's bounded stored headings and links.
+	Topics *TopicReport `json:"topics"`
 	// Agent says whether and at what price the paid agent can run; the
 	// handler fills it.
 	Agent AgentOffer `json:"agent"`
@@ -179,6 +183,8 @@ func Build(scan Scan, pages []Page, issues []Issue) Report {
 	}
 	shells := pageSet(byType[string(audit.IssueJavaScriptRenderingSuspected)])
 	duplicates := pageSet(byType[string(audit.IssueDuplicateContent)])
+	topics := buildTopics(pages, duplicates, shells)
+	report.Topics = &topics
 
 	results := map[string]result{
 		"ai-search-bots-allowed": siteResult(!blocksSearchBots(byType[string(audit.IssueAICrawlersBlocked)])),
@@ -204,14 +210,21 @@ func Build(scan Scan, pages []Page, issues []Issue) Report {
 		signals := page.Signals
 		_, duplicate := duplicates[page.URL]
 		outcomes := []outcome{
+			{"snippet-access", !signals.SnippetBlocked && signals.NoSnippetWords == 0},
 			{"structured-data", len(signals.SchemaTypes) > 0},
 			{"author", signals.Author},
 			{"dated", signals.Published != "" || signals.Modified != ""},
+			{"stale-claims", !hasStaleClaims(signals, scanDay)},
+			{"hidden-instructions", len(signals.InjectionEvidence) == 0},
 			{"answer-first", signals.LeadWords >= minLeadWords && signals.LeadWords <= maxLeadWords},
+			{"answer-capsule", signals.AnswerCapsule},
+			{"definition-after-heading", signals.DefinitionAfterHeading},
+			{"chunk-ready-sections", signals.Sections > 0 && signals.ChunkReadySections*2 >= signals.Sections},
 			{"question-headings", signals.QuestionHeadings > 0},
 			{"scannable", signals.Lists+signals.Tables > 0},
 			{"statistics", signals.Statistics > 0},
 			{"sources", page.ExternalLinks > 0},
+			{"authoritative-sources", signals.AuthorityLinks > 0},
 			{"quotes", signals.Quotes > 0},
 			{"not-thin", page.WordCount >= minWords},
 			{"unique", !duplicate},
@@ -317,9 +330,34 @@ func record(results map[string]result, id string, page Page, pass bool) {
 	if pass {
 		r.passed++
 	} else if len(r.failing) < maxFixPages {
-		r.failing = append(r.failing, PageRef{URL: page.URL, Title: page.Title})
+		ref := PageRef{URL: page.URL, Title: page.Title}
+		if id == "hidden-instructions" {
+			for _, evidence := range page.Signals.InjectionEvidence {
+				ref.Evidence = append(ref.Evidence, evidence.Kind+": "+evidence.Text)
+			}
+		}
+		if id == "snippet-access" {
+			if page.Signals.SnippetBlocked {
+				ref.Evidence = append(ref.Evidence, "A robots directive blocks snippets for this page.")
+			}
+			if page.Signals.SnippetTextWords > 0 && page.Signals.NoSnippetWords > 0 {
+				ref.Evidence = append(ref.Evidence, fmt.Sprintf("%d of %d measured words (%.1f%%) are marked data-nosnippet.", page.Signals.NoSnippetWords, page.Signals.SnippetTextWords, 100*float64(page.Signals.NoSnippetWords)/float64(page.Signals.SnippetTextWords)))
+			}
+		}
+		r.failing = append(r.failing, ref)
 	}
 	results[id] = r
+}
+
+func hasStaleClaims(signals *audit.AIPageSignals, scanDay time.Time) bool {
+	scanDay = time.Date(scanDay.UTC().Year(), scanDay.UTC().Month(), scanDay.UTC().Day(), 0, 0, 0, 0, time.UTC)
+	for _, year := range signals.DecayYears {
+		if year < scanDay.Year()-2 {
+			return true
+		}
+	}
+	updated, ok := latestDate(signals.Published, signals.Modified)
+	return signals.DatedClaims && ok && scanDay.After(updated.AddDate(0, 0, freshDays))
 }
 
 func checkByID(id string) check {
@@ -342,10 +380,8 @@ func blocksSearchBots(issues []Issue) bool {
 		crawlers, _ := issue.Details["crawlers"].([]any)
 		for _, crawler := range crawlers {
 			name, _ := crawler.(string)
-			for _, bot := range searchBots {
-				if name == bot || strings.HasPrefix(name, bot+" ") {
-					return true
-				}
+			if audit.IsAISearchBot(name) {
+				return true
 			}
 		}
 	}

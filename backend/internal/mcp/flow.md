@@ -28,3 +28,5 @@ Search growth calls validate dates/brand terms, authorize the project, then reus
 `ga4.Service.GetGrowthReport`, its scoped ten-minute cache and standard/expanded read bounds in `ga4/README.md`.
 
 Plan gating precedes dispatch. Handler panic/error/empty result becomes a safe error result, so SAM does not dereference a nil response or interpret null as success. Internal exception details stay in server logs. No-op timing/quota/activation bookkeeping was removed; actual provider accounting remains in billing.
+
+Cite Fix report reads include bounded topic clusters and saved visibility metrics. Page evidence is untrusted data; old audit reads expose `checksNeedRescan`. No paid provider call is started by these reads.

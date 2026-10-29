@@ -5,9 +5,11 @@ type IssueSeverity string
 
 // The three severities, mirroring IssueSeverity.
 const (
-	SeverityCritical IssueSeverity = "critical"
-	SeverityWarning  IssueSeverity = "warning"
-	SeverityInfo     IssueSeverity = "info"
+	IssueExternalChecksPending    IssueType     = "external-checks-pending"
+	IssueExternalChecksIncomplete IssueType     = "external-checks-incomplete"
+	SeverityCritical              IssueSeverity = "critical"
+	SeverityWarning               IssueSeverity = "warning"
+	SeverityInfo                  IssueSeverity = "info"
 )
 
 // IssueType identifies one issue kind.
@@ -15,6 +17,27 @@ type IssueType string
 
 // The closed registry of issue types, mirroring AUDIT_ISSUE_TYPES.
 const (
+	IssueInvalidHTMLLanguage          IssueType = "invalid-html-language"
+	IssueMissingViewport              IssueType = "missing-viewport"
+	IssueMultipleTitles               IssueType = "multiple-titles"
+	IssueMultipleDescriptions         IssueType = "multiple-descriptions"
+	IssueMultipleCanonicals           IssueType = "multiple-canonicals"
+	IssueRelativeCanonical            IssueType = "relative-canonical"
+	IssueBadCanonicalTarget           IssueType = "bad-canonical-target"
+	IssueSitemapNoindex               IssueType = "sitemap-noindex"
+	IssueSitemapBlocked               IssueType = "sitemap-blocked"
+	IssueSitemapNoncanonical          IssueType = "sitemap-noncanonical"
+	IssueHreflangNoSelf               IssueType = "hreflang-no-self"
+	IssueHreflangNoDefault            IssueType = "hreflang-no-default"
+	IssueHreflangNotReciprocal        IssueType = "hreflang-not-reciprocal"
+	IssueHreflangBadTarget            IssueType = "hreflang-bad-target"
+	IssueHTTPLinks                    IssueType = "http-links"
+	IssueInsecureForm                 IssueType = "insecure-form"
+	IssueInternalNofollow             IssueType = "internal-nofollow"
+	IssueImagesMissingSize            IssueType = "images-missing-size"
+	IssueLargeImage                   IssueType = "large-image"
+	IssueMissingHSTS                  IssueType = "missing-hsts"
+	IssueBrokenExternalLink           IssueType = "broken-external-link"
 	IssueBlockedPage                  IssueType = "blocked-page"
 	IssueJavaScriptRenderingSuspected IssueType = "javascript-rendering-suspected"
 	IssueRateLimitedPage              IssueType = "rate-limited-page"
@@ -46,6 +69,7 @@ const (
 	IssueCanonicalizedPage            IssueType = "canonicalized-page"
 	IssueDeepPage                     IssueType = "deep-page"
 	IssueAICrawlersBlocked            IssueType = "ai-crawlers-blocked"
+	IssueAITrainingBotsBlocked        IssueType = "ai-training-bots-blocked"
 	IssueMissingLLMsTxt               IssueType = "missing-llms-txt"
 	IssueMissingBusinessSchema        IssueType = "missing-business-schema"
 	IssueNoQuestionAnswers            IssueType = "no-question-answers"
@@ -62,6 +86,29 @@ type issueDescriptor struct {
 
 // issueRegistry carries the severity and title for every known issue type.
 var issueRegistry = map[IssueType]issueDescriptor{
+	IssueExternalChecksPending:        {SeverityInfo, "External link checks are queued"},
+	IssueExternalChecksIncomplete:     {SeverityInfo, "Some external links or images could not be checked"},
+	IssueInvalidHTMLLanguage:          {SeverityWarning, "Missing or invalid HTML language"},
+	IssueMissingViewport:              {SeverityWarning, "Missing mobile viewport"},
+	IssueMultipleTitles:               {SeverityWarning, "Multiple title tags"},
+	IssueMultipleDescriptions:         {SeverityWarning, "Multiple meta descriptions"},
+	IssueMultipleCanonicals:           {SeverityWarning, "Multiple canonical tags"},
+	IssueRelativeCanonical:            {SeverityWarning, "Relative canonical URL"},
+	IssueBadCanonicalTarget:           {SeverityWarning, "Canonical points to an unavailable page"},
+	IssueSitemapNoindex:               {SeverityWarning, "Sitemap includes a noindex page"},
+	IssueSitemapBlocked:               {SeverityWarning, "Sitemap URL blocked by robots.txt"},
+	IssueSitemapNoncanonical:          {SeverityWarning, "Sitemap includes a non-canonical URL"},
+	IssueHreflangNoSelf:               {SeverityWarning, "Hreflang has no self-reference"},
+	IssueHreflangNoDefault:            {SeverityInfo, "Hreflang has no x-default"},
+	IssueHreflangNotReciprocal:        {SeverityWarning, "Hreflang alternate does not link back"},
+	IssueHreflangBadTarget:            {SeverityWarning, "Hreflang points to a redirect or error"},
+	IssueHTTPLinks:                    {SeverityWarning, "HTTPS page links to HTTP"},
+	IssueInsecureForm:                 {SeverityCritical, "Form submits over HTTP"},
+	IssueInternalNofollow:             {SeverityInfo, "Internal links use nofollow"},
+	IssueImagesMissingSize:            {SeverityWarning, "Images lack width or height"},
+	IssueLargeImage:                   {SeverityWarning, "Large image"},
+	IssueMissingHSTS:                  {SeverityWarning, "HTTPS page has no active HSTS"},
+	IssueBrokenExternalLink:           {SeverityWarning, "External link returns an error"},
 	IssueBlockedPage:                  {SeverityCritical, "Crawler was blocked"},
 	IssueJavaScriptRenderingSuspected: {SeverityWarning, "Content may require JavaScript"},
 	IssueRateLimitedPage:              {SeverityWarning, "Rate limited (429)"},
@@ -93,6 +140,7 @@ var issueRegistry = map[IssueType]issueDescriptor{
 	IssueCanonicalizedPage:            {SeverityInfo, "Canonicalized to another URL"},
 	IssueDeepPage:                     {SeverityInfo, "Page is deep in the site structure"},
 	IssueAICrawlersBlocked:            {SeverityWarning, "AI assistants are blocked from reading the site"},
+	IssueAITrainingBotsBlocked:        {SeverityInfo, "AI training crawlers are blocked"},
 	IssueMissingLLMsTxt:               {SeverityInfo, "No llms.txt file"},
 	IssueMissingBusinessSchema:        {SeverityWarning, "AI cannot read who the business is"},
 	IssueNoQuestionAnswers:            {SeverityWarning, "No page answers customer questions"},
@@ -113,9 +161,35 @@ type IssueDescriptor struct {
 	Severity IssueSeverity
 	Title    string
 	HowToFix string
+	Why      string
 }
 
 var issueRemediation = map[IssueType]string{
+	IssueAITrainingBotsBlocked:    "Review these robots.txt rules only if you want to permit training use; blocking them does not lower the score.",
+	IssueExternalChecksPending:    "Refresh this audit after the queued checks finish.",
+	IssueExternalChecksIncomplete: "Review unverified destinations manually; some sites block automated checks or did not respond in time.",
+	IssueInvalidHTMLLanguage:      "Add a valid language tag such as lang=\"en\" or lang=\"hi\" on the html element.",
+	IssueMissingViewport:          "Add a viewport meta tag with width=device-width and an appropriate initial scale.",
+	IssueMultipleTitles:           "Keep one descriptive title element in the page head.",
+	IssueMultipleDescriptions:     "Keep one relevant meta description in the page head.",
+	IssueMultipleCanonicals:       "Keep one canonical link in the head pointing to the preferred page.",
+	IssueRelativeCanonical:        "Use the full absolute HTTPS URL in the canonical link.",
+	IssueBadCanonicalTarget:       "Point the canonical at an indexable, successful final URL.",
+	IssueSitemapNoindex:           "Remove the URL from the sitemap or remove noindex if the page should appear in search.",
+	IssueSitemapBlocked:           "Allow the URL in robots.txt or remove it from the sitemap.",
+	IssueSitemapNoncanonical:      "Replace the listed URL with its canonical URL.",
+	IssueHreflangNoSelf:           "Add an alternate hreflang link pointing to this page in its own language.",
+	IssueHreflangNoDefault:        "Consider adding an x-default alternate for the fallback page.",
+	IssueHreflangNotReciprocal:    "Add a matching return hreflang link on the alternate page.",
+	IssueHreflangBadTarget:        "Point each alternate directly to its live final URL.",
+	IssueHTTPLinks:                "Link directly to the HTTPS version where available.",
+	IssueInsecureForm:             "Change the form action to an HTTPS endpoint and confirm it handles the submission.",
+	IssueInternalNofollow:         "Remove nofollow from ordinary internal links when those pages should be crawled.",
+	IssueImagesMissingSize:        "Set appropriate width and height attributes or reserve space with an aspect ratio.",
+	IssueLargeImage:               "Resize or compress the image and use an efficient format appropriate for its content.",
+	IssueMissingHSTS:              "Configure Strict-Transport-Security with a positive max-age after confirming HTTPS works across the intended domain.",
+	IssueBrokenExternalLink:       "Check the destination and update or remove the link if it is no longer valid.",
+
 	IssueType("blocked-page"):                   "If you own this site, allowlist the \"Uplumo-Audit\" user agent in your WAF/bot-protection settings (on Cloudflare: a WAF custom rule that skips bot protection when the user agent contains \"Uplumo-Audit\"; on some free tiers you may need to relax bot protection). Then re-run the audit. On Shopify, use Crawler access instead (Online Store → Preferences → Crawler access) and paste the signature into Uplumo under Settings → Crawler access.",
 	IssueType("javascript-rendering-suspected"): "This audit checks the initial HTML; JavaScript rendering is not currently available in Uplumo. Verify the loaded page in a browser and serve important content and navigation in the initial HTML using server-side rendering or prerendering. This warning does not prove that search engines cannot index the page.",
 	IssueType("rate-limited-page"):              "Raise the rate limit for crawlers, or allowlist the \"Uplumo-Audit\" user agent in your rate-limiting rules (on Cloudflare: a rate-limiting rule exception matching that user agent). Then re-run the audit. Re-running with fewer pages also helps if the limit is strict. On Shopify, use Crawler access instead (Online Store → Preferences → Crawler access) and paste the signature into Uplumo under Settings → Crawler access.",
@@ -153,6 +227,36 @@ var issueRemediation = map[IssueType]string{
 	IssueSeveralPhoneNumbers:                    "If these are the same business, use one main number everywhere: website, Google Business Profile and listings such as Justdial. AI and Google trust details that match. If they are different departments, label each one clearly.",
 }
 
+var issueExplanations = map[IssueType]string{
+	IssueMissingH1:                "A clear H1 helps readers and search engines identify the page's main topic.",
+	IssueCanonicalConflict:        "Conflicting HTML and HTTP canonical declarations make the preferred URL ambiguous.",
+	IssueAICrawlersBlocked:        "Search assistants may be unable to retrieve and cite pages when their search crawler is blocked.",
+	IssueAITrainingBotsBlocked:    "These bots are used for training; allowing them is optional and independent of citation readiness.",
+	IssueExternalChecksPending:    "External links and image sizes are checked separately so they do not delay other site scans.",
+	IssueExternalChecksIncomplete: "The audit could not verify every external link or image within its safety limits.",
+	IssueInvalidHTMLLanguage:      "Without a valid language, browsers and search engines cannot reliably identify the language of the page.",
+	IssueMissingViewport:          "Mobile browsers may render the page at desktop width, making content hard to read.",
+	IssueMultipleTitles:           "Search engines may select an unintended title when a page declares more than one.",
+	IssueMultipleDescriptions:     "Multiple descriptions provide conflicting snippets to search engines.",
+	IssueMultipleCanonicals:       "Different canonical tags can make the preferred URL ambiguous.",
+	IssueRelativeCanonical:        "A relative canonical can resolve differently when the page moves or a base URL changes.",
+	IssueBadCanonicalTarget:       "A canonical target that redirects, errors or is noindex may not be a suitable page to index.",
+	IssueSitemapNoindex:           "The sitemap asks search engines to discover a page that also asks not to be indexed.",
+	IssueSitemapBlocked:           "Search engines cannot crawl a listed URL when the site blocks it in robots.txt.",
+	IssueSitemapNoncanonical:      "A sitemap should list the preferred URL rather than another URL that points away.",
+	IssueHreflangNoSelf:           "A language group without a self-reference can be harder for search engines to interpret.",
+	IssueHreflangNoDefault:        "A default version helps visitors whose language does not match another alternate.",
+	IssueHreflangNotReciprocal:    "Language alternates need reciprocal links so search engines can verify the relationship.",
+	IssueHreflangBadTarget:        "A language alternate that redirects or errors may not be usable as the intended version.",
+	IssueHTTPLinks:                "Visitors following an insecure link can lose HTTPS protection.",
+	IssueInsecureForm:             "Information submitted to an HTTP endpoint can be exposed in transit.",
+	IssueInternalNofollow:         "Nofollow can prevent crawlers from following links to useful pages.",
+	IssueImagesMissingSize:        "Without dimensions the browser may shift content while images load.",
+	IssueLargeImage:               "Large image files can slow page loading, especially on mobile connections.",
+	IssueMissingHSTS:              "Without HSTS, a browser may allow an insecure HTTP connection to the site.",
+	IssueBrokenExternalLink:       "A link to an unavailable external page can frustrate readers.",
+}
+
 // DescribeIssueType returns the descriptor for a known audit issue type.
 func DescribeIssueType(issueType string) (IssueDescriptor, bool) {
 	key := IssueType(issueType)
@@ -160,5 +264,5 @@ func DescribeIssueType(issueType string) (IssueDescriptor, bool) {
 	if !ok {
 		return IssueDescriptor{}, false
 	}
-	return IssueDescriptor{Severity: descriptor.Severity, Title: descriptor.Title, HowToFix: issueRemediation[key]}, true
+	return IssueDescriptor{Severity: descriptor.Severity, Title: descriptor.Title, HowToFix: issueRemediation[key], Why: issueExplanations[key]}, true
 }

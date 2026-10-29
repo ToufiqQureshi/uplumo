@@ -50,3 +50,9 @@ It also covers saved mentions, no paid call on load, the explicit Overview
 price confirmation and exactly one paid refresh, rival comparisons, and the
 free Site Audit issue section. `audit-capabilities.spec.ts` covers the render
 opt-in and its displayed ceiling.
+
+`TopicsSection.tsx` shows bounded topic clusters and opens a new blank Content
+Editor draft with the chosen missing pillar topic prefilled. `ProofCard.tsx`
+reuses `ai-search/components/VisibilityInsights.tsx` for saved citation history.
+Neither action starts an AI or provider purchase. New finding evidence is
+shown as untrusted text; old signals request a new scan.

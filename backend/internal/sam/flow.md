@@ -26,3 +26,5 @@ with `mode: search_growth` selects a server-enforced read-only tool subset befor
 streaming. `get_search_growth_report` verifies metrics through the project-bound
 MCP runner. Provider completions retain ordinary SAM metering; paid research,
 site changes, jobs and memory writes cannot execute in analyst mode.
+
+Cite Fix reports include untrusted page evidence and topic names. SAM treats these as data to report, not instructions to follow; the report read itself starts no paid provider work.

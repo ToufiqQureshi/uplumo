@@ -22,6 +22,7 @@ import { ProofCard } from "./ProofCard";
 import { AIMentionsSection, RivalComparisonsSection } from "./EvidenceSections";
 import { GoogleAIOverviewSection, SEOIssuesSection } from "./CitationSections";
 import { scoreBand } from "./scoreBand";
+import { TopicsSection } from "./TopicsSection";
 
 /** While a scan runs, check back this often; the report is free to read. */
 const RUNNING_REFRESH_MS = 15_000;
@@ -106,7 +107,7 @@ export function CiteFixPage({ projectId }: { projectId: string }) {
         <>
           <EmptyState
             title="Scan your site again"
-            description="Your last scan ran before Cite Fix existed, so it did not read authors, dates or answers on your pages. A new scan is free."
+            description="Your last scan did not collect the latest citation and topic signals. A new scan is free."
             action={
               report.data.running ? null : scanLink("Scan again", "default")
             }
@@ -195,6 +196,9 @@ function Ready({
       </section>
 
       <ProofCard projectId={projectId} proof={report.proof} />
+      {report.topics ? (
+        <TopicsSection projectId={projectId} topics={report.topics} />
+      ) : null}
       <RivalComparisonsSection
         proof={report.proof}
         comparisons={report.rivals}
@@ -289,6 +293,14 @@ function FixRow({ fix, position }: { fix: CiteFix; position: number }) {
                       label={page.title || page.url}
                       className="inline-flex max-w-full items-center gap-1 truncate hover:underline"
                     />
+                    {page.evidence?.map((item) => (
+                      <p
+                        key={item}
+                        className="break-words text-muted-foreground"
+                      >
+                        {item}
+                      </p>
+                    ))}
                   </li>
                 ))}
               </ul>

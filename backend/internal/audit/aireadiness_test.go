@@ -178,7 +178,8 @@ func TestAnalyzeHTMLCollectsCitationSignals(t *testing.T) {
 		Published: "2026-01-05", Modified: "2026-03-01",
 		LeadWords: 15, Lists: 2, Tables: 1, Quotes: 1,
 		// ₹999 in the header, 40%, Rs. 2,500 and 1 crore.
-		Statistics: 4,
+		Statistics: 4, Version: CitationSignalsVersion, SnippetTextWords: 40, Sections: 1,
+		DatedClaims: true, TopicHeadings: []string{"Best time to visit Goa"},
 	}
 	if !slices.Equal(got.SchemaTypes, want.SchemaTypes) {
 		t.Fatalf("schema types = %q, want %q", got.SchemaTypes, want.SchemaTypes)

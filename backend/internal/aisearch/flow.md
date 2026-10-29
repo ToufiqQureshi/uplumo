@@ -51,3 +51,8 @@ publisher. `extractCitations` validates it before falling back to the redirect,
 then deduplicates and computes publisher/brand matching from the selected URL.
 It never follows or fetches citation URLs. Only Gemini’s cache namespace advances
 to `prompt-response-v2`; the next explicit uncached Gemini run buys a fresh answer.
+
+`Tracking.State` and Cite Fix proof call `LoadVisibilityMetrics` for a saved
+run. It joins the owning project/workspace, samples up to 30 prior runs of the
+same scope and computes source positions, observed inline positions, first/last
+seen and comparable-run momentum. The read uses zero provider calls.

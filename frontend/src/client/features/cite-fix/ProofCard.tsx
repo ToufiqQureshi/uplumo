@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Sparkles } from "lucide-react";
 import { Button } from "@/client/components/ui/button";
+import { VisibilityInsights } from "../ai-search/components/VisibilityInsights";
 import type { CiteFixProof } from "./citeFixApi";
 
 /**
@@ -67,6 +68,9 @@ export function ProofCard({
         <span className="font-mono">{proof.answers}</span> AI answers cite{" "}
         <span className="font-medium">{proof.domain}</span>.
       </p>
+      {proof.visibility ? (
+        <VisibilityInsights metrics={proof.visibility} />
+      ) : null}
       {proof.rivals.length ? (
         <div className="flex flex-col gap-1">
           <p className="label-mono text-muted-foreground">Cited instead</p>

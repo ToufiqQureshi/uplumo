@@ -149,6 +149,50 @@ func TestRepositoryAuditLifecycle(t *testing.T) {
 	}
 }
 
+func TestResultsRequestRescanWhenSignalsWereNotMeasured(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	pool := auditTestPool(ctx, t)
+	repo := NewRepository(pool)
+	project := seedProject(ctx, t, pool, "org-"+suffix(t))
+	auditID := "audit-" + suffix(t)
+	seedRepositoryAudit(ctx, t, repo, auditID, project)
+	page := samplePage("page-"+suffix(t), "https://example.com/")
+	if err := repo.InsertCrawledBatch(ctx, auditID, []CrawledPageResult{page}, nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.CompleteAudit(ctx, auditID, auditID, 1, 1); err != nil {
+		t.Fatal(err)
+	}
+	service := NewService(ServiceConfig{Repository: repo})
+	for _, tc := range []struct {
+		name    string
+		signals *string
+		rescan  bool
+	}{
+		{"current", new(`{"version":2}`), false},
+		{"previous version", new(`{"version":1}`), true},
+		{"legacy", nil, true},
+		{"invalid old data", new(`bad json`), true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, err := pool.Exec(ctx, `UPDATE go_audit_pages SET citation_signals_json=$2 WHERE id=$1`, page.ID, tc.signals); err != nil {
+				t.Fatal(err)
+			}
+			result, err := service.GetResults(ctx, auditID, project)
+			if err != nil || result.ChecksNeedRescan != tc.rescan {
+				t.Fatalf("rescan = %v, err = %v, want %v", result.ChecksNeedRescan, err, tc.rescan)
+			}
+		})
+	}
+	if _, err := pool.Exec(ctx, `UPDATE go_audits SET status='failed' WHERE id=$1`, auditID); err != nil {
+		t.Fatal(err)
+	}
+	if result, err := service.GetResults(ctx, auditID, project); err != nil || !result.ChecksNeedRescan {
+		t.Fatalf("old partial audit rescan = %v, err = %v", result.ChecksNeedRescan, err)
+	}
+}
+
 func TestRepositoryInsertCrawledBatchIsIdempotent(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()

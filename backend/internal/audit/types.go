@@ -139,7 +139,8 @@ type PageAnalysis struct {
 	HreflangTags      []string `json:"hreflangTags"`
 
 	// AI holds the AI readiness and Cite Fix signals (aireadiness.go).
-	AI AIPageSignals `json:"-"`
+	AI        AIPageSignals    `json:"-"`
+	Technical TechnicalSignals `json:"-"`
 }
 
 // LighthouseResult is a Lighthouse check for a single URL and strategy.
@@ -206,9 +207,10 @@ type CrawledPageResult struct {
 	HreflangTags      []string   `json:"hreflangTags"`
 	// AI holds the AI readiness signals. Stored as citation_signals_json for
 	// Cite Fix; not part of this struct's own JSON.
-	AI             AIPageSignals `json:"-"`
-	IsIndexable    bool          `json:"isIndexable"`
-	ResponseTimeMs int64         `json:"responseTimeMs"`
+	AI             AIPageSignals    `json:"-"`
+	Technical      TechnicalSignals `json:"-"`
+	IsIndexable    bool             `json:"isIndexable"`
+	ResponseTimeMs int64            `json:"responseTimeMs"`
 	// CrawlDepth is nil when the page was not reached via links.
 	CrawlDepth *int `json:"crawlDepth"`
 	InSitemap  bool `json:"inSitemap"`

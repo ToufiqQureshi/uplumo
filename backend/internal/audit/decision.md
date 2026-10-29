@@ -109,3 +109,27 @@ Use the package tests next to the source files in `README.md`. For changes cross
 - **Trace:** `dataforseo_renderer.go`,
   `TestDataForSEORendererKeepsPaidPagesWhenALaterBatchFails` (fails on the
   previous code); `raw_html` calls are now one per batch, all free.
+
+## Additional technical findings and isolated external checks (PR 3)
+
+The page analyzer derives technical checks from the response it already has;
+canonical/hreflang targets are checked only when actually crawled, so an
+unvisited page is not labeled healthy or broken. Same-origin canonical and
+hreflang targets join the existing bounded crawl queue, subject to robots rules.
+Sitemap pages disallowed by
+robots.txt are reported without fetching them. Search and training bot rules
+are kept in one list: blocked training bots produce an informational issue,
+while only search bot blocks reduce readiness scores.
+
+External links and image sizes use a separate queue so a slow third-party host
+does not hold a site-audit worker. Each audit collects at most 200 distinct
+external links and 30 image targets, HEAD only for each target, with a 5-second
+request limit, robots respected, a shared Redis limit of one second between
+same-host requests, 64 KiB
+robots cap and a 25-second batch budget. An unsuccessful or unsupported check
+is partial coverage, never an invented error; Redis failure does not bypass
+the host limit. A short database transaction
+fences each workspace's in-flight job before any network request, with no
+connection held during network waits; an ambiguous restart does not retry the
+HEADs. URLs are removed from completed job payloads. Tests cover SSRF, robots,
+limits, partial results, retry, rate limiting and workspace claims.

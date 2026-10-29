@@ -1,8 +1,32 @@
 import { z } from "zod";
 import { apiRequest } from "@/client/lib/uplumoApi";
 import { brandLookupResultSchema } from "@/types/schemas/ai-search";
+import { visibilityMetricsSchema } from "../ai-search/trackingApi";
 
-const pageRefSchema = z.object({ url: z.string(), title: z.string() });
+const pageRefSchema = z.object({
+  url: z.string(),
+  title: z.string(),
+  evidence: z.array(z.string()).optional(),
+});
+const topicSchema = z.object({
+  score: z.number().int().min(0).max(100).nullable(),
+  pagesAnalyzed: z.number().int().nonnegative(),
+  limited: z.boolean(),
+  clustersLimited: z.boolean().default(false),
+  recommendations: z.array(z.string()),
+  clusters: z.array(
+    z.object({
+      topic: z.string(),
+      pageCount: z.number().int().positive(),
+      interlinkRatio: z.number().min(0).max(1),
+      pillar: pageRefSchema.nullable(),
+      pages: z.array(pageRefSchema),
+      orphans: z.array(pageRefSchema),
+      thin: z.array(pageRefSchema),
+      duplicates: z.array(pageRefSchema),
+    }),
+  ),
+});
 const rivalSignalsSchema = z.object({
   answerFirstWords: z.number(),
   author: z.boolean(),
@@ -91,6 +115,7 @@ const reportSchema = z.object({
   ),
   pagesChecked: z.number(),
   pagesTotal: z.number(),
+  topics: topicSchema.nullable().default(null),
   proof: z
     .object({
       checkedAt: z.string(),
@@ -115,6 +140,7 @@ const reportSchema = z.object({
             .default([]),
         }),
       ),
+      visibility: visibilityMetricsSchema.nullable().default(null),
     })
     .nullable(),
   mentions: z

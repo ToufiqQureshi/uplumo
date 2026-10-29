@@ -36,3 +36,5 @@ Razorpay, transactional email through Loops, SEO data through DataForSEO on
 Uplumo's own account (customers never bring their own keys).
 
 Secrets live in Railway variables, never in this repository.
+
+Third-party notices: [SEOnaut MIT](LICENSE-SEONAUT-MIT), [GEO Optimizer MIT](LICENSE-GEO-OPTIMIZER-MIT), and [OpenCite Apache 2.0](LICENSE-OPENCITE-APACHE) with [notice](NOTICE-OPENCITE). See also [OpenSEO MIT](LICENSE-OPENSEO-MIT).

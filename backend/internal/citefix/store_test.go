@@ -4,13 +4,18 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/toufiqqureshi/uplumo/backend/internal/audit"
+	"github.com/toufiqqureshi/uplumo/backend/internal/auth"
 	"github.com/toufiqqureshi/uplumo/backend/internal/database"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/pgdb"
 )
@@ -39,6 +44,46 @@ func testPool(ctx context.Context, t *testing.T) *pgxpool.Pool {
 		t.Fatalf("ensure projects table: %v", err)
 	}
 	return pool
+}
+
+type countedOverview struct{ calls int }
+
+func (o *countedOverview) Refresh(context.Context, string, string, string) (GoogleAIOverviewState, error) {
+	o.calls++
+	return GoogleAIOverviewState{}, nil
+}
+func (o *countedOverview) Collect(context.Context, string, string) (GoogleAIOverviewState, error) {
+	o.calls++
+	return GoogleAIOverviewState{}, nil
+}
+
+func TestReportAndTopicsNeverStartPaidProviderWork(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	pool := testPool(ctx, t)
+	org, project := seedProject(ctx, t, pool)
+	page := crawledPage("https://shop.example/solar", 500, audit.AIPageSignals{TopicHeadings: []string{"Solar panels"}})
+	page.Title = "Solar panels guide"
+	crawl(ctx, t, audit.NewRepository(pool), project, true, []audit.CrawledPageResult{page}, nil)
+	agent := &fakeRunner{}
+	overview := &countedOverview{}
+	h := handler{Deps{Reporter: Store{DB: pool}, Agent: agent, GoogleAIOverview: overview}}
+	for range 3 {
+		request := httptest.NewRequestWithContext(auth.WithProjectOrganization(ctx, org), http.MethodPost, "/report", strings.NewReader(`{}`))
+		request.SetPathValue("projectId", project)
+		response := httptest.NewRecorder()
+		h.report(response, request)
+		if response.Code != http.StatusOK {
+			t.Fatalf("report status %d: %s", response.Code, response.Body)
+		}
+		var report Report
+		if err := json.Unmarshal(response.Body.Bytes(), &report); err != nil || report.Topics == nil || len(report.Topics.Clusters) == 0 {
+			t.Fatalf("topics = %+v, err = %v", report.Topics, err)
+		}
+	}
+	if agent.runs != 0 || overview.calls != 0 {
+		t.Fatalf("report caused paid work: agent %d, overview %d", agent.runs, overview.calls)
+	}
 }
 
 func randomID(t *testing.T, prefix string) string {
@@ -136,11 +181,21 @@ func TestStoreReportStates(t *testing.T) {
 	if err != nil || report.State != StateNeedsRescan || report.Score != nil || report.Scan == nil || report.Scan.AuditID != legacyID {
 		t.Fatalf("legacy audit: %+v, %v", report, err)
 	}
+	// A PR 1/2 scan has JSON but not the new versioned fields: it is also
+	// unknown, not a collection of failed checks.
+	if _, err := pool.Exec(ctx, `UPDATE go_audit_pages SET citation_signals_json = '{"schemaTypes":[],"author":true}' WHERE audit_id = $1`, legacyID); err != nil {
+		t.Fatal(err)
+	}
+	report, err = store.Report(ctx, organizationID, projectID)
+	if err != nil || report.State != StateNeedsRescan || report.Score != nil || report.Topics != nil {
+		t.Fatalf("pre-version signals: %+v, %v", report, err)
+	}
 
 	// A new crawl writes signals with each page, and the report reads them.
 	signals := audit.AIPageSignals{
 		SchemaTypes: []string{"Article"}, QuestionHeadings: 1, Author: true, Published: "2026-09-01",
-		LeadWords: 30, Lists: 1, Statistics: 2, Quotes: 1,
+		LeadWords: 30, Lists: 1, Statistics: 2, Quotes: 1, AnswerCapsule: true,
+		DefinitionAfterHeading: true, Sections: 1, ChunkReadySections: 1, AuthorityLinks: 1,
 	}
 	page := crawledPage("https://shop.example/guide", 900, signals)
 	page.Links = []audit.PageLink{{TargetURL: "https://gov.example/rule", IsInternal: false}}
@@ -161,8 +216,8 @@ func TestStoreReportStates(t *testing.T) {
 	if got := fixIDs(report); len(got) != 1 || got[0] != "ai-search-bots-allowed" {
 		t.Fatalf("fixes = %v, want only the blocked search bot", got)
 	}
-	if *report.Score != 90 {
-		t.Fatalf("score = %d, want 90", *report.Score)
+	if *report.Score != 93 {
+		t.Fatalf("score = %d, want 93", *report.Score)
 	}
 }
 

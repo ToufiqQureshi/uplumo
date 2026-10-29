@@ -17,7 +17,7 @@ way.
 
 ## Source map
 
-- `checks.go`: the six categories (weights sum to 100), the 17 checks with the
+- `checks.go`: the six categories (weights sum to 100), the 24 checks with the
   copy the customer reads, and the thresholds.
 - `citefix.go`: `Build`, the pure scoring of one scan; report types.
 - `store.go`: `Store.Report`, the Postgres reads, scoped to the workspace.
@@ -37,14 +37,14 @@ is 400). Session and project membership required; any member may call it.
 | -------------- | ------------------------------------------------------------------------------------------ |
 | `ready`        | Latest completed audit scored: `score`, `categories`, `fixes`, `pages`.                    |
 | `no_scan`      | No completed audit. `running` says whether one is under way.                               |
-| `needs_rescan` | Latest completed audit was crawled before signals were stored (migration 47). Never zeros. |
+| `needs_rescan` | A page lacks the current version of stored citation signals. Scan again; never zeros. |
 
 `running` is the newest audit with status `running`, or null, in every state.
 
 ## The score
 
-- 6 categories: AI can read the site 20, AI knows who you are 15, author and
-  freshness 15, direct answers 20, facts and sources 15, content depth 15.
+- 6 categories: AI can read the site 25, AI knows who you are 10, author and
+  freshness 20, direct answers 20, facts and sources 15, content depth 10.
 - A **site check** (robots.txt search bots, llms.txt, business schema, one
   phone number) passes or fails once. A **page check** scores the share of
   content pages that pass. A category is the weighted mean of its checks; a
@@ -59,8 +59,8 @@ is 400). Session and project membership required; any member may call it.
   sort by gain.
 - Thresholds: lead paragraph 10-80 words, thin under 300 words, fresh within
   365 days of the scan day. Only search bots count as blocked
-  (`OAI-SearchBot`, `ChatGPT-User`, `PerplexityBot`, `Claude-SearchBot`);
-  blocking training bots is the owner's choice and costs no points.
+  (the central search-bot list in `audit/aiaccess.go`); blocking training bots
+  is the owner's choice and costs no points.
 
 ## Agent (paid) and proof (free)
 
@@ -124,3 +124,16 @@ a 45-second total deadline.
 `store_test.go`, `overview_test.go` and `rivals_test.go` (Postgres; need
 `TEST_DATABASE_URL`, run in CI), plus `agent_test.go` for unchanged hold caps
 and rival evidence.
+
+## Topic and citation signals
+
+`audit/citationextras.go` records snippet restrictions and their measured word
+share, answer capsules, heading definitions, sections, authoritative links,
+dated claims, and bounded possible injection evidence. `topics.go` groups the
+first 500 readable pages by title and content H1/H2 terms, retaining up to 20
+clusters. It uses stored content links (not navigation), flags missing pillars,
+orphans, thin and duplicate pages, and offers free draft topics. The score is an
+estimate, not a search ranking. `aisearch/visibility_metrics.go` reads saved
+answers to show citation history and ranks; source-list order and an actual URL
+found in answer text are separately labeled. Both analyses make zero paid
+provider calls.

@@ -390,10 +390,11 @@ type ResultAudit struct {
 
 // ResultsPayload is the audit results payload.
 type ResultsPayload struct {
-	Audit      ResultAudit        `json:"audit"`
-	Pages      []PageRecord       `json:"pages"`
-	Lighthouse []LighthouseRecord `json:"lighthouse"`
-	Issues     []IssueRecord      `json:"issues"`
+	Audit            ResultAudit        `json:"audit"`
+	Pages            []PageRecord       `json:"pages"`
+	Lighthouse       []LighthouseRecord `json:"lighthouse"`
+	Issues           []IssueRecord      `json:"issues"`
+	ChecksNeedRescan bool               `json:"checksNeedRescan"`
 }
 
 // GetResults returns an audit's pages, issues and Lighthouse results.
@@ -406,6 +407,15 @@ func (s *Service) GetResults(ctx context.Context, auditID, projectID string) (Re
 	if !ok {
 		return ResultsPayload{}, ErrInvalidConfig
 	}
+	needsRescan := results.Audit.Status != "running" && len(results.Pages) == 0
+	if results.Audit.Status != "running" {
+		for _, page := range results.Pages {
+			if page.SignalsVersion < CitationSignalsVersion {
+				needsRescan = true
+				break
+			}
+		}
+	}
 	return ResultsPayload{
 		Audit: ResultAudit{
 			ID: results.Audit.ID, StartURL: results.Audit.StartURL, Status: results.Audit.Status,
@@ -413,7 +423,7 @@ func (s *Service) GetResults(ctx context.Context, auditID, projectID string) (Re
 			StartedAt: formatISO(results.Audit.StartedAt), CompletedAt: formatISOMillisOpt(results.Audit.CompletedAt),
 			Config: config,
 		},
-		Pages: results.Pages, Lighthouse: results.Lighthouse, Issues: results.Issues,
+		Pages: results.Pages, Lighthouse: results.Lighthouse, Issues: results.Issues, ChecksNeedRescan: needsRescan,
 	}, nil
 }
 

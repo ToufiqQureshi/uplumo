@@ -151,6 +151,9 @@ func (s Store) pages(ctx context.Context, auditID string) ([]Page, bool, error) 
 			if err := json.Unmarshal([]byte(*signalsJSON), &signals); err != nil {
 				return nil, false, fmt.Errorf("decode citation signals for %s: %w", page.URL, err)
 			}
+			if signals.Version < audit.CitationSignalsVersion {
+				legacy = true
+			}
 			page.Signals = &signals
 		}
 		pages = append(pages, page)

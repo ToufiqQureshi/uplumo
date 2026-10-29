@@ -44,3 +44,8 @@ For orphan-page issues, `results/IssuesView.tsx` displays up to 100 orphan rows.
 
 Rendered HTML runs through the regular page analyzer; PSI runs separately on
 Google. Without the renderer, the opt-in stays disabled and no price is shown.
+
+`results` carries `checksNeedRescan` for old signal versions and pending or
+incomplete external-check issues. The view asks for a new scan instead of
+scoring missing checks. A later refresh can show the separate worker's results;
+the browser does not initiate the network checks.
