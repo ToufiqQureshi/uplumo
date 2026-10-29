@@ -443,3 +443,32 @@ func TestPublicPagesCarryNoPersonalContactDetails(t *testing.T) {
 		}
 	}
 }
+
+// Prevent sales copy from turning observable signals into unsupported promises.
+func TestPublicPagesKeepMeasurementClaimsHonest(t *testing.T) {
+	s := newSite(t, &url.URL{Scheme: "https", Host: "uplumo.com"})
+	pages := map[string]http.HandlerFunc{"/": s.ServeLanding, "/pricing": s.ServePricing}
+	for _, path := range InfoPaths() {
+		pages[path] = s.ServeInfo
+	}
+	for path, serve := range pages {
+		t.Run(path, func(t *testing.T) {
+			body := get(serve, path, nil).Body.String()
+			for _, claim := range []string{
+				"Most picked",
+				"Most AI traffic shows up as",
+				"Most visits from ChatGPT",
+				"tells you which assistant sent each visitor",
+				"no row caps on our own data",
+			} {
+				if strings.Contains(body, claim) {
+					t.Errorf("public page repeats unsupported claim %q", claim)
+				}
+			}
+		})
+	}
+	body := get(s.ServeLanding, "/", nil).Body.String()
+	if !strings.Contains(body, "Without an identifying referrer or tag") {
+		t.Error("AI traffic explanation must disclose missing attribution")
+	}
+}

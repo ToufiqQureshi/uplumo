@@ -33,3 +33,13 @@ Dark. `static/theme.js` loads before CSS and shares `theme-preference` with the
 React app. The light palette is in `templates/base.html`; saved picks survive
 page navigation and reload, and System follows OS changes. No API calls or
 account are needed. A blocked storage write keeps the pick for this document.
+
+## Buyer-facing content
+
+`templates/landing.html` explains evidence, Cite Fix, editing and measurement;
+`about.html` explains the owner's supplied experience without a personal name.
+`pricing.html` keeps all numeric offers catalog-driven and explains shared
+credits. Legal templates describe research inputs, shared reports, publishing
+and activation prerequisites without changing billing rules. Keep sampled AI
+answers separate from consumer-app coverage and recognised referral visits.
+See `decision.md` for capability evidence and the public anonymity boundary.
