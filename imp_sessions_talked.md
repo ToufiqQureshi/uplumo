@@ -17,6 +17,12 @@ feelings, business calls, priorities, corrections. Read it after
 
 ---
 
+## 29 Oct 2026: credits exactly as shown, merge and deploy (Claude)
+
+- Owner: "bhai proper credit cut hone chahiye and proper sab kuch acche se hona chahiye samja": a customer must never pay more than the credits shown before the action.
+- Order given: "pehle #246, phir #245 ... merge kar"; then "sab kaam sab pr ke kaam docs me update kardena ... then once done deploy it". Merged #246 and #245 after Strix reviews came back clean (Strix found under-booked local seeds and `site:` queries on #245; fixed first).
+- Deploy waits on the owner: this cloud session has no Railway access.
+
 ## 28 Oct 2026: Keywords agent (Claude)
 
 - Vision: "har ek feature ke liye master AI agent" that understands intent, shows tables/charts/recommendations, says what to do with keywords ("ranking possible hai, guarantee nahi"). Doesn't like SAM as a generic chat; wants feature-specific agents. Approved a Design-canvas mockup first.

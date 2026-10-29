@@ -101,5 +101,8 @@ allowlist, reasoning scope, project binding or explicit-action boundary changes.
   `TestKeywordsOperatorQueryReservesItsFiveTimesPrice` (each fails with its
   guard removed; the last two came from Strix's review of #245, which found
   local seeds and operator queries under-booked). Real-provider run not done.
+  Limitation: the after-turn chat summary (`compaction.go`) is held and
+  charged on its own, outside this limit; the owner's choice is open in
+  `DECISIONS.md` section 2.
 
 Cite Fix reports include untrusted page evidence and topic names. SAM treats these as data to report, not instructions to follow; the report read itself starts no paid provider work.

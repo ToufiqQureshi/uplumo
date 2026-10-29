@@ -61,7 +61,7 @@ mean each one has been tried on production with real provider keys.
 | Uplumo Analytics     | Tracking script, ingest, dashboard (visitors, pages, sources, devices, countries), button clicks via `data-uplumo-event`                                                                                                                                              |
 | AI traffic detection | ChatGPT, Perplexity, Gemini, Claude, Copilot referrers, plus AI traffic hiding as "Direct"                                                                                                                                                                            |
 | AI Visibility        | Brand Lookup (mentions, citations, share of voice) and Prompt Explorer                                                                                                                                                                                                |
-| Keywords             | Research, SERP analysis, saved keywords with tags                                                                                                                                                                                                                     |
+| Keywords             | Chat agent on the Keywords page (paid plans; at most 1,200 credits per answer, data and AI together, shown before sending), saved keywords with tags                                                                                                                  |
 | Rank tracking        | Configs, manual and scheduled checks, city-level locations                                                                                                                                                                                                            |
 | Site audit           | Crawl, issues, Lighthouse through Google PageSpeed Insights (free; homepage only on Free) with real-visitor Core Web Vitals                                                                                                                                           |
 | Backlinks, Domain    | Overview, rows, referring domains, top pages; domain keywords and pages                                                                                                                                                                                               |
@@ -101,9 +101,16 @@ mean each one has been tried on production with real provider keys.
   run. Real-provider acceptance remains pending.
 - Built: free `get_cite_fix_report` MCP tool, also in SAM's allowlist; it now
   returns saved mentions, rivals and audit issues and has no paid triggers.
-- Remaining: real DataForSEO and OpenRouter acceptance after merge. Cite Fix
+- Built in merged Cite Fix PR 3 (#246): free citation and technical audit
+  checks, bounded topic clusters with a Content Editor pillar handoff, and
+  saved citation history in the tracker, Cite Fix and MCP/SAM. External checks
+  run in isolated workers with explicit partial coverage; no paid-provider caps
+  or models changed.
+- Remaining: real DataForSEO and OpenRouter acceptance after deploy. Cite Fix
   does not purchase a new mentions refresh; a possible Cite Fix-only refresh
   needs a separate at-most-two-call, real-cost proposal and owner approval.
+  Known follow-up from #246 review: a re-scheduled audit can leave the
+  "external checks pending" marker shown.
 
 ## Not built yet
 
@@ -238,11 +245,3 @@ Secrets go into Railway variables only, never into the repo or chat.
 - Google native generative-AI reporting and optional BigQuery setup are external
   entry points; automatic ingestion is not implemented. Real-account Google
   reconciliation and production acceptance remain pending.
-
-## Cite Fix PR 3
-
-PR 3 adds free citation and technical audit checks, bounded topic clusters and
-Content Editor pillar handoff, and saved citation history in the tracker, Cite
-Fix and MCP/SAM. External checks run in isolated workers with explicit partial
-coverage. No paid-provider caps or models change. PR verification and merge
-are required before release.
