@@ -112,3 +112,33 @@ Why: optional recognition changes the privacy behavior of enabled customer snipp
 - **Trace:** `templates/base.html`, `static/theme.js`, `site_test.go`, frontend
   `scripts/public-theme.test.ts`. Browser checks cover every public route at
   1280/375/320px, selected light palette, persistence, reload and system changes.
+
+## Public buyer education and anonymous expertise
+
+- **Decision:** Explain the existing research → Cite Fix → editor → measurement
+  workflow on the homepage and About page, with plan-selection help on Pricing.
+  Attribute 3 years of SEO/AEO experience and full-stack AI engineering
+  experience to the product's background, as supplied by the owner. Publish no
+  personal name, personal contact details, invented team size, customers,
+  testimonials, certifications or results. Replace “Most picked” with a
+  use-case label because purchase popularity has not been established.
+- **Accuracy:** AI referral attribution needs a recognised referrer or campaign
+  tag (`analytics/classify.go`). Brand Lookup datasets, selected API prompts,
+  saved tracking and consumer-app conversations have different coverage
+  (`aisearch/provider.go`, `tracking.go`). Cite Fix scores stored audit signals
+  (`citefix/checks.go`, `citefix.go`), with separately requested paid analysis;
+  scores do not guarantee citation or causation. `httpapi/httpapi.go` mounts
+  these existing routes; this content change adds no endpoint or provider call.
+- **Legal clarity:** Preserve existing subscription/refund conditions and
+  Google read-only/Limited Use disclosures. Explain credit sharing, sampled
+  evidence, optional publishing, report-link sharing, research inputs and
+  account prerequisites. Do not invent a legal entity, address or registration.
+  Legal identity fields remain unset at the owner's explicit request; copy
+  improvements do not establish legal compliance or Google verification.
+- **Verification:** Existing site tests cover rendering, links, canonical URLs,
+  plan-catalog alignment and personal-detail exclusion. The measurement-claim
+  regression rejects unsupported attribution and popularity promises. Review
+  against Google's official production-readiness and verification guidance:
+  https://developers.google.com/identity/protocols/oauth2/production-readiness/policy-compliance
+  and https://support.google.com/cloud/answer/13464321 . No prices, credits,
+  provider rules, consent defaults, CI or deployment settings change.

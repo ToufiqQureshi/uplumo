@@ -17,6 +17,13 @@ feelings, business calls, priorities, corrections. Read it after
 
 ---
 
+
+## 29 Oct 2026: public pages, trust and anonymous experience
+
+- Owner authorised one PR improving existing public and legal pages, with detailed feature content verified against code; prioritise a fast delivery.
+- Explicit: do not publish his personal name. May mention 3 years of SEO/AEO experience and full-stack AI engineering experience.
+- Improve buyer understanding without inventing customers, testimonials, legal identity, guaranteed rankings or universal AI coverage. Existing pricing and payment policy remain unchanged.
+
 ## 29 Oct 2026: credits exactly as shown, merge and deploy (Claude)
 
 - Owner: "bhai proper credit cut hone chahiye and proper sab kuch acche se hona chahiye samja": a customer must never pay more than the credits shown before the action.

@@ -37,7 +37,7 @@ const (
 	SupportEmail = "support@uplumo.com"
 	// policyUpdated is the date shown on the legal pages. Change it whenever
 	// their text changes.
-	policyUpdated = "20 October 2026"
+	policyUpdated = "29 October 2026"
 	// operatorName and operatorAddress are the legal name and postal address
 	// of whoever runs Uplumo, and supportPhone a support number. The legal
 	// and contact pages print each only when it is set. The owner asked for
@@ -608,9 +608,16 @@ func landingFAQ() []QA {
 		{"What is Uplumo?", "An SEO and AI search platform. It tracks your Google rankings, audits your site, " +
 			"shows where AI assistants mention your brand and measures the visitors they send you."},
 		{"How is it different from other SEO platforms?", "Uplumo combines site analytics, Google search data, SEO research and AI visibility. Choose a tier by the number of websites and tools you need."},
-		{"What is AI traffic detection?", "Most visits from ChatGPT, Perplexity or Gemini show up as \"Direct\" " +
-			"in ordinary analytics. Uplumo Analytics recognises AI referrers and AI tracking tags, " +
-			"so you can see which assistants send you visitors and which pages they land on."},
+		{"What is AI traffic detection?", "Uplumo Analytics recognises supported AI referrers and campaign tags, " +
+			"then shows their visits and landing pages. Without an identifying referrer or tag, a visit stays unknown or Direct. " +
+			"It cannot recover every untagged AI visit or connect an individual visit to a particular AI answer."},
+		{"Does AI Visibility cover every answer?", "No. Brand Lookup uses provider datasets with engine and market limits. " +
+			"Prompt Explorer compares selected prompts across supported models; API answers may differ from consumer apps. " +
+			"Saved tracking measures your chosen questions, not every private AI conversation."},
+		{"What does Cite Fix tell me?", "It reviews signals from a completed site audit and saved citation evidence to prioritise page improvements. " +
+			"Its score is a diagnostic checklist, not an official AI ranking or a guarantee of citations. Optional page analysis and rewriting use credits."},
+		{"Will Uplumo guarantee rankings or sales?", "No. Uplumo provides research, measurement and suggested improvements. " +
+			"Search engines and AI platforms decide what appears; content scores and observed traffic do not guarantee customers or revenue."},
 		{"Does the tracker need a cookie banner?", "The tracker sets no cookies and stores no IP addresses. " +
 			"Default visitor-day counts use a daily-changing hash. Optional new/returning recognition uses first-party browser storage; enable it only after obtaining any required consent and updating your privacy notice."},
 		{"Do I need technical skills?", "No. Every finding is explained in plain language, with what to do next. " +
