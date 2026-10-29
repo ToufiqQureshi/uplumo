@@ -187,3 +187,28 @@ and draft handoff cost zero provider calls. Legacy signals require a rescan.
   interlink ratios and pillar advice. The crawler's `normalizeURL` already
   keeps the slash for the same reason.
 - **Trace:** `topics.go`, `TestTopicURLKeepsTrailingSlashPagesApart`.
+
+## Topics come from page titles, not template headings
+
+- **Decision:** topic terms come from each page's own title. Text repeated word
+  for word on at least 3 pages and 5% of the pages read (a "| Brand" title
+  part, "FAQ", "Sources", "Related guides", footer "Product/Company/Legal") is
+  template and dropped; the words of a repeated title part (the brand) are
+  dropped from every title, so "Uplumo AI Writing" reads as "ai writing".
+  H1/H2 headings are used only when the title is nothing but template text.
+  Function words ("in", "it", "these", "make", "but") and pure numbers are not
+  topics on their own; a bigram with a number ("web 3") still is.
+- **Why:** live test on uplumo.com (29 Oct): every blog post shares the same
+  H2s, so the report showed topics "make", "faq", "sources", "in", "it",
+  "related uplumo" and advised "Write a pillar page for make". Generic section
+  headings ("Why this happens", "Start here") also leaked verbs. The old cut
+  only dropped terms on 80% or more of pages; a blog template sits on about
+  60%. After the fix the same pages give seo, google, search, ai, ai search,
+  analytics, keyword and checklist.
+- **Preserve:** zero paid calls; the 500-page, 20-cluster and 60-term caps;
+  two pages that genuinely share a title subject still form a cluster.
+- **Trace:** `topics.go` (`topicSegments`, `boilerplateSegments`,
+  `topicTerms`), tests `TestTopicReportIgnoresTemplateHeadingsAndBrand`,
+  `TestTopicReportFallsBackToHeadingsWhenTitleIsOnlyTheBrand`; mutation checks
+  (template skip, brand words, title-first, stopwords) each fail a test.
+  Stored reports refresh on the next "Scan again".

@@ -130,8 +130,11 @@ and rival evidence.
 `audit/citationextras.go` records snippet restrictions and their measured word
 share, answer capsules, heading definitions, sections, authoritative links,
 dated claims, and bounded possible injection evidence. `topics.go` groups the
-first 500 readable pages by title and content H1/H2 terms, retaining up to 20
-clusters. It uses stored content links (not navigation), flags missing pillars,
+first 500 readable pages by the terms of their own titles, retaining up to 20
+clusters. Text that repeats word for word on at least 3 pages and 5% of them
+(a "| Brand" title part, "FAQ", "Related guides", footer headings) is template
+and is dropped, and the brand's words are dropped from other titles too; H1/H2
+headings are read only when a title is nothing but template text. It uses stored content links (not navigation), flags missing pillars,
 orphans, thin and duplicate pages, and offers free draft topics. The score is an
 estimate, not a search ranking. `aisearch/visibility_metrics.go` reads saved
 answers to show citation history and ranks; source-list order and an actual URL

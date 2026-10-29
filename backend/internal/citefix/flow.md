@@ -100,8 +100,8 @@ per-audit claim and is never automatically retried.
 
 ## Free topic and visibility reads
 
-`Build` calls the pure `topics.go` computation on stored page titles, H1/H2 and
-content links. A cluster's draft button opens an unsaved Content Editor draft
+`Build` calls the pure `topics.go` computation on stored page titles (H1/H2
+only when a title is just template text) and content links. A cluster's draft button opens an unsaved Content Editor draft
 with its topic as the keyword; it does not generate content. Proof reads up to
 30 comparable saved AI Visibility runs, no collection or provider call. The
 report and `get_cite_fix_report` carry both topics and `proof.visibility`.
