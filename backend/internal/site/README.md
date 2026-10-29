@@ -43,3 +43,14 @@ credits. Legal templates describe research inputs, shared reports, publishing
 and activation prerequisites without changing billing rules. Keep sampled AI
 answers separate from consumer-app coverage and recognised referral visits.
 See `decision.md` for capability evidence and the public anonymity boundary.
+
+## Homepage product tour
+
+Four anchored sections in `templates/landing.html` explain Dashboard, AI
+Visibility, Prompt Explorer and Cite Fix. `static/product/` contains WebP
+captures of the actual frontend with isolated illustrative fixtures; captions
+must retain the sample-data disclosure. These are demonstrations, not customer
+results. Never put customer account data, emails, secrets or billing details
+in these assets. Images use `asset` versioning, intrinsic dimensions, native
+full-size links and lazy loading below the first preview. No live provider
+request runs when a public visitor opens the tour.

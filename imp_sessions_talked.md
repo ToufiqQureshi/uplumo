@@ -18,6 +18,13 @@ feelings, business calls, priorities, corrections. Read it after
 ---
 
 
+## 30 Oct 2026: show the actual product on the homepage
+
+- Owner used sheetlink.app as a reference for clarity and asked for prominent Dashboard, AI Visibility, Prompt Explorer and Cite Fix explanations with images.
+- Build on existing public pages with a clear buying reason and visible product workflows. Continue to omit the owner's personal name; no fabricated customer results.
+- Owner supplied Product Hunt listing/badge (post 1297648); add it below the hero CTA, above product feature links.
+
+
 ## 29 Oct 2026: public pages, trust and anonymous experience
 
 - Owner authorised one PR improving existing public and legal pages, with detailed feature content verified against code; prioritise a fast delivery.

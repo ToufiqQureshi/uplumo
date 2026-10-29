@@ -142,3 +142,34 @@ Why: optional recognition changes the privacy behavior of enabled customer snipp
   https://developers.google.com/identity/protocols/oauth2/production-readiness/policy-compliance
   and https://support.google.com/cloud/answer/13464321 . No prices, credits,
   provider rules, consent defaults, CI or deployment settings change.
+
+## Show the product before asking a visitor to buy
+
+- **Decision:** Replace the generic simulated overview chart and repeated
+  text cards with four illustrated sections for Dashboard, AI Visibility,
+  Prompt Explorer and Cite Fix. Explain the customer's question, the existing
+  workflow and the output beside each image. Use plain anchor navigation and
+  native links to view the screenshots at full size, with no new JavaScript.
+- **Why:** Owner compared Sheetlink's clear outcome and visible product with
+  Uplumo's text-heavy homepage. Product images should show what customers
+  actually use, not an invented dashboard. Sheetlink was reviewed as a design
+  reference; no branding, illustrations or copy were copied.
+- **Preserve:** Capture actual app components with fictional fixture data and
+  disclose sample data next to every image. Preserve anonymity and plan-derived
+  pricing. Distinguish dataset Brand Lookup from selected-prompt API responses,
+  diagnostic Cite Fix scores from citations, and visits from sales. No paid
+  calls, screenshots of private customer records, new dependencies, pricing
+  changes or automatic deployment.
+- **Trace:** `templates/landing.html`, scoped tour CSS in `base.html`, static
+  product images; frontend `DashboardPage.tsx`, `BrandLookupPage.tsx`,
+  `PromptExplorerPage.tsx` and `CiteFixPage.tsx`. Homepage metadata names the
+  featured tools. Site asset/link and metadata tests remain applicable.
+
+## Owner-supplied Product Hunt launch badge
+
+Place the supplied badge below the hero CTA and above product anchor links.
+Keep the exact listing and image IDs from the owner, no inferred vote counts
+or ranking claims. The external link opens with `noopener noreferrer`; the
+image sends no referrer. CSP adds only `https://api.producthunt.com` to
+`img-src`; scripts and frames remain restricted. No widget script is loaded.
+The badge image is requested from Product Hunt by the visitor's browser.
