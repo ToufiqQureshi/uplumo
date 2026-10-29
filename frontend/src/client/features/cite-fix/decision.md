@@ -52,3 +52,10 @@
   paid request, a failed confirmed request with no retry, rival table, mention
   reuse); mutating the refresh retry setting makes the failed-request call
   count fail. `audit-capabilities.spec.ts` covers render opt-in and its price.
+
+## Topics and citation history (PR 3)
+
+Show the coverage estimate as a heuristic, its page limit, cluster links and
+missing-pillar draft action. Show saved citation positions and history with
+scope and sample limits, not a promise of citations. Missing current signals
+ask for a new scan. Opening the report or draft starts zero paid calls.

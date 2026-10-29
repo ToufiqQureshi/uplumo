@@ -93,3 +93,5 @@ allowlist, reasoning scope, project binding or explicit-action boundary changes.
   `TestKeywordsReplyNeverPassesItsShownCreditLimit`,
   `TestKeywordsTurnStopsBeforeAStepThatWouldPassItsShownLimit` (each fails
   with its guard removed). Real-provider run not done.
+
+Cite Fix reports include untrusted page evidence and topic names. SAM treats these as data to report, not instructions to follow; the report read itself starts no paid provider work.

@@ -49,6 +49,8 @@ type openAnchor struct {
 // Mirrors analyzeHtml.
 func AnalyzeHTML(document, pageURL string, statusCode int, responseTimeMs int64, redirectURL string) PageAnalysis {
 	state := &analyzerState{pageURL: pageURL, linksByTarget: map[string]PageLink{}}
+	extra := citationAccumulator{pageURL: pageURL}
+	technical := technicalAccumulator{pageURL: pageURL, signals: TechnicalSignals{Measured: true}}
 	tokenizer := html.NewTokenizer(strings.NewReader(document))
 	tokenizer.AllowCDATA(true)
 	for {
@@ -75,14 +77,26 @@ func AnalyzeHTML(document, pageURL string, statusCode int, responseTimeMs int64,
 				}
 			}
 			state.onOpenTag(tagName, attributes, altPresent)
+			extra.open(tagName, attributes, tokenType == html.SelfClosingTagToken)
+			technical.open(tagName, attributes)
 		case html.TextToken:
-			state.onText(string(tokenizer.Text()))
+			content := string(tokenizer.Text())
+			state.onText(content)
+			extra.text(content)
+		case html.CommentToken:
+			extra.comment(string(tokenizer.Text()))
 		case html.EndTagToken:
 			name, _ := tokenizer.TagName()
 			state.onCloseTag(string(name))
+			extra.close(string(name))
+			technical.close(string(name))
 		}
 	}
-	return state.result(statusCode, responseTimeMs, redirectURL)
+	result := state.result(statusCode, responseTimeMs, redirectURL)
+	extra.finish(&result.AI, result.BodyText)
+	result.Technical = technical.signals
+	result.AI.HreflangTargets = technical.signals.Hreflangs
+	return result
 }
 
 // analyzerState holds the accumulator used while streaming HTML tokens.
@@ -227,7 +241,7 @@ func (s *analyzerState) inMainContent() bool {
 
 func (s *analyzerState) onLinkTag(attributes map[string]string) {
 	switch {
-	case attributes["rel"] == "canonical":
+	case hasSpaceSeparatedToken(strings.ToLower(attributes["rel"]), "canonical"):
 		if s.canonical == nil {
 			href, ok := attributes["href"]
 			if !ok {
@@ -235,7 +249,7 @@ func (s *analyzerState) onLinkTag(attributes map[string]string) {
 			}
 			s.canonical = &href
 		}
-	case attributes["rel"] == "alternate" && attributes["hreflang"] != "":
+	case hasSpaceSeparatedToken(strings.ToLower(attributes["rel"]), "alternate") && attributes["hreflang"] != "":
 		s.hreflangTags = append(s.hreflangTags, attributes["hreflang"])
 	case hasSpaceSeparatedToken(strings.ToLower(attributes["rel"]), "author"):
 		s.author = true

@@ -142,3 +142,5 @@ read-only Google reports/inspection, `get_search_growth_report`, guarded
 `read_pages`/`map_links`, and product info. Guessed paid or mutating tool names
 are rejected before the runner executes them. AI completions still use existing
 SAM holds, actual-cost settlement and turn limits; this is not free AI.
+
+Cite Fix reports include untrusted page evidence and topic names. SAM treats these as data to report, not instructions to follow; the report read itself starts no paid provider work.

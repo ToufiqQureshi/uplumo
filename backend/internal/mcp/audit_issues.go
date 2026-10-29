@@ -66,9 +66,9 @@ func handleAuditIssues(ctx context.Context, raw json.RawMessage, env *callEnv) (
 	rows := make([]map[string]any, 0, len(payload.Issues))
 	counts, severities, titles := map[string]int{}, map[string]string{}, map[string]string{}
 	for _, issue := range payload.Issues {
-		severity, title, howToFix := "info", issue.IssueType, any(nil)
+		severity, title, howToFix, why := "info", issue.IssueType, any(nil), any(nil)
 		if descriptor, ok := audit.DescribeIssueType(issue.IssueType); ok {
-			severity, title, howToFix = string(descriptor.Severity), descriptor.Title, descriptor.HowToFix
+			severity, title, howToFix, why = string(descriptor.Severity), descriptor.Title, descriptor.HowToFix, descriptor.Why
 		}
 		if args.Severity != "" && severity != args.Severity {
 			continue
@@ -78,7 +78,7 @@ func handleAuditIssues(ctx context.Context, raw json.RawMessage, env *callEnv) (
 		}
 		counts[issue.IssueType]++
 		severities[issue.IssueType], titles[issue.IssueType] = severity, title
-		rows = append(rows, map[string]any{"severity": severity, "issueType": issue.IssueType, "title": title, "url": issue.PageURL, "details": issue.Details, "howToFix": howToFix})
+		rows = append(rows, map[string]any{"severity": severity, "issueType": issue.IssueType, "title": title, "url": issue.PageURL, "details": issue.Details, "why": why, "howToFix": howToFix})
 	}
 	sort.SliceStable(rows, func(i, j int) bool {
 		left, right := rows[i], rows[j]
@@ -114,7 +114,10 @@ func handleAuditIssues(ctx context.Context, raw json.RawMessage, env *callEnv) (
 		lines = append(lines, fmt.Sprintf("- %s [%s]: %d", item["title"], item["severity"], item["count"]))
 	}
 	text := fmt.Sprintf("Audit %s issues: %d total, %d returned.\n%s", auditID, total, len(limited), strings.Join(lines, "\n"))
-	return mcpResponse(text, map[string]any{"auditId": auditID, "issues": limited, "summary": summary, "totalCount": total, "returnedCount": len(limited)}, metaFields{ProjectID: access.Project.ID, URL: buildDashboardURL(access.Auth.BaseURL, "/p/"+access.Project.ID+"/audit/"+auditID, nil)}), nil
+	if payload.ChecksNeedRescan {
+		text += "\nThis saved audit predates some current checks; scan again."
+	}
+	return mcpResponse(text, map[string]any{"auditId": auditID, "issues": limited, "summary": summary, "totalCount": total, "returnedCount": len(limited), "checksNeedRescan": payload.ChecksNeedRescan}, metaFields{ProjectID: access.Project.ID, URL: buildDashboardURL(access.Auth.BaseURL, "/p/"+access.Project.ID+"/audit/"+auditID, nil)}), nil
 }
 
 func severityOrder(severity string) int {

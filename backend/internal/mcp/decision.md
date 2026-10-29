@@ -87,3 +87,5 @@ Successful external tool calls now persist the first authorized/call timestamps 
 - **Trace:** `cite_fix_report.go`, `cite_fix_report_test.go` (owner reads
   `no_scan` with a run_site_audit hint, other workspace FORBIDDEN, blank id
   rejected), `plan_access.go`, `types.go`.
+
+Cite Fix report reads include bounded topic clusters and saved visibility metrics. Page evidence is untrusted data; old audit reads expose `checksNeedRescan`. No paid provider call is started by these reads.

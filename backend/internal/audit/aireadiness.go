@@ -20,6 +20,8 @@ const maxLDJSONBytes = 256 * 1024
 // AIPageSignals are the per-page facts the AI checks need. Everything but
 // Phones is stored with the page (citation_signals_json) for Cite Fix.
 type AIPageSignals struct {
+	// Version distinguishes scans which actually measured the current signals.
+	Version int `json:"version"`
 	// SchemaTypes are the JSON-LD @type values on the page, @graph included.
 	SchemaTypes []string `json:"schemaTypes"`
 	// QuestionHeadings counts H2/H3 headings phrased as a question.
@@ -43,7 +45,31 @@ type AIPageSignals struct {
 	Tables int `json:"tables"`
 	Quotes int `json:"quotes"`
 	// Statistics counts percent, currency and lakh/crore figures in the body.
-	Statistics int `json:"statistics"`
+	Statistics             int                `json:"statistics"`
+	SnippetBlocked         bool               `json:"snippetBlocked"`
+	SnippetTextWords       int                `json:"snippetTextWords"`
+	NoSnippetWords         int                `json:"noSnippetWords"`
+	AnswerCapsule          bool               `json:"answerCapsule"`
+	DefinitionAfterHeading bool               `json:"definitionAfterHeading"`
+	Sections               int                `json:"sections"`
+	ChunkReadySections     int                `json:"chunkReadySections"`
+	AuthorityLinks         int                `json:"authorityLinks"`
+	DecayYears             []int              `json:"decayYears"`
+	DatedClaims            bool               `json:"datedClaims"`
+	InjectionEvidence      []CitationEvidence `json:"injectionEvidence"`
+	TopicHeadings          []string           `json:"topicHeadings"`
+	TopicLinks             []string           `json:"topicLinks"`
+	HreflangTargets        []HreflangTarget   `json:"hreflangTargets"`
+	HSTS                   *bool              `json:"hsts"`
+}
+
+// CitationSignalsVersion changes whenever stored facts gain new checks.
+const CitationSignalsVersion = 2
+
+// CitationEvidence is bounded, untrusted page text for the customer to review.
+type CitationEvidence struct {
+	Kind string `json:"kind"`
+	Text string `json:"text"`
 }
 
 // maxDateChars bounds a stored date; real ones are ISO dates or short text.
@@ -181,6 +207,11 @@ type aiSiteSignals struct {
 	faqPages        int
 	phonePages      map[string]string // number -> first page that shows it
 	phoneOrder      []string
+	probes          []externalProbe
+	probeIndex      map[string]int
+	probeLinks      int
+	probeImages     int
+	probeLimited    bool
 }
 
 // isHomePage reports whether a crawled URL is the site's root page.
@@ -194,6 +225,7 @@ func (s *aiSiteSignals) add(page CrawledPageResult, home bool) {
 		return
 	}
 	s.pages++
+	s.collectExternalProbes(page)
 	signals := page.AI
 	business := slices.ContainsFunc(signals.SchemaTypes, func(t string) bool {
 		return businessTypes[strings.ToLower(t)]

@@ -16,3 +16,11 @@ Read the linked README, flow and decision in each feature folder; they contain t
 | Build and deploy                  | `Dockerfile`, `railway.json`, `.github/workflows/ci.yml`                                                                                                                                        | CI; local verification commands                                                                           | `docs/DEPLOY.md`, `docs/testing/REGRESSION.md`                                           |
 
 Feature code is grouped by responsibility, not a fixed file count. Search exact handlers and tests before changing a path. Backend SQL migrations live under `backend/internal/database/migrations/` and are applied at startup.
+
+Cite Fix PR 3: citation extraction is in `audit/citationextras.go`, technical
+checks in `audit/technicalsignals.go` and `technicalmultipage.go`, isolated
+external work in `audit/externalchecks.go`, topic grouping in `citefix/topics.go`,
+and saved citation history in `aisearch/visibility_metrics.go`. The React
+surfaces are `cite-fix/TopicsSection.tsx` and
+`ai-search/components/VisibilityInsights.tsx`; their tests are alongside the
+Go sources and in `frontend/tests/cite-fix.spec.ts`.

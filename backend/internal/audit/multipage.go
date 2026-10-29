@@ -19,6 +19,9 @@ type SlimPage struct {
 	CrawlDepth         *int
 	InSitemap          bool
 	ResponseTimeMs     int64
+	HreflangTargets    []HreflangTarget
+	HSTS               *bool
+	SignalsVersion     int
 }
 
 // duplicateGroupSample caps the other URLs listed per duplicate issue.

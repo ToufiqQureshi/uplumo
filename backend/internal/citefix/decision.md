@@ -150,3 +150,40 @@ Scores how easy a site is for AI assistants to quote, from the latest completed 
   Uplumo opened and closed.
 - **Trace:** `agent_prompts.go` (`fence`, `defuseFence`),
   `TestPromptsKeepUntrustedTextInsideItsFence` (fails without the defuse).
+
+## Free critical checks, topic estimates and citation history (PR 3)
+
+The category weights are access 25, identity 10, trust 20, answers 20, evidence
+15 and depth 10 (100 total). Access has the largest weight because a snippet
+block can prevent Google from quoting the page. Within access, snippet access
+has weight 5 of 11, search-bot access 3, readable HTML 2 and optional llms.txt 1.
+Training-only bots are informational and cost no points.
+
+A capsule has 30–120 words, starts with a statement and contains a number or
+capitalized name; a definition starts the first paragraph after H1/H2 with “X
+is”; at least half the heading-delimited sections must contain 100–150 words.
+Any `nosnippet`/`max-snippet:0` or text marked `data-nosnippet` fails the
+snippet check, with word counts and share shown. Source checks recognize
+public/academic and named standards domains. A year older than two calendar
+years or a price/version on a page whose readable date is over 365 days old
+is a review signal, not proof it is wrong. Unreadable dates are unknown.
+Possible hidden instructions and invisible controls show bounded evidence;
+normal joiners between non-Latin letters/marks are not penalized.
+
+Topic grouping is capped at 500 pages, 20 clusters, 60 title/heading terms per
+page, 100 content links and 20 example pages per list. The 0–100 estimate adapts
+GEO Optimizer's topic-authority dimension weights: depth 40, interlinking 30,
+pillars 20 and breadth 10. Its grouping and calculations are our own; the
+source license is at the repo root. This is heuristic and not a search-engine
+ranking. Tests hand-work score, limits, Unicode and issue examples. The report
+and draft handoff cost zero provider calls. Legacy signals require a rescan.
+
+## Topic pages keep their trailing slash
+
+- **Decision:** `topicURL` lower-cases the host and drops the fragment but
+  keeps a trailing slash, so `/guide` and `/guide/` stay two pages.
+- **Why:** review of #246: stripping it merged distinct pages, overwrote one
+  in `byURL` and counted links between them as self-links, skewing orphans,
+  interlink ratios and pillar advice. The crawler's `normalizeURL` already
+  keeps the slash for the same reason.
+- **Trace:** `topics.go`, `TestTopicURLKeepsTrailingSlashPagesApart`.

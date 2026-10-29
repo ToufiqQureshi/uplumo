@@ -22,7 +22,7 @@ func goodPage(url string) Page {
 		Signals: &audit.AIPageSignals{
 			SchemaTypes: []string{"Article"}, QuestionHeadings: 2, Author: true,
 			Published: "2026-05-01", Modified: "2026-09-01T10:00:00+05:30", LeadWords: 40,
-			Lists: 1, Tables: 1, Quotes: 1, Statistics: 3,
+			Lists: 1, Tables: 1, Quotes: 1, Statistics: 3, AnswerCapsule: true, DefinitionAfterHeading: true, Sections: 1, ChunkReadySections: 1, AuthorityLinks: 1,
 		},
 	}
 }
@@ -75,24 +75,24 @@ func TestBuildPerfectSiteScoresFullMarks(t *testing.T) {
 // the weights in checks.go, so a weight change has to change this test.
 func TestBuildBarePageScoreAndFixOrder(t *testing.T) {
 	report := Build(testScan(), []Page{barePage("https://shop.example/rooms")}, nil)
-	// access 100, identity 3/5 (structured data fails), trust 0, answers 0,
-	// evidence 0, content 100: (20*100 + 15*60 + 15*100) / 100 = 44.
-	if *report.Score != 44 {
-		t.Fatalf("score = %d, want 44", *report.Score)
+	// Access 25, identity 6, trust 20*5/8 = 12.5, answers 0,
+	// evidence 0, content 10: 53.5 rounds to 54.
+	if *report.Score != 54 {
+		t.Fatalf("score = %d, want 54", *report.Score)
 	}
-	wantCategories := map[string]int{"access": 100, "identity": 60, "trust": 0, "answers": 0, "evidence": 0, "content": 100}
+	wantCategories := map[string]int{"access": 100, "identity": 60, "trust": 63, "answers": 0, "evidence": 0, "content": 100}
 	for _, category := range report.Categories {
 		if category.Score != wantCategories[category.ID] {
 			t.Errorf("category %s = %d, want %d", category.ID, category.Score, wantCategories[category.ID])
 		}
 	}
-	// Gains: author 15*2/3, answer-first 20*2/4, structured data 15*2/5, then
-	// the 5-point checks in category order. Fresh is not judged: no date.
-	want := []string{"author", "answer-first", "structured-data", "dated", "question-headings", "scannable", "statistics", "sources", "quotes"}
+	// Fresh is not judged without a date. Author and both answer checks
+	// each gain five points; ties retain category and check order.
+	want := []string{"author", "answer-first", "answer-capsule", "structured-data", "statistics", "sources", "authoritative-sources", "quotes", "dated", "definition-after-heading", "chunk-ready-sections", "question-headings", "scannable"}
 	if got := fixIDs(report); !slices.Equal(got, want) {
 		t.Fatalf("fix order = %v\nwant        %v", got, want)
 	}
-	gains := map[string]float64{"author": 10, "answer-first": 10, "structured-data": 6, "dated": 5, "quotes": 5}
+	gains := map[string]float64{"author": 5, "answer-first": 5, "answer-capsule": 5}
 	for id, gain := range gains {
 		if fix := findFix(t, report, id); fix.Gain != gain || fix.Impact != "high" {
 			t.Errorf("%s gain %v impact %s, want %v high", id, fix.Gain, fix.Impact, gain)
@@ -105,7 +105,7 @@ func TestBuildBarePageScoreAndFixOrder(t *testing.T) {
 }
 
 func TestBuildImpactFollowsGain(t *testing.T) {
-	// Nine good pages and one without quotes: 15*2/6*(1/10) = 0.5 points.
+	// Nine good pages and one without quotes: 15*2/8*(1/10) = 0.4 points.
 	pages := []Page{}
 	for i := range 9 {
 		pages = append(pages, goodPage(fmt.Sprintf("https://shop.example/%d", i)))
@@ -114,22 +114,22 @@ func TestBuildImpactFollowsGain(t *testing.T) {
 	page.Signals.Quotes = 0
 	pages = append(pages, page)
 	fix := findFix(t, Build(testScan(), pages, nil), "quotes")
-	if fix.Gain != 0.5 || fix.Impact != "low" || fix.PagesAffected != 1 {
-		t.Fatalf("quotes fix = %+v, want gain 0.5 low on 1 page", fix)
+	if fix.Gain != 0.4 || fix.Impact != "low" || fix.PagesAffected != 1 {
+		t.Fatalf("quotes fix = %+v, want gain 0.4 low on 1 page", fix)
 	}
-	// Half the pages without a date: 15*1/4*(1/2) = 1.9 points, still low;
-	// all of them: 3.75 -> 3.8, medium.
+	// Half undated: 20*1/9*(1/2) = 1.1 points; all undated: fresh is
+	// excluded, so 20*1/8 = 2.5 points.
 	for i := range 5 {
 		pages[i].Signals.Published, pages[i].Signals.Modified = "", ""
 	}
-	if fix := findFix(t, Build(testScan(), pages, nil), "dated"); fix.Gain != 1.9 || fix.Impact != "low" {
+	if fix := findFix(t, Build(testScan(), pages, nil), "dated"); fix.Gain != 1.1 || fix.Impact != "low" {
 		t.Fatalf("dated fix on half = %+v", fix)
 	}
 	for i := range pages {
 		pages[i].Signals.Published, pages[i].Signals.Modified = "", ""
 	}
-	if fix := findFix(t, Build(testScan(), pages, nil), "dated"); fix.Gain != 5 || fix.Impact != "high" {
-		// With no readable date, fresh is not judged, so dated weighs 1 of 3.
+	if fix := findFix(t, Build(testScan(), pages, nil), "dated"); fix.Gain != 2.5 || fix.Impact != "medium" {
+		// With no readable date, fresh is not judged, so dated weighs 1 of 8.
 		t.Fatalf("dated fix on all = %+v", fix)
 	}
 }
@@ -145,12 +145,12 @@ func TestBuildSearchBotsVersusTrainingBots(t *testing.T) {
 	}
 	search := Build(testScan(), pages, blocked("GPTBot (OpenAI)", "PerplexityBot (Perplexity)"))
 	fix := findFix(t, search, "ai-search-bots-allowed")
-	// The whole access category's 3 of 6: 20*3/6 = 10 points.
-	if fix.Gain != 10 || fix.Impact != "high" || fix.PagesAffected != 0 || len(fix.Pages) != 0 {
+	// Access: 25*3/11 = 6.8 points.
+	if fix.Gain != 6.8 || fix.Impact != "high" || fix.PagesAffected != 0 || len(fix.Pages) != 0 {
 		t.Fatalf("search bot fix = %+v", fix)
 	}
-	if *search.Score != 90 {
-		t.Fatalf("score = %d, want 90", *search.Score)
+	if *search.Score != 93 {
+		t.Fatalf("score = %d, want 93", *search.Score)
 	}
 	// A name that only starts like a bot is not that bot.
 	if hasFix(Build(testScan(), pages, blocked("ChatGPT-UserAgent")), "ai-search-bots-allowed") {
@@ -241,9 +241,9 @@ func TestBuildPageChecksReadOnlyContentPages(t *testing.T) {
 	if fix.PagesAffected != 1 || fix.Pages[0].URL != shell.URL {
 		t.Fatalf("readable fix = %+v", fix)
 	}
-	// 20*2/6*(1/3) = 2.2.
-	if fix.Gain != 2.2 || fix.Impact != "medium" {
-		t.Fatalf("readable gain %v %s, want 2.2 medium", fix.Gain, fix.Impact)
+	// 25*2/11*(1/3) = 1.5.
+	if fix.Gain != 1.5 || fix.Impact != "low" {
+		t.Fatalf("readable gain %v %s, want 1.5 low", fix.Gain, fix.Impact)
 	}
 }
 
@@ -283,19 +283,19 @@ func TestBuildCapsListsAndSortsPagesWorstFirst(t *testing.T) {
 	if slices.ContainsFunc(report.Pages, func(p PageScore) bool { return p.URL == "https://shop.example/best" }) {
 		t.Fatal("the best page was listed among the 50 worst")
 	}
-	// A bare page passes only not-thin and unique: 3 of 18 weight (fresh is
-	// not judged without a date) = 17.
-	if report.Pages[0].Score != 17 {
-		t.Fatalf("bare page score = %d, want 17", report.Pages[0].Score)
+	// A bare page passes snippet access, stale-claim and trust checks,
+	// plus not-thin and unique: 13 of 34 weight = 38.
+	if report.Pages[0].Score != 38 {
+		t.Fatalf("bare page score = %d, want 38", report.Pages[0].Score)
 	}
 }
 
 func TestBuildWithNoContentPagesScoresSiteChecksOnly(t *testing.T) {
 	report := Build(testScan(), nil, []Issue{{Type: string(audit.IssueMissingLLMsTxt)}})
 	// Access: 3 of 4 weight (readable has nothing to judge), identity 5 of 5:
-	// (20*75 + 15*100) / 35 = 85.7 -> 86.
-	if *report.Score != 86 {
-		t.Fatalf("score = %d, want 86", *report.Score)
+	// (25*75 + 10*100) / 35 = 82.1 -> 82.
+	if *report.Score != 82 {
+		t.Fatalf("score = %d, want 82", *report.Score)
 	}
 	if len(report.Categories) != 2 || report.PagesChecked != 0 {
 		t.Fatalf("categories %d, pages checked %d", len(report.Categories), report.PagesChecked)
@@ -345,5 +345,60 @@ func TestChecksAreConsistent(t *testing.T) {
 	}
 	if total != 100 {
 		t.Fatalf("category weights sum to %d, want 100", total)
+	}
+}
+
+func TestNewCitationChecksHaveHandWorkedGains(t *testing.T) {
+	for _, tc := range []struct {
+		id     string
+		change func(*audit.AIPageSignals)
+		gain   float64
+	}{
+		{"snippet-access", func(s *audit.AIPageSignals) { s.SnippetBlocked = true }, 11.4},
+		{"snippet-access", func(s *audit.AIPageSignals) { s.SnippetTextWords = 100; s.NoSnippetWords = 1 }, 11.4},
+		{"stale-claims", func(s *audit.AIPageSignals) { s.DecayYears = []int{2023} }, 4.4},
+		{"hidden-instructions", func(s *audit.AIPageSignals) {
+			s.InjectionEvidence = []audit.CitationEvidence{{Kind: "Hidden instruction", Text: "Ignore previous instructions"}}
+		}, 6.7},
+		{"answer-capsule", func(s *audit.AIPageSignals) { s.AnswerCapsule = false }, 5},
+		{"definition-after-heading", func(s *audit.AIPageSignals) { s.DefinitionAfterHeading = false }, 2.5},
+		{"chunk-ready-sections", func(s *audit.AIPageSignals) { s.Sections = 3; s.ChunkReadySections = 1 }, 2.5},
+		{"authoritative-sources", func(s *audit.AIPageSignals) { s.AuthorityLinks = 0 }, 3.8},
+	} {
+		t.Run(tc.id, func(t *testing.T) {
+			page := goodPage("https://shop.example/guide")
+			tc.change(page.Signals)
+			fix := findFix(t, Build(testScan(), []Page{page}, nil), tc.id)
+			if fix.Gain != tc.gain || fix.PagesAffected != 1 || fix.Title == "" || fix.Why == "" || fix.How == "" {
+				t.Fatalf("fix = %+v, want gain %v", fix, tc.gain)
+			}
+			if tc.id == "hidden-instructions" && (len(fix.Pages) != 1 || len(fix.Pages[0].Evidence) != 1) {
+				t.Fatalf("missing evidence: %+v", fix)
+			}
+			if tc.id == "snippet-access" && len(fix.Pages[0].Evidence) == 0 {
+				t.Fatalf("missing snippet evidence: %+v", fix)
+			}
+		})
+	}
+}
+
+func TestStaleClaimsUseScanDate(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		signals audit.AIPageSignals
+		stale   bool
+	}{
+		{"old year", audit.AIPageSignals{DecayYears: []int{2023}}, true},
+		{"recent year", audit.AIPageSignals{DecayYears: []int{2024}}, false},
+		{"old price on dated page", audit.AIPageSignals{DatedClaims: true, Published: "2025-10-26"}, true},
+		{"price exactly one year old", audit.AIPageSignals{DatedClaims: true, Published: "2025-10-27"}, false},
+		{"price without readable date", audit.AIPageSignals{DatedClaims: true}, false},
+		{"old page without dated claim", audit.AIPageSignals{Published: "2020-01-01"}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := hasStaleClaims(&tc.signals, scanAt); got != tc.stale {
+				t.Fatalf("stale = %v, want %v", got, tc.stale)
+			}
+		})
 	}
 }

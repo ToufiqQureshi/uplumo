@@ -91,7 +91,20 @@ func (s *Tracking) State(ctx context.Context, org, project string) (TrackingStat
 		}
 		out.Runs = append(out.Runs, run)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return out, err
+	}
+	rows.Close()
+	for _, run := range out.Runs {
+		if run.Status == "completed" || run.Status == "partial" {
+			out.Visibility, err = LoadVisibilityMetrics(ctx, s.DB, org, project, run.ID)
+			if err != nil {
+				return out, err
+			}
+			break
+		}
+	}
+	return out, nil
 }
 
 // Answers reads evidence only when the run, project and organization match.

@@ -157,7 +157,11 @@ func handleAuditPages(ctx context.Context, raw json.RawMessage, env *callEnv) (*
 	if len(filtered) > limit {
 		filtered = filtered[:limit]
 	}
-	return mcpResponse(fmt.Sprintf("Audit %s: %d matching pages (showing %d)", id, total, len(filtered)), map[string]any{"pages": filtered, "total": total}, metaFields{ProjectID: access.Project.ID, URL: buildDashboardURL(env.auth.BaseURL, "/p/"+access.Project.ID+"/audit/"+id, nil)}), nil
+	text := fmt.Sprintf("Audit %s: %d matching pages (showing %d)", id, total, len(filtered))
+	if payload.ChecksNeedRescan {
+		text += ". Scan again for current checks."
+	}
+	return mcpResponse(text, map[string]any{"pages": filtered, "total": total, "checksNeedRescan": payload.ChecksNeedRescan}, metaFields{ProjectID: access.Project.ID, URL: buildDashboardURL(env.auth.BaseURL, "/p/"+access.Project.ID+"/audit/"+id, nil)}), nil
 }
 func handleDeleteAudit(ctx context.Context, raw json.RawMessage, env *callEnv) (*callResult, error) {
 	var a struct {

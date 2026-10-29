@@ -745,23 +745,32 @@ func buildAuditService(ctx context.Context, logger *slog.Logger, db *pgxpool.Poo
 		Hosted:             billingSvc != nil, Env: os.Getenv, Logger: logger,
 	})
 
-	startAuditWorker(ctx, logger, queue, repository, progress, guard, crawler, lighthouseProvider, fieldData, crawlerAccess, renderer)
+	startAuditWorker(ctx, logger, queue, db, rdb, repository, progress, guard, crawler, lighthouseProvider, fieldData, crawlerAccess, renderer)
 	return service, nil
 }
 
 // startAuditWorker consumes audits from the jobs queue until ctx ends. The
 // worker's jobs are at-least-once, so a crashed worker's audit is retried and
 // its deterministic row ids keep the retry idempotent.
-func startAuditWorker(ctx context.Context, logger *slog.Logger, queue *jobs.Queue, repository *audit.Repository, progress *audit.Progress, guard *audit.Guard, crawler *audit.Crawler, lighthouseProvider audit.LighthouseProvider, fieldData audit.FieldDataProvider, crawlerAccess audit.CrawlerAccessResolver, renderer audit.JavaScriptRenderer) {
+func startAuditWorker(ctx context.Context, logger *slog.Logger, queue *jobs.Queue, db *pgxpool.Pool, rdb *redis.Client, repository *audit.Repository, progress *audit.Progress, guard *audit.Guard, crawler *audit.Crawler, lighthouseProvider audit.LighthouseProvider, fieldData audit.FieldDataProvider, crawlerAccess audit.CrawlerAccessResolver, renderer audit.JavaScriptRenderer) {
+	externalChecks := audit.NewExternalChecks(queue, db, repository, guard, rdb, logger)
 	runner := audit.NewRunner(audit.RunnerConfig{
 		Repository: repository, Progress: progress, Guard: guard, Crawler: crawler,
-		Lighthouse: lighthouseProvider, FieldData: fieldData, Renderer: renderer, Logger: logger, Resolver: crawlerAccess,
+		Lighthouse: lighthouseProvider, FieldData: fieldData, Renderer: renderer, Logger: logger, Resolver: crawlerAccess, ExternalChecks: externalChecks,
 	})
 	worker := jobs.Worker{
 		Queue: queue, QueueName: audit.AuditQueueName, Handle: audit.RunnerHandler(runner),
 		Lease: time.Minute, PollInterval: 2 * time.Second,
 	}
 	go worker.RunSupervised(ctx, logger)
+	// Separate workers ensure third-party responses never hold an audit worker.
+	for range 4 {
+		externalWorker := jobs.Worker{
+			Queue: queue, QueueName: audit.ExternalChecksQueue, Handle: externalChecks.Handler(),
+			Lease: time.Minute, PollInterval: 2 * time.Second,
+		}
+		go externalWorker.RunSupervised(ctx, logger)
+	}
 }
 
 // newDashboardOverview leaves Backlinks as a nil interface when DataForSEO is

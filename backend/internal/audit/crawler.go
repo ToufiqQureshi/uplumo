@@ -127,7 +127,7 @@ func applyAnalysis(page *CrawledPageResult, analysis PageAnalysis, headers http.
 	page.CanonicalURL = analysis.Canonical
 	page.RobotsMeta = analysis.RobotsMeta
 	page.HeaderCanonicalURL = parseHeaderCanonical(headers)
-	page.XRobotsTag = strings.TrimSpace(headers.Get("X-Robots-Tag"))
+	page.XRobotsTag = strings.TrimSpace(strings.Join(headers.Values("X-Robots-Tag"), ", "))
 	page.OgTitle = analysis.OgTitle
 	page.OgDescription = analysis.OgDescription
 	page.OgImage = analysis.OgImage
@@ -137,6 +137,12 @@ func applyAnalysis(page *CrawledPageResult, analysis PageAnalysis, headers http.
 	page.Links = analysis.Links
 	page.HasStructuredData = analysis.HasStructuredData
 	page.AI = analysis.AI
+	page.Technical = analysis.Technical
+	hsts := hstsEnabled(headers.Get("Strict-Transport-Security"))
+	page.AI.HSTS = &hsts
+	for _, value := range headers.Values("X-Robots-Tag") {
+		page.AI.SnippetBlocked = page.AI.SnippetBlocked || blocksSnippet(value)
+	}
 	page.HreflangTags = analysis.HreflangTags
 	page.JavaScriptShell = analysis.JavaScriptShell
 	page.IsIndexable = computeIsIndexable(analysis.RobotsMeta, page.XRobotsTag)

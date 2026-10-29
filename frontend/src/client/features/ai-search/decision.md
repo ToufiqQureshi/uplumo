@@ -114,3 +114,9 @@ Brand Lookup compares brand mentions and cited pages across supported answer eng
 - **Why:** In the first live check, the Maps link showed up as a "competitor page", and ChatGPT's `?utm_source=chatgpt.com` cluttered every link. For a local Indian business, the Google profile is the most important listing.
 - **Preserve:** No new requests. Classification still only reads the URLs that were saved.
 - **Trace:** `whyNotCited.ts`. Its test fails under each of 4 mutations: the Maps path, the utm filter, the singular wording and the profile link.
+
+## Saved citation metrics (PR 3)
+
+Reuse saved answers and label source-list positions separately from actual URLs
+found in answer text. Show sample limits and compare only complete matching
+runs. No paid check runs merely to render the tracker or Cite Fix proof.

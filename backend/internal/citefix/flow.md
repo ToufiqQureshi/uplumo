@@ -26,8 +26,7 @@
    bounded HTML; use `audit.AnalyzeHTML` for the same citation signals as
    the customer's page. Cache by project, URL and content hash, reuse for seven
    days, and label app shells without rendering them.
-5. No completed audit: `no_scan`. Any page row with `citation_signals_json`
-   NULL: `needs_rescan`.
+5. No completed audit: `no_scan`. Any page with missing, unversioned or older citation signals: `needs_rescan`.
 6. Otherwise it loads up to 10,000 pages (url, title, status, indexable, word
    count, external link count, signals) and the six issue types the checks read
    (`ai-crawlers-blocked`, `missing-llms-txt`, `missing-business-schema`,
@@ -57,7 +56,7 @@ same analyzer.
 | ------------------- | -------------- |
 | Open the Cite Fix page | 0 |
 | Page polls while a scan runs (every 15 s) | 0 |
-| Start a scan (Site Audit) | 0 paid; PageSpeed checks use Google's free quota as the audit already does |
+| Start a scan without optional JavaScript rendering | 0 paid; PageSpeed checks use Google's free quota as the audit already does |
 | Agent Quick on one page | 1 OpenRouter call (Flash), ≤ 25 credits; 0 if cached or replayed |
 | Agent Deep on one page | 2 OpenRouter calls (Flash, then Pro), ≤ 60 credits; 0 if cached or replayed |
 | Batch of N pages | N runs one after another; confirmed at N × cap before the first |
@@ -98,3 +97,13 @@ per-audit claim and is never automatically retried.
   fetches at most three unique pages, a fresh-cache read makes zero requests,
   and a seven-day or cross-workspace cache miss fetches only the three-page cap.
 - `agent_test.go`: Quick/Deep hold ceilings remain 25/60 with rival context.
+
+## Free topic and visibility reads
+
+`Build` calls the pure `topics.go` computation on stored page titles, H1/H2 and
+content links. A cluster's draft button opens an unsaved Content Editor draft
+with its topic as the keyword; it does not generate content. Proof reads up to
+30 comparable saved AI Visibility runs, no collection or provider call. The
+report and `get_cite_fix_report` carry both topics and `proof.visibility`.
+`TestReportAndTopicsNeverStartPaidProviderWork` exercises three report reads
+through the handler with paid entry points counted at zero.

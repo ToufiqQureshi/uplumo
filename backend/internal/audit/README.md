@@ -3,8 +3,8 @@
 Site audit: crawl a site, run per-page and cross-page checks, optionally sample
 Lighthouse through Google's PageSpeed Insights API, and serve the results to the
 React audit pages.
-Ported from the TypeScript engine; the JSON contract is unchanged so the pages
-only changed their transport.
+Ported from the TypeScript engine; the results contract keeps its existing
+fields and adds explicit coverage information for newer checks.
 
 ## Flow
 
@@ -34,9 +34,9 @@ are rejected): `start`, `status`, `results`, `history`, `progress`, `delete`,
 (migration `00007_audit.sql`). Pages, issues and results cascade with the audit.
 `go_audit_pages.citation_signals_json` (migration 47) holds each page's AI
 citation signals (schema types, question headings, author, dates, lead
-paragraph length, lists, tables, quotes, statistics) for Cite Fix
-(`backend/internal/citefix`). It is NULL only on audits crawled before it
-existed.
+paragraph length, lists, tables, quotes, statistics and versioned citation
+checks) for Cite Fix (`backend/internal/citefix`). NULL or an older version
+means these newer checks were not measured; results ask for a rescan.
 
 The audit history view also compares the two latest completed crawls with the
 same start URL. It reports changes in title, meta description, canonical URL,
@@ -179,3 +179,24 @@ never "Google has no data".
 `go test ./internal/audit/` needs no database for unit and handler tests.
 Repository tests need `TEST_DATABASE_URL` and run in CI. To prove a test can
 fail, break the code by hand and rerun it (`CLAUDE.md` section 4).
+
+## Technical and external checks
+
+`technicalsignals.go`, `technicalmultipage.go` and `pagereporters.go` inspect
+language, viewport, duplicate/relative canonicals and metadata, sitemap
+indexability, hreflang, insecure links/forms, nofollow, image dimensions and
+HSTS. Canonical and hreflang target checks compare pages actually crawled;
+unfetched targets are unknown. Search and training crawler lists live together
+in `aiaccess.go`; training-only blocks are informational and do not lower AI
+readiness scores.
+
+`externalchecks.go` queues up to 200 external links and 30 images on workers
+separate from the audit worker. Requests use the audit SSRF guard, robots.txt,
+HEAD for each target, a 5-second request timeout, a shared Redis one-second per-host
+interval, 64 KiB robots limit and a 25-second batch budget. Images above
+500,000 bytes are flagged when a usable image Content-Length is provided.
+Redirects and inaccessible or robots-blocked targets remain unknown. A queued
+or incomplete issue shows coverage; a fenced start marker prevents a retry from
+repeating HEAD requests. A short workspace claim transaction releases its DB
+connection before network waits; unavailable Redis leaves coverage partial
+rather than bypassing the host limit. `checksNeedRescan` flags old audit signals.

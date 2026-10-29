@@ -77,3 +77,10 @@ Starts an asynchronous crawl and presents technical SEO findings, crawl progress
   - Audits started before `AI_CHECKS_SINCE` (2026-10-26T15:00Z, when the crawler checks went live) are not scored. They show "run a new audit", because a missing issue there means "not checked".
   - The weights are judgement. Change them here only.
 - **Trace:** `aiReadiness.ts`, `aiReadiness.test.ts`. Each of these 4 mutations fails the tests: pass check, Weak verdict, the date guard, fix order. Backend checks: #220 and #223.
+
+## New audit results (PR 3)
+
+Treat absent new signals as unmeasured: display “scan again” and suppress the
+old AI-readiness score. Training-only bot blocks are informational; only search
+bot blocks count. External-check status remains visible when coverage is
+pending or partial, so unavailable targets do not look verified.

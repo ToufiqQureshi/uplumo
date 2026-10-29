@@ -7,6 +7,7 @@ import { TrackingForm } from "./TrackingForm";
 import { AiVisibilityGuide } from "./AiVisibilityGuide";
 import { MarkdownAnswer } from "./components/MarkdownAnswer";
 import { WhyNotCitedCard } from "./components/WhyNotCitedCard";
+import { VisibilityInsights } from "./components/VisibilityInsights";
 
 const ENGINE_LABELS: Record<string, string> = {
   chat_gpt: "ChatGPT",
@@ -181,6 +182,9 @@ export function PromptTrackingPage({ projectId }: { projectId: string }) {
           </p>
         ) : null}
       </section>
+      {state.data.visibility ? (
+        <VisibilityInsights metrics={state.data.visibility} />
+      ) : null}
       {answers.data && selectedRun ? (
         <WhyNotCitedCard
           projectId={projectId}

@@ -12,12 +12,12 @@ type Category struct {
 // weigh most: an assistant that cannot read a page, or cannot find a direct
 // answer in it, never quotes it, however trusted the site is.
 var categories = []Category{
-	{ID: "access", Label: "AI can read the site", Weight: 20},
-	{ID: "identity", Label: "AI knows who you are", Weight: 15},
-	{ID: "trust", Label: "Author and freshness", Weight: 15},
+	{ID: "access", Label: "AI can read the site", Weight: 25},
+	{ID: "identity", Label: "AI knows who you are", Weight: 10},
+	{ID: "trust", Label: "Author and freshness", Weight: 20},
 	{ID: "answers", Label: "Direct answers", Weight: 20},
 	{ID: "evidence", Label: "Facts and sources", Weight: 15},
-	{ID: "content", Label: "Content depth", Weight: 15},
+	{ID: "content", Label: "Content depth", Weight: 10},
 }
 
 // check is one test. A site check passes or fails once for the whole site; a
@@ -40,7 +40,13 @@ var checks = []check{
 		id: "ai-search-bots-allowed", category: "access", weight: 3,
 		title: "AI search bots are blocked in robots.txt",
 		why:   "ChatGPT search, Perplexity and Claude search read your pages with their own bots. A bot that robots.txt blocks cannot link or quote your site.",
-		how:   "Remove the Disallow rules for OAI-SearchBot, ChatGPT-User, PerplexityBot and Claude-SearchBot in robots.txt, and check your firewall or CDN bot protection does not block them. Blocking only training bots (GPTBot, ClaudeBot, Google-Extended) is a choice and does not lower this score.",
+		how:   "Review the blocked search bots in robots.txt and your firewall. Blocking training-only bots is your choice and does not lower this score.",
+	},
+	{
+		id: "snippet-access", category: "access", weight: 5, page: true,
+		title: "Text is unavailable for search snippets",
+		why:   "Google cannot quote text excluded by nosnippet or max-snippet:0 in search results and AI Overviews.",
+		how:   "Review robots meta tags, X-Robots-Tag headers and data-nosnippet attributes. Remove restrictions from text you want Google to quote.",
 	},
 	{
 		id: "pages-readable", category: "access", weight: 2, page: true,
@@ -91,10 +97,40 @@ var checks = []check{
 		how:   "Review these pages, update facts that changed, and change the updated date only when you change the content.",
 	},
 	{
+		id: "stale-claims", category: "trust", weight: 2, page: true,
+		title: "Facts may need an update",
+		why:   "Old years and prices or versions on older pages may be out of date. They are a review signal, not proof a fact is wrong.",
+		how:   "Check the dated claims, prices and versions against current sources, then update the page and its review date.",
+	},
+	{
+		id: "hidden-instructions", category: "trust", weight: 3, page: true,
+		title: "Review possible hidden AI instructions",
+		why:   "Hidden instructions, unusual invisible characters or AI-specific attributes can make page content less trustworthy.",
+		how:   "Review the evidence and remove instructions or attributes you did not intend. Some findings can be harmless.",
+	},
+	{
 		id: "answer-first", category: "answers", weight: 2, page: true,
 		title: "The answer is not in the first paragraph",
 		why:   "Assistants quote short, direct answers. A page that opens with a long story or no paragraph at all gives them nothing to lift.",
 		how:   "Start the page with a 1 to 3 sentence answer (10 to 80 words) to the question the page is about, then add the detail.",
+	},
+	{
+		id: "answer-capsule", category: "answers", weight: 2, page: true,
+		title: "No concise answer with a concrete fact",
+		why:   "A direct paragraph with a specific fact gives readers and search tools an answer they can check.",
+		how:   "Add a 30–120 word paragraph that starts with a statement and includes a number, name or date.",
+	},
+	{
+		id: "definition-after-heading", category: "answers", weight: 1, page: true,
+		title: "No definition directly after a heading",
+		why:   "A short definition after a heading can make a topic easier to understand.",
+		how:   "For a relevant H1 or H2, start the next paragraph with a clear 'X is …' definition.",
+	},
+	{
+		id: "chunk-ready-sections", category: "answers", weight: 1, page: true,
+		title: "Few sections are concise and self-contained",
+		why:   "Sections around 100–150 words are easier to read as standalone answers.",
+		how:   "Organize the page under headings and aim for at least half the sections to contain 100–150 words where appropriate.",
 	},
 	{
 		id: "question-headings", category: "answers", weight: 1, page: true,
@@ -119,6 +155,12 @@ var checks = []check{
 		title: "No links to sources",
 		why:   "Citing sources was another change the KDD 2024 GEO study found raised citations. It shows your facts can be checked.",
 		how:   "Link to the official or original source for the facts you state: government pages, studies, manufacturer specs.",
+	},
+	{
+		id: "authoritative-sources", category: "evidence", weight: 2, page: true,
+		title: "No links to official or authoritative sources",
+		why:   "Links to original public, academic or standards sources let readers check important claims.",
+		how:   "Where relevant, link to the original government, university or standards source for a claim.",
 	},
 	{
 		id: "quotes", category: "evidence", weight: 2, page: true,
@@ -151,8 +193,3 @@ const (
 	// freshDays is how recent an update must be to count as fresh.
 	freshDays = 365
 )
-
-// searchBots are the robots.txt agents that fetch pages to answer a question
-// and link the source. Blocking one stops that assistant from citing the site.
-// Training-only agents are left out on purpose: blocking them is a choice.
-var searchBots = []string{"OAI-SearchBot", "ChatGPT-User", "PerplexityBot", "Claude-SearchBot"}

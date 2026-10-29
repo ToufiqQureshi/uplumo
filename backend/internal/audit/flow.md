@@ -36,3 +36,17 @@ Postgres audit tables; Redis progress/cache/quota; PageSpeed Insights and CrUX; 
 JavaScript rendering is opt-in and limited to app-shell pages; without a wired
 DataForSEO renderer, capabilities report false and the start request fails
 before persistence or dispatch. PSI runs separately on Google.
+
+## Free checks after a crawl
+
+The analyzer extracts the new citation and technical facts while processing
+existing HTML. The crawl also queues same-origin canonical and hreflang targets within its
+existing page, depth and robots limits. Cross-page checks compare known crawled
+targets and sitemap membership; other targets remain unknown. After completion the audit worker enqueues bounded external HEAD
+checks to a separate queue and returns without waiting. The external workers
+verify project/workspace/page ownership, serialize starts within a workspace,
+check robots.txt through `NewGuard`, rate-limit each host across workers with
+Redis and save issues or a
+partial-coverage warning. No additional paid call is made. Retry after a
+started-but-uncertain job marks coverage partial rather than repeating HEAD.
+Old page signals set `checksNeedRescan` on saved results.

@@ -9,20 +9,41 @@ import (
 // aiCrawler is a user agent an AI assistant uses to read a site. Blocking one
 // in robots.txt keeps that assistant from quoting or linking the site.
 type aiCrawler struct {
-	token string // robots.txt user-agent token, lower case
-	name  string // what the customer sees
+	token  string // robots.txt user-agent token, lower case
+	name   string // what the customer sees
+	search bool   // this bot can retrieve pages for an answer
 }
 
 // aiCrawlers that decide whether an assistant can read and cite a page.
 // Google AI Overviews use Googlebot, which the normal audit already covers.
 var aiCrawlers = []aiCrawler{
-	{"oai-searchbot", "OAI-SearchBot (ChatGPT search)"},
-	{"chatgpt-user", "ChatGPT-User (ChatGPT browsing)"},
-	{"gptbot", "GPTBot (OpenAI)"},
-	{"perplexitybot", "PerplexityBot (Perplexity)"},
-	{"claude-searchbot", "Claude-SearchBot (Claude search)"},
-	{"claudebot", "ClaudeBot (Anthropic)"},
-	{"google-extended", "Google-Extended (Gemini)"},
+	{"oai-searchbot", "OAI-SearchBot (ChatGPT search)", true},
+	{"chatgpt-user", "ChatGPT-User (ChatGPT browsing)", true},
+	{"perplexitybot", "PerplexityBot (Perplexity)", true},
+	{"claude-searchbot", "Claude-SearchBot (Claude search)", true},
+	{"bingbot", "Bingbot (Copilot)", true},
+	{"duckassistbot", "DuckAssistBot (DuckDuckGo)", true},
+	{"amazonbot", "Amazonbot (Amazon)", true},
+	{"youbot", "YouBot (You.com)", true},
+	{"xai-bot", "xAI-Bot (xAI)", true},
+	{"applebot", "Applebot (Apple)", true},
+	{"gptbot", "GPTBot (OpenAI training)", false},
+	{"claudebot", "ClaudeBot (Anthropic training)", false},
+	{"google-extended", "Google-Extended (Google training)", false},
+	{"ccbot", "CCBot (Common Crawl training)", false},
+	{"applebot-extended", "Applebot-Extended (Apple training)", false},
+}
+
+// IsAISearchBot identifies a name emitted by blockedAICrawlers. Training-only
+// bots remain visible in the audit but never lower the citation score.
+func IsAISearchBot(name string) bool {
+	name = strings.ToLower(strings.TrimSpace(name))
+	for _, crawler := range aiCrawlers {
+		if crawler.search && (name == crawler.token || strings.HasPrefix(name, crawler.token+" ")) {
+			return true
+		}
+	}
+	return false
 }
 
 // maxLLMsTxtBytes is enough to tell a text file from an HTML error page.
@@ -71,11 +92,26 @@ func (d discoverer) hasLLMsTxt(ctx context.Context, origin string) bool {
 // llms.txt is one extra request to the customer's own site.
 func aiAccessIssues(origin string, robotsText *string, llmsTxt bool) []DetectedIssue {
 	var issues []DetectedIssue
-	if blocked := blockedAICrawlers(origin, robotsText); len(blocked) > 0 {
+	var search, training []string
+	for _, crawler := range blockedAICrawlers(origin, robotsText) {
+		if IsAISearchBot(crawler) {
+			search = append(search, crawler)
+		} else {
+			training = append(training, crawler)
+		}
+	}
+	if len(search) > 0 {
 		issues = append(issues, DetectedIssue{
 			IssueType: IssueAICrawlersBlocked,
 			PageURL:   origin + "/robots.txt",
-			Details:   map[string]any{"crawlers": blocked},
+			Details:   map[string]any{"crawlers": search},
+		})
+	}
+	if len(training) > 0 {
+		issues = append(issues, DetectedIssue{
+			IssueType: IssueAITrainingBotsBlocked,
+			PageURL:   origin + "/robots.txt",
+			Details:   map[string]any{"crawlers": training},
 		})
 	}
 	if !llmsTxt {
