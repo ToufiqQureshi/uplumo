@@ -529,3 +529,25 @@ func TestSetupFailuresAreGenericToTheClientAndReturnedToTheCaller(t *testing.T) 
 		t.Fatal("the model must not be called when the prompt cannot be built")
 	}
 }
+
+func TestKeywordsTurnStopsBeforeAStepThatWouldPassItsShownLimit(t *testing.T) {
+	steps := make([]scriptStep, 0, 5)
+	for i := range 5 {
+		// 0.4 USD is 512 credits: two steps fit in the 1,200-credit limit,
+		// a third step's ceiling does not, though the general $1 stop has
+		// not been reached.
+		steps = append(steps, scriptStep{toolCalls: []openrouter.ToolCall{toolCall(strconv.Itoa(i), "list_saved_keywords", `{}`)}, cost: 0.4})
+	}
+	h := newHarness(t, steps...)
+	h.agent.Meter = h.meter
+	h.meter.hasCred = true
+	h.sc.Keywords = true
+	h.run(context.Background(), t, "go", &recordingSink{})
+	if h.llm.callCount() != 2 {
+		t.Fatalf("model calls = %d, want 2: a step that could pass %d credits started", h.llm.callCount(), KeywordsReplyMaxCredits)
+	}
+	parts := h.lastAssistant(t).Parts
+	if got := parts[len(parts)-1].Text; got != refuseTurnLimit {
+		t.Fatalf("last part = %q, want the turn-limit message", got)
+	}
+}

@@ -17,6 +17,13 @@ feelings, business calls, priorities, corrections. Read it after
 
 ---
 
+## 28 Oct 2026: Keywords agent (Claude)
+
+- Vision: "har ek feature ke liye master AI agent" that understands intent, shows tables/charts/recommendations, says what to do with keywords ("ranking possible hai, guarantee nahi"). Doesn't like SAM as a generic chat; wants feature-specific agents. Approved a Design-canvas mockup first.
+- Asked for Genkit and the DataForSEO MCP: Claude advised against both (SAM loop exists; MCP bypasses the spend guard). Owner accepted, but insisted "raw DFS output compare kar": found zero-volume rows, other-language rows and unmerged variants; fixed.
+- Decisions: "Free plan ko kuch mat de"; remove the old research UI and make the page like the mockup; "ek PR me sab". Claude chose 3 seeds + 2 SERP per reply and actual-cost AI billing as defaults.
+- Short on tokens; asked for careful, not-repeated work and no long background tasks.
+
 ## 28 Oct 2026: Cite Fix PR 3 (owner direction)
 
 - Build all requested free citation checks, Site Audit checks, topic clusters, saved visibility metrics and MCP/SAM reads together in one new PR based on merged main. Use the three licensed reference repositories; do not use the unlicensed one.

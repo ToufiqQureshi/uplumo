@@ -74,28 +74,3 @@ export function normalizeLegacyKeywordSearch(search: KeywordSearchParams): {
     changed: keys.some((key) => search[key] !== normalized[key]),
   };
 }
-
-export function isResultLimit(value: number): value is ResultLimit {
-  return value === 150 || value === 300 || value === 500;
-}
-
-export function normalizeKeywordMode(value: string): KeywordMode {
-  if (value === "auto") return "auto";
-  if (value === "related") return "related";
-  if (value === "suggestions") return "suggestions";
-  if (value === "ideas") return "ideas";
-  return "auto";
-}
-
-export function normalizeSortField(value: string): SortField {
-  if (value === "keyword") return "keyword";
-  if (value === "searchVolume") return "searchVolume";
-  if (value === "cpc") return "cpc";
-  if (value === "competition") return "competition";
-  if (value === "keywordDifficulty") return "keywordDifficulty";
-  return "searchVolume";
-}
-
-export function normalizeSortDir(value: string): SortDir {
-  return value === "asc" ? "asc" : "desc";
-}

@@ -286,11 +286,12 @@ func TestLabsPlaceFilterAndSerpFeaturesReachTheProvider(t *testing.T) {
 	})
 	for _, tt := range []struct {
 		source LabsSource
-		field  string // "" when the source must send no filter
+		prefix string
+		place  bool // suggestions are phrase matches and never place-filtered
 	}{
-		{SourceIdeas, "keyword"},
-		{SourceRelated, "keyword_data.keyword"},
-		{SourceSuggestions, ""},
+		{SourceIdeas, "", true},
+		{SourceRelated, "keyword_data.", true},
+		{SourceSuggestions, "", false},
 	} {
 		items, err := provider.LabsKeywords(t.Context(), "org", LabsRequest{Source: tt.source, Seed: "best resort in lonavala", LocationCode: 2356, LanguageCode: "en", Limit: 75, MustContain: "lonavala"})
 		if err != nil {
@@ -300,12 +301,13 @@ func TestLabsPlaceFilterAndSerpFeaturesReachTheProvider(t *testing.T) {
 		if body["include_serp_info"] != true {
 			t.Errorf("%s: include_serp_info = %v, want true (free with the task)", tt.source, body["include_serp_info"])
 		}
-		filters, hasFilter := body["filters"].([]any)
-		switch {
-		case tt.field == "" && hasFilter:
-			t.Errorf("%s: filters = %v, want none", tt.source, filters)
-		case tt.field != "" && (len(filters) != 3 || filters[0] != tt.field || filters[1] != "ilike" || filters[2] != "%lonavala%"):
-			t.Errorf("%s: filters = %v, want [%s ilike %%lonavala%%]", tt.source, body["filters"], tt.field)
+		volume := fmt.Sprint([]any{tt.prefix + "keyword_info.search_volume", ">", 0})
+		want := volume
+		if tt.place {
+			want = fmt.Sprint([]any{[]any{tt.prefix + "keyword", "ilike", "%lonavala%"}, "and", []any{tt.prefix + "keyword_info.search_volume", ">", 0}})
+		}
+		if got := fmt.Sprint(body["filters"]); got != want {
+			t.Errorf("%s: filters = %s, want %s", tt.source, got, want)
 		}
 		rows := labsRows(items)
 		if len(rows) != 1 || !slices.Equal(rows[0].SerpFeatures, []string{"ai_overview", "hotels_pack", "organic"}) {
@@ -320,8 +322,8 @@ func TestLabsPlaceFilterAndSerpFeaturesReachTheProvider(t *testing.T) {
 	if _, err := provider.LabsKeywords(t.Context(), "org", LabsRequest{Source: SourceIdeas, Seed: "seo tool", LocationCode: 2840, LanguageCode: "en", Limit: 75}); err != nil {
 		t.Fatal(err)
 	}
-	if _, ok := ps.bodies[len(ps.bodies)-1]["filters"]; ok {
-		t.Error("a seed without a place must send no filter")
+	if got, want := fmt.Sprint(ps.bodies[len(ps.bodies)-1]["filters"]), fmt.Sprint([]any{"keyword_info.search_volume", ">", 0}); got != want {
+		t.Errorf("a seed without a place filters = %s, want only the zero-volume filter %s", got, want)
 	}
 	if rows := labsRows([]LabsItem{{Keyword: "x"}}); rows[0].SerpFeatures == nil {
 		t.Error("SerpFeatures must be an empty list, not null, when Labs sent none")
@@ -384,5 +386,31 @@ func TestAdsRowsPreserveTopBidsAndCompetitionLevel(t *testing.T) {
 		rows[0].TopOfPageBidHigh == nil || *rows[0].TopOfPageBidHigh != 0.9 ||
 		rows[0].CompetitionLevel == nil || *rows[0].CompetitionLevel != "LOW" {
 		t.Fatalf("Ads bids or competition level dropped: %+v", rows[0])
+	}
+}
+
+func TestLabsCoreKeywordAndLanguageReachRows(t *testing.T) {
+	_, provider := newProviderServer(t, func(string) map[string]any {
+		return okTask(map[string]any{"items": []any{
+			map[string]any{"keyword": "revenue management hotel", "keyword_info": map[string]any{"search_volume": 390},
+				"keyword_properties": map[string]any{"core_keyword": "hotel revenue management"},
+				"avg_backlinks_info": map[string]any{"main_domain_rank": 402.7}},
+			map[string]any{"keyword": "deloitte revenue", "keyword_info": map[string]any{"search_volume": 1000},
+				"keyword_properties": map[string]any{"is_another_language": true}},
+		}})
+	})
+	items, err := provider.LabsKeywords(t.Context(), "org", LabsRequest{Source: SourceIdeas, Seed: "hotel revenue management", LocationCode: 2356, LanguageCode: "en", Limit: 10})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := labsRows(items)
+	if len(rows) != 1 || rows[0].Keyword != "revenue management hotel" {
+		t.Fatalf("rows = %+v, want only the keyword in the requested language", rows)
+	}
+	if rows[0].CoreKeyword == nil || *rows[0].CoreKeyword != "hotel revenue management" {
+		t.Errorf("CoreKeyword = %v, want the Labs variant group", rows[0].CoreKeyword)
+	}
+	if rows[0].TopPagesDomainRank == nil || *rows[0].TopPagesDomainRank != 403 {
+		t.Errorf("TopPagesDomainRank = %v, want 403", rows[0].TopPagesDomainRank)
 	}
 }

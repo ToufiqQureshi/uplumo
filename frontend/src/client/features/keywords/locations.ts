@@ -7,5 +7,4 @@ export {
   getLanguageCode,
   getLanguageOptions,
   isLabsLocationCode,
-  isSupportedLocationCode,
 } from "@/shared/keyword-locations";

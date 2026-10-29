@@ -2,36 +2,33 @@
 
 ## What this does
 
-Pages `/p/$projectId/keywords` (research) and `/p/$projectId/saved` (saved
-keywords), plus the search-performance and domain-overview "save keyword"
-actions. All data comes from the Go keywords API.
+`/p/$projectId/keywords` is the Keywords agent: the customer asks in plain
+words and gets a table, charts, quick wins and a content plan.
+`/p/$projectId/saved` is the saved-keywords list. All data comes from the Go
+API.
 
 ## Flow
 
-- Research: the controls form builds a request (`keywords`, optional
-  `locationCode`/`locationName`, `resultLimit`, `mode`, `clickstream`,
-  `groupKeywords`) and the query cache keys on every field that changes the
-  result, including the local area. Every research call is billed, so queries
-  never auto-retry.
-- SERP panel: a shallow top-20 snapshot by default; paging past it re-buys a
-  depth-100 snapshot one level deeper than the current one. A failed deep
-  fetch drops back to the cached shallow snapshot instead of re-billing on
-  every retry.
-  Successful snapshots stay fresh and retained in TanStack Query for 12 hours,
-  matching the server cache; revisiting the same keyword does not refetch it.
-- A missing exact seed shows an approximate-match notice in every mode,
-  including Auto. Exact matching trims whitespace and ignores case.
-- When research limited ideas to a place named in the seed (`placeFilter`),
-  an info notice says so and tells the customer to search without the place
-  name for wider ideas. No extra request is made.
-- The "Google shows" column turns each row's `serpFeatures` into up to three
-  badges (Maps, AI, Snippet, Q&A, Video), each with a tooltip saying what to do
-  about it (`components/SerpFeatureBadges.tsx`). The data comes with the
-  research task; showing it buys nothing.
-- Research CSV/Sheets exports include both top bids, referring domains,
-  quarterly change and monthly-search history alongside the core metrics.
-- SERP rows and exports retain the description already present in the API.
-  No additional lookup is bought for this field.
+- `agent/KeywordAgentPage.tsx`: Free workspaces see an upgrade card and send
+  nothing. A paid workspace picks an example or types a question; the first
+  send creates a SAM session and streams the reply from
+  `POST .../sam/sessions/chat` with `mode: "keywords"` (see
+  `backend/internal/sam/README.md`). A ref guarantees the first question is
+  sent once, even when React re-runs the effect. "New research" starts a new
+  session.
+- The agent's text and tool steps render through the shared `ChatMessage`.
+  Its `present_keywords` tool part renders as `KeywordReportView` instead:
+  "how I read you" chips, KPI tiles, the keyword table with monthly
+  sparklines, the seasonality chart, the searches-vs-difficulty matrix,
+  quick wins from Search Console, the content plan, follow-up chips and Save
+  all. Every number comes from the research the reply bought
+  (`keywordReport.ts` validates it with Zod); a keyword without research
+  shows dashes.
+- The cost note shows the most one answer can charge, data and AI together
+  (`MAX_REPLY_CREDITS`, 1,200), before anything is sent. The server enforces
+  the same number (`KeywordsReplyMaxCredits`); a Go test fails if they differ.
+- An old `?q=` link offers the seed as a one-click question; it never sends
+  on its own.
 - Saved keywords: filtered/sorted/paged list (page sizes 50/100/250), bulk
   remove (max 2000 ids), tag assign (append/replace), tag rename/recolor, and
   a delete that fails with `tag_in_use` while any keyword still carries the
@@ -41,8 +38,9 @@ actions. All data comes from the Go keywords API.
 
 ## Go endpoints
 
-`POST /api/v1/projects/{projectId}/keywords/...` — `research`, `serp`,
-`saved/refresh|save|list|export|remove`, `saved/tags/assign|update|delete`.
+`POST /api/v1/projects/{projectId}/keywords/...` — `saved/refresh|save|list|export|remove`,
+`saved/tags/assign|update|delete` (the page no longer calls `research` or
+`serp` directly; the agent reaches them through its tools).
 Contract: `backend/api/keywords.yaml`; response shapes in
 `keywordsApi.ts` (Zod) mirror `backend/internal/keywords`.
 
@@ -50,7 +48,8 @@ Contract: `backend/api/keywords.yaml`; response shapes in
 
 - Response validation through `apiRequest` + Zod: a drifted server shape is an
   "unexpected answer" error, never a half-rendered table.
-- Never sneak a billed refetch past the user (retries off for research/serp;
-  refresh and SERP depth changes are explicit).
+- Never sneak a paid call past the user: nothing sends on page load, focus or
+  re-render, the first question is sent once, and the cost ceiling is shown
+  before the send.
 - Playwright intercepts research HTTP requests and installs its own authenticated session/project fixtures; it never calls live DataForSEO.
 - Customer runtime always uses the Go API; there is no build-time fixture bypass.

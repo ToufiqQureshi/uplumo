@@ -65,17 +65,3 @@ export type SavedKeywordTag = {
 export type SavedKeywordTagSummary = SavedKeywordTag & {
   keywordCount: number;
 };
-
-export type SerpResultItem = {
-  rank: number;
-  title: string;
-  url: string;
-  domain: string;
-  description: string;
-  etv: number | null;
-  estimatedPaidTrafficCost: number | null;
-  referringDomains: number | null;
-  backlinks: number | null;
-  isNew: boolean;
-  rankChange: number | null;
-};

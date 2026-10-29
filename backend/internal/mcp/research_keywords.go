@@ -1,9 +1,11 @@
 package mcp
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/toufiqqureshi/uplumo/backend/internal/keywords"
@@ -17,7 +19,42 @@ type researchKeywordRow struct {
 	CPC               *float64 `json:"cpc"`
 	Competition       *float64 `json:"competition"`
 	Intent            string   `json:"intent"`
+	// MonthlyVolumes are the last months' searches, oldest first, so a
+	// client can draw the trend without a second purchase.
+	MonthlyVolumes     []int    `json:"monthlyVolumes"`
+	LatestMonth        string   `json:"latestMonth,omitempty"` // YYYY-MM of the last monthlyVolumes entry
+	YearlyChange       *int     `json:"yearlyChange"`
+	SerpFeatures       []string `json:"serpFeatures"`
+	CoreKeyword        *string  `json:"coreKeyword"`
+	TopPagesDomainRank *int     `json:"topPagesDomainRank"`
 }
+
+// monthlyVolumes orders a trend oldest first; Labs sends newest first.
+func monthlyVolumes(trend []keywords.MonthlySearch) []int {
+	sorted := slices.Clone(trend)
+	slices.SortFunc(sorted, func(a, b keywords.MonthlySearch) int {
+		return cmp.Or(cmp.Compare(a.Year, b.Year), cmp.Compare(a.Month, b.Month))
+	})
+	out := make([]int, len(sorted))
+	for i, m := range sorted {
+		out[i] = m.SearchVolume
+	}
+	return out
+}
+
+func latestMonth(trend []keywords.MonthlySearch) string {
+	var latest keywords.MonthlySearch
+	for _, m := range trend {
+		if m.Year > latest.Year || (m.Year == latest.Year && m.Month > latest.Month) {
+			latest = m
+		}
+	}
+	if latest.Year == 0 {
+		return ""
+	}
+	return fmt.Sprintf("%04d-%02d", latest.Year, latest.Month)
+}
+
 type researchSeedResult struct {
 	Seed         string               `json:"seed"`
 	OK           bool                 `json:"ok"`
@@ -112,7 +149,8 @@ func handleResearchKeywords(ctx context.Context, raw json.RawMessage, env *callE
 		result.UsedFallback = data.UsedFallback
 		result.Rows = make([]researchKeywordRow, 0, len(data.Rows))
 		for _, r := range data.Rows {
-			result.Rows = append(result.Rows, researchKeywordRow{Keyword: r.Keyword, SearchVolume: r.SearchVolume, KeywordDifficulty: r.KeywordDifficulty, CPC: r.CPC, Competition: r.Competition, Intent: r.Intent})
+			result.Rows = append(result.Rows, researchKeywordRow{Keyword: r.Keyword, SearchVolume: r.SearchVolume, KeywordDifficulty: r.KeywordDifficulty, CPC: r.CPC, Competition: r.Competition, Intent: r.Intent,
+				MonthlyVolumes: monthlyVolumes(r.Trend), LatestMonth: latestMonth(r.Trend), YearlyChange: r.YearlyChange, SerpFeatures: r.SerpFeatures, CoreKeyword: r.CoreKeyword, TopPagesDomainRank: r.TopPagesDomainRank})
 		}
 		results = append(results, result)
 		okCount++

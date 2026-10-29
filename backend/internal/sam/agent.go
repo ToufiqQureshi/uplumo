@@ -11,6 +11,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/toufiqqureshi/uplumo/backend/internal/billing"
 	"github.com/toufiqqureshi/uplumo/backend/internal/mcp"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/ids"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/openrouter"
@@ -71,6 +72,9 @@ type SessionContext struct {
 	OrganizationID string
 	Role           string
 	SearchGrowth   bool
+	// Keywords is the Keywords page agent: keyword tools only, with per-reply
+	// purchase limits.
+	Keywords bool
 }
 
 // SessionTitler names and touches the registry row.
@@ -241,6 +245,8 @@ type turnState struct {
 	assistant Message
 	// spent is the turn's provider cost so far.
 	spent float64
+	// keywords is the Keywords-mode credit budget, nil in other modes.
+	keywords *keywordTurn
 	// stepChars counts the characters the current step streamed, to price a
 	// call whose usage never arrived.
 	stepChars int
@@ -312,6 +318,11 @@ func (t *turnState) run(ctx context.Context) error {
 		toolset.restrictToGrowth()
 		system += "\nThis turn is Search growth analyst mode. Only read-only first-party Google reporting and guarded site-reading tools are available. No paid research, writes, jobs or site changes are authorized. Start with the requested evidence analysis instead of onboarding."
 	}
+	if t.sc.Keywords {
+		toolset.restrictToKeywords()
+		t.keywords = toolset.keywords
+		system += keywordsModePrompt
+	}
 	conversation := append([]openrouter.Message{{Role: "system", Content: system}}, history...)
 	for step := 0; step < maxSteps; step++ {
 		if step > 0 && t.spent >= maxTurnUSD {
@@ -324,6 +335,19 @@ func (t *turnState) run(ctx context.Context) error {
 			Tools:           toolset.Definitions(),
 			MaxTokens:       maxOutputTokens,
 			ReasoningEffort: "max",
+		}
+		if t.keywords != nil {
+			// Keywords mode shows its credit limit before sending, so a step
+			// runs only when its worst case still fits inside it.
+			req.MaxTokens = keywordsMaxOutputTokens
+			ceiling, err := openrouter.MaxCostUSD(req)
+			if err != nil {
+				return t.fail(ctx, fmt.Errorf("keywords step ceiling: %w", err))
+			}
+			if !t.keywords.fits(billing.CreditsForUSD(ceiling)) {
+				t.refuse(refuseTurnLimit)
+				return nil
+			}
 		}
 		// Every step costs money, so each holds its ceiling first: credits
 		// can run out, or the daily limit be reached, mid-turn.
@@ -502,6 +526,9 @@ func (t *turnState) fail(ctx context.Context, cause error) error {
 // survives the client leaving: the provider has already been paid.
 func (t *turnState) settle(ctx context.Context, hold spend.Hold, costUSD float64) {
 	t.spent += costUSD
+	if t.keywords != nil {
+		t.keywords.aiCredits += billing.CreditsForUSD(costUSD)
+	}
 	if hold == nil {
 		return
 	}

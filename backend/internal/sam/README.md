@@ -26,6 +26,17 @@ The reply streams as server-sent events in the AI SDK UI message stream format
 (`x-vercel-ai-ui-message-stream: v1`), so the React client keeps using `useChat`.
 A test parses the real output with the SDK's own parser.
 
+## Keywords mode
+
+`mode: "keywords"` (sent by the Keywords page) restricts the turn to keyword,
+Search Console, site-reading and saving tools, adds the Keywords prompt
+(`keywordsModePrompt`) and the free `present_keywords` tool. Per reply: at
+most 3 `research_keywords` seeds, 2 `get_serp_results` queries (depth ≤20)
+and 1 `get_keyword_metrics` call (≤50 keywords); a call over a limit is
+refused before it reaches the provider. `present_keywords` joins its metrics
+from that reply's research rows (`keywordTurn.record`), so the page never
+shows a number the model typed. Code: `keywords_mode.go`.
+
 ## Endpoints
 
 All are `POST /api/v1/projects/{projectId}/sam/...`, need a session and project
