@@ -51,7 +51,7 @@ const (
 	// executable script is needed; JSON-LD remains a data block.
 	contentSecurityPolicy = "default-src 'none'; script-src 'self' https://www.googletagmanager.com; " +
 		"connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com; " +
-		"style-src 'unsafe-inline'; img-src 'self' https://*.google-analytics.com; font-src 'self'; " +
+		"style-src 'unsafe-inline'; img-src 'self' https://*.google-analytics.com https://api.producthunt.com; font-src 'self'; " +
 		"base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
 )
 
@@ -178,8 +178,8 @@ func build(publicURL *url.URL, blogFiles fs.FS) (*Site, error) {
 
 	landing := base
 	landing.Path = "/"
-	landing.Title = "Uplumo: SEO and AI search analytics with honest INR pricing"
-	landing.Description = "Track Google rankings, audit your site and see where AI assistants mention you and send visitors. Choose Free, Basic, Pro or Business pricing in rupees."
+	landing.Title = "Uplumo: SEO, AI Visibility, Prompt Explorer and Cite Fix"
+	landing.Description = "Explore Uplumo: a project dashboard, AI brand visibility, prompt comparisons and prioritised website fixes. See the product and choose a plan in rupees."
 	landing.Canonical = origin + "/"
 	landing.FAQ = landingFAQ()
 	landing.JSONLD = jsonLD(origin, landing.Description, plans)

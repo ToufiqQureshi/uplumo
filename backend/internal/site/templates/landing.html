@@ -2,108 +2,88 @@
 {{template "nav" .}}
 <main id="main">
 <div class="dots">
-<div class="wrap hero">
-<span class="sticker">AI traffic tracking on every plan</span>
-<h1>See what AI says about <em>your brand.</em></h1>
-<p class="lead">Find brand mentions and cited pages in sampled AI answers. Understand your Google rankings, prioritise website fixes and measure recognised AI referrals—all in one workspace.</p>
+<div class="wrap hero product-hero">
+<span class="sticker">SEO + AI visibility. One clear next step.</span>
+<h1>See where you show up.<br><em>Know what to fix next.</em></h1>
+<p class="lead">Does AI mention your business? Which competitors get cited? What should you improve? Uplumo brings your search data, AI answers and website fixes into one workspace.</p>
 <div class="cta-row">
 <a class="btn" href="{{.SignUp}}" data-uplumo-event="signup_click">Start free, no card →</a>
-<a class="btn btn-ghost" href="/pricing" data-uplumo-event="pricing_open">See pricing</a>
+<a class="btn btn-ghost" href="#dashboard">See the product ↓</a>
 </div>
-<p class="note">No card for Free · paid tools depend on your plan · cancel from Billing</p>
-</div>
-
-<div class="wrap" style="max-width:68.75rem;padding-top:4.5rem;padding-bottom:6rem">
-<div class="window" role="img" aria-label="Example of the Uplumo overview, with sample data: a headline saying AI sent 1,284 visitors, a chart of AI visitors climbing while Google visitors stay flat, an AI visibility score of 34, and a suggested next step.">
-<div class="window-bar" aria-hidden="true"><i></i><i></i><i></i><span>uplumo / acme-dental.in / overview</span><span class="sticker sm">Sample data</span></div>
-<div class="window-body" aria-hidden="true">
-<div>
-<p class="eyebrow faint">Last 12 weeks</p>
-<p class="headline">AI sent you <em>1,284</em> <span>visitors. 41% more than last quarter.</span></p>
-</div>
-<div class="row">
-<div style="flex:2 1 26rem;min-width:0">
-<svg viewBox="0 0 640 200" style="width:100%;height:auto">
-<g stroke="#26302c" stroke-width="1" stroke-dasharray="2 6"><line x1="10" y1="30" x2="630" y2="30"/><line x1="10" y1="85" x2="630" y2="85"/><line x1="10" y1="140" x2="630" y2="140"/></g>
-<path d="M10 150 L66 146 L122 144 L178 136 L234 126 L290 128 L346 114 L402 98 L458 86 L514 72 L570 56 L626 38 L626 175 L10 175 Z" fill="#ff7aa6" fill-opacity=".1"/>
-<path d="M10 100 L66 98 L122 102 L178 94 L234 96 L290 90 L346 92 L402 86 L458 88 L514 82 L570 84 L626 78" fill="none" stroke="#a3b0aa" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M10 150 L66 146 L122 144 L178 136 L234 126 L290 128 L346 114 L402 98 L458 86 L514 72 L570 56 L626 38" fill="none" stroke="#ff7aa6" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>
-<circle cx="626" cy="38" r="6" fill="#ff7aa6" stroke="#0d1110" stroke-width="3"/>
-</svg>
-</div>
-<div style="flex:1 1 13rem;display:flex;flex-direction:column;gap:.75rem">
-<div class="tile"><span class="eyebrow" style="color:var(--muted)">AI visibility score</span><span class="num">34 <small>+6</small></span></div>
-<div class="tile lime"><span class="eyebrow ink">Do this next</span><span class="say">Add price and EMI to your braces page.</span></div>
-</div>
-</div>
-</div>
-</div>
+<p class="note">Free analytics and starter audit · paid research and AI tools use credits</p>
+<a class="launch-badge" href="https://www.producthunt.com/products/uplumo?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-uplumo" target="_blank" rel="noopener noreferrer"><img alt="Find Uplumo on Product Hunt" width="250" height="54" referrerpolicy="no-referrer" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1297648&amp;theme=dark&amp;t=1793305477357"></a>
+<nav class="feature-jumps" aria-label="Explore Uplumo features">
+<a href="#dashboard">Dashboard</a><a href="#ai-visibility">AI Visibility</a><a href="#prompt-explorer">Prompt Explorer</a><a href="#cite-fix">Cite Fix</a>
+</nav>
 </div>
 </div>
 
-<section class="band" aria-labelledby="features">
+<section class="band product-showcase" id="dashboard" aria-labelledby="dashboard-title">
 <div class="wrap narrow stack">
-<div class="section-head">
-<p class="eyebrow">What you get</p>
-<h2 id="features">See the evidence. Choose your next improvement.</h2>
+<figure class="product-preview">
+<div class="preview-bar"><span class="preview-dots" aria-hidden="true">● ● ●</span><span>Uplumo / Dashboard</span><span class="preview-label">Sample data</span></div>
+<a href="{{asset "product/dashboard.webp"}}" aria-label="View full-size Dashboard screenshot with sample data"><img src="{{asset "product/dashboard.webp"}}" alt="Uplumo project dashboard showing Google search performance, site audit issues and a saved backlink overview for a demonstration website." width="1440" height="1050" fetchpriority="high" decoding="async"></a>
+<figcaption>Actual Uplumo interface with illustrative data. Cards shown depend on your saved layout and connected sources. Select the image to view full size.</figcaption>
+</figure>
+<div class="showcase-intro">
+<div><p class="eyebrow">01 / Your project dashboard</p><h2 id="dashboard-title">Your website's picture.<br><em>Without the tab overload.</em></h2></div>
+<div class="showcase-copy"><p>Bring saved search performance, AI visibility, traffic, rankings and site health into a dashboard you can arrange around your work.</p><ul><li>See the latest saved signals for your project.</li><li>Hide or reorder cards with Customize.</li><li>Open the relevant tool when something needs attention.</li></ul><p class="showcase-outcome"><strong>What you get:</strong> one starting point for deciding where to investigate next.</p></div>
 </div>
-<div class="row">
-<article class="card wide">
-<div>
-<p class="eyebrow pink">01 · AI Visibility</p>
-<h3>Know when AI names you, and when it names your rival.</h3>
-<p>Inspect brand mentions and cited sources, compare selected prompts across supported AI models, and track saved questions over time. Brand Lookup coverage differs from live prompt checks; available engines and markets are shown in the tool.</p>
+
 </div>
-<div aria-hidden="true">
-<p class="note">Illustrative comparison · sample data</p>
-<div class="meter you"><span>You<span class="mono">34%</span></span><i><b style="width:34%"></b></i></div>
-<div class="meter"><span>Rival A<span class="mono">41%</span></span><i><b style="width:41%"></b></i></div>
-<div class="meter"><span>Rival B<span class="mono">17%</span></span><i><b style="width:17%"></b></i></div>
+</section>
+
+<section class="band product-showcase" id="ai-visibility" aria-labelledby="visibility-title">
+<div class="wrap narrow stack">
+<div class="showcase-intro">
+<div><p class="eyebrow">02 / AI Visibility</p><h2 id="visibility-title">Are they finding you<br><em>or your competitors?</em></h2></div>
+<div class="showcase-copy"><p>Use Brand Lookup to investigate mentions and cited pages in supported AI datasets. Add competitors to compare your share of voice, then inspect the questions and sources behind the numbers.</p><ul><li>Review brand mentions and the pages being cited.</li><li>Compare competitors in the selected market.</li><li>Save questions in the tracker to measure them over time.</li></ul><p class="showcase-outcome"><strong>What you get:</strong> evidence of where your brand appears and which competing sources deserve a closer look.</p><p class="note">Brand Lookup uses supported ChatGPT and Google AI Overview datasets. Engine and market coverage differ; it does not monitor private conversations.</p></div>
 </div>
-</article>
-<article class="card lime">
-<p class="eyebrow ink">02 · AI traffic</p>
-<h3>See the AI referrals you can measure.</h3>
-<p>Our cookie-free tracker recognises supported AI referrers and campaign tags. See their landing pages and visits. When no identifying signal is available, the source remains unknown or Direct.</p>
-<div class="bars" aria-hidden="true"><i style="height:90px"></i><i style="height:34px"></i></div>
-</article>
-<article class="card">
-<p class="eyebrow">03 · Site audit</p>
-<h3>Find technical issues worth fixing first.</h3>
-<div class="diff" aria-hidden="true">
-<div class="del">- &lt;title&gt;Services&lt;/title&gt;</div>
-<div class="add">+ &lt;title&gt;Dental services in Pune | Acme&lt;/title&gt;</div>
+<figure class="product-preview">
+<div class="preview-bar"><span class="preview-dots" aria-hidden="true">● ● ●</span><span>Uplumo / AI Visibility / Brand Lookup</span><span class="preview-label">Sample data</span></div>
+<a href="{{asset "product/ai-visibility.webp"}}" aria-label="View full-size AI Visibility screenshot with sample data"><img src="{{asset "product/ai-visibility.webp"}}" alt="Uplumo Brand Lookup showing a demonstration domain's AI mentions, platform breakdown and competitor share of voice." width="1440" height="1050" loading="lazy" decoding="async"></a>
+<figcaption>Actual Brand Lookup interface with illustrative mentions and competitors. These numbers are a demonstration, not customer results.</figcaption>
+</figure>
 </div>
-<p>Crawl your site and get the issues that matter most first, each explained in plain language with a suggested fix.</p>
-</article>
-<article class="card">
-<p class="eyebrow">04 · Rankings</p>
-<h3>Track the keywords that bring customers.</h3>
-<p>Track your keywords in Google and find new ones worth targeting, with search volume and difficulty explained.</p>
-</article>
-<article class="card">
-<p class="eyebrow">05 · For agencies</p>
-<h3>Reports with your logo, not ours.</h3>
-<p>Record completed work, observed outcomes and next steps. Share a client review link when ready. White-label reports with your own name, logo and colours are available on Business.</p>
-</article>
+</section>
+
+<section class="band product-showcase" id="prompt-explorer" aria-labelledby="prompt-title">
+<div class="wrap narrow stack">
+<div class="showcase-intro">
+<div><p class="eyebrow">03 / Prompt Explorer</p><h2 id="prompt-title">One customer question.<br><em>Different AI answers.</em></h2></div>
+<div class="showcase-copy"><p>Ask a selected question across ChatGPT, Claude, Gemini and Perplexity. Read the answers and source links in one place, and highlight a brand to see whether it appears.</p><ul><li>Choose the models, question and supported search market.</li><li>Inspect the answer text and citations for each result.</li><li>Separate a brand mention from a link that actually cites it.</li></ul><p class="showcase-outcome"><strong>What you get:</strong> a concrete answer to “what does this AI response say about us?”</p><p class="note">API-generated answers can differ from consumer chat apps. This is a check of your selected prompt, not every possible conversation. Fresh checks use credits.</p></div>
 </div>
+<figure class="product-preview">
+<div class="preview-bar"><span class="preview-dots" aria-hidden="true">● ● ●</span><span>Uplumo / Prompt Explorer</span><span class="preview-label">Sample data</span></div>
+<a href="{{asset "product/prompt-explorer.webp"}}" aria-label="View full-size Prompt Explorer screenshot with sample data"><img src="{{asset "product/prompt-explorer.webp"}}" alt="Uplumo Prompt Explorer with a sample question about SEO tools and model answers showing brand mentions and cited sources." width="1440" height="1050" loading="lazy" decoding="async"></a>
+<figcaption>Actual Prompt Explorer interface. Answers and citations use illustrative fixtures; no live AI checks were purchased to produce this preview.</figcaption>
+</figure>
+</div>
+</section>
+
+<section class="band product-showcase" id="cite-fix" aria-labelledby="citefix-title">
+<div class="wrap narrow stack">
+<div class="showcase-intro">
+<div><p class="eyebrow">04 / Cite Fix</p><h2 id="citefix-title">A score is a start.<br><em>The fixes are the point.</em></h2></div>
+<div class="showcase-copy"><p>Turn a completed website audit into a prioritised citation-readiness checklist. See which pages need attention and why, then request focused AI help for the pages you choose.</p><ul><li>Check readable content, identity, freshness, answer structure and sources.</li><li>Inspect affected URLs and available saved citation evidence.</li><li>Use optional Quick analysis or Deep rewriting, then open the draft in the editor for review.</li></ul><p class="showcase-outcome"><strong>What you get:</strong> specific page improvements you can review and act on instead of another unexplained score.</p><p class="note">The checklist is diagnostic, not an official AI score or a guarantee of citations. Reading saved checks is free; optional AI and fresh provider checks show their credit limits first.</p></div>
+</div>
+<figure class="product-preview">
+<div class="preview-bar"><span class="preview-dots" aria-hidden="true">● ● ●</span><span>Uplumo / Cite Fix</span><span class="preview-label">Sample data</span></div>
+<a href="{{asset "product/cite-fix.webp"}}" aria-label="View full-size Cite Fix screenshot with sample data"><img src="{{asset "product/cite-fix.webp"}}" alt="Uplumo Cite Fix showing an illustrative citation-readiness score, category breakdown and prioritised page fixes." width="1440" height="1050" loading="lazy" decoding="async"></a>
+<figcaption>Actual Cite Fix interface with illustrative audit results. Suggested changes need your review; scores do not promise search rankings or AI citations.</figcaption>
+</figure>
 </div>
 </section>
 
 <section class="band" aria-labelledby="workflow">
 <div class="wrap narrow stack">
-<div class="section-head">
-<p class="eyebrow">A practical workflow</p>
-<h2 id="workflow">From “why am I not visible?” to a page you can improve.</h2>
-<p>Work with your own website and evidence. Choose paid checks when you need them; review the credit information before starting.</p>
-</div>
+<div class="section-head"><p class="eyebrow">How it fits together</p><h2 id="workflow">Find the gap. Make the change.<br>Check what happens.</h2></div>
 <div class="row">
-<article class="card"><p class="eyebrow">01 · Investigate</p><h3>Ask the questions your customers ask.</h3><p>Use AI Visibility to inspect sampled answers and their sources. Track selected questions by engine and market, and keep brand mentions separate from actual citations.</p></article>
-<article class="card"><p class="eyebrow">02 · Diagnose</p><h3>Use Cite Fix to prioritise page improvements.</h3><p>Start with a completed site audit. Inspect readability, identity, freshness, answer structure and source signals, alongside saved citation evidence and available rival-page comparisons. The readiness score explains Uplumo checks; it does not predict whether an AI will cite you.</p></article>
-<article class="card"><p class="eyebrow">03 · Improve</p><h3>Keep your judgement in the writing process.</h3><p>Edit your own content, add images and use search briefs or focused AI suggestions. Optional Cite Fix analysis works on a selected page. Review facts and proposed changes before applying or publishing to a connected WordPress site.</p></article>
-<article class="card"><p class="eyebrow">04 · Measure</p><h3>Check what changed, then report the work.</h3><p>Follow rankings, saved AI answers and website traffic. Connect your Google data where available. Record actions and observed outcomes in a client report; a change after an edit is evidence to investigate, not proof of causation.</p></article>
+<article class="card"><p class="eyebrow">Investigate</p><h3>Start with the evidence.</h3><p>Use the dashboard to choose where to look. Check brand mentions and selected AI answers, or inspect your Google search and website data.</p></article>
+<article class="card"><p class="eyebrow">Improve</p><h3>Work on a specific page.</h3><p>Use Cite Fix and Site Audit to prioritise issues. Research keywords, prepare a brief and improve your own content in the editor, with images and optional AI help.</p></article>
+<article class="card"><p class="eyebrow">Measure</p><h3>Explain the work you did.</h3><p>Follow saved rankings, AI checks and recognised referral visits. Record completed work and observed outcomes in a client report, with white-label branding on Business.</p></article>
 </div>
-<p class="note">Feature access, engine coverage and usage depend on your plan and configuration. Reading a saved Cite Fix report makes no new paid AI or search-data request. Optional AI analysis, fresh AI Overview checks and JavaScript rendering are separate credit-using actions.</p>
+<p class="note">Tools and coverage depend on your plan and setup. A mention, citation, visit and sale are different measurements; an observed change does not prove its cause.</p>
 </div>
 </section>
 

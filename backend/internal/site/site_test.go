@@ -293,6 +293,8 @@ func TestPagesHaveNoDeadLinks(t *testing.T) {
 	// where a user removes our access. Any other outside link is a mistake.
 	known["https://developers.google.com/terms/api-services-user-data-policy"] = true
 	known["https://myaccount.google.com/permissions"] = true
+	known["https://www.producthunt.com/products/uplumo?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-uplumo"] = true
+	known["https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1297648&amp;theme=dark&amp;t=1793305477357"] = true
 	pages := map[string]http.HandlerFunc{"/": s.ServeLanding, "/pricing": s.ServePricing, "/blog": s.ServeBlog}
 	for _, path := range InfoPaths() {
 		known[path] = true
