@@ -2,9 +2,14 @@ package sam
 
 import (
 	"encoding/json"
+	"fmt"
+	"os"
+	"strings"
 	"testing"
 
+	"github.com/toufiqqureshi/uplumo/backend/internal/billing"
 	"github.com/toufiqqureshi/uplumo/backend/internal/mcp"
+	"github.com/toufiqqureshi/uplumo/backend/internal/platform/openrouter"
 )
 
 func keywordsToolset(t *testing.T, runner *fakeRunner) *toolset {
@@ -114,4 +119,72 @@ func TestPresentKeywordsUsesBoughtNumbersOnly(t *testing.T) {
 	if _, isError, err := ts.Run(t.Context(), "present_keywords", json.RawMessage(`{"understood":[],"summary":"s","keywords":[]}`)); err == nil && !isError {
 		t.Error("an empty presentation was accepted")
 	}
+}
+
+func TestKeywordsModeRefusesDearerResearchOptions(t *testing.T) {
+	runner := newFakeRunner()
+	ts := keywordsToolset(t, runner)
+	for _, args := range []string{
+		`{"seeds":[{"seed":"a"}],"resultLimit":500}`,
+		`{"seeds":[{"seed":"a"}],"includeClickstreamData":true}`,
+	} {
+		if _, isError, err := ts.Run(t.Context(), "research_keywords", json.RawMessage(args)); err == nil && !isError {
+			t.Errorf("%s was bought; it costs more than the shown limit allows", args)
+		}
+	}
+	if _, isError, err := ts.Run(t.Context(), "get_keyword_metrics", json.RawMessage(`{"keywords":["a"],"includeClickstreamData":true}`)); err == nil && !isError {
+		t.Error("clickstream metrics were bought")
+	}
+	if got := callCount(runner, "research_keywords") + callCount(runner, "get_keyword_metrics"); got != 0 {
+		t.Errorf("provider calls = %d, want 0: refused options must never be sent", got)
+	}
+	if ts.keywords.seeds != 0 || ts.keywords.dataCredits != 0 {
+		t.Errorf("refused calls were counted: %+v", ts.keywords)
+	}
+	if !runOK(t, ts, "research_keywords", `{"seeds":[{"seed":"a"}],"resultLimit":150}`) {
+		t.Error("the default research size was refused")
+	}
+}
+
+func TestKeywordsReplyNeverPassesItsShownCreditLimit(t *testing.T) {
+	// Every paid call at its worst case still leaves room for a full model
+	// step, so a normal reply can finish inside the limit.
+	data := maxKeywordSeedsPerTurn*seedMaxCredits + maxSerpQueriesPerTurn*serpQueryMaxCredits + metricsMaxCredits
+	step, err := openrouter.MaxCostUSD(openrouter.Request{MaxTokens: keywordsMaxOutputTokens,
+		Messages: []openrouter.Message{{Content: strings.Repeat("x", 4*maxToolOutputChars)}}})
+	if err != nil || data+billing.CreditsForUSD(step) >= KeywordsReplyMaxCredits {
+		t.Fatalf("worst-case data %d + one step %d credits does not fit the %d-credit limit (err %v)", data, billing.CreditsForUSD(step), KeywordsReplyMaxCredits, err)
+	}
+
+	runner := newFakeRunner()
+	ts := keywordsToolset(t, runner)
+	// The model steps already charged leave no room for another paid lookup.
+	ts.keywords.aiCredits = KeywordsReplyMaxCredits - seedMaxCredits + 1
+	if runOK(t, ts, "research_keywords", `{"seeds":[{"seed":"a"}]}`) || callCount(runner, "research_keywords") != 0 {
+		t.Fatal("a lookup that would pass the shown limit was sent")
+	}
+	ts.keywords.aiCredits = KeywordsReplyMaxCredits - seedMaxCredits
+	if !runOK(t, ts, "research_keywords", `{"seeds":[{"seed":"a"}]}`) {
+		t.Fatal("a lookup that fits exactly was refused")
+	}
+	if total := ts.keywords.aiCredits + ts.keywords.dataCredits; total != KeywordsReplyMaxCredits {
+		t.Fatalf("reserved %d credits, want exactly the limit %d", total, KeywordsReplyMaxCredits)
+	}
+}
+
+func TestKeywordsPageShowsTheBackendCreditLimit(t *testing.T) {
+	page, err := os.ReadFile("../../../frontend/src/client/features/keywords/agent/KeywordAgentPage.tsx")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := fmt.Sprintf("const MAX_REPLY_CREDITS = %d;", KeywordsReplyMaxCredits)
+	if !strings.Contains(string(page), want) {
+		t.Fatalf("the Keywords page must show the limit the server enforces: want %q in KeywordAgentPage.tsx", want)
+	}
+}
+
+func runOK(t *testing.T, ts *toolset, name, args string) bool {
+	t.Helper()
+	_, isError, err := ts.Run(t.Context(), name, json.RawMessage(args))
+	return err == nil && !isError
 }

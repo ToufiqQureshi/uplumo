@@ -25,11 +25,10 @@ const EXAMPLES = [
   "Plan content around my main service keyword",
 ];
 
-// The most keyword data one answer can buy: 3 auto researches of 150 rows
-// (2 Labs tasks each), 2 SERP checks of 20 results and one 50-keyword metric
-// lookup, at DataForSEO rates with the credit markup. backend/internal/sam/
-// keywords_mode.go enforces the counts; flow.md has the maths.
-const MAX_DATA_CREDITS = 265;
+// The most one answer can charge, keyword data and AI together. The server
+// enforces the same number (KeywordsReplyMaxCredits in
+// backend/internal/sam/keywords_mode.go, whose test checks this line).
+const MAX_REPLY_CREDITS = 1200;
 
 function messageText(message: UIMessage): string {
   return message.parts
@@ -131,9 +130,10 @@ export function KeywordAgentPage({
 function CostNote() {
   return (
     <p className="text-xs text-muted-foreground">
-      Each answer buys at most 3 keyword searches and 2 Google result checks (up
-      to {MAX_DATA_CREDITS} credits of data), plus AI usage charged as used.
-      Questions about results you already have use no keyword data.
+      Each answer costs at most {MAX_REPLY_CREDITS.toLocaleString("en-IN")}{" "}
+      credits, keyword data and AI together; you pay what it really uses,
+      usually far less. Questions about results you already have use no keyword
+      data.
     </p>
   );
 }

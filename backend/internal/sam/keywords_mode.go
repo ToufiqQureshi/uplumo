@@ -3,12 +3,15 @@ package sam
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
 
+	"github.com/toufiqqureshi/uplumo/backend/internal/billing"
 	"github.com/toufiqqureshi/uplumo/backend/internal/keywords"
 	"github.com/toufiqqureshi/uplumo/backend/internal/mcp"
+	"github.com/toufiqqureshi/uplumo/backend/internal/platform/dataforseo"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/openrouter"
 )
 
@@ -23,6 +26,34 @@ const (
 	maxMetricKeywordsPerCall = 50
 
 	maxPresentedKeywords = 20
+
+	// KeywordsReplyMaxCredits is the most one Keywords answer can charge,
+	// data and AI together. The page shows this number before sending, so it
+	// is a hard stop: every paid tool call and model step reserves its
+	// worst-case credits against it first and is refused if it would not fit.
+	KeywordsReplyMaxCredits = 1200
+	// keywordsResultLimit is the only research size Keywords mode buys; larger
+	// sizes and clickstream data (twice the Labs price) are refused.
+	keywordsResultLimit = 150
+	// keywordsMaxOutputTokens keeps one model step's ceiling small enough to
+	// fit next to the research inside KeywordsReplyMaxCredits.
+	keywordsMaxOutputTokens = 8000
+)
+
+// Worst-case credits per paid call, from the provider price list. A seed is
+// the dearer of the Labs blend (two half-limit legs plus the related-keywords
+// fallback) and the Google Ads ideas used in local markets; a metric lookup
+// is the dearer of Labs overview (billed per keyword, at most
+// maxMetricKeywordsPerCall) and Ads search volume.
+var (
+	seedMaxCredits = billing.CreditsForUSD(max(
+		2*dataforseo.EstimateUSD("/v3/dataforseo_labs/google/keyword_suggestions/live", []byte(`[{"limit":75}]`))+
+			dataforseo.EstimateUSD("/v3/dataforseo_labs/google/related_keywords/live", []byte(`[{"limit":150}]`)),
+		dataforseo.EstimateUSD("/v3/keywords_data/google_ads/keywords_for_keywords/live", []byte(`[{}]`))))
+	serpQueryMaxCredits = billing.CreditsForUSD(dataforseo.SerpCostUSD(maxSerpDepthPerTurn, false))
+	metricsMaxCredits   = billing.CreditsForUSD(max(
+		dataforseo.EstimateUSD("/v3/dataforseo_labs/google/keyword_overview/live", []byte(fmt.Sprintf(`[{"limit":%d}]`, maxMetricKeywordsPerCall))),
+		dataforseo.EstimateUSD("/v3/keywords_data/google_ads/search_volume/live", []byte(`[{}]`))))
 )
 
 const keywordsModePrompt = `
@@ -54,6 +85,15 @@ func keywordsModeTool(name string) bool {
 type keywordTurn struct {
 	seeds, serpQueries, metricCalls int
 	rows                            map[string]map[string]any
+	// dataCredits is the worst case of the paid tool calls let through;
+	// aiCredits is what the model steps were charged.
+	dataCredits, aiCredits int64
+}
+
+// fits reports whether credits more can still be charged within
+// KeywordsReplyMaxCredits.
+func (kt *keywordTurn) fits(credits int64) bool {
+	return kt.dataCredits+kt.aiCredits+credits <= KeywordsReplyMaxCredits
 }
 
 func (ts *toolset) restrictToKeywords() {
@@ -73,20 +113,29 @@ func (kt *keywordTurn) reserve(name string, arguments json.RawMessage) error {
 		return nil
 	}
 	var args struct {
-		Seeds    []json.RawMessage `json:"seeds"`
-		Queries  []json.RawMessage `json:"queries"`
-		Depth    int               `json:"depth"`
-		Keywords []string          `json:"keywords"`
+		Seeds       []json.RawMessage `json:"seeds"`
+		Queries     []json.RawMessage `json:"queries"`
+		Depth       int               `json:"depth"`
+		Keywords    []string          `json:"keywords"`
+		ResultLimit int               `json:"resultLimit"`
+		Clickstream bool              `json:"includeClickstreamData"`
 	}
 	if err := json.Unmarshal(arguments, &args); err != nil {
 		return fmt.Errorf("invalid tool arguments: %w", err)
 	}
+	if args.Clickstream {
+		return errors.New("clickstream data is not used in Keywords mode; call again without it")
+	}
+	var credits int64
 	switch name {
 	case "research_keywords":
+		if args.ResultLimit != 0 && args.ResultLimit != keywordsResultLimit {
+			return fmt.Errorf("resultLimit must be %d in Keywords mode", keywordsResultLimit)
+		}
 		if kt.seeds+len(args.Seeds) > maxKeywordSeedsPerTurn {
 			return fmt.Errorf("this reply may research at most %d seeds and %d are used; present what you have", maxKeywordSeedsPerTurn, kt.seeds)
 		}
-		kt.seeds += len(args.Seeds)
+		credits = int64(len(args.Seeds)) * seedMaxCredits
 	case "get_serp_results":
 		if args.Depth > maxSerpDepthPerTurn {
 			return fmt.Errorf("depth may be at most %d in Keywords mode", maxSerpDepthPerTurn)
@@ -94,7 +143,7 @@ func (kt *keywordTurn) reserve(name string, arguments json.RawMessage) error {
 		if kt.serpQueries+len(args.Queries) > maxSerpQueriesPerTurn {
 			return fmt.Errorf("this reply may check at most %d Google results pages and %d are used", maxSerpQueriesPerTurn, kt.serpQueries)
 		}
-		kt.serpQueries += len(args.Queries)
+		credits = int64(len(args.Queries)) * serpQueryMaxCredits
 	case "get_keyword_metrics":
 		if len(args.Keywords) > maxMetricKeywordsPerCall {
 			return fmt.Errorf("ask for at most %d keywords", maxMetricKeywordsPerCall)
@@ -102,8 +151,20 @@ func (kt *keywordTurn) reserve(name string, arguments json.RawMessage) error {
 		if kt.metricCalls >= maxMetricCallsPerTurn {
 			return fmt.Errorf("this reply may look up keyword metrics only %d time", maxMetricCallsPerTurn)
 		}
+		credits = metricsMaxCredits
+	}
+	if !kt.fits(credits) {
+		return fmt.Errorf("this reply's %d-credit limit leaves no room for this lookup; present what you have", KeywordsReplyMaxCredits)
+	}
+	switch name {
+	case "research_keywords":
+		kt.seeds += len(args.Seeds)
+	case "get_serp_results":
+		kt.serpQueries += len(args.Queries)
+	case "get_keyword_metrics":
 		kt.metricCalls++
 	}
+	kt.dataCredits += credits
 	return nil
 }
 

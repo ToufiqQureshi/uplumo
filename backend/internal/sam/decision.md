@@ -9,7 +9,7 @@ Streams model turns, persists bounded history, invokes registered project tools 
 ## Decisions to preserve
 
 
-- **Decision:** Chat `mode: "keywords"` runs the Keywords page agent: only keyword, Search Console, site-reading and saving tools; at most 3 research seeds, 2 SERP queries (depth ≤20) and 1 metric lookup (≤50 keywords) per reply; and a free `present_keywords` tool whose metrics are joined server-side from that reply's research rows. **Why:** one prompt must not buy unbounded DataForSEO tasks, and the screen must never show a number the model typed. **Preserve:** limits are checked at execution, so a guessed or repeated call is refused before it reaches the provider; a counted call stays counted even if it fails (a failed task can still be billed); data ceiling = 3×$0.06 + 2×$0.004 + $0.018 ≈ $0.206 ≈ 265 credits, shown on the page. AI tokens keep the existing $1 per-reply stop. Free plans are refused by the MCP plan gate and have no credits; the page also hides the chat for Free. **Trace:** `keywords_mode.go`, `keywords_mode_test.go`, `chat.go`, `agent.go`, `api/sam.yaml`. Real-provider validation of a full reply not run.
+- **Decision:** Chat `mode: "keywords"` runs the Keywords page agent: only keyword, Search Console, site-reading and saving tools; at most 3 research seeds, 2 SERP queries (depth ≤20) and 1 metric lookup (≤50 keywords) per reply; and a free `present_keywords` tool whose metrics are joined server-side from that reply's research rows. **Why:** one prompt must not buy unbounded DataForSEO tasks, and the screen must never show a number the model typed. **Preserve:** limits are checked at execution, so a guessed or repeated call is refused before it reaches the provider; a counted call stays counted even if it fails (a failed task can still be billed); the page shows one hard limit per answer, `KeywordsReplyMaxCredits` = 1,200 credits for data and AI together (see the next entry). Free plans are refused by the MCP plan gate and have no credits; the page also hides the chat for Free. **Trace:** `keywords_mode.go`, `keywords_mode_test.go`, `chat.go`, `agent.go`, `api/sam.yaml`. Real-provider validation of a full reply not run.
 
 - Require a per-turn cost ceiling and stop mid-turn if credits/limits are exhausted. _Why:_ This work consumes paid quota or shared capacity, so authorization and bounds must be checked before dispatch.
 - Never let a model-selected project ID change authorization scope. _Why:_ Callers can tamper with IDs and UI state, so server-verified ownership must prevent cross-customer access.
@@ -69,3 +69,27 @@ allowlist, reasoning scope, project binding or explicit-action boundary changes.
 - **Why:** Source copies still promised Local SEO/Maps capabilities removed by owner decision, and the embedded-copy regression failed.
 - **Preserve:** No runtime prompt expansion or new paid tool; existing shipped prompts remain the capability boundary. This updates agent skill instructions and must be called out in the PR.
 - **Trace:** `skills_test.go:TestEmbeddedCopiesMatchTheirSources` and the two source/embedded pairs.
+
+## Keywords answers never charge more than the limit shown
+
+- **Decision:** one Keywords answer charges at most `KeywordsReplyMaxCredits`
+  (1,200 credits), data and AI together. Each paid tool call reserves its
+  worst case first (a seed 116, a SERP query 6, a metric lookup 116 credits,
+  computed from `dataforseo` prices) and each model step its ceiling, at most
+  8,000 output tokens in this mode; a call or step that would not fit is
+  refused. Research is fixed at 150 rows; `resultLimit` above that and
+  clickstream data (twice the Labs price) are refused before any provider call.
+- **Why:** review of #245: the page showed "265 credits of data" while the
+  model could ask for 500 rows with clickstream (about 1,200 credits of data),
+  the related-keywords fallback and local Google Ads prices were not counted,
+  and AI usage up to $1 (about 1,280 credits) was not shown at all. CLAUDE.md:
+  the customer pays at most what was shown.
+- **Preserve:** charge ≤ reservation ≤ the shown limit; refused calls never
+  reach the provider; the frontend constant equals the server constant
+  (`TestKeywordsPageShowsTheBackendCreditLimit`). Typical answers cost far
+  less; the 1,200 figure is the owner's to lower or raise.
+- **Trace:** `keywords_mode.go` (`reserve`, `fits`), `agent.go` (step check),
+  tests `TestKeywordsModeRefusesDearerResearchOptions`,
+  `TestKeywordsReplyNeverPassesItsShownCreditLimit`,
+  `TestKeywordsTurnStopsBeforeAStepThatWouldPassItsShownLimit` (each fails
+  with its guard removed). Real-provider run not done.

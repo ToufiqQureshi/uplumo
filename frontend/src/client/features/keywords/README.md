@@ -24,9 +24,9 @@ API.
   all. Every number comes from the research the reply bought
   (`keywordReport.ts` validates it with Zod); a keyword without research
   shows dashes.
-- The cost note says what one answer can buy (3 searches, 2 Google checks,
-  at most 265 credits of data) before anything is sent; AI usage is charged as
-  used.
+- The cost note shows the most one answer can charge, data and AI together
+  (`MAX_REPLY_CREDITS`, 1,200), before anything is sent. The server enforces
+  the same number (`KeywordsReplyMaxCredits`); a Go test fails if they differ.
 - An old `?q=` link offers the seed as a one-click question; it never sends
   on its own.
 - Saved keywords: filtered/sorted/paged list (page sizes 50/100/250), bulk
