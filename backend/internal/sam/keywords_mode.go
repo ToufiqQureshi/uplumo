@@ -20,6 +20,7 @@ import (
 // before the customer sends (see flow.md for the dollar maths).
 const (
 	maxKeywordSeedsPerTurn   = 3  // research_keywords seeds, each one auto research
+	maxLocalSeedsPerTurn     = 1  // of those, seeds with a locationName (one extra Ads call each)
 	maxSerpQueriesPerTurn    = 2  // get_serp_results queries
 	maxSerpDepthPerTurn      = 20 // results per SERP query
 	maxMetricCallsPerTurn    = 1  // get_keyword_metrics calls
@@ -40,27 +41,41 @@ const (
 	keywordsMaxOutputTokens = 8000
 )
 
-// Worst-case credits per paid call, from the provider price list. A seed is
-// the dearer of the Labs blend (two half-limit legs plus the related-keywords
-// fallback) and the Google Ads ideas used in local markets; a metric lookup
+// Worst-case credits per paid call, from the provider price list. The spend
+// guard charges each DataForSEO task on its own, rounded up, so a ceiling is
+// the sum of its tasks' credits. A seed is the dearer of the Labs blend (two
+// half-limit legs plus the related-keywords fallback) and the Google Ads ideas
+// used where Labs has no data; a seed with a locationName (a city or region)
+// also buys one Google Ads search volume call for that place. A metric lookup
 // is the dearer of Labs overview (billed per keyword, at most
 // maxMetricKeywordsPerCall) and Ads search volume.
 var (
-	seedMaxCredits = billing.CreditsForUSD(max(
-		2*dataforseo.EstimateUSD("/v3/dataforseo_labs/google/keyword_suggestions/live", []byte(`[{"limit":75}]`))+
-			dataforseo.EstimateUSD("/v3/dataforseo_labs/google/related_keywords/live", []byte(`[{"limit":150}]`)),
-		dataforseo.EstimateUSD("/v3/keywords_data/google_ads/keywords_for_keywords/live", []byte(`[{}]`))))
-	serpQueryMaxCredits = billing.CreditsForUSD(dataforseo.SerpCostUSD(maxSerpDepthPerTurn, false))
-	metricsMaxCredits   = billing.CreditsForUSD(max(
-		dataforseo.EstimateUSD("/v3/dataforseo_labs/google/keyword_overview/live", []byte(fmt.Sprintf(`[{"limit":%d}]`, maxMetricKeywordsPerCall))),
-		dataforseo.EstimateUSD("/v3/keywords_data/google_ads/search_volume/live", []byte(`[{}]`))))
+	adsTaskCredits = billing.CreditsForUSD(dataforseo.EstimateUSD("/v3/keywords_data/google_ads/search_volume/live", []byte(`[{}]`)))
+	seedMaxCredits = max(
+		2*billing.CreditsForUSD(dataforseo.EstimateUSD("/v3/dataforseo_labs/google/keyword_suggestions/live", []byte(`[{"limit":75}]`)))+
+			billing.CreditsForUSD(dataforseo.EstimateUSD("/v3/dataforseo_labs/google/related_keywords/live", []byte(`[{"limit":150}]`))),
+		billing.CreditsForUSD(dataforseo.EstimateUSD("/v3/keywords_data/google_ads/keywords_for_keywords/live", []byte(`[{}]`))))
+	localSeedMaxCredits = seedMaxCredits + adsTaskCredits
+	// serpQueryMaxCredits is the dearest query: one with a search operator
+	// such as site:, which Google SERP endpoints bill at five times the price.
+	serpQueryMaxCredits = serpQueryCredits("site:example.com")
+	metricsMaxCredits   = max(
+		billing.CreditsForUSD(dataforseo.EstimateUSD("/v3/dataforseo_labs/google/keyword_overview/live", []byte(fmt.Sprintf(`[{"limit":%d}]`, maxMetricKeywordsPerCall)))),
+		adsTaskCredits)
 )
+
+// serpQueryCredits prices one get_serp_results query from its own keyword, at
+// the deepest depth Keywords mode allows.
+func serpQueryCredits(keyword string) int64 {
+	body := fmt.Appendf(nil, `[{"keyword":%q,"depth":%d}]`, keyword, maxSerpDepthPerTurn)
+	return billing.CreditsForUSD(dataforseo.EstimateUSD("/v3/serp/google/organic/live/advanced", body))
+}
 
 const keywordsModePrompt = `
 This turn is Keywords mode: the customer is on the Keywords page and wants keyword research that tells them what to do.
 Work like a senior SEO, in this order:
 1. Read what they asked: market, intent, how many keywords, what "high volume" or "easy" means for them. Keep the seed short: research the topic ("hotel revenue management"), not filler words like "best", "top" or "company".
-2. Research with research_keywords (at most 3 seeds this reply) and, when ranking strength matters, get_serp_results for the 1–2 best keywords (depth 10).
+2. Research with research_keywords (at most 3 seeds this reply, at most 1 of them with a locationName) and, when ranking strength matters, get_serp_results for the 1–2 best keywords (depth 10).
 3. If Search Console is connected, call get_search_console_performance to find queries and pages the site already ranks for; those are quick wins (improve the existing page) before new content.
 4. Pick keywords: one per coreKeyword group (variants share one Google volume), drop jobs, courses, salary and other companies' brand names unless asked, and respect the number they asked for.
 5. Call present_keywords exactly once with your picks, the quick wins and the content plan. Only present keywords that research_keywords returned in this reply; their numbers are filled in from that data, so never type metrics yourself.
@@ -83,8 +98,8 @@ func keywordsModeTool(name string) bool {
 // keywordTurn is one Keywords-mode reply's purchase counters and the research
 // rows it bought, which present_keywords reads so numbers come from data.
 type keywordTurn struct {
-	seeds, serpQueries, metricCalls int
-	rows                            map[string]map[string]any
+	seeds, localSeeds, serpQueries, metricCalls int
+	rows                                        map[string]map[string]any
 	// dataCredits is the worst case of the paid tool calls let through;
 	// aiCredits is what the model steps were charged.
 	dataCredits, aiCredits int64
@@ -113,12 +128,16 @@ func (kt *keywordTurn) reserve(name string, arguments json.RawMessage) error {
 		return nil
 	}
 	var args struct {
-		Seeds       []json.RawMessage `json:"seeds"`
-		Queries     []json.RawMessage `json:"queries"`
-		Depth       int               `json:"depth"`
-		Keywords    []string          `json:"keywords"`
-		ResultLimit int               `json:"resultLimit"`
-		Clickstream bool              `json:"includeClickstreamData"`
+		Seeds []struct {
+			LocationName *string `json:"locationName"`
+		} `json:"seeds"`
+		Queries []struct {
+			Keyword string `json:"keyword"`
+		} `json:"queries"`
+		Depth       int      `json:"depth"`
+		Keywords    []string `json:"keywords"`
+		ResultLimit int      `json:"resultLimit"`
+		Clickstream bool     `json:"includeClickstreamData"`
 	}
 	if err := json.Unmarshal(arguments, &args); err != nil {
 		return fmt.Errorf("invalid tool arguments: %w", err)
@@ -127,6 +146,7 @@ func (kt *keywordTurn) reserve(name string, arguments json.RawMessage) error {
 		return errors.New("clickstream data is not used in Keywords mode; call again without it")
 	}
 	var credits int64
+	local := 0 // research_keywords seeds with a locationName
 	switch name {
 	case "research_keywords":
 		if args.ResultLimit != 0 && args.ResultLimit != keywordsResultLimit {
@@ -135,7 +155,15 @@ func (kt *keywordTurn) reserve(name string, arguments json.RawMessage) error {
 		if kt.seeds+len(args.Seeds) > maxKeywordSeedsPerTurn {
 			return fmt.Errorf("this reply may research at most %d seeds and %d are used; present what you have", maxKeywordSeedsPerTurn, kt.seeds)
 		}
-		credits = int64(len(args.Seeds)) * seedMaxCredits
+		for _, seed := range args.Seeds {
+			if seed.LocationName != nil {
+				local++
+			}
+		}
+		if kt.localSeeds+local > maxLocalSeedsPerTurn {
+			return fmt.Errorf("this reply may research at most %d city or region seed; research the others for the whole country", maxLocalSeedsPerTurn)
+		}
+		credits = int64(len(args.Seeds)-local)*seedMaxCredits + int64(local)*localSeedMaxCredits
 	case "get_serp_results":
 		if args.Depth > maxSerpDepthPerTurn {
 			return fmt.Errorf("depth may be at most %d in Keywords mode", maxSerpDepthPerTurn)
@@ -143,7 +171,9 @@ func (kt *keywordTurn) reserve(name string, arguments json.RawMessage) error {
 		if kt.serpQueries+len(args.Queries) > maxSerpQueriesPerTurn {
 			return fmt.Errorf("this reply may check at most %d Google results pages and %d are used", maxSerpQueriesPerTurn, kt.serpQueries)
 		}
-		credits = int64(len(args.Queries)) * serpQueryMaxCredits
+		for _, query := range args.Queries {
+			credits += serpQueryCredits(query.Keyword)
+		}
 	case "get_keyword_metrics":
 		if len(args.Keywords) > maxMetricKeywordsPerCall {
 			return fmt.Errorf("ask for at most %d keywords", maxMetricKeywordsPerCall)
@@ -159,6 +189,7 @@ func (kt *keywordTurn) reserve(name string, arguments json.RawMessage) error {
 	switch name {
 	case "research_keywords":
 		kt.seeds += len(args.Seeds)
+		kt.localSeeds += local
 	case "get_serp_results":
 		kt.serpQueries += len(args.Queries)
 	case "get_keyword_metrics":

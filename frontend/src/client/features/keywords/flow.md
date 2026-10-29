@@ -11,8 +11,11 @@
    2 queries), free `get_search_console_performance`, then `present_keywords`
    (free).
 4. Paid calls per send: 0 to 3 research seeds (2 Labs tasks each on a cache
-   miss), 0 to 2 SERP pages, 0 to 1 metric lookup. A cached seed costs
-   nothing. A refused call over the limit is never sent.
+   miss, a third related-keywords task when the blend is thin, or one Google
+   Ads ideas task where Labs has no data; at most 1 seed for a city or region,
+   which adds one Google Ads volume task), 0 to 2 SERP pages, 0 to 1 metric
+   lookup. A cached seed costs nothing. A refused call over the limit is never
+   sent. Credit worst cases per call: `backend/internal/sam/decision.md`.
 5. The `tool-present_keywords` part is parsed by `agent/keywordReport.ts` and
    drawn by `KeywordReportView` + `KeywordCharts`. Save all calls
    `keywords/saved/save` (free) with the shown metrics.

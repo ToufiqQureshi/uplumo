@@ -9,7 +9,7 @@ Streams model turns, persists bounded history, invokes registered project tools 
 ## Decisions to preserve
 
 
-- **Decision:** Chat `mode: "keywords"` runs the Keywords page agent: only keyword, Search Console, site-reading and saving tools; at most 3 research seeds, 2 SERP queries (depth ≤20) and 1 metric lookup (≤50 keywords) per reply; and a free `present_keywords` tool whose metrics are joined server-side from that reply's research rows. **Why:** one prompt must not buy unbounded DataForSEO tasks, and the screen must never show a number the model typed. **Preserve:** limits are checked at execution, so a guessed or repeated call is refused before it reaches the provider; a counted call stays counted even if it fails (a failed task can still be billed); the page shows one hard limit per answer, `KeywordsReplyMaxCredits` = 1,200 credits for data and AI together (see the next entry). Free plans are refused by the MCP plan gate and have no credits; the page also hides the chat for Free. **Trace:** `keywords_mode.go`, `keywords_mode_test.go`, `chat.go`, `agent.go`, `api/sam.yaml`. Real-provider validation of a full reply not run.
+- **Decision:** Chat `mode: "keywords"` runs the Keywords page agent: only keyword, Search Console, site-reading and saving tools; at most 3 research seeds (1 of them for a city or region), 2 SERP queries (depth ≤20) and 1 metric lookup (≤50 keywords) per reply; and a free `present_keywords` tool whose metrics are joined server-side from that reply's research rows. **Why:** one prompt must not buy unbounded DataForSEO tasks, and the screen must never show a number the model typed. **Preserve:** limits are checked at execution, so a guessed or repeated call is refused before it reaches the provider; a counted call stays counted even if it fails (a failed task can still be billed); the page shows one hard limit per answer, `KeywordsReplyMaxCredits` = 1,200 credits for data and AI together (see the next entry). Free plans are refused by the MCP plan gate and have no credits; the page also hides the chat for Free. **Trace:** `keywords_mode.go`, `keywords_mode_test.go`, `chat.go`, `agent.go`, `api/sam.yaml`. Real-provider validation of a full reply not run.
 
 - Require a per-turn cost ceiling and stop mid-turn if credits/limits are exhausted. _Why:_ This work consumes paid quota or shared capacity, so authorization and bounds must be checked before dispatch.
 - Never let a model-selected project ID change authorization scope. _Why:_ Callers can tamper with IDs and UI state, so server-verified ownership must prevent cross-customer access.
@@ -74,8 +74,13 @@ allowlist, reasoning scope, project binding or explicit-action boundary changes.
 
 - **Decision:** one Keywords answer charges at most `KeywordsReplyMaxCredits`
   (1,200 credits), data and AI together. Each paid tool call reserves its
-  worst case first (a seed 116, a SERP query 6, a metric lookup 116 credits,
-  computed from `dataforseo` prices) and each model step its ceiling, at most
+  worst case first, computed from `dataforseo` prices with each task rounded
+  up on its own as the spend guard charges it: a seed 116 credits, a seed with
+  a `locationName` 232 (its national research plus one Google Ads volume call
+  for the place; at most 1 such seed per reply), a SERP query 6, or 26 when it
+  uses an operator such as `site:` (billed at five times), a metric lookup
+  116. Worst-case data is 632 credits, which leaves room for a full model
+  step. Each model step reserves its ceiling, at most
   8,000 output tokens in this mode; a call or step that would not fit is
   refused. Research is fixed at 150 rows; `resultLimit` above that and
   clickstream data (twice the Labs price) are refused before any provider call.
@@ -91,7 +96,10 @@ allowlist, reasoning scope, project binding or explicit-action boundary changes.
 - **Trace:** `keywords_mode.go` (`reserve`, `fits`), `agent.go` (step check),
   tests `TestKeywordsModeRefusesDearerResearchOptions`,
   `TestKeywordsReplyNeverPassesItsShownCreditLimit`,
-  `TestKeywordsTurnStopsBeforeAStepThatWouldPassItsShownLimit` (each fails
-  with its guard removed). Real-provider run not done.
+  `TestKeywordsTurnStopsBeforeAStepThatWouldPassItsShownLimit`,
+  `TestKeywordsLocalSeedReservesItsGoogleAdsVolumeCall`,
+  `TestKeywordsOperatorQueryReservesItsFiveTimesPrice` (each fails with its
+  guard removed; the last two came from Strix's review of #245, which found
+  local seeds and operator queries under-booked). Real-provider run not done.
 
 Cite Fix reports include untrusted page evidence and topic names. SAM treats these as data to report, not instructions to follow; the report read itself starts no paid provider work.

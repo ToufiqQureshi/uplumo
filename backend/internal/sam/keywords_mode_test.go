@@ -9,6 +9,7 @@ import (
 
 	"github.com/toufiqqureshi/uplumo/backend/internal/billing"
 	"github.com/toufiqqureshi/uplumo/backend/internal/mcp"
+	"github.com/toufiqqureshi/uplumo/backend/internal/platform/dataforseo"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/openrouter"
 )
 
@@ -149,7 +150,7 @@ func TestKeywordsModeRefusesDearerResearchOptions(t *testing.T) {
 func TestKeywordsReplyNeverPassesItsShownCreditLimit(t *testing.T) {
 	// Every paid call at its worst case still leaves room for a full model
 	// step, so a normal reply can finish inside the limit.
-	data := maxKeywordSeedsPerTurn*seedMaxCredits + maxSerpQueriesPerTurn*serpQueryMaxCredits + metricsMaxCredits
+	data := maxLocalSeedsPerTurn*localSeedMaxCredits + (maxKeywordSeedsPerTurn-maxLocalSeedsPerTurn)*seedMaxCredits + maxSerpQueriesPerTurn*serpQueryMaxCredits + metricsMaxCredits
 	step, err := openrouter.MaxCostUSD(openrouter.Request{MaxTokens: keywordsMaxOutputTokens,
 		Messages: []openrouter.Message{{Content: strings.Repeat("x", 4*maxToolOutputChars)}}})
 	if err != nil || data+billing.CreditsForUSD(step) >= KeywordsReplyMaxCredits {
@@ -169,6 +170,47 @@ func TestKeywordsReplyNeverPassesItsShownCreditLimit(t *testing.T) {
 	}
 	if total := ts.keywords.aiCredits + ts.keywords.dataCredits; total != KeywordsReplyMaxCredits {
 		t.Fatalf("reserved %d credits, want exactly the limit %d", total, KeywordsReplyMaxCredits)
+	}
+}
+
+func TestKeywordsLocalSeedReservesItsGoogleAdsVolumeCall(t *testing.T) {
+	// A city or region seed buys the national research and then one Google
+	// Ads search volume call for the place; both must be inside the reserve.
+	ads := billing.CreditsForUSD(dataforseo.EstimateUSD("/v3/keywords_data/google_ads/search_volume/live", []byte(`[{}]`)))
+	if localSeedMaxCredits < seedMaxCredits+ads {
+		t.Fatalf("a local seed reserves %d credits, want at least %d research + %d Ads volume", localSeedMaxCredits, seedMaxCredits, ads)
+	}
+	runner := newFakeRunner()
+	ts := keywordsToolset(t, runner)
+	if !runOK(t, ts, "research_keywords", `{"seeds":[{"seed":"a"},{"seed":"b","locationName":"Mumbai,Maharashtra,India"}]}`) {
+		t.Fatal("a national and a local seed were refused")
+	}
+	if want := seedMaxCredits + localSeedMaxCredits; ts.keywords.dataCredits != want {
+		t.Fatalf("reserved %d credits, want %d", ts.keywords.dataCredits, want)
+	}
+	if runOK(t, ts, "research_keywords", `{"seeds":[{"seed":"c","locationName":"Pune,Maharashtra,India"}]}`) || callCount(runner, "research_keywords") != 1 {
+		t.Fatal("a second local seed was bought")
+	}
+}
+
+func TestKeywordsOperatorQueryReservesItsFiveTimesPrice(t *testing.T) {
+	// Google SERP bills a query with an operator such as site: at five times
+	// the plain price; the reserve must book what DataForSEO will charge.
+	runner := newFakeRunner()
+	ts := keywordsToolset(t, runner)
+	plain := billing.CreditsForUSD(dataforseo.SerpCostUSD(maxSerpDepthPerTurn, false))
+	operator := billing.CreditsForUSD(dataforseo.EstimateUSD("/v3/serp/google/organic/live/advanced", []byte(`[{"keyword":"site:uplumo.com hotel","depth":20}]`)))
+	if operator <= plain {
+		t.Fatalf("operator query priced %d, plain %d: the price list lost its operator factor", operator, plain)
+	}
+	if !runOK(t, ts, "get_serp_results", `{"queries":[{"keyword":"hotel"},{"keyword":"site:uplumo.com hotel"}],"depth":20}`) {
+		t.Fatal("two SERP queries were refused")
+	}
+	if want := plain + operator; ts.keywords.dataCredits != want {
+		t.Fatalf("reserved %d credits, want %d", ts.keywords.dataCredits, want)
+	}
+	if serpQueryMaxCredits < operator {
+		t.Fatalf("the worst-case SERP query is %d credits, below an operator query's %d", serpQueryMaxCredits, operator)
 	}
 }
 
