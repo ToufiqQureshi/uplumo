@@ -3,9 +3,15 @@ title: Inside Uplumo Site Audit: Crawl, Diagnose and Improve
 description: Explore Uplumo site auditing: multi-page crawling, technical checks, AI-readiness signals and crawl comparisons for actionable website reviews.
 date: 2026-10-26
 author: Uplumo team
+updated: 2026-10-29
+image: /site/blog/uplumo-advanced-site-audit-crawler-overview.svg
 ---
 
 **Uplumo Site Audit helps teams investigate technical SEO and selected AI-readiness signals through multi-page crawling, page checks and cross-page analysis.** For SMBs through enterprise teams reviewing defined sites or campaigns, its value is turning a website review into concrete findings that can be assigned, fixed and verified.
+
+![Read the audit at the right level](/site/blog/uplumo-advanced-site-audit-crawler-overview.svg)
+
+*Feature overview diagram. This explains the workflow; it is not an application screenshot.*
 
 ## A website needs more than a homepage check
 
@@ -46,7 +52,7 @@ For selected orphan-page findings, Uplumo can also suggest relevant source pages
 
 ## Use the right technical scope
 
-The active crawler examines initial HTTP HTML. JavaScript-only content may need a separate rendered-page investigation. Lighthouse checks, where configured, use Google's PageSpeed Insights and complement the crawl with performance evidence.
+The default crawler examines initial HTTP HTML. Eligible flagged app-shell pages can use separately requested, credit-priced JavaScript rendering; this is not automatic rendering of every URL. Lighthouse checks, where configured, use Google's PageSpeed Insights and complement the crawl with performance evidence.
 
 These boundaries make the results easier to interpret. Define the page limit, important sections and content delivery method before a run. For enterprise teams, evaluate a scoped property or campaign and confirm the capacity and operational requirements before applying the process more widely.
 
@@ -57,6 +63,20 @@ Consider a hypothetical product site where a key buying guide receives little at
 The reviewer opens the affected pages, confirms the intended destination and updates the useful links. A follow-up crawl can then check the current response and link paths. Search Console provides a separate view of Google's indexed state and later search performance.
 
 This is a verifiable improvement process. It makes the website easier to navigate while keeping technical observations separate from assumptions about rankings.
+
+## JavaScript pages and the Cite Fix handoff
+
+The default crawl reads initial HTTP HTML. If the audit flags an application shell, the optional JavaScript rendering action can fetch rendered content through DataForSEO for a bounded set of flagged pages. It requires explicit approval of the displayed credit ceiling; opening an audit does not automatically buy rendering. Inspect the resulting evidence rather than assuming every JavaScript page has been fully rendered.
+
+After a completed scan, [Cite Fix](/blog/uplumo-cite-fix-guide) reuses stored page signals to prioritise citation-related improvements. Older scans missing current signals ask for a rescan. The report also exposes critical and warning audit issues under “Also fix for Google”. This gives the owner a practical sequence: repair access and technical issues, improve a relevant answer, then verify the published page.
+
+![Audit scope and evidence](/site/blog/uplumo-advanced-site-audit-crawler-workflow.svg)
+
+*Workflow diagram: crawl; optional rendering; compare.*
+
+![Turn one finding into a verified repair](/site/blog/uplumo-advanced-site-audit-crawler-review.svg)
+
+*Review diagram: affected url; owner action; recheck.*
 
 ## FAQ
 

@@ -2,6 +2,8 @@
 title: SEO audit checklist: find fixes that can help your business
 description: Use this practical SEO audit checklist to find crawling, page, local and conversion problems, then prioritise fixes by customer impact.
 date: 2026-10-15
+updated: 2026-10-29
+image: /site/blog/seo-audit-triage.svg
 ---
 
 **Short answer:** A useful SEO audit finds problems that stop customers or search engines from reaching important pages, then ranks those problems by impact and effort. Start with crawl and indexing, review service pages and local details, test the mobile journey, and connect search data to enquiries.
@@ -65,6 +67,22 @@ Share a short summary with the person who will approve the work. If they cannot 
 
 After a change goes live, test the page as a customer: open it on mobile, follow the link, submit the form or booking request, and confirm the right person receives it. For indexing changes, inspect the URL and monitor the relevant Search Console report; a recrawl or ranking change may take time and is not guaranteed. Record the release date and the metric you expect to change. If the expected improvement does not appear, check whether the fix reached every affected template and whether the original diagnosis was correct before adding more changes.
 
+## Diagnose routing, migrations and media with the right evidence
+
+For a redirect chain, record each hop and final destination. Link directly to the intended canonical page where possible. A loop needs the conflicting application, proxy or CMS rule fixed. For 403, 404 or 5xx responses, test the exact public URL without a logged-in session and check server/CDN logs. Verify crawler identity before changing a firewall rule; do not disable security site-wide.
+
+After a migration, compare old-to-new URL mappings, internal links, canonical tags, sitemaps and important landing pages. For hreflang problems, check language/region codes, reciprocal references and that each target is accessible and actually serves the stated language. For video visibility, inspect Google's video indexing report and whether the video is prominent with an accessible thumbnail.
+
+[Uplumo Site Audit](/blog/uplumo-advanced-site-audit-crawler) supplies crawl observations and comparisons. Search Console supplies Google's own inspection and indexing evidence. Save both when they disagree; one crawler's successful fetch does not prove what Google received.
+
+![Prioritise an audit by business impact](/site/blog/seo-audit-that-finds-real-problems-workflow.svg)
+
+*Workflow diagram: access first; answer next; polish after.*
+
+![An audit issue needs a verification path](/site/blog/seo-audit-that-finds-real-problems-review.svg)
+
+*Review diagram: evidence; repair; recheck.*
+
 ## FAQ
 
 **How often should I run an SEO audit?**
@@ -84,3 +102,9 @@ No. Check the affected URL and customer impact first.
 - [Google: technical requirements for Search](https://developers.google.com/search/docs/essentials/technical)
 - [Google Search Console: useful reports](https://developers.google.com/search/docs/monitor-debug/search-console-start)
 - [Google SEO Starter Guide](https://developers.google.com/search/docs/fundamentals/seo-starter-guide)
+
+- [Google site move guidance](https://developers.google.com/search/docs/crawling-indexing/site-move-with-url-changes)
+
+- [Google international page versions](https://developers.google.com/search/docs/specialty/international/localized-versions)
+
+- [Google video indexing report](https://support.google.com/webmasters/answer/9495631)

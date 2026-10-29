@@ -28,3 +28,12 @@ The shared head loads versioned `theme.js` before CSS. It reads the app's
 and binds the accessible header selector on DOMContentLoaded. A pick updates
 localStorage and the root palette; storage and OS events synchronize tabs and
 system mode. If storage is unavailable, the pick stays in memory for the page.
+
+## Article discovery and retirement
+
+`loadPosts` validates optional local cover metadata and orders publish-date ties
+by slug. Build resolves a named cover through the embedded versioned asset map
+for article social/structured metadata. The index uses covers as decorative
+link thumbnails. Before post lookup, `ServeBlogPost` handles the explicit retired
+slug map with a 301 to its maintained guide. Unknown slugs remain 404; only
+published source files enter the index and sitemap. No provider calls occur.

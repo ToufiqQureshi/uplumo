@@ -3,9 +3,15 @@ title: Uplumo Analytics: Connect AI Traffic with Search Performance
 description: Use Uplumo Analytics and connected Google data to review AI referrals, landing pages and search performance with clear measurement boundaries.
 date: 2026-10-26
 author: Uplumo team
+updated: 2026-10-29
+image: /site/product/dashboard.webp
 ---
 
 **Uplumo helps teams connect visibility work with measured website activity through its own analytics and connected Google Search Console and GA4 views.** SMBs through enterprise marketing teams can use that combination to ask a better question than “did the score rise?”: did relevant people reach the intended page, and what happened next?
+
+![Uplumo dashboard screen with illustrative example.com data](/site/product/dashboard.webp)
+
+*Actual Uplumo interface with fictional sample data. The values illustrate the workflow and are not customer results.*
 
 ## A useful SEO and AEO workflow needs measurement
 
@@ -65,6 +71,20 @@ Record the page, customer question, measurement period, known source definitions
 For an SMB, this can be a short review of one service page. For an enterprise campaign, it can be a defined set of pages with shared metric definitions and assigned owners. Match the scope and connections to [current plans](/pricing) and organizational requirements.
 
 The strength of Uplumo's approach is the connection between investigation and action. A useful report should end with a justified next step, supported by the relevant evidence.
+
+## Diagnose a Search Console and analytics mismatch
+
+Start with the same landing page and date range, then check property coverage, time zones and whether redirects change the recorded URL. Search Console counts search interactions; analytics requires its collection to run under the site's measurement and consent setup. Multiple clicks can be part of one session, and a click need not produce a recorded analytics visit.
+
+For AI traffic, known referrers and campaign tags support classification; an untagged visit with no usable referrer cannot be reconstructed reliably. Opening a saved citation shows answer evidence, not proof that a visitor clicked it. Uplumo keeps these views available within the same project so a reviewer can explain the difference before making a business decision. See the [ChatGPT traffic walkthrough](/blog/chatgpt-traffic-google-analytics) for a controlled tag test.
+
+![Three sources answer different questions](/site/blog/uplumo-ai-traffic-analytics-search-performance-workflow.svg)
+
+*Workflow diagram: search console; ga4; uplumo analytics.*
+
+![Reconcile clicks and sessions sensibly](/site/blog/uplumo-ai-traffic-analytics-search-performance-review.svg)
+
+*Review diagram: match scope; check collection; explain gaps.*
 
 ## FAQ
 

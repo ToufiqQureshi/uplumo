@@ -33,6 +33,42 @@ var blogMarkdown = goldmark.New(
 	goldmark.WithParserOptions(parser.WithAutoHeadingID()),
 )
 
+// Retired articles resolve to maintained guides covering their original task.
+// Keep these URLs out of the index and sitemap; avoid chains and home redirects.
+var blogRedirects = map[string]string{
+	"daily-keyword-rank-fluctuations-how-to-report":        "search-console-impressions-clicks-down",
+	"ecommerce-faceted-navigation-crawl-traps":             "ecommerce-product-pages-not-ranking",
+	"fix-redirect-chains-and-loops":                        "seo-audit-that-finds-real-problems",
+	"ga4-vs-search-console-organic-clicks-mismatch":        "uplumo-ai-traffic-analytics-search-performance",
+	"google-chose-different-canonical-how-to-fix":          "website-not-showing-on-google",
+	"google-core-update-organic-traffic-drop":              "refresh-old-blog-posts-that-lost-traffic",
+	"google-manual-action-unnatural-links-recovery":        "ethical-backlinks-for-small-business",
+	"google-search-console-sitemap-couldnt-fetch":          "website-not-showing-on-google",
+	"googlebot-403-5xx-cloudflare-firewall-block":          "seo-audit-that-finds-real-problems",
+	"gptbot-vs-oai-searchbot-robots-txt":                   "get-cited-in-ai-search-results",
+	"hreflang-wrong-language-page-in-google":               "seo-audit-that-finds-real-problems",
+	"images-not-indexed-in-google-images":                  "ecommerce-product-pages-not-ranking",
+	"japanese-seo-hack-spam-urls-recovery":                 "website-not-showing-on-google",
+	"javascript-content-not-visible-to-google":             "uplumo-advanced-site-audit-crawler",
+	"keyword-cannibalization-how-to-diagnose-and-fix":      "refresh-old-blog-posts-that-lost-traffic",
+	"out-of-stock-product-pages-seo":                       "ecommerce-product-pages-not-ranking",
+	"pdf-files-indexed-outdated-or-private-seo":            "website-not-showing-on-google",
+	"product-rich-results-price-stars-not-showing":         "ecommerce-product-pages-not-ranking",
+	"rank-tracker-results-differ-from-google":              "search-console-impressions-clicks-down",
+	"robots-txt-vs-noindex-pages-still-indexed":            "website-not-showing-on-google",
+	"seo-client-report-template-that-proves-progress":      "uplumo-seo-aeo-platform-smb-enterprise",
+	"seo-client-seo-roi-long-sales-cycle":                  "seo-website-traffic-no-leads",
+	"seo-site-migration-traffic-drop-checklist":            "seo-audit-that-finds-real-problems",
+	"seo-tools-show-different-search-volume":               "uplumo-ai-keyword-research-content-workflow",
+	"soft-404-errors-on-live-pages":                        "website-not-showing-on-google",
+	"staging-site-indexed-in-google-how-to-remove":         "website-not-showing-on-google",
+	"valid-page-returns-404-to-google":                     "seo-audit-that-finds-real-problems",
+	"video-indexing-report-no-thumbnail":                   "seo-audit-that-finds-real-problems",
+	"why-backlink-counts-differ-between-seo-tools-and-gsc": "ethical-backlinks-for-small-business",
+}
+
+var blogImagePattern = regexp.MustCompile(`^/site/(blog|product)/[a-z0-9-]+\.(svg|webp|png)$`)
+
 var slugPattern = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
 
 // Post is one published blog post.
@@ -40,6 +76,7 @@ type Post struct {
 	Slug        string
 	Title       string
 	Description string
+	Image       string
 	Published   time.Time
 	Updated     time.Time
 	Author      string
@@ -48,7 +85,7 @@ type Post struct {
 	ReadMinutes int
 }
 
-// Lengths search engines show in full; longer ones are cut off in results.
+// Editorial metadata budgets; search-result display width varies.
 const (
 	maxTitleRunes       = 70
 	minDescriptionRunes = 50
@@ -79,7 +116,12 @@ func loadPosts(fsys fs.FS) ([]Post, error) {
 			posts = append(posts, post)
 		}
 	}
-	slices.SortFunc(posts, func(a, b Post) int { return b.Published.Compare(a.Published) })
+	slices.SortFunc(posts, func(a, b Post) int {
+		if order := b.Published.Compare(a.Published); order != 0 {
+			return order
+		}
+		return strings.Compare(a.Slug, b.Slug)
+	})
 	return posts, nil
 }
 
@@ -110,7 +152,10 @@ func parsePost(slug string, source []byte) (Post, bool, error) {
 		fields[strings.TrimSpace(key)] = strings.Trim(strings.TrimSpace(value), `"`)
 	}
 
-	post := Post{Slug: slug, Title: fields["title"], Description: fields["description"], Author: fields["author"]}
+	post := Post{Slug: slug, Title: fields["title"], Description: fields["description"], Image: fields["image"], Author: fields["author"]}
+	if post.Image != "" && !blogImagePattern.MatchString(post.Image) {
+		return Post{}, false, fmt.Errorf("image must be a local /site/blog/ or /site/product/ asset")
+	}
 	if post.Author == "" {
 		post.Author = "Uplumo team"
 	}
@@ -118,7 +163,7 @@ func parsePost(slug string, source []byte) (Post, bool, error) {
 	case n == 0:
 		return Post{}, false, fmt.Errorf("title is required")
 	case n > maxTitleRunes:
-		return Post{}, false, fmt.Errorf("title is %d characters; keep it to %d so search results show all of it", n, maxTitleRunes)
+		return Post{}, false, fmt.Errorf("title is %d characters; keep it to the editorial limit of %d", n, maxTitleRunes)
 	}
 	if n := utf8.RuneCountInString(post.Description); n < minDescriptionRunes || n > maxDescriptionRunes {
 		return Post{}, false, fmt.Errorf("description is %d characters; it must be %d to %d", n, minDescriptionRunes, maxDescriptionRunes)

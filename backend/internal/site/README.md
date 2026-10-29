@@ -43,3 +43,14 @@ credits. Legal templates describe research inputs, shared reports, publishing
 and activation prerequisites without changing billing rules. Keep sampled AI
 answers separate from consumer-app coverage and recognised referral visits.
 See `decision.md` for capability evidence and the public anonymity boundary.
+
+## Maintained article collection
+
+The 29 retired troubleshooting URLs are explicit one-hop 301 redirects in
+`blogRedirects` (`blog.go`) to guides covering the original task. Retired files
+are absent from the index/sitemap. Keep new internal links on canonical targets.
+Every maintained article includes at least three distinct explanatory images.
+`image:` front matter selects a validated embedded cover for the index, Open
+Graph and BlogPosting metadata; an absent cover retains the default metadata
+for older/custom posts. Missing named covers stop startup. Product screenshots
+use fictional fixtures, labelled as sample data; diagrams are labelled separately.

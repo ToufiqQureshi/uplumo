@@ -3,9 +3,15 @@ title: Uplumo Keyword Research: Turn Search Intent into Content
 description: Use Uplumo keyword research, SERP analysis, search briefs and AI writing assistance to create content around real customer intent.
 date: 2026-10-26
 author: Uplumo team
+updated: 2026-10-29
+image: /site/blog/uplumo-ai-keyword-research-content-workflow-overview.svg
 ---
 
 **Uplumo supports an AI-assisted keyword-to-content workflow that connects research, search intent, briefing and draft improvement.** SMBs through enterprise marketing teams can use it to turn a promising query into an article with a clear purpose, relevant evidence and a useful next step.
+
+![Keep a useful research shortlist](/site/blog/uplumo-ai-keyword-research-content-workflow-overview.svg)
+
+*Feature overview diagram. This explains the workflow; it is not an application screenshot.*
 
 ## Start with the decision behind the search
 
@@ -61,6 +67,22 @@ After publication, keep the target market and page assignment in the measurement
 A comparison page may assist a later demo request. A troubleshooting guide may help existing customers. Define the intended outcome before evaluating raw traffic.
 
 For SMBs, the first project might be one commercial page. For an enterprise team, it could be a scoped product campaign with several related articles. Match the workload to [current capacity and plans](/pricing), then repeat the process with a stable review routine.
+
+## Work with the current Keyword Research agent
+
+The current research page uses a conversational agent. Start with a specific business task: “Find service-page opportunities for a bookkeeping business serving Pune”. Supply the actual offer and market, then review the agent's evidence and proposed direction. It can research keyword and search-result context through Uplumo's controlled tools; the answer still needs a business owner's judgement.
+
+Keep selected terms in Saved Keywords so you can filter, tag and revisit the shortlist. Similar terms do not automatically deserve separate pages. Choose a primary intent, inspect the current result types, and send the useful assignment into a [content brief](/blog/seo-content-brief-for-small-business).
+
+Search volume is an estimate tied to a source, market and period. Different providers or refresh times can produce different values. A missing difficulty or intent field is not a score of zero. Review the displayed maximum credits before asking for paid research, because data and AI actions share the workspace allowance.
+
+![The keyword agent needs business context](/site/blog/uplumo-ai-keyword-research-content-workflow-workflow.svg)
+
+*Workflow diagram: ask; research; choose.*
+
+![Keep keyword estimates interpretable](/site/blog/uplumo-ai-keyword-research-content-workflow-review.svg)
+
+*Review diagram: market; source; timing.*
 
 ## FAQ
 

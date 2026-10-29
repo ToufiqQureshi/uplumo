@@ -2,6 +2,8 @@
 title: Ethical backlinks for small businesses: a practical guide
 description: Earn relevant links through useful resources, local partnerships and real expertise, while avoiding paid link schemes and spam.
 date: 2026-10-15
+updated: 2026-10-29
+image: /site/blog/ethical-backlinks.svg
 ---
 
 **Short answer:** A small business can earn useful backlinks by creating something worth referencing, contributing real expertise, supporting local organisations and asking partners to link to the right page. Avoid buying links, mass directory submissions and fake guest posts designed only to change rankings.
@@ -68,6 +70,20 @@ Choose one useful resource customers already need and improve it. Share it with 
 
 You can also look for mentions of your business that do not link to your site. Contact the publisher politely, confirm the business details and ask whether a link would help readers find the official page. They are free to decline.
 
+## Use Uplumo Backlinks as research, not a link-buying list
+
+On an eligible plan, review backlink and referring-domain evidence for your site or a competitor. Open promising sources and ask why the reference exists: a useful resource, a supplier relationship, a news event or an unrelated placement. Different tools and Search Console can show different totals because their crawl coverage, freshness, grouping and filters differ. Compare like-for-like domains and time periods rather than declaring one count the truth.
+
+If Search Console reports a manual action for unnatural links, read that specific notice and Google's guidance before acting. Work on the affected links, document removal attempts where appropriate and use the reconsideration process when required. A different backlink count alone is not a reason to disavow links. Connect competitor research with [original content planning](/blog/seo-content-brief-for-small-business) so outreach has something useful to reference.
+
+![Build a link that has a reason to exist](/site/blog/ethical-backlinks-for-small-business-workflow.svg)
+
+*Workflow diagram: useful asset; relevant audience; editorial choice.*
+
+![Read backlink evidence with context](/site/blog/ethical-backlinks-for-small-business-review.svg)
+
+*Review diagram: discovery; verification; value.*
+
 ## FAQ
 
 **Should a new business buy backlinks?**
@@ -87,3 +103,7 @@ There is no universal target. Focus on relevant visitors, trusted mentions and a
 - [Google spam policies: link spam](https://developers.google.com/search/docs/essentials/spam-policies)
 - [Google SEO Starter Guide](https://developers.google.com/search/docs/fundamentals/seo-starter-guide)
 - [Google Search Essentials](https://developers.google.com/search/docs/essentials)
+
+- [Google link spam policies](https://developers.google.com/search/docs/essentials/spam-policies#link-spam)
+
+- [Google Manual Actions report](https://support.google.com/webmasters/answer/9044175)

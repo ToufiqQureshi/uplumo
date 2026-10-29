@@ -9,8 +9,8 @@ starting, and the tests fail first, so a broken post never reaches the site.
 ## Add a post
 
 1. Name the file after the URL you want: lower-case words joined by hyphens,
-   for example `what-is-aeo.md` → `/blog/what-is-aeo`. Never rename a
-   published file; the old URL would break.
+   for example `what-is-aeo.md` → `/blog/what-is-aeo`. When retiring or consolidating a
+   published file, add a relevant one-hop redirect in `blogRedirects` and update internal links.
 2. Start it with this front matter, then write Markdown below it:
 
    ```
@@ -25,14 +25,15 @@ starting, and the tests fail first, so a broken post never reaches the site.
 
    | Field         | Required | Rule                                                                   |
    | ------------- | -------- | ---------------------------------------------------------------------- |
-   | `title`       | yes      | Up to 70 characters (longer is cut off in Google). Main keyword first. |
+   | `title`       | yes      | Up to 70 characters by site policy; display width varies in Google. |
    | `description` | yes      | 50 to 160 characters. Shown under the title in Google.                 |
    | `date`        | yes      | `YYYY-MM-DD`, the publish date.                                        |
    | `updated`     | no       | `YYYY-MM-DD`, set it when you change a post a lot.                     |
+   | `image`       | no       | Embedded cover under `/site/blog/` or `/site/product/`; SVG, WebP or PNG. |
    | `author`      | no       | Defaults to "Uplumo team".                                             |
    | `draft`       | no       | `true` keeps the post off the site.                                    |
 
-3. Images: put them in `backend/internal/site/static/blog/` and write
+3. Include at least three distinct explanatory images in maintained guides. Label fictional sample data and distinguish diagrams from application screenshots. Images: put them in `backend/internal/site/static/blog/` and write
    `![What the image shows](/site/blog/file-name.svg)` or use `.webp`. Only images on
    uplumo.com load (the pages' security policy blocks other sites).
 4. Raw HTML in a post is dropped. Use Markdown only.
@@ -51,11 +52,10 @@ starting, and the tests fail first, so a broken post never reaches the site.
 - **Show it is real:** your own numbers, screenshots and examples from
   the markets you serve, such as India and the United States. Thin, generic or copied text does not rank.
 - **Link** to 2–3 other Uplumo posts or pages, and to sources you cite.
-- **Length:** as long as the answer needs. Most guides land at 1,000–2,000
-  words.
+- **Length:** as long as the answer needs; no word count guarantees ranking.
 - **Publish steadily** (one or two posts a week beats ten at once) and
   update old posts with `updated:` instead of writing near-duplicates.
 - After a post is live, ask Google to index it in Search Console (URL
-  inspection → "Request indexing"). The sitemap is already submitted at
+  inspection → "Request indexing"). The sitemap is available at
   `https://uplumo.com/sitemap.xml`.
 

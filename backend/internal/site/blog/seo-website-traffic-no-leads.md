@@ -2,6 +2,8 @@
 title: Website traffic but no leads? Fix the conversion gaps
 description: Getting website visits but no calls or enquiries? Find the common gaps and use this practical checklist to turn more visits into real leads.
 date: 2026-10-15
+updated: 2026-10-29
+image: /site/blog/traffic-to-leads.svg
 ---
 
 **Short answer:** If your website gets visits but few enquiries, check the path from page to action before buying more traffic. Make the service clear, show proof, answer common objections, and make it easy to call or send a short enquiry from a phone.
@@ -69,6 +71,20 @@ A page can produce many enquiries and still fail the business if they are outsid
 If calls matter, use a tracked phone link where privacy rules and your setup allow it. Keep a backup record of calls and forms so a tracking glitch does not make the business look quieter than it is. Separate spam from genuine enquiries and note how each lead was answered. That shows whether the problem is the page, the audience or the follow-up process.
 
 A practical monthly comparison is: relevant page visits, completed calls or forms, qualified leads, and booked work. The path from search to sale can take more than one visit, so avoid claiming that one page caused a sale unless you can trace it.
+
+## Measure SEO when sales take longer than a session
+
+Use a simple pipeline that separates the landing page, enquiry, qualified opportunity and completed sale. A small consultancy can keep this in its CRM or an agreed spreadsheet; use permissioned records rather than exposing personal lead details in a public report. Agree what counts as qualified and allow for the actual sales cycle before assessing revenue.
+
+[Uplumo Analytics](/blog/uplumo-ai-traffic-analytics-search-performance) provides recorded source and interaction evidence where measurement is available. The connected GA4 view can show configured key events, while business records confirm the sale. Do not multiply all organic sessions by an assumed conversion rate and call it earned revenue. Explain attribution uncertainty, untracked visits and the reporting period alongside any ROI calculation.
+
+![Find where the customer journey breaks](/site/blog/seo-website-traffic-no-leads-workflow.svg)
+
+*Workflow diagram: fit; clarity; action.*
+
+![Do not call every click revenue](/site/blog/seo-website-traffic-no-leads-review.svg)
+
+*Review diagram: intent; enquiry; revenue.*
 
 ## FAQ
 

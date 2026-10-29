@@ -2,6 +2,8 @@
 title: Ecommerce product pages not ranking? Fix these basics
 description: Help shoppers and search engines understand your products with clear descriptions, crawlable categories, accurate data and useful images.
 date: 2026-10-15
+updated: 2026-10-29
+image: /site/blog/ecommerce-seo-basics.svg
 ---
 
 **Short answer:** If product pages are not appearing in Search, first check that Google can crawl and index the URLs. Then improve the category structure, write accurate product details, handle variants and out-of-stock items clearly, and use real product data where it applies.
@@ -60,6 +62,22 @@ Review customer questions and returns. If people keep asking whether an item fit
 
 For stores with hundreds of products, test one category and a small sample of product pages before changing templates everywhere. Compare indexing and orders so you can catch template mistakes early.
 
+## Handle filters, stock changes and product media deliberately
+
+For faceted navigation, decide which combinations deserve standalone search pages. Avoid linking every possible filter combination as if each were a valuable category. Review crawlable links, canonical signals and your sitemap together; a canonical hint does not itself stop crawling. Keep filters useful for shoppers while controlling accidental URL growth.
+
+A temporarily unavailable product can retain a useful page with clear stock information and alternatives. If an item is permanently removed, choose a closely relevant replacement only when it satisfies the same need; otherwise use an appropriate not-found response. Keep Merchant Center, visible price/stock and structured data consistent. Valid markup makes a page eligible for supported displays, without guaranteeing stars or prices in Search.
+
+For image discovery, use accessible image URLs, descriptive surrounding text and useful alt text. Original product media should help a buyer inspect the item. [Audit the store](/blog/uplumo-advanced-site-audit-crawler) after template changes and check exact product URLs in Search Console.
+
+![Give each store page a distinct purpose](/site/blog/ecommerce-product-pages-not-ranking-workflow.svg)
+
+*Workflow diagram: category; product; variant or filter.*
+
+![Review a product before requesting indexing](/site/blog/ecommerce-product-pages-not-ranking-review.svg)
+
+*Review diagram: content; access; search appearance.*
+
 ## FAQ
 
 **Does Product structured data guarantee product snippets?**
@@ -79,3 +97,7 @@ Choose based on customer value: explain the product is discontinued, suggest a r
 - [Google ecommerce SEO guide](https://developers.google.com/search/docs/specialty/ecommerce)
 - [Google ecommerce site structure](https://developers.google.com/search/docs/specialty/ecommerce/help-google-understand-your-ecommerce-site-structure)
 - [Google product data guidance](https://developers.google.com/search/docs/specialty/ecommerce/share-your-product-data-with-google)
+
+- [Google faceted navigation guidance](https://developers.google.com/search/docs/crawling-indexing/crawling-managing-faceted-navigation)
+
+- [Google product structured data](https://developers.google.com/search/docs/appearance/structured-data/product)

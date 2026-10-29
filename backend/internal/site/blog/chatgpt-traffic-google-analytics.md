@@ -2,11 +2,13 @@
 title: How to see ChatGPT traffic in Google Analytics (and why it hides)
 description: Visits from ChatGPT, Perplexity and Gemini often show up as Direct. Here is how to find them in GA4 and track AI traffic properly.
 date: 2026-10-15
+updated: 2026-10-29
+image: /site/blog/ai-traffic-shows-as-direct.svg
 ---
 
-**Short answer:** visits from AI assistants are often recorded as "Direct" because many of them arrive without a referrer. In Google Analytics 4 you can find part of this traffic by filtering the session source for AI domains like `chatgpt.com`, `perplexity.ai` and `gemini.google.com`, and by saving that filter as a custom channel group. To catch the rest you need analytics that also reads AI tracking tags and recognises AI assistants by name.
+**Short answer:** In GA4, open Traffic acquisition and inspect **Session default channel group** for **AI Assistant**, then review **Session source / medium** and landing pages. Google's current channel definitions include AI Assistant. Some visits arrive without a usable referrer or campaign tag. GA4 and Uplumo cannot reliably recover that missing source.
 
-![The same four visits from ChatGPT, Perplexity, Gemini and Copilot shown as Direct in ordinary analytics and labelled per assistant in AI-aware analytics](/site/blog/ai-traffic-shows-as-direct.svg)
+![AI referral classification needs a recognised referrer or campaign tag; visits without a usable signal remain unknown](/site/blog/ai-traffic-shows-as-direct.svg)
 
 ## Why AI traffic matters now
 
@@ -35,38 +37,24 @@ Some assistants help by adding a tag to the link. ChatGPT, for example, adds `ut
 
 ## How to find AI traffic in GA4, step by step
 
-You can see the part of AI traffic that does carry a referrer or tag. It takes about ten minutes.
+### 1. Start with the current default channel
 
-### 1. Check the sources you already have
+1. Open **Reports → Acquisition → Traffic acquisition**.
+2. Select **Session default channel group** and look for **AI Assistant**.
+3. Switch to **Session source / medium** to inspect which sources make up those visits.
+4. Review the relevant landing pages and your configured key events.
 
-1. Open GA4 and go to **Reports → Acquisition → Traffic acquisition**.
-2. Change the primary dimension to **Session source / medium**.
-3. In the search box, try each of these: `chatgpt`, `perplexity`, `gemini`, `copilot`, `claude`.
+Google's [default channel definitions](https://support.google.com/analytics/answer/9756891) distinguish AI Assistant traffic from Google AI Overviews and AI Mode, which belong to Organic Search. Use the report's actual dimension and scope; a user-acquisition view answers a different question from session acquisition.
 
-If any rows appear, AI assistants are already sending you visitors.
+### 2. Inspect sources rather than assuming every assistant is identical
 
-### 2. Build an "AI assistants" exploration
+Search source rows for the domains you expect, such as `chatgpt.com`, `perplexity.ai` or `gemini.google.com`. Check the associated medium and landing URL. A campaign tag can provide source information even when the browser sends no referrer, but it does not independently prove which conversation generated the visit.
 
-1. Go to **Explore → Blank**.
-2. Add the dimensions **Session source** and **Landing page + query string**.
-3. Add the metrics **Sessions**, **Engaged sessions** and **Key events**.
-4. Add a filter: **Session source** *matches regex*:
+### 3. Save a focused exploration if your reporting needs it
 
-```
-chatgpt|perplexity|gemini\.google|copilot|claude\.ai|openai
-```
+Use a GA4 exploration with Session source / medium, Landing page + query string, Sessions and your configured key-event metrics. Filter the actual sources you observed. A custom channel group is optional when your business needs a different grouping; it is no longer necessary simply to create the concept of an AI channel.
 
-Now you can see which pages AI assistants send people to, and whether those visits lead to enquiries.
-
-### 3. Make it a permanent channel
-
-So that AI traffic stops mixing with "Referral" in every report:
-
-1. Go to **Admin → Data display → Channel groups → Create new channel group**.
-2. Add a channel called **AI assistants** with the condition *Session source matches regex* and the pattern above.
-3. **Move it above "Referral"** in the list. GA4 uses the first rule that matches.
-
-New data will now show "AI assistants" as its own channel in your acquisition reports. GA4 applies custom channel groups to past data as well, but the visits that arrived with no referrer stay in "Direct".
+Keep the original source values available so the grouping can be checked. No channel rule restores a referrer or campaign tag that was never collected.
 
 ## What GA4 still misses
 
@@ -87,10 +75,24 @@ Uplumo Analytics is a small tracking script, built to answer this exact question
 
 It is included in every plan, including Free. You add one script tag to your site, the same way you would add GA4, and both can run side by side.
 
+## Test one AI referral before interpreting the report
+
+Open a public page through a link with `utm_source=chatgpt.com&utm_medium=referral`, then check the recorded source and landing URL. This tests tag handling; it is a test visit, not proof that ChatGPT recommended the business. Compare a normal untagged visit separately. If neither a recognised referrer nor a campaign tag arrives, Uplumo cannot recover the missing origin.
+
+For a useful weekly review, record the assistant source, landing page and your chosen business outcome. A click on a WhatsApp or enquiry button is intent; confirm a submitted form, conversation or sale in the system that receives it. Keep consent settings and blocked-script effects in the measurement note. Use [Uplumo's analytics workflow](/blog/uplumo-ai-traffic-analytics-search-performance) to connect these observations without treating citations as visits.
+
+![Identify the signal before naming the source](/site/blog/chatgpt-traffic-google-analytics-workflow.svg)
+
+*Workflow diagram: known referrer; campaign tag; no usable signal.*
+
+![Keep four different measurements separate](/site/blog/chatgpt-traffic-google-analytics-review.svg)
+
+*Review diagram: answer observed; visit recorded; outcome confirmed.*
+
 ## FAQ
 
 **Will GA4 ever label AI traffic by itself?**
-GA4's default channel groups do not have an AI channel yet, so a custom channel group is the way to do it today.
+Yes. Google's current default definitions include AI Assistant. Check the report's scope and inspect the underlying source rows; unidentifiable visits still cannot be recovered.
 
 **Does traffic from Google's AI Overviews count?**
 Clicks from AI Overviews arrive from Google search like any other organic click, so they appear as Organic Search, not as AI assistant traffic.
@@ -100,3 +102,8 @@ It varies a lot by industry and by how often assistants cite your pages. Measure
 
 **How do I get more of it?**
 Write pages that answer questions clearly, so assistants can quote them. Our guide to [answer engine optimisation](/blog/what-is-answer-engine-optimisation) covers how.
+
+## Sources
+
+- [Google Analytics default channel definitions](https://support.google.com/analytics/answer/9756891)
+- [Google Analytics traffic acquisition report](https://support.google.com/analytics/answer/12923437)

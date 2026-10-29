@@ -2,6 +2,8 @@
 title: Google Search Console for small businesses: a simple guide
 description: Learn how to use Google Search Console to spot search demand, low-click pages and indexing problems without getting lost in reports.
 date: 2026-10-15
+updated: 2026-10-29
+image: /site/blog/search-console-workflow.svg
 ---
 
 **Short answer:** Google Search Console shows how your pages appear in Google Search: the queries people use, impressions, clicks, click-through rate and average position. Start with the Performance report and Page Indexing report. Use them to choose one practical improvement at a time.
@@ -71,6 +73,20 @@ Share access with a separate account rather than passing around the business own
 ## Make a simple action log
 
 A small spreadsheet is enough: record the date range, country, page, query pattern, clicks, impressions, issue, change and review date. Keep the first version of a title or page copy so you can compare it later. If the page has very few impressions, wait for more data or use customer calls and sales questions as evidence. Avoid treating a tiny change in average position as a business result. The purpose of this log is to connect one observed problem to one change, then check whether qualified visits or enquiries improve.
+
+## A small-business review you can repeat every week
+
+Choose one important service page. Filter Search performance to that page, then review the queries, country and device rather than the property-wide average alone. Compare equivalent periods and note any holiday or campaign that changes demand. A page can gain impressions for new broad queries while receiving fewer clicks for its core buying queries.
+
+Inspect the exact URL if indexing or canonical selection looks wrong. If the page is eligible but the query intent is poorly served, use the [service-page checklist](/blog/on-page-seo-checklist-for-service-pages) before changing titles at random. Uplumo Search Performance connects eligible Google properties to a project; the underlying Search Console remains the place to inspect Google's detailed indexing state. Read the [measurement guide](/blog/uplumo-ai-traffic-analytics-search-performance) for why clicks and recorded sessions differ.
+
+![Use the report that answers your question](/site/blog/google-search-console-for-small-businesses-workflow.svg)
+
+*Workflow diagram: url inspection; performance; page indexing.*
+
+![Turn a Search Console observation into work](/site/blog/google-search-console-for-small-businesses-review.svg)
+
+*Review diagram: filter; inspect; review.*
 
 ## FAQ
 

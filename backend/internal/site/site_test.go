@@ -472,3 +472,19 @@ func TestPublicPagesKeepMeasurementClaimsHonest(t *testing.T) {
 		t.Error("AI traffic explanation must disclose missing attribution")
 	}
 }
+
+func TestBlogMeasurementClaimsStayCurrent(t *testing.T) {
+	s := newSite(t, &url.URL{Scheme: "https", Host: "uplumo.com"})
+	traffic := getPost(s, "chatgpt-traffic-google-analytics").Body.String()
+	for _, stale := range []string{"do not have an AI channel yet", "To catch the rest you need"} {
+		if strings.Contains(traffic, stale) {
+			t.Errorf("traffic guide repeats unsupported claim %q", stale)
+		}
+	}
+	if !strings.Contains(traffic, "AI Assistant") || !strings.Contains(traffic, "cannot reliably recover") {
+		t.Error("traffic guide must explain current grouping and missing-source limits")
+	}
+	if strings.Contains(getPost(s, "what-is-answer-engine-optimisation").Body.String(), "Growth plan") {
+		t.Error("AEO guide advertises a retired plan")
+	}
+}

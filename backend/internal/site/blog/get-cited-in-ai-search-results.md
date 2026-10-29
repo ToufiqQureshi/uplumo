@@ -2,7 +2,8 @@
 title: How to get your business cited in AI search answers
 description: Make your business information clear and trustworthy so search systems can understand your pages, while measuring citations without false promises.
 date: 2026-10-15
-updated: 2026-10-17
+updated: 2026-10-29
+image: /site/blog/ai-search-citations.svg
 ---
 
 **Short answer:** No one can guarantee that ChatGPT, Google AI Overviews or another assistant will cite a business. You can make your site easier to discover and understand: answer a clear question, show first-hand proof, keep business facts consistent, earn legitimate mentions and measure what each platform exposes.
@@ -77,7 +78,23 @@ Do not add special “AI schema” or create hundreds of thin question pages to 
 
 Record the prompt, platform, date, country or language, answer and any cited URL. Repeat a small, stable set over time and label the results as samples: assistants can produce different answers for similar prompts. A mention is not a click, and an unlinked brand mention is not a referral visit. Compare this qualitative observation with Search Console clicks, site visits and qualified leads rather than presenting a citation count as revenue.
 
-Keep citations easy for a reader to verify. Our guide to [Search Console and click changes](/blog/search-console-impressions-clicks-down) helps establish the search baseline; the [SEO report template](/blog/seo-client-report-template-that-proves-progress) shows how to report uncertainty without overselling it. Google also warns against scaled pages made mainly to manipulate rankings in its [spam policies](https://developers.google.com/search/docs/essentials/spam-policies).
+Keep citations easy for a reader to verify. Our guide to [Search Console and click changes](/blog/search-console-impressions-clicks-down) helps establish the search baseline; the [SEO report template](/blog/uplumo-seo-aeo-platform-smb-enterprise) shows how to report uncertainty without overselling it. Google also warns against scaled pages made mainly to manipulate rankings in its [spam policies](https://developers.google.com/search/docs/essentials/spam-policies).
+## Use a citation miss to choose a page improvement
+
+Imagine a customer asks whether a service works for a particular location and the saved answer cites another business. Open that cited page before deciding why it won. Does it provide the location detail, eligibility, pricing conditions or example your page lacks? Those are observable differences; they do not reveal the model's private selection process.
+
+[Uplumo Cite Fix](/blog/uplumo-cite-fix-guide) brings stored crawl signals together with available saved AI evidence. Inspect its affected URLs, compare a relevant rival snapshot when available, and make one defensible improvement. A score increase is a change in the tool's checks, not proof of an AI citation.
+
+For OpenAI crawler policies, distinguish OAI-SearchBot for search from GPTBot for training. Review [OpenAI's crawler documentation](https://developers.openai.com/api/docs/bots) with the site owner. Blocking training is a policy choice; do not expose private content or weaken authentication to pursue citations.
+
+![Build a page worth citing](/site/blog/get-cited-in-ai-search-results-workflow.svg)
+
+*Workflow diagram: accessible; useful; verifiable.*
+
+![Investigate a citation miss in Uplumo](/site/blog/get-cited-in-ai-search-results-review.svg)
+
+*Review diagram: save evidence; compare pages; fix and revisit.*
+
 ## FAQ
 
 **Does FAQ schema make ChatGPT cite my page?**

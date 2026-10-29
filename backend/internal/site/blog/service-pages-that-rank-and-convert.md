@@ -2,6 +2,8 @@
 title: Service pages that rank and turn visits into enquiries
 description: Improve a service page with clear scope, customer proof, useful pricing details, local relevance and one easy next step.
 date: 2026-10-15
+updated: 2026-10-29
+image: /site/blog/service-page-blueprint.svg
 ---
 
 **Short answer:** A strong service page explains what you do, who needs it, where you work, how the service works and how to take the next step. It should answer a real buying question better than a generic list of keywords.
@@ -71,6 +73,20 @@ A page for emergency work should make the response route clear and avoid sending
 This does not mean every customer needs a different page. It means the page should match the decision people are making. If the same page tries to serve urgent repairs, long-term contracts and DIY readers, consider whether a section or separate guide would help.
 
 Use Search Console queries and actual sales conversations to make this choice. Search wording suggests intent; customer questions tell you what information the business needs to provide before someone is ready to speak.
+
+## Example: turn a vague offer into a useful decision page
+
+A bookkeeping page saying “all financial solutions” gives a small shop little help. A clearer page states the supported business types, recurring tasks, documents needed, reporting schedule and how onboarding works. Publish a price range only when its conditions can be explained honestly; otherwise show what is needed for an estimate.
+
+Use [Uplumo Content Scoring](/blog/uplumo-seo-aeo-content-scoring) to inspect answer structure and missing evidence, then test the live enquiry flow. [Cite Fix](/blog/uplumo-cite-fix-guide) can add a page-level review of quoteability signals. The strongest reason to use the workflow is that the reviewer can move from a specific gap to the relevant edit and later measurement, rather than collect a score without acting.
+
+![Answer the questions before the enquiry](/site/blog/service-pages-that-rank-and-convert-workflow.svg)
+
+*Workflow diagram: relevance; confidence; action.*
+
+![Review the service page as a customer](/site/blog/service-pages-that-rank-and-convert-review.svg)
+
+*Review diagram: first screen; main content; next step.*
 
 ## FAQ
 

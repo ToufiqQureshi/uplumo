@@ -2,6 +2,8 @@
 title: Internal links for SEO: help customers find key pages
 description: Use clear internal links to connect your services, guides and important pages, improve navigation and help search engines discover content.
 date: 2026-10-15
+updated: 2026-10-29
+image: /site/blog/internal-linking-map.svg
 ---
 
 **Short answer:** Internal links connect pages on the same website. Use them to help customers reach the next useful page and help search engines discover important content. Link from relevant pages with descriptive words, and make sure key pages are not hidden or several clicks away.
@@ -73,6 +75,20 @@ Use a small, stable set of page types: core services, locations, guides, about a
 A page can have many links and still be hard to use if they all point to similar destinations. Group links by the task a visitor wants to complete. Put the most important service or booking path where a customer expects to find it, and use related guides as supporting routes.
 
 For a small site, a quick manual map is enough: homepage to main services, service page to booking or quote, guide to related service, and all important pages to contact details. For a large site, a crawler can help, but have a person review whether the links make sense.
+
+## Example: link a buying guide to the right service
+
+A guide about choosing an air-conditioner size can link to the relevant installation service at the point where professional sizing becomes useful. “See our AC installation process” gives a clearer expectation than “click here”. The service page can link back to the sizing explanation for readers who need background. Both links should help the reader complete a task.
+
+In [Uplumo Site Audit](/blog/uplumo-advanced-site-audit-crawler), inspect orphan and discovery findings against the pages actually crawled. A URL absent from a limited crawl is not automatically an orphan across the whole site. [Cite Fix topic clusters](/blog/uplumo-cite-fix-guide) group stored page signals and can suggest draft topics; review the proposed relationship before adding links. Do not add the same keyword anchor to every footer just to inflate counts.
+
+![Connect a question to its useful next page](/site/blog/internal-linking-for-small-business-seo-workflow.svg)
+
+*Workflow diagram: guide; service page; next action.*
+
+![Check a proposed internal link](/site/blog/internal-linking-for-small-business-seo-review.svg)
+
+*Review diagram: source; anchor; destination.*
 
 ## FAQ
 
