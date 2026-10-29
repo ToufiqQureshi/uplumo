@@ -196,8 +196,11 @@ and draft handoff cost zero provider calls. Legacy signals require a rescan.
   template and dropped; the words of a repeated title part (the brand) are
   dropped from every title, so "Uplumo AI Writing" reads as "ai writing".
   H1/H2 headings are used only when the title is nothing but template text.
-  Function words ("in", "it", "these", "make", "but") and pure numbers are not
-  topics on their own; a bigram with a number ("web 3") still is.
+  Function words ("in", "it", "these", "make", "but"), generic title words
+  ("guide", "site", "pages", "fix", "plan", "show", "remove", "diagnose") and
+  pure numbers are not topics on their own; a two-word phrase ("ai search",
+  "web 3") still is. The generic list was added after the first fix went live
+  and the rescan still advised "Write a pillar page for show".
 - **Why:** live test on uplumo.com (29 Oct): every blog post shares the same
   H2s, so the report showed topics "make", "faq", "sources", "in", "it",
   "related uplumo" and advised "Write a pillar page for make". Generic section

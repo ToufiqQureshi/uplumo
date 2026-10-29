@@ -56,7 +56,15 @@ var topicStopwords = map[string]bool{
 	"before": true, "after": true, "than": true, "then": true, "just": true, "also": true,
 	"get": true, "make": true, "use": true, "tell": true, "need": true, "want": true,
 	"new": true, "one": true, "but": true, "better": true, "find": true, "way": true,
-	"ways": true, "tips": true, "here": true, "now": true, "faq": true, "faqs": true, "source": true, "sources": true,
+	"ways": true, "tips": true, "here": true, "now": true,
+	// Generic title words: a guide, a site, a fix or a plan is not a subject.
+	"guide": true, "guides": true, "site": true, "sites": true, "website": true,
+	"websites": true, "pages": true, "show": true, "shows": true, "remove": true,
+	"diagnose": true, "fix": true, "fixes": true, "plan": true, "step": true,
+	"steps": true, "check": true, "start": true, "work": true, "works": true,
+	"help": true, "improve": true, "simple": true, "practical": true, "complete": true,
+	"ultimate": true, "quick": true, "easy": true, "realistic": true, "useful": true,
+	"keep": true, "turn": true, "choose": true, "explained": true, "inside": true, "faq": true, "faqs": true, "source": true, "sources": true,
 	"related": true, "में": true, "और": true, "का": true, "की": true, "के": true, "से": true,
 	"को": true, "है": true, "पर": true,
 }
