@@ -87,9 +87,8 @@ func topicURL(raw string) string {
 	}
 	u.Fragment = ""
 	u.Host = strings.ToLower(u.Host)
-	if u.Path != "/" {
-		u.Path = strings.TrimRight(u.Path, "/")
-	}
+	// A trailing slash is kept: /guide and /guide/ can be different pages,
+	// as the crawler's normalizeURL also treats them.
 	if u.Path == "" {
 		u.Path = "/"
 	}

@@ -78,3 +78,15 @@ func TestTopicReportLimits500PagesAndClusters(t *testing.T) {
 		t.Fatalf("exact limit: %+v", got)
 	}
 }
+
+func TestTopicURLKeepsTrailingSlashPagesApart(t *testing.T) {
+	if topicURL("https://Site.example/guide") == topicURL("https://site.example/guide/") {
+		t.Fatal("/guide and /guide/ collapsed into one page; they can be different pages")
+	}
+	if got := topicURL("https://Site.example/guide/#top"); got != "https://site.example/guide/" {
+		t.Fatalf("topicURL = %q, want host lower-cased and fragment dropped", got)
+	}
+	if got := topicURL("https://site.example"); got != "https://site.example/" {
+		t.Fatalf("topicURL(root) = %q", got)
+	}
+}

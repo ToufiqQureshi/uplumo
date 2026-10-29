@@ -177,3 +177,13 @@ pillars 20 and breadth 10. Its grouping and calculations are our own; the
 source license is at the repo root. This is heuristic and not a search-engine
 ranking. Tests hand-work score, limits, Unicode and issue examples. The report
 and draft handoff cost zero provider calls. Legacy signals require a rescan.
+
+## Topic pages keep their trailing slash
+
+- **Decision:** `topicURL` lower-cases the host and drops the fragment but
+  keeps a trailing slash, so `/guide` and `/guide/` stay two pages.
+- **Why:** review of #246: stripping it merged distinct pages, overwrote one
+  in `byURL` and counted links between them as self-links, skewing orphans,
+  interlink ratios and pillar advice. The crawler's `normalizeURL` already
+  keeps the slash for the same reason.
+- **Trace:** `topics.go`, `TestTopicURLKeepsTrailingSlashPagesApart`.
