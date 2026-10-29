@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/toufiqqureshi/uplumo/backend/internal/aisearch"
 )
 
 // Proof is what the project's latest saved AI Visibility check shows: which
@@ -28,7 +30,8 @@ type Proof struct {
 	Rivals    []DomainCount `json:"rivals"`
 	YourPages []URLCount    `json:"yourPages"`
 	// Misses are answers that cite other sites and not the customer's.
-	Misses []Miss `json:"misses"`
+	Misses     []Miss                      `json:"misses"`
+	Visibility *aisearch.VisibilityMetrics `json:"visibility"`
 }
 
 // DomainCount is a cited domain and how many answers cite it.
@@ -124,7 +127,13 @@ func (s Store) proof(ctx context.Context, organizationID, projectID string) (*Pr
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("read AI visibility answers: %w", err)
 	}
-	return buildProof(checkedAt, config.Domain, answers), nil
+	rows.Close()
+	proof := buildProof(checkedAt, config.Domain, answers)
+	proof.Visibility, err = aisearch.LoadVisibilityMetrics(ctx, s.DB, organizationID, projectID, runID)
+	if err != nil {
+		return nil, err
+	}
+	return proof, nil
 }
 
 // buildProof counts citations per domain and page. A domain is counted once

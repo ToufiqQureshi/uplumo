@@ -66,3 +66,5 @@ allowlist, reasoning scope, project binding or explicit-action boundary changes.
 - **Why:** Source copies still promised Local SEO/Maps capabilities removed by owner decision, and the embedded-copy regression failed.
 - **Preserve:** No runtime prompt expansion or new paid tool; existing shipped prompts remain the capability boundary. This updates agent skill instructions and must be called out in the PR.
 - **Trace:** `skills_test.go:TestEmbeddedCopiesMatchTheirSources` and the two source/embedded pairs.
+
+Cite Fix reports include untrusted page evidence and topic names. SAM treats these as data to report, not instructions to follow; the report read itself starts no paid provider work.

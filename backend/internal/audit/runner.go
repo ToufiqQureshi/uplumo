@@ -17,17 +17,18 @@ const maxCrawlDepth = 6
 // deterministic row ids and upserts, so a partially written audit completes
 // instead of duplicating.
 type Runner struct {
-	repo       Store
-	progress   *Progress
-	guard      *Guard
-	crawler    *Crawler
-	lighthouse LighthouseProvider
-	fieldData  FieldDataProvider
-	renderer   JavaScriptRenderer
-	rendering  RenderingMeter
-	logger     *slog.Logger
-	now        func() time.Time
-	resolver   CrawlerAccessResolver
+	repo           Store
+	progress       *Progress
+	guard          *Guard
+	crawler        *Crawler
+	lighthouse     LighthouseProvider
+	fieldData      FieldDataProvider
+	renderer       JavaScriptRenderer
+	rendering      RenderingMeter
+	externalChecks *ExternalChecks
+	logger         *slog.Logger
+	now            func() time.Time
+	resolver       CrawlerAccessResolver
 	// minCheckTime is minLighthouseCheckTime; tests shorten it.
 	minCheckTime time.Duration
 }
@@ -41,12 +42,13 @@ type RunnerConfig struct {
 	Lighthouse LighthouseProvider
 	// FieldData looks up real-visitor data for each check; nil uses only
 	// what PageSpeed Insights embeds.
-	FieldData FieldDataProvider
-	Renderer  JavaScriptRenderer
-	Rendering RenderingMeter
-	Logger    *slog.Logger
-	Now       func() time.Time
-	Resolver  CrawlerAccessResolver
+	FieldData      FieldDataProvider
+	Renderer       JavaScriptRenderer
+	Rendering      RenderingMeter
+	ExternalChecks *ExternalChecks
+	Logger         *slog.Logger
+	Now            func() time.Time
+	Resolver       CrawlerAccessResolver
 }
 
 // NewRunner builds a Runner.
@@ -70,7 +72,7 @@ func NewRunner(config RunnerConfig) *Runner {
 	return &Runner{
 		repo: config.Repository, progress: config.Progress, guard: guard, crawler: crawler,
 		lighthouse: config.Lighthouse, fieldData: config.FieldData, renderer: config.Renderer,
-		rendering: config.Rendering, logger: logger, now: now,
+		rendering: config.Rendering, externalChecks: config.ExternalChecks, logger: logger, now: now,
 		minCheckTime: minLighthouseCheckTime,
 		resolver:     config.Resolver,
 	}
@@ -158,6 +160,11 @@ func (r *Runner) run(ctx, jobCtx context.Context, job JobPayload) error {
 	if err := r.repo.CompleteAudit(ctx, job.AuditID, job.AuditID, pagesCrawled, maxPages); err != nil {
 		return err
 	}
+	if r.externalChecks != nil {
+		if err := r.externalChecks.schedule(ctx, job, ai); err != nil {
+			r.logger.WarnContext(ctx, "schedule external audit checks", "audit_id", job.AuditID, "err", err)
+		}
+	}
 	if r.progress != nil {
 		_ = r.progress.Clear(ctx, job.AuditID)
 	}
@@ -222,6 +229,8 @@ func (r *Runner) renderJavaScriptPages(ctx context.Context, job JobPayload, ai *
 		}
 		applyAnalysis(&page, analysis, http.Header{})
 		page.XRobotsTag = slim.XRobotsTag
+		page.AI.SnippetBlocked = page.AI.SnippetBlocked || blocksSnippet(slim.XRobotsTag)
+		page.AI.HSTS = slim.HSTS
 		page.HeaderCanonicalURL = slim.HeaderCanonicalURL
 		page.IsIndexable = computeIsIndexable(page.RobotsMeta, page.XRobotsTag)
 		if err := r.repo.SaveJavaScriptRenderedPage(ctx, job.AuditID, page, entry.CostUSD); err != nil {
@@ -234,8 +243,9 @@ func (r *Runner) renderJavaScriptPages(ctx context.Context, job JobPayload, ai *
 
 // crawlQueueItem is one URL waiting to be fetched.
 type crawlQueueItem struct {
-	url   string
-	depth int
+	url       string
+	depth     int
+	inSitemap bool
 }
 
 // crawl runs the BFS crawl, persisting each sub-batch as it lands.
@@ -245,10 +255,26 @@ func (r *Runner) crawl(ctx context.Context, job JobPayload, _ string, seedURLs [
 		return 0, ErrStartURLInvalid
 	}
 	visited := map[string]struct{}{}
-	queue := []crawlQueueItem{{url: startNormalized, depth: 0}}
+	seeds := map[string]bool{}
+	var blockedSitemap []DetectedIssue
 	for _, seed := range seedURLs {
 		if normalized, ok := normalizeURL(seed, ""); ok {
-			queue = append(queue, crawlQueueItem{url: normalized})
+			seeds[normalized] = true
+			if !robots.IsAllowed(normalized) {
+				blockedSitemap = append(blockedSitemap, DetectedIssue{IssueType: IssueSitemapBlocked, PageURL: normalized})
+			}
+		}
+	}
+	if err := r.repo.InsertIssues(ctx, job.AuditID, blockedSitemap); err != nil {
+		return 0, err
+	}
+	queue := []crawlQueueItem{}
+	if robots.IsAllowed(startNormalized) {
+		queue = append(queue, crawlQueueItem{url: startNormalized, depth: 0, inSitemap: seeds[startNormalized]})
+	}
+	for _, seed := range seedURLs {
+		if normalized, ok := normalizeURL(seed, ""); ok && robots.IsAllowed(normalized) {
+			queue = append(queue, crawlQueueItem{url: normalized, inSitemap: true})
 		}
 	}
 
@@ -293,6 +319,7 @@ func (r *Runner) crawl(ctx context.Context, job JobPayload, _ string, seedURLs [
 				continue // already visited
 			}
 			page := result.CrawledPageResult
+			page.InSitemap = item.inSitemap
 			page.ID = DeterministicAuditRowID(job.AuditID, page.URL)
 			depth := item.depth
 			if item.depth != 0 || i != 0 {
@@ -325,12 +352,27 @@ func (r *Runner) crawl(ctx context.Context, job JobPayload, _ string, seedURLs [
 
 		window = AdjustCrawlWindow(window, pages, CrawlWindow)
 
-		// Enqueue discovered internal links.
+		// Within the same crawl budget, visit internal canonical and language
+		// targets as well as ordinary links so their status can be checked.
 		for _, page := range pages {
 			if page.CrawlDepth != nil && *page.CrawlDepth >= maxCrawlDepth {
 				continue
 			}
-			for _, link := range page.Links {
+			links := append([]PageLink(nil), page.Links...)
+			targets := []string{page.CanonicalURL, page.HeaderCanonicalURL}
+			for _, alternate := range page.Technical.Hreflangs {
+				targets = append(targets, alternate.URL)
+			}
+			for _, target := range targets {
+				if target == "" {
+					continue
+				}
+				normalized, ok := normalizeURL(target, page.URL)
+				if ok && isSameOrigin(normalized, job.StartURL) {
+					links = append(links, PageLink{TargetURL: normalized, IsInternal: true})
+				}
+			}
+			for _, link := range links {
 				if !link.IsInternal {
 					continue
 				}

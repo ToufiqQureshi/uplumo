@@ -58,6 +58,7 @@ paths:
     post:
       operationId: getAuditResults
       summary: Read an audit's pages, issues and Lighthouse results
+      description: Results include checksNeedRescan when saved page signals predate current checks. Pending or incomplete external checks are reported as issues.
       parameters:
         - $ref: "#/components/parameters/ProjectId"
       requestBody: { $ref: "#/components/requestBodies/AuditId" }

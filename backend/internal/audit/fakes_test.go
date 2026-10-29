@@ -276,6 +276,7 @@ func (m *memoryStore) ListSlimPages(_ context.Context, auditID string) ([]SlimPa
 			CanonicalURL: page.CanonicalURL, HeaderCanonicalURL: page.HeaderCanonicalURL,
 			XRobotsTag: page.XRobotsTag, RobotsMeta: page.RobotsMeta, CrawlDepth: page.CrawlDepth,
 			InSitemap: page.InSitemap, ResponseTimeMs: page.ResponseTimeMs,
+			HreflangTargets: page.AI.HreflangTargets, HSTS: page.AI.HSTS, SignalsVersion: page.AI.Version,
 		})
 	}
 	return slim, nil
@@ -358,6 +359,7 @@ func (m *memoryStore) RunMultipageChecks(ctx context.Context, auditID string) ([
 		filtered = append(filtered, page)
 	}
 	issues := append(FindDuplicates(filtered), FindRedirectChainsAndLoops(filtered)...)
+	issues = append(issues, findCanonicalAndHreflangIssues(filtered)...)
 	return issues, len(shellIDs) > 0, nil
 }
 

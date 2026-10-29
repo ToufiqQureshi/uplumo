@@ -20,3 +20,7 @@ crawler flagged as app shells through DataForSEO On-Page JavaScript. The launch
 control appears only when backend capabilities confirm the renderer is wired.
 It is opt-in, capped at 20 pages, and shows the 39-credit maximum (actual
 delivered cost is charged). See [flow.md](flow.md) for the paid-call boundary.
+
+Results show the added technical and external-link findings. Queued or partial
+external checks are identified; old audits without current signals ask for a
+new scan. Training-bot blocks are informational and do not reduce readiness.

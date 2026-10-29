@@ -35,11 +35,41 @@ const run = z.object({
   mentioned: z.number(),
   cited: z.number(),
 });
+const visibilitySourceSchema = z.object({
+  name: z.string(),
+  firstSeen: z.string(),
+  lastSeen: z.string(),
+  averageRank: z.number().positive(),
+  latestCount: z.number().int().nonnegative(),
+  momentum: z.enum(["up", "down", "flat", "unavailable"]),
+});
+export const visibilityMetricsSchema = z.object({
+  runs: z.number().int().nonnegative(),
+  historyLimited: z.boolean(),
+  sourcesLimited: z.boolean(),
+  domains: z.array(visibilitySourceSchema),
+  pages: z.array(visibilitySourceSchema),
+  prompts: z.array(
+    z.object({
+      prompt: z.string(),
+      engine: z.string(),
+      answers: z.number().int().nonnegative(),
+      citedAnswers: z.number().int().nonnegative(),
+      averageRank: z.number().positive().nullable(),
+      latestRank: z.number().int().positive().nullable(),
+      inlineAnswers: z.number().int().nonnegative().default(0),
+      averageAnswerRank: z.number().positive().nullable().default(null),
+      latestAnswerRank: z.number().int().positive().nullable().default(null),
+    }),
+  ),
+});
+export type VisibilityMetrics = z.infer<typeof visibilityMetricsSchema>;
 const trackingStateSchema = z.object({
   configuration: trackingConfigSchema.nullable(),
   nextCheckAt: z.string().nullable(),
   runs: z.array(run),
   providerConfigured: z.boolean(),
+  visibility: visibilityMetricsSchema.nullable().default(null),
 });
 export const trackingEstimateSchema = z.object({
   answers: z.number(),

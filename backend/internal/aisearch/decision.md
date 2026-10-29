@@ -145,3 +145,13 @@ Use the package tests next to the source files in `README.md`. For changes cross
   - A quote not found in the excerpt is dropped rather than shown as the AI's words.
   - Model and ceiling match the writer (`TestSentimentPricesMatchTheWriter`); metered as `ai_visibility`, endpoint `openrouter/openai/gpt-4.1-mini`.
 - **Trace:** `tracking_sentiment.go`, `tracking_handler.go`; `tracking_sentiment_test.go` (foreign workspace, no plan and no credits refused before the model; one call charged once; second click buys nothing). A mutation that reclassified stored answers failed it.
+
+## Citation history from saved answers (PR 3)
+
+Show rank, first/last observation, momentum and repeated-prompt averages from
+existing saved answers only. Limit analysis to the latest 30 comparable runs
+and 50 displayed sources; label the limit. A provider's source-list order is
+not necessarily answer-text order, so inline ranks require the saved URL to be
+present in the answer; absent evidence stays unavailable. Momentum compares
+complete runs with the same prompts and engines. Tests cover rank order,
+missing evidence, unequal scopes, unsafe URLs and Unicode questions.

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 )
@@ -23,22 +24,22 @@ func TestBlockedAICrawlers(t *testing.T) {
 		{
 			name:   "everyone blocked",
 			robots: text("User-agent: *\nDisallow: /\n"),
-			want:   []string{"OAI-SearchBot (ChatGPT search)", "ChatGPT-User (ChatGPT browsing)", "GPTBot (OpenAI)", "PerplexityBot (Perplexity)", "Claude-SearchBot (Claude search)", "ClaudeBot (Anthropic)", "Google-Extended (Gemini)"},
+			want:   []string{"OAI-SearchBot (ChatGPT search)", "ChatGPT-User (ChatGPT browsing)", "PerplexityBot (Perplexity)", "Claude-SearchBot (Claude search)", "Bingbot (Copilot)", "DuckAssistBot (DuckDuckGo)", "Amazonbot (Amazon)", "YouBot (You.com)", "xAI-Bot (xAI)", "Applebot (Apple)", "GPTBot (OpenAI training)", "ClaudeBot (Anthropic training)", "Google-Extended (Google training)", "CCBot (Common Crawl training)", "Applebot-Extended (Apple training)"},
 		},
 		{
 			name:   "training bots only, search bots still allowed",
 			robots: text("User-agent: GPTBot\nUser-agent: ClaudeBot\nDisallow: /\n\nUser-agent: *\nAllow: /\n"),
-			want:   []string{"GPTBot (OpenAI)", "ClaudeBot (Anthropic)"},
+			want:   []string{"GPTBot (OpenAI training)", "ClaudeBot (Anthropic training)"},
 		},
 		{
 			name:   "a specific allow beats a blanket block",
 			robots: text("User-agent: *\nDisallow: /\n\nUser-agent: OAI-SearchBot\nAllow: /\n"),
-			want:   []string{"ChatGPT-User (ChatGPT browsing)", "GPTBot (OpenAI)", "PerplexityBot (Perplexity)", "Claude-SearchBot (Claude search)", "ClaudeBot (Anthropic)", "Google-Extended (Gemini)"},
+			want:   []string{"ChatGPT-User (ChatGPT browsing)", "PerplexityBot (Perplexity)", "Claude-SearchBot (Claude search)", "Bingbot (Copilot)", "DuckAssistBot (DuckDuckGo)", "Amazonbot (Amazon)", "YouBot (You.com)", "xAI-Bot (xAI)", "Applebot (Apple)", "GPTBot (OpenAI training)", "ClaudeBot (Anthropic training)", "Google-Extended (Google training)", "CCBot (Common Crawl training)", "Applebot-Extended (Apple training)"},
 		},
 		{
 			name:   "Claude-SearchBot is not caught by a ClaudeBot rule",
 			robots: text("User-agent: claudebot\nDisallow: /\n"),
-			want:   []string{"ClaudeBot (Anthropic)"},
+			want:   []string{"ClaudeBot (Anthropic training)"},
 		},
 	}
 	for _, tt := range tests {
@@ -101,7 +102,7 @@ func TestHasLLMsTxt(t *testing.T) {
 func TestAIAccessIssues(t *testing.T) {
 	blockAll := "User-agent: *\nDisallow: /\n"
 	issues := aiAccessIssues("https://shop.example", &blockAll, false)
-	if len(issues) != 2 || issues[0].IssueType != IssueAICrawlersBlocked || issues[1].IssueType != IssueMissingLLMsTxt {
+	if len(issues) != 3 || issues[0].IssueType != IssueAICrawlersBlocked || issues[1].IssueType != IssueAITrainingBotsBlocked || issues[2].IssueType != IssueMissingLLMsTxt {
 		t.Fatalf("issues = %+v", issues)
 	}
 	if issues[0].PageID != nil || issues[0].PageURL != "https://shop.example/robots.txt" {
@@ -110,10 +111,40 @@ func TestAIAccessIssues(t *testing.T) {
 	if got := aiAccessIssues("https://shop.example", nil, true); len(got) != 0 {
 		t.Fatalf("an open site with llms.txt has issues: %+v", got)
 	}
-	for _, issueType := range []IssueType{IssueAICrawlersBlocked, IssueMissingLLMsTxt} {
+	for _, issueType := range []IssueType{IssueAICrawlersBlocked, IssueAITrainingBotsBlocked, IssueMissingLLMsTxt} {
 		descriptor, ok := DescribeIssueType(string(issueType))
 		if !ok || descriptor.HowToFix == "" {
 			t.Fatalf("%s has no title or fix: %+v", issueType, descriptor)
 		}
+	}
+	trainingOnly := "User-agent: GPTBot\nDisallow: /\nUser-agent: Applebot-Extended\nDisallow: /\n"
+	trainingIssues := aiAccessIssues("https://shop.example", &trainingOnly, true)
+	if len(trainingIssues) != 1 || trainingIssues[0].IssueType != IssueAITrainingBotsBlocked {
+		t.Fatalf("training-only restrictions must not flag search crawlers: %+v", trainingIssues)
+	}
+}
+
+func TestAISearchAndTrainingCrawlerClassification(t *testing.T) {
+	for _, tc := range []struct {
+		token  string
+		search bool
+	}{
+		{"OAI-SearchBot", true}, {"ChatGPT-User", true}, {"PerplexityBot", true}, {"Claude-SearchBot", true},
+		{"Bingbot", true}, {"DuckAssistBot", true}, {"Amazonbot", true}, {"YouBot", true}, {"xAI-Bot", true}, {"Applebot", true},
+		{"GPTBot", false}, {"ClaudeBot", false}, {"Google-Extended", false}, {"CCBot", false}, {"Applebot-Extended", false},
+	} {
+		t.Run(tc.token, func(t *testing.T) {
+			text := "User-agent: " + tc.token + "\nDisallow: /\n"
+			blocked := blockedAICrawlers("https://shop.example", &text)
+			match := slices.IndexFunc(blocked, func(name string) bool {
+				return strings.HasPrefix(strings.ToLower(name), strings.ToLower(tc.token)+" ")
+			})
+			if match < 0 {
+				t.Fatalf("blocked = %v, missing %s", blocked, tc.token)
+			}
+			if got := IsAISearchBot(blocked[match]); got != tc.search {
+				t.Fatalf("search = %v, want %v", got, tc.search)
+			}
+		})
 	}
 }

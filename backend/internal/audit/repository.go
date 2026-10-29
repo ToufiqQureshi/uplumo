@@ -78,6 +78,7 @@ type PageRecord struct {
 	CrawlDepth         *int           `json:"crawlDepth"`
 	InSitemap          bool           `json:"inSitemap"`
 	ResponseTimeMs     *int           `json:"responseTimeMs"`
+	SignalsVersion     int            `json:"-"`
 }
 
 // IssueRecord is one issue row.
@@ -386,7 +387,9 @@ func (r *Repository) SaveJavaScriptRenderedPage(ctx context.Context, auditID str
 	headingOrder, _ := json.Marshal(defaultIntSlice(page.HeadingOrder))
 	images, _ := json.Marshal(defaultImageSlice(page.Images))
 	hreflang, _ := json.Marshal(defaultStringSlice(page.HreflangTags))
-	citation, _ := json.Marshal(page.AI)
+	signals := page.AI
+	signals.Version = CitationSignalsVersion
+	citation, _ := json.Marshal(signals)
 	command, err := tx.Exec(ctx, `UPDATE go_audit_pages SET status_code=$3, redirect_url=NULL, title=$4, meta_description=$5,
 		canonical_url=$6, robots_meta=$7, og_title=$8, og_description=$9, og_image=$10,
 		h1_count=$11, h2_count=$12, h3_count=$13, h4_count=$14, h5_count=$15, h6_count=$16,
@@ -477,6 +480,7 @@ func pageArgs(auditID string, page CrawledPageResult) []any {
 	// Written for every page of a new crawl, so a NULL marks an audit crawled
 	// before Cite Fix existed rather than a page with no signals.
 	signals := page.AI
+	signals.Version = CitationSignalsVersion
 	signals.SchemaTypes = defaultStringSlice(signals.SchemaTypes)
 	citation, _ := json.Marshal(signals)
 	var responseTime *int
@@ -636,7 +640,7 @@ func (r *Repository) listPages(ctx context.Context, auditID string) ([]PageRecor
 			x_robots_tag, header_canonical_url, og_title, og_description, og_image, h1_count, h2_count, h3_count,
 			h4_count, h5_count, h6_count, heading_order_json, word_count, content_hash, images_total,
 			images_missing_alt, images_json, internal_link_count, external_link_count, has_structured_data,
-			hreflang_tags_json, is_indexable, crawl_depth, in_sitemap, response_time_ms
+			hreflang_tags_json, is_indexable, crawl_depth, in_sitemap, response_time_ms, citation_signals_json
 		FROM go_audit_pages WHERE audit_id = $1 ORDER BY id`, auditID)
 	if err != nil {
 		return nil, fmt.Errorf("list pages: %w", err)
@@ -645,19 +649,27 @@ func (r *Repository) listPages(ctx context.Context, auditID string) ([]PageRecor
 	pages := []PageRecord{}
 	for rows.Next() {
 		var page PageRecord
-		var headingOrderJSON, imagesJSON, hreflangJSON *string
+		var headingOrderJSON, imagesJSON, hreflangJSON, signalsJSON *string
 		if err := rows.Scan(&page.ID, &page.URL, &page.StatusCode, &page.FetchClass, &page.RedirectURL, &page.Title,
 			&page.MetaDescription, &page.CanonicalURL, &page.RobotsMeta, &page.XRobotsTag, &page.HeaderCanonicalURL,
 			&page.OgTitle, &page.OgDescription, &page.OgImage, &page.H1Count, &page.H2Count, &page.H3Count,
 			&page.H4Count, &page.H5Count, &page.H6Count, &headingOrderJSON, &page.WordCount, &page.ContentHash,
 			&page.ImagesTotal, &page.ImagesMissingAlt, &imagesJSON, &page.InternalLinkCount, &page.ExternalLinkCount,
 			&page.HasStructuredData, &hreflangJSON, &page.IsIndexable, &page.CrawlDepth, &page.InSitemap,
-			&page.ResponseTimeMs); err != nil {
+			&page.ResponseTimeMs, &signalsJSON); err != nil {
 			return nil, fmt.Errorf("scan page: %w", err)
 		}
 		page.HeadingOrder = decodeInts(headingOrderJSON)
 		page.Images = decodeImages(imagesJSON)
 		page.HreflangTags = decodeStrings(hreflangJSON)
+		if signalsJSON != nil {
+			var signals struct {
+				Version int `json:"version"`
+			}
+			if json.Unmarshal([]byte(*signalsJSON), &signals) == nil {
+				page.SignalsVersion = signals.Version
+			}
+		}
 		pages = append(pages, page)
 	}
 	if err := rows.Err(); err != nil {
@@ -741,7 +753,7 @@ func (r *Repository) ListSlimPages(ctx context.Context, auditID string) ([]SlimP
 	rows, err := r.pool.Query(ctx, `
 		SELECT id, url, status_code, fetch_class, redirect_url, title, meta_description, content_hash, word_count,
 			is_indexable, canonical_url, header_canonical_url, x_robots_tag, robots_meta, crawl_depth, in_sitemap,
-			response_time_ms
+			response_time_ms, citation_signals_json
 		FROM go_audit_pages WHERE audit_id = $1`, auditID)
 	if err != nil {
 		return nil, fmt.Errorf("list slim pages: %w", err)
@@ -752,9 +764,10 @@ func (r *Repository) ListSlimPages(ctx context.Context, auditID string) ([]SlimP
 		var page SlimPage
 		var title, metaDescription, contentHash, redirectURL, canonicalURL, headerCanonicalURL, xRobotsTag, robotsMeta *string
 		var responseTime *int
+		var signalsJSON *string
 		if err := rows.Scan(&page.ID, &page.URL, &page.StatusCode, &page.FetchClass, &redirectURL, &title,
 			&metaDescription, &contentHash, &page.WordCount, &page.IsIndexable, &canonicalURL, &headerCanonicalURL,
-			&xRobotsTag, &robotsMeta, &page.CrawlDepth, &page.InSitemap, &responseTime); err != nil {
+			&xRobotsTag, &robotsMeta, &page.CrawlDepth, &page.InSitemap, &responseTime, &signalsJSON); err != nil {
 			return nil, fmt.Errorf("scan slim page: %w", err)
 		}
 		page.Title = derefString(title)
@@ -765,6 +778,13 @@ func (r *Repository) ListSlimPages(ctx context.Context, auditID string) ([]SlimP
 		page.HeaderCanonicalURL = derefString(headerCanonicalURL)
 		page.XRobotsTag = derefString(xRobotsTag)
 		page.RobotsMeta = derefString(robotsMeta)
+		if signalsJSON != nil {
+			var signals AIPageSignals
+			if err := json.Unmarshal([]byte(*signalsJSON), &signals); err != nil {
+				return nil, fmt.Errorf("decode audit signals for %s: %w", page.URL, err)
+			}
+			page.HreflangTargets, page.HSTS, page.SignalsVersion = signals.HreflangTargets, signals.HSTS, signals.Version
+		}
 		if responseTime != nil {
 			page.ResponseTimeMs = int64(*responseTime)
 		}
@@ -819,6 +839,7 @@ func (r *Repository) RunMultipageChecks(ctx context.Context, auditID string) ([]
 		filtered = append(filtered, page)
 	}
 	issues := append(FindDuplicates(filtered), FindRedirectChainsAndLoops(filtered)...)
+	issues = append(issues, findCanonicalAndHreflangIssues(filtered)...)
 	return issues, len(shellIDs) > 0, nil
 }
 

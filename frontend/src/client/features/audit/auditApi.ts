@@ -128,6 +128,7 @@ export const auditResultsSchema = z.object({
   pages: z.array(auditPageSchema),
   lighthouse: z.array(lighthouseResultSchema),
   issues: z.array(auditIssueSchema),
+  checksNeedRescan: z.boolean().optional(),
 });
 
 export type AuditResultsData = z.infer<typeof auditResultsSchema>;

@@ -202,3 +202,13 @@ AI tracking workers use the shared `jobs.Worker.RunSupervised` restart loop. Tem
 `Sentiment` (`tracking_sentiment.go`) classifies a saved run's answers on
 request for the Insights AI Sentiment page. Rules and costs are in
 `decision.md`; the route is in `backend/api/ai-tracking.yaml`.
+
+## Saved citation history
+
+`visibility_metrics.go` computes citation positions, first/last seen and
+momentum from at most 30 completed/partial saved runs with the same scope.
+It shows source-list rank separately from the position of citation URLs
+actually found in answer text; a missing inline URL has no inferred position.
+Failed/empty answers do not count, and momentum requires comparable complete
+runs. Displays cap sources at 50 and disclose sample limits. No collection or
+provider request is started.

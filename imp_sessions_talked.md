@@ -17,6 +17,11 @@ feelings, business calls, priorities, corrections. Read it after
 
 ---
 
+## 28 Oct 2026: Cite Fix PR 3 (owner direction)
+
+- Build all requested free citation checks, Site Audit checks, topic clusters, saved visibility metrics and MCP/SAM reads together in one new PR based on merged main. Use the three licensed reference repositories; do not use the unlicensed one.
+- No new paid provider calls, cap or model changes; external checks must protect other customers and legacy audits must say scan again. Owner asked: "Or kaam fast karna samja" and "Continue bhai".
+
 ## 28 Oct 2026: Cite Fix follow-ups (Claude)
 
 - Owner chose DataForSEO for JavaScript rendering; approved JS render (max 39 credits for 20 pages) and Google AI Overview (max 16 for 10 questions); refused AI mentions at 960 credits, so Cite Fix reuses AI Visibility's saved data. Codex built it in PR #244; Claude fixed two money/perf bugs there.

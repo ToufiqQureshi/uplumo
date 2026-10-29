@@ -1,5 +1,10 @@
 package audit
 
+import (
+	"net/url"
+	"strings"
+)
+
 // DetectedIssue is one issue found on a page. Cross-page checks (duplicates,
 // redirect chains) also produce these.
 type DetectedIssue struct {
@@ -70,16 +75,30 @@ func runPageReporters(page CrawledPageResult) []DetectedIssue {
 
 	if !page.IsIndexable {
 		report(IssueNoindexPage, map[string]any{"robotsMeta": nullable(page.RobotsMeta), "xRobotsTag": nullable(page.XRobotsTag)})
+		if page.InSitemap {
+			report(IssueSitemapNoindex, nil)
+		}
 	}
-	if page.CanonicalURL != "" && page.HeaderCanonicalURL != "" && page.CanonicalURL != page.HeaderCanonicalURL {
+	if page.CanonicalURL != "" && page.HeaderCanonicalURL != "" && normalizedCanonical(page.CanonicalURL, page.URL) != normalizedCanonical(page.HeaderCanonicalURL, page.URL) {
 		report(IssueCanonicalConflict, map[string]any{"htmlCanonical": page.CanonicalURL, "headerCanonical": page.HeaderCanonicalURL})
 	}
 	effectiveCanonical := page.CanonicalURL
 	if effectiveCanonical == "" {
 		effectiveCanonical = page.HeaderCanonicalURL
 	}
-	if effectiveCanonical != "" && effectiveCanonical != page.URL {
+	canonical := normalizedCanonical(effectiveCanonical, page.URL)
+	current := normalizedCanonical(page.URL, page.URL)
+	if canonical != "" && canonical != current {
 		report(IssueCanonicalizedPage, map[string]any{"canonicalUrl": effectiveCanonical})
+		if page.InSitemap {
+			report(IssueSitemapNoncanonical, map[string]any{"canonicalUrl": canonical})
+		}
+	}
+	if canonicalIsRelative(page.CanonicalURL) {
+		report(IssueRelativeCanonical, map[string]any{"canonicalUrl": page.CanonicalURL})
+	}
+	if strings.HasPrefix(strings.ToLower(page.URL), "https://") && page.AI.HSTS != nil && !*page.AI.HSTS {
+		report(IssueMissingHSTS, nil)
 	}
 
 	if page.CrawlDepth != nil && *page.CrawlDepth >= deepPageDepth {
@@ -91,6 +110,60 @@ func runPageReporters(page CrawledPageResult) []DetectedIssue {
 	if page.JavaScriptShell {
 		report(IssueJavaScriptRenderingSuspected, map[string]any{"wordCount": page.WordCount})
 		return issues
+	}
+
+	if tech := page.Technical; tech.Measured {
+		if !validHTMLLanguage(tech.HTMLLanguage) {
+			report(IssueInvalidHTMLLanguage, map[string]any{"language": tech.HTMLLanguage})
+		}
+		if !tech.Viewport {
+			report(IssueMissingViewport, nil)
+		}
+		if tech.Titles > 1 {
+			report(IssueMultipleTitles, map[string]any{"count": tech.Titles})
+		}
+		if tech.Descriptions > 1 {
+			report(IssueMultipleDescriptions, map[string]any{"count": tech.Descriptions})
+		}
+		if tech.Canonicals > 1 {
+			report(IssueMultipleCanonicals, map[string]any{"count": tech.Canonicals})
+		}
+		if tech.ImagesWithoutSize > 0 {
+			report(IssueImagesMissingSize, map[string]any{"count": tech.ImagesWithoutSize})
+		}
+		if len(tech.InsecureForms) > 0 {
+			report(IssueInsecureForm, map[string]any{"targets": tech.InsecureForms})
+		}
+		if len(tech.Hreflangs) > 0 {
+			self, fallback := false, false
+			for _, target := range tech.Hreflangs {
+				self = self || normalizedCanonical(target.URL, page.URL) == current
+				fallback = fallback || target.Language == "x-default"
+			}
+			if !self {
+				report(IssueHreflangNoSelf, nil)
+			}
+			if !fallback {
+				report(IssueHreflangNoDefault, nil)
+			}
+		}
+	}
+
+	var insecureLinks, nofollow []string
+	parsedPage, _ := url.Parse(page.URL)
+	for _, link := range page.Links {
+		if parsedPage != nil && parsedPage.Scheme == "https" && strings.HasPrefix(strings.ToLower(link.TargetURL), "http://") && len(insecureLinks) < 20 {
+			insecureLinks = append(insecureLinks, link.TargetURL)
+		}
+		if link.IsInternal && link.IsNofollow && len(nofollow) < 20 {
+			nofollow = append(nofollow, link.TargetURL)
+		}
+	}
+	if len(insecureLinks) > 0 {
+		report(IssueHTTPLinks, map[string]any{"targets": insecureLinks})
+	}
+	if len(nofollow) > 0 {
+		report(IssueInternalNofollow, map[string]any{"targets": nofollow})
 	}
 
 	switch {

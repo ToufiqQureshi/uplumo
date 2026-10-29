@@ -38,3 +38,7 @@ After a successful paid Brand Lookup on a paid plan, `BrandLookupPage.tsx` reque
 ## Saved tracking
 
 `PromptTrackingPage.tsx` uses TanStack Query for free history reads and active-run polling. `TrackingForm.tsx` reviews the complete current configuration through the free estimate API before enabling save/run. Editing invalidates the quote. A save never rewrites run evidence. Mentions and citations have separate denominators and model API results are labelled separately from consumer apps.
+
+`tracking/state` supplies `visibility` from saved comparable answers. The
+tracker and Cite Fix share `VisibilityInsights`; opening either makes no paid
+provider call. Missing inline URL positions remain unavailable.

@@ -131,10 +131,21 @@ export function ResultsView({
 
       <RenderingWarnings data={data} />
 
-      <AiReadinessCard
-        issueTypes={issues.map((issue) => issue.issueType)}
-        startedAt={audit.startedAt}
-      />
+      {data.checksNeedRescan ? (
+        <Alert variant="warning">
+          <ShieldAlert />
+          <AlertTitle>Scan your site again for the latest checks.</AlertTitle>
+          <AlertDescription>
+            This saved audit did not measure all the current checks. Missing
+            findings here do not mean those checks passed.
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <AiReadinessCard
+          issueTypes={issues.map((issue) => issue.issueType)}
+          startedAt={audit.startedAt}
+        />
+      )}
 
       <StatsStrip
         pagesCrawled={audit.pagesCrawled}

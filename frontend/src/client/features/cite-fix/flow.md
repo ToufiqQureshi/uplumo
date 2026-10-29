@@ -57,3 +57,8 @@ not use browser retries.
 
 A failed load shows `QueryError` with Retry. The endpoint is free, so the
 default query retry is safe.
+
+The free report includes `topics` and `proof.visibility`. The topic pillar
+button opens the Content Editor route with a prefilled keyword; the user writes
+or explicitly chooses a paid action later. Citation history distinguishes the
+saved source list from URLs actually present in answer text.
