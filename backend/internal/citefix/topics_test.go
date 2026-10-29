@@ -67,7 +67,7 @@ func TestTopicReportLinkedPillarAndIssues(t *testing.T) {
 func TestTopicReportLimits500PagesAndClusters(t *testing.T) {
 	pages := make([]Page, 0, 501)
 	for i := range 501 {
-		pages = append(pages, topicPage(fmt.Sprintf("https://site.example/%03d", i), fmt.Sprintf("Room service guide %03d", i), 350))
+		pages = append(pages, topicPage(fmt.Sprintf("https://site.example/%03d", i), fmt.Sprintf("Room service menu %03d", i), 350))
 	}
 	got := buildTopics(pages, nil, nil)
 	if got.PagesAnalyzed != 500 || !got.Limited || !got.ClustersLimited || len(got.Clusters) != 20 || got.Score == nil {
@@ -133,6 +133,11 @@ func TestTopicReportIgnoresTemplateHeadingsAndBrand(t *testing.T) {
 		}
 		if strings.Contains(topic, "uplumo") {
 			t.Fatalf("brand became topic %q; topics = %v", topic, topics)
+		}
+	}
+	for _, generic := range []string{"fix", "guide", "site", "pages", "plan", "show"} {
+		if slices.Contains(topics, generic) {
+			t.Fatalf("generic word %q became a topic; topics = %v", generic, topics)
 		}
 	}
 	for _, want := range []string{"search console", "keyword research"} {
