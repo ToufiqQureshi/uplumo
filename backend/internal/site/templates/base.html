@@ -199,7 +199,6 @@ footer .legal{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--bord
 <nav class="wrap nav" aria-label="Main">
 <a class="brand" href="/"><img src="{{asset "logo.svg"}}" alt="" width="30" height="30">Uplumo</a>
 <a class="link hide-sm" href="/pricing" data-uplumo-event="pricing_open"{{if eq .Path "/pricing"}} aria-current="page"{{end}}>Pricing</a>
-<a class="link hide-sm" href="/blog"{{if eq .Path "/blog"}} aria-current="page"{{end}}>Blog</a>
 <a class="link hide-sm" href="/about"{{if eq .Path "/about"}} aria-current="page"{{end}}>About</a>
 <label class="theme-control" for="site-theme"><span>Theme</span>
 <select id="site-theme" aria-label="Color theme" disabled>
@@ -254,7 +253,7 @@ footer .legal{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--bord
 <p>SEO and AI search, made simple. See where you rank, where AI names you and what to fix next.</p>
 </div>
 <nav aria-label="Product"><h2>Product</h2><a href="/pricing" data-uplumo-event="pricing_open">Pricing</a><a href="/sign-in">Log in</a><a href="{{.SignUp}}" data-uplumo-event="signup_click">Start free</a></nav>
-<nav aria-label="Company"><h2>Company</h2><a href="/blog">Blog</a><a href="/about">About</a><a href="/contact">Contact</a></nav>
+<nav aria-label="Company"><h2>Company</h2><a href="/about">About</a><a href="/contact">Contact</a></nav>
 <nav aria-label="Legal"><h2>Legal</h2><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/refunds">Refunds</a><a href="/shipping">Delivery</a></nav>
 </div>
 <p class="legal"><span>&copy; Uplumo</span><span>built for solo owners and agencies · made in India</span></p>

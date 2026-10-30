@@ -5,7 +5,6 @@
 <p class="eyebrow">Blog</p>
 <h1>SEO and AI search, <em>in plain words.</em></h1>
 <p class="lead">Work through real search and AI visibility questions with page examples, screenshots and practical checks.</p>
-<p><a href="/blog/uplumo-seo-aeo-platform-smb-enterprise">Explore every Uplumo feature</a> · <a href="/blog/uplumo-cite-fix-guide">Start with Cite Fix</a> · <a href="/blog/uplumo-ai-visibility-citation-tracking">Understand AI Visibility</a></p>
 {{if .Posts}}<ul class="posts">
 {{range .Posts}}<li><a href="/blog/{{.Slug}}">
 {{if .Image}}<img class="post-cover" src="{{.Image}}" alt="" width="1200" height="800" loading="lazy" decoding="async">{{end}}
@@ -14,6 +13,6 @@
 <p class="meta"><time datetime="{{.Published.Format "2006-01-02"}}">{{.Published.Format "2 January 2006"}}</time> · {{.ReadMinutes}} min read</p>
 </a></li>
 {{end}}</ul>
-{{else}}<p class="lead" style="margin-top:3rem">The first posts are on their way.</p>
+{{else}}<p class="lead" style="margin-top:3rem">There are no published articles.</p>
 {{end}}</div>
 {{template "footer" .}}

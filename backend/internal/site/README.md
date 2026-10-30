@@ -44,13 +44,11 @@ and activation prerequisites without changing billing rules. Keep sampled AI
 answers separate from consumer-app coverage and recognised referral visits.
 See `decision.md` for capability evidence and the public anonymity boundary.
 
-## Maintained article collection
+## Blog publication state
 
-The 29 retired troubleshooting URLs are explicit one-hop 301 redirects in
-`blogRedirects` (`blog.go`) to guides covering the original task. Retired files
-are absent from the index/sitemap. Keep new internal links on canonical targets.
-Every maintained article includes at least three distinct explanatory images.
-`image:` front matter selects a validated embedded cover for the index, Open
-Graph and BlogPosting metadata; an absent cover retains the default metadata
-for older/custom posts. Missing named covers stop startup. Product screenshots
-use fictional fixtures, labelled as sample data; diagrams are labelled separately.
+The owner removed every article on 30 October 2026. There are no published
+sources or blog-only assets. Former article URLs and the empty `/blog` index
+return 404, without redirects. Navigation and sitemap contain no blog links.
+The generic Markdown/cover renderer remains covered by fixture-based tests;
+shared product screenshots are retained. See `blog/README.md` and the removal
+regression in `blog_test.go` before considering new publication.

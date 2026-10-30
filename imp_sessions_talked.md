@@ -17,6 +17,13 @@ feelings, business calls, priorities, corrections. Read it after
 
 ---
 
+## 30 Oct 2026: remove all blogs
+
+- Owner explicitly requested: delete every blog, superseding the earlier content expansion.
+- Remove all published articles and blog-only visuals, old redirects, navigation and sitemap entries. Shared product assets remain.
+- Former article URLs must not serve content or redirect to deleted guides.
+
+
 ## 29 Oct 2026: replace generic blog volume with useful product evidence
 
 - Owner explicitly authorised removal of the 29 generic posts; improve the retained guides and keep product information accurate.

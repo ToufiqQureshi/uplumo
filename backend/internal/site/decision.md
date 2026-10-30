@@ -168,3 +168,18 @@ Why: optional recognition changes the privacy behavior of enabled customer snipp
   catalog-driven pricing. No providers, billing, permissions or deployment
   configuration change. Tests cover all 29 redirects, useful canonical targets,
   sitemap/index exclusion, three distinct embedded images and safe covers.
+
+## Remove every blog at the owner's request (30 October 2026)
+
+- Supersedes the previous 29-post consolidation and three-image publication
+  requirements: the owner explicitly requested deleting all blogs.
+- Remove all 32 remaining article sources and all 122 blog-only SVG assets.
+  Keep shared product screenshots. Remove the 29 old article redirects because
+  their targets are also gone; all 61 former article URLs return 404 without
+  redirection. Do not redirect unrelated deleted articles to the homepage.
+- Remove public Blog navigation links and all blog URLs from the sitemap.
+  An empty /blog returns 404; generic parsing/rendering remains fixture-tested.
+- Replace assertions about the removed collection with a regression requiring
+  no published posts, no blog assets/discovery links, and 404 responses for
+  all former article URLs. Parser, escaping and safe-cover tests remain.
+- No billing, provider, database, authentication or product feature changes.
