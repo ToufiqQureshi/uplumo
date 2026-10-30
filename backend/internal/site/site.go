@@ -281,15 +281,15 @@ func (s *Site) ServeInfo(w http.ResponseWriter, r *http.Request) {
 
 // ServeBlog writes the blog index.
 func (s *Site) ServeBlog(w http.ResponseWriter, r *http.Request) {
+	if len(s.posts) == 0 {
+		http.NotFound(w, r)
+		return
+	}
 	servePage(w, r, s.blog, "public, max-age=300, no-transform")
 }
 
 // ServeBlogPost writes the post named by the {slug} path value.
 func (s *Site) ServeBlogPost(w http.ResponseWriter, r *http.Request) {
-	if target, ok := blogRedirects[r.PathValue("slug")]; ok {
-		http.Redirect(w, r, "/blog/"+target, http.StatusMovedPermanently)
-		return
-	}
 	p, ok := s.posts[r.PathValue("slug")]
 	if !ok {
 		http.NotFound(w, r)
@@ -333,8 +333,11 @@ func sitemap(origin string, posts []Post) []byte {
 		}
 		b.WriteString("</url>\n")
 	}
-	for _, path := range append([]string{"/", "/pricing", "/blog"}, InfoPaths()...) {
+	for _, path := range append([]string{"/", "/pricing"}, InfoPaths()...) {
 		write(path, "")
+	}
+	if len(posts) > 0 {
+		write("/blog", "")
 	}
 	for _, post := range posts {
 		write("/blog/"+post.Slug, post.Updated.Format(time.DateOnly))
