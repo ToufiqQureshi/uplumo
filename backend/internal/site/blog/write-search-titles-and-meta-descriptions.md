@@ -2,6 +2,8 @@
 title: SEO title and meta description: write a clearer search result
 description: Write useful page titles and meta descriptions that tell searchers what a page offers and help the right visitors choose it.
 date: 2026-10-15
+updated: 2026-10-29
+image: /site/blog/search-result-title-description.svg
 ---
 
 **Short answer:** Write a unique title that accurately names the page, then write a clear description that helps a searcher decide whether to visit. Use the service, audience or benefit where it fits naturally. Google may rewrite the title link or snippet, so make sure the visible page supports what you promise.
@@ -73,6 +75,20 @@ Save the URL, queries, old title and description, new wording, country and date.
 Wait for the result to be recrawled and for enough impressions to accumulate before judging the change. A better click-through rate can be useful, but check whether the clicks are relevant and whether the page creates enquiries. Avoid clickbait that wins a visit and disappoints the customer.
 
 If Google keeps choosing a different title, inspect the headings, prominent text and internal anchor text. Make sure they describe the page consistently instead of trying to force one exact phrase.
+
+## Example: improve a service title without keyword stuffing
+
+“Services | Riverbend” does not tell a customer whether the page covers a boiler repair or a new installation. If the page actually covers emergency boiler repair in Leeds, name that service and location. Keep unsupported “24/7” or “lowest price” claims out unless the business can fulfil them under the stated conditions.
+
+Uplumo's [Content Editor](/blog/uplumo-seo-aeo-content-scoring) helps review title and description work alongside the page's content. Site Audit checks the published metadata and related crawl signals. In Search Performance, review the same query group after a change; a different average CTR across the entire property can reflect a different mix of queries. Google can choose another title or snippet even when your markup is valid.
+
+![Write a search result that the page supports](/site/blog/write-search-titles-and-meta-descriptions-workflow.svg)
+
+*Workflow diagram: title; description; page.*
+
+![Test a snippet change with a stable comparison](/site/blog/write-search-titles-and-meta-descriptions-review.svg)
+
+*Review diagram: baseline; revision; review.*
 
 ## FAQ
 

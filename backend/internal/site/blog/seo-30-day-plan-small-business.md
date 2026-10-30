@@ -2,6 +2,8 @@
 title: A realistic 30-day SEO plan for a small business
 description: A practical four-week SEO plan for a busy small business: fix blockers, improve one valuable page, strengthen local trust and measure enquiries.
 date: 2026-10-17
+updated: 2026-10-29
+image: /site/blog/30-day-seo-plan.svg
 ---
 
 **Short answer:** A useful 30-day SEO plan does not try to “do everything.” First fix anything stopping search engines or customers from using the site. Then improve one page tied to a real business goal, make the business information trustworthy, and set up a simple way to measure enquiries. The plan below assumes a few focused hours each week.
@@ -87,3 +89,17 @@ SEO rarely produces a reliable promise of results in 30 days. Search engines nee
 - [Google guidance on helpful, people-first content](https://developers.google.com/search/docs/fundamentals/creating-helpful-content)
 - [Google local ranking factors](https://support.google.com/business/answer/7091?hl=en)
 - [Google Search Console Performance report](https://support.google.com/webmasters/answer/17010961?hl=en)
+
+## Run the plan with a small scope in Uplumo
+
+Use the Dashboard to orient yourself, then choose one revenue-relevant URL. Connect eligible Google data, run an audit and record the questions the page should answer. [Cite Fix](/blog/uplumo-cite-fix-guide) can help prioritise stored citation signals; it is optional evidence, not a prerequisite for every SEO task.
+
+Use the second week for verified page improvements rather than launching dozens of thin articles. The third week can produce one supporting guide with an internal link that helps the reader. In week four, compare crawl findings and early search or recorded-visit signals. Search changes may need longer than a month to become clear. Keep a later review date instead of promising a 30-day ranking result. Check [current plan access](/pricing) before scheduling paid research.
+
+![A month organised around one business page](/site/blog/seo-30-day-plan-small-business-workflow.svg)
+
+*Workflow diagram: week 1; weeks 2–3; week 4.*
+
+![Define deliverables you can actually control](/site/blog/seo-30-day-plan-small-business-review.svg)
+
+*Review diagram: technical; editorial; measurement.*

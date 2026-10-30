@@ -17,6 +17,14 @@ feelings, business calls, priorities, corrections. Read it after
 
 ---
 
+## 29 Oct 2026: replace generic blog volume with useful product evidence
+
+- Owner explicitly authorised removal of the 29 generic posts; improve the retained guides and keep product information accurate.
+- At least three relevant explanatory images per maintained article; show features so readers can understand the output.
+- Cover all main features and make the buying case from actual workflows. No personal name, fabricated results or unsupported “best”/ranking guarantees.
+- Preserve retired URLs with relevant redirects and maintain canonical internal links.
+
+
 
 ## 29 Oct 2026: public pages, trust and anonymous experience
 

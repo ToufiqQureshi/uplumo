@@ -215,7 +215,14 @@ func build(publicURL *url.URL, blogFiles fs.FS) (*Site, error) {
 		data.Description = post.Description
 		data.Canonical = origin + data.Path
 		data.Post = &post
-		data.JSONLD = blogPostingJSONLD(origin, post, base.OGImage)
+		if post.Image != "" {
+			image, err := asset(strings.TrimPrefix(post.Image, AssetsPrefix))
+			if err != nil {
+				return nil, fmt.Errorf("blog %s image: %w", post.Slug, err)
+			}
+			data.OGImage = origin + image
+		}
+		data.JSONLD = blogPostingJSONLD(origin, post, data.OGImage)
 		if s.posts[post.Slug], err = render(tmpl, "post.html", data); err != nil {
 			return nil, err
 		}
@@ -279,6 +286,10 @@ func (s *Site) ServeBlog(w http.ResponseWriter, r *http.Request) {
 
 // ServeBlogPost writes the post named by the {slug} path value.
 func (s *Site) ServeBlogPost(w http.ResponseWriter, r *http.Request) {
+	if target, ok := blogRedirects[r.PathValue("slug")]; ok {
+		http.Redirect(w, r, "/blog/"+target, http.StatusMovedPermanently)
+		return
+	}
 	p, ok := s.posts[r.PathValue("slug")]
 	if !ok {
 		http.NotFound(w, r)

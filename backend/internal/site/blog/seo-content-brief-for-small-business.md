@@ -2,6 +2,8 @@
 title: SEO content brief: plan a useful article before writing
 description: Give a writer a clear audience, search intent, evidence, outline and next action so a blog post answers a real customer problem.
 date: 2026-10-15
+updated: 2026-10-29
+image: /site/blog/content-brief-blueprint.svg
 ---
 
 **Short answer:** A useful SEO content brief tells a writer who the reader is, what question the page must answer, what evidence is available and what action the reader may take next. It prevents generic articles that use the keyword but leave the real problem unsolved.
@@ -83,6 +85,20 @@ A brief should guide the work without forcing every post into the same template.
 Ask a subject expert to check names, numbers, safety instructions, service limits and promises. Keep a source list so a reviewer can verify facts quickly. If a claim cannot be verified, remove it or qualify it clearly.
 
 The best brief is short enough to use and specific enough to prevent generic output. It should make the job easier for the writer and the final page more useful for the reader.
+
+## Example: brief a software comparison without inventing a winner
+
+Specify the buyer's job first: for example, a consultant wants to review one client site's AI citations and turn a miss into a page edit. Ask the writer to explain the observed answer, source URL, affected page, editing workflow and measurement limits. Require links to the current official product pages for competitor claims.
+
+In [Uplumo's search-brief workflow](/blog/uplumo-ai-content-writing-search-briefs), result coverage can suggest questions and subtopics. The editor still chooses which belong in the answer and adds first-hand product details. Include a “claims to verify” list for supported integrations, plan access, country coverage and usage costs. A source link should substantiate the sentence beside it, rather than act as decoration at the end of the article.
+
+![A brief connects intent to evidence](/site/blog/seo-content-brief-for-small-business-workflow.svg)
+
+*Workflow diagram: reader task; original input; deliverable.*
+
+![From Uplumo research to a reviewed draft](/site/blog/seo-content-brief-for-small-business-review.svg)
+
+*Review diagram: research; brief; edit.*
 
 ## FAQ
 

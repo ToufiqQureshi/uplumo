@@ -142,3 +142,29 @@ Why: optional recognition changes the privacy behavior of enabled customer snipp
   https://developers.google.com/identity/protocols/oauth2/production-readiness/policy-compliance
   and https://support.google.com/cloud/answer/13464321 . No prices, credits,
   provider rules, consent defaults, CI or deployment settings change.
+
+## Retire generic posts and explain the real product visually
+
+- Owner explicitly requested removal of the 29 generic articles and at least
+  three explanatory images in every retained guide. Keep the 31 existing
+  canonical guides, expand their task-specific examples, and add one focused
+  Cite Fix guide because none existed. Retired URLs redirect permanently to
+  maintained guides with relevant diagnostic coverage; no homepage redirects
+  or redirect chains. Update internal links and omit retired URLs from sitemap.
+- Use four actual app screenshots with isolated fictional fixtures, alongside
+  topic-specific accessible SVG diagrams. Captions distinguish diagrams and
+  sample data from customer evidence. No authenticated customer data, paid
+  collection or runtime fixture is introduced. Cover metadata is restricted
+  to embedded image paths and checked before rendering.
+- Explain all main exposed feature groups in the platform guide and link to
+  focused workflows. Correct retired Growth naming, GA4's current AI Assistant
+  channel, missing-source attribution limits, Google report dimensions and
+  optional audit rendering. Cite Fix checks are heuristics, not causal
+  explanations or citation probabilities. Current Google, OpenAI and official
+  competitor references reviewed 29 October 2026.
+- Buyer positioning rests on evidence → page improvement → measurement and
+  scope fit; no universal best, ranking promises, invented customers, enterprise
+  certifications or competitor omissions. All numeric plan offers remain on
+  catalog-driven pricing. No providers, billing, permissions or deployment
+  configuration change. Tests cover all 29 redirects, useful canonical targets,
+  sitemap/index exclusion, three distinct embedded images and safe covers.

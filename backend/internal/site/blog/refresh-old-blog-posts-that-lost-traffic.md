@@ -2,6 +2,8 @@
 title: Old blog post lost traffic? Diagnose before you rewrite it
 description: Find out why an old article lost search clicks, then choose whether to update, combine, redirect or leave it as it is.
 date: 2026-10-15
+updated: 2026-10-29
+image: /site/blog/content-refresh-decision.svg
 ---
 
 **Short answer:** Before rewriting an old blog post, compare its clicks, impressions and queries in Search Console, check whether the search intent changed, and inspect the page for outdated or incomplete advice. Update only what improves the answer; combine or redirect pages only when they truly overlap.
@@ -59,6 +61,20 @@ A redirect is appropriate when a page has moved or when you have combined it int
 Before redirecting, check whether the old URL has useful links, bookmarked visits, enquiries or support value. Save a copy of content that should remain available to customers, and update internal links to point directly to the new destination.
 
 If the old article covers a separate question, keep it and improve it instead of folding every related topic into one long page. Good content structure makes it easier for people to find one complete answer.
+
+## Separate a content decline from a technical decline
+
+After a site move or template release, inspect redirects, canonicals and indexing before commissioning a rewrite. After a confirmed search update, compare affected page groups and query intent without assuming a single missing phrase caused the drop. Use [Google's core update guidance](https://developers.google.com/search/docs/appearance/core-updates) to structure the review.
+
+For possible cannibalisation, inspect which URLs appear for the same important query and whether they serve the same job. Two pages sharing a keyword is not automatically a defect. Keep separate intents distinct; merge overlapping answers only when a consolidated page is more useful. Update internal links and redirect an old URL only to a relevant replacement. In Uplumo, pair [Search Performance](/blog/uplumo-ai-traffic-analytics-search-performance) evidence with a [content brief](/blog/seo-content-brief-for-small-business) that lists the new evidence the article needs.
+
+![Diagnose before rewriting an older article](/site/blog/refresh-old-blog-posts-that-lost-traffic-workflow.svg)
+
+*Workflow diagram: demand; access; answer.*
+
+![Choose update, consolidation or retirement](/site/blog/refresh-old-blog-posts-that-lost-traffic-review.svg)
+
+*Review diagram: update; consolidate; retire.*
 
 ## FAQ
 

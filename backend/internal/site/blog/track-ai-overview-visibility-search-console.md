@@ -2,21 +2,23 @@
 title: How to track AI Overview visibility in Search Console
 description: Use Google Search Console to review available AI search performance data, compare it with organic results and choose a useful next action.
 date: 2026-10-15
+updated: 2026-10-29
+image: /site/blog/ai-overview-measurement.svg
 ---
 
-**Short answer:** Use the generative AI performance report in Search Console when it is available for your property to review visibility in Google’s AI Search features. Compare the pages and queries it surfaces with your regular Search performance, then improve the page that best answers a real customer question. Reporting availability and detail can change.
+**Short answer:** Use the generative AI performance report in Search Console when it is available for your property to review visibility in Google’s AI Search features. Compare its page-level impressions with your regular Search performance, then improve the page that best answers a real customer question. Reporting availability and detail can change.
 
 ![A measurement loop from AI search visibility to page review and a tracked improvement](/site/blog/ai-overview-measurement.svg)
 
 ## Start with the report you actually have
 
-Open Search Console for the verified property and look for the generative AI performance report. Google has introduced reporting for impressions in generative AI features on Search, including AI Overviews and AI Mode. Report availability, coverage and details may vary as the feature rolls out.
+Open Search Console for the verified property and look for the generative AI performance report. Google has introduced reporting for impressions in generative AI features on Search, including AI Overviews and AI Mode. Google says the report has rolled out worldwide; a property may lack the report when it has insufficient impressions.
 
 Do not assume that data from every experiment or every assistant is included. Search Console reports Google Search activity; it is not a universal tracker for ChatGPT, Perplexity or every AI product.
 
 ## Read the data as a signal, not a full citation count
 
-Review the pages and queries surfaced by the report. Ask:
+Review the pages, countries, dates and devices surfaced by the report. Use regular Search performance separately for query context. Ask:
 
 - Which pages appear in the report, and what question might they answer?
 - Do those pages have accurate, complete and current information?
@@ -46,7 +48,7 @@ See [how to get cited in AI search](/blog/get-cited-in-ai-search-results), [how 
 
 ## A reporting template for clients
 
-For each report, show the property, country, date range and exact Search Console report used. Separate AI feature impressions from clicks and from visits in analytics. Then list the affected pages, the visible query themes and the changes made during that period.
+For each report, show the property, country, date range and exact Search Console report used. Separate AI feature impressions from clicks and from visits in analytics. Then list affected pages, query themes from the regular Performance report, and changes made during that period.
 
 Use a note such as “Search Console reported impressions for Google AI Search features during this period; the report does not measure all AI assistants or guarantee that an individual page was cited.” This keeps the report useful without overstating what the data means.
 
@@ -59,6 +61,20 @@ If you use a third-party visibility tracker alongside Search Console, label each
 For a fair monthly comparison, keep the prompts, location, language, date range and page set as consistent as possible. Record when any of them changes. A different prompt set can make a visibility score move even when the website did not.
 
 Use a note for unavailable data and report what the team did instead, such as reviewing page accuracy or fixing an indexing issue. This gives a client a useful next step without pretending that a dashboard has complete coverage.
+
+## Understand the current Google report and Uplumo evidence
+
+Google's generative AI performance report covers impressions for AI Overviews and AI Mode. Its documented dimensions include pages, countries, dates and devices. Do not describe it as a universal prompt-level answer log or expect it to identify every AI referral session. Google says insufficient impressions can explain a missing report.
+
+Uplumo's saved Tracker answers and Cite Fix's explicitly requested AI Overview checks provide a different form of evidence: a sampled question, answer and available sources. They are not an import of Google's generative AI report and cannot replace its real-user impression counts. Use [Cite Fix](/blog/uplumo-cite-fix-guide) to connect a sampled miss with a relevant page review. Keep the collection method and timestamp beside each observation, and use [analytics](/blog/uplumo-ai-traffic-analytics-search-performance) separately for recorded visits.
+
+![Use Google and sampled answer data separately](/site/blog/track-ai-overview-visibility-search-console-workflow.svg)
+
+*Workflow diagram: google report; sampled answers; website visits.*
+
+![A useful AI Overview investigation](/site/blog/track-ai-overview-visibility-search-console-review.svg)
+
+*Review diagram: scope; evidence; action.*
 
 ## FAQ
 

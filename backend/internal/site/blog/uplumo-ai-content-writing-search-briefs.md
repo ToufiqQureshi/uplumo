@@ -3,9 +3,15 @@ title: Uplumo AI Writing: Search Briefs, Better Drafts and Review
 description: Discover Uplumo AI writing with search briefs, SEO and AEO modes, targeted revision actions and a practical review-to-publication workflow.
 date: 2026-10-26
 author: Uplumo team
+updated: 2026-10-29
+image: /site/blog/uplumo-ai-content-writing-search-briefs-overview.svg
 ---
 
 **Uplumo's AI writing workflow combines search evidence, SEO/AEO content checks and targeted assistance for drafting and revision.** It gives SMBs, agencies and enterprise content teams a way to work on the actual editorial task: answer the customer's question accurately and make the page more useful.
+
+![What stays with the human editor](/site/blog/uplumo-ai-content-writing-search-briefs-overview.svg)
+
+*Feature overview diagram. This explains the workflow; it is not an application screenshot.*
 
 ## Better inputs make AI assistance more useful
 
@@ -66,6 +72,20 @@ For a strong product article, this means showing real capabilities and supported
 An SMB can apply the workflow to one important article. An agency can use it to structure a client review. An enterprise team can evaluate a scoped campaign with its own subject-matter, legal and editorial review requirements.
 
 Match seats, sites and writing/research usage to [current plans](/pricing). The practical value is a clear handoff: research evidence becomes a brief, the brief becomes a draft and review produces a publishable answer.
+
+## From a reviewed draft to WordPress
+
+Connect the correct WordPress site before publishing from the Content Editor and confirm that the destination matches the project. Review the title, description, headings, links and media in the draft. The publishing workflow sends the article to the connected site; it does not make the content accurate merely because the request succeeds.
+
+When using IndexNow for a published or changed page, remember that it notifies participating engines such as Bing. It does not submit a Google indexing request or guarantee inclusion. Inspect the final public URL, then use Search Console for Google's own inspection. The benefit of Uplumo here is continuity from the search brief through human revision and an explicit publishing action, with [content scoring](/blog/uplumo-seo-aeo-content-scoring) available during review.
+
+![Use AI on a defined editorial task](/site/blog/uplumo-ai-content-writing-search-briefs-workflow.svg)
+
+*Workflow diagram: brief; assist; review.*
+
+![Publish through a deliberate review](/site/blog/uplumo-ai-content-writing-search-briefs-review.svg)
+
+*Review diagram: draft; preview; publish.*
 
 ## FAQ
 

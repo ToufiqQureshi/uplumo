@@ -2,6 +2,8 @@
 title: Website not showing on Google? Find and fix the cause
 description: If your website or a new page is missing from Google, follow these checks for indexing, crawl blocks, page quality and sitemap mistakes.
 date: 2026-10-15
+updated: 2026-10-29
+image: /site/blog/website-not-showing.svg
 ---
 
 **Short answer:** First check whether Google has indexed the exact URL in Search Console. If it has not, inspect the reason shown, confirm the page can be crawled, remove accidental blocking, make the page useful, and request a recrawl after fixing it. A sitemap helps discovery but cannot force indexing.
@@ -63,6 +65,22 @@ Also check for a soft 404: the server may return a success response while the pa
 
 Keep a small issue log with URL, inspection status, change and next review date. It helps a business owner and developer agree what changed and whether Google has had time to revisit it.
 
+## Special cases: sitemaps, soft 404s, staging and exposed files
+
+If a sitemap “couldn't fetch”, open the submitted URL and check its HTTP response, XML content, redirects and access rules. Submit the actual sitemap location, then confirm that it lists canonical public URLs. A working browser view does not prove that a firewall lets Google fetch it.
+
+A page returning 200 while saying “not found” may be treated as a soft 404. Restore useful content or return the appropriate removal response. For staging or private PDFs, protect or remove the source first. A robots.txt block alone is not access control and can stop Google seeing a noindex instruction. Use Search Console's temporary removal tools when appropriate, alongside the lasting source repair.
+
+Unexpected foreign-language spam URLs can indicate a compromised site. Preserve evidence, secure the site and investigate the cause rather than only hiding results. Review [Google's hacked-content guidance](https://support.google.com/webmasters/answer/9044101?hl=en) and any Search Console security notices. [Uplumo's audit workflow](/blog/uplumo-advanced-site-audit-crawler) can help recheck public responses after repairs.
+
+![Choose the correct indexing repair](/site/blog/website-not-showing-on-google-workflow.svg)
+
+*Workflow diagram: not discovered; blocked or failing; indexed but invisible.*
+
+![Distinguish a removal from a discovery request](/site/blog/website-not-showing-on-google-review.svg)
+
+*Review diagram: public useful page; retired resource; private resource.*
+
 ## FAQ
 
 **Will a sitemap make Google index my site?**
@@ -83,3 +101,7 @@ Yes. Indexing means Google can include the page in its index. Ranking for a part
 - [Google: ask Google to recrawl a URL](https://developers.google.com/search/docs/crawling-indexing/ask-google-to-recrawl)
 - [Google: technical requirements for Search](https://developers.google.com/search/docs/essentials/technical)
 - [Google: sitemap overview](https://developers.google.com/search/docs/crawling-indexing/sitemaps/overview)
+
+- [Google robots.txt guidance](https://developers.google.com/search/docs/crawling-indexing/robots/intro)
+
+- [Google noindex guidance](https://developers.google.com/search/docs/crawling-indexing/block-indexing)

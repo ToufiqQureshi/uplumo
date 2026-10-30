@@ -2,6 +2,8 @@
 title: On-page SEO checklist for service pages
 description: Use this simple on-page SEO checklist to make service pages clearer for customers and easier for search engines to understand.
 date: 2026-10-15
+updated: 2026-10-29
+image: /site/blog/on-page-seo-checklist.svg
 ---
 
 **Short answer:** On-page SEO means improving the visible content and page elements so people and search engines can understand the page. Start with one clear service, a descriptive title and heading, helpful sections, useful links, accessible images and a working contact action.
@@ -62,6 +64,20 @@ Ask someone who does not know the business to spend two minutes on the page. Ask
 Then compare the search result with the page. A title that says “emergency repair” should lead to a page that explains how to request urgent work. A result that promises a free estimate should not open a page that hides the estimate process. This match builds trust and helps customers self-select.
 
 A useful on-page review is not a score chase. It is a short check of clarity, evidence, navigation, accessibility and measurement on the pages that matter most.
+
+## Example: review a local repair service page
+
+For an emergency repair page, verify the actual service area, operating hours, call-out conditions and how the customer requests help. If same-day service depends on availability, say so near the call to action. A generic paragraph about “quality solutions” does less work than a clear explanation of what happens after the customer calls.
+
+Open the page on a phone and test the call or enquiry link. Add accessible photos only when they show the service honestly. In Uplumo, use [Content Scoring](/blog/uplumo-seo-aeo-content-scoring) to review draft structure and [Site Audit](/blog/uplumo-advanced-site-audit-crawler) to inspect the published result. These checks complement a business owner's fact review; neither can verify a claim such as an accreditation without evidence.
+
+![Build a useful service-page answer](/site/blog/on-page-seo-checklist-for-service-pages-workflow.svg)
+
+*Workflow diagram: offer; evidence; decision.*
+
+![Check the published page at three levels](/site/blog/on-page-seo-checklist-for-service-pages-review.svg)
+
+*Review diagram: search result; page; technical.*
 
 ## FAQ
 

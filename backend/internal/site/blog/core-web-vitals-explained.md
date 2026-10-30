@@ -2,7 +2,8 @@
 title: Core Web Vitals explained: what LCP, INP and CLS mean for your site
 description: A plain guide to Google's Core Web Vitals: what LCP, INP and CLS measure, the good scores to aim for, how to check them free and the fixes that help most.
 date: 2026-10-15
-updated: 2026-10-17
+updated: 2026-10-29
+image: /site/blog/core-web-vitals-thresholds.svg
 ---
 
 **Short answer:** Core Web Vitals are three measurements Google uses to judge how a page feels to real visitors: **LCP** (how fast the main content shows), **INP** (how quickly the page reacts to a tap or click) and **CLS** (how much the page jumps around while loading). A page passes when, for at least 75% of visits, LCP is 2.5 seconds or less, INP is 200 milliseconds or less and CLS is 0.1 or less.
@@ -108,6 +109,20 @@ Google's [Core Web Vitals documentation](https://developers.google.com/search/do
 | 12 Oct | Product page | Reserved banner space | CLS changed in test | Search Console after enough visits |
 
 Use our [30-day SEO plan](/blog/seo-30-day-plan-small-business) to balance speed work against content and conversion fixes. If clicks also changed, diagnose the query and page mix before assuming performance was the only cause with the [Search Console guide](/blog/search-console-impressions-clicks-down).
+## Example: diagnose a slow service-page hero
+
+Suppose PageSpeed Insights identifies the hero image as the LCP element. Inspect the delivered file dimensions, transfer size, loading priority and server response before changing the whole design. Resize an oversized image and preserve its displayed dimensions. Do not lazy-load the primary above-the-fold image merely because other images are lazy-loaded.
+
+Run the same URL and device profile again. A faster lab run supports a technical hypothesis; it does not establish a ranking increase or instantly change the 28-day field window. Check whether the booking or enquiry action still works. [Uplumo Site Audit](/blog/uplumo-advanced-site-audit-crawler) helps place performance findings beside crawl and page issues, so the fastest page is also discoverable and useful.
+
+![Find the metric and the affected journey](/site/blog/core-web-vitals-explained-workflow.svg)
+
+*Workflow diagram: lcp; inp; cls.*
+
+![Validate a performance change](/site/blog/core-web-vitals-explained-review.svg)
+
+*Review diagram: before; change; after.*
+
 ## FAQ
 
 **Do Core Web Vitals affect rankings?**

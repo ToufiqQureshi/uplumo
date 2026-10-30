@@ -164,21 +164,23 @@ footer .legal{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--bord
 .doc h1{font-size:clamp(2.75rem,8vw,5rem);line-height:1}
 .doc .lead{margin-top:1.25rem}
 .doc .note{margin-top:1rem}
-.prose{max-width:44rem;margin-top:3rem;display:flex;flex-direction:column;gap:1rem;color:var(--soft)}
+.prose{overflow-wrap:anywhere;min-width:0;max-width:44rem;margin-top:3rem;display:flex;flex-direction:column;gap:1rem;color:var(--soft)}
 .prose h2{font-size:clamp(1.75rem,4vw,2.25rem);line-height:1.1;letter-spacing:-.01em;color:var(--fg);margin-top:1.75rem}
 .prose ul{margin:0;padding-left:1.25rem;display:flex;flex-direction:column;gap:.5rem}
 .prose a{color:var(--accent)}
 .prose strong{color:var(--fg);font-weight:600}
 .prose h3{font-size:clamp(1.375rem,3vw,1.75rem);color:var(--fg);margin-top:1rem}
 .prose ol{margin:0;padding-left:1.25rem;display:flex;flex-direction:column;gap:.5rem}
-.prose img{max-width:100%;height:auto;border-radius:12px;border:1px solid var(--border)}
+.prose img{display:block;width:100%;max-width:100%;height:auto;border-radius:12px;border:1px solid var(--border)}
 .prose pre{overflow-x:auto;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1rem;font:.875rem/1.5 var(--mono)}
 .prose code{font-family:var(--mono);font-size:.9em}
 .prose blockquote{margin:0;padding-left:1rem;border-left:3px solid var(--lime);color:var(--muted)}
-.prose table{border-collapse:collapse;width:100%;font-size:.9375rem}
+.prose table{display:block;overflow-x:auto;border-collapse:collapse;width:100%;font-size:.9375rem}
 .prose th,.prose td{border:1px solid var(--line);padding:.5rem .75rem;text-align:left}
-.posts{list-style:none;margin:3rem 0 0;padding:0;display:flex;flex-direction:column;gap:1rem;max-width:44rem}
-.posts a{display:block;padding:1.25rem 1.5rem;border:1px solid var(--border);border-radius:16px;background:var(--card);text-decoration:none}
+.posts{list-style:none;margin:3rem 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,22rem),1fr));gap:1.5rem}
+.posts li{min-width:0}
+.posts .post-cover{display:block;width:100%;height:auto;aspect-ratio:3/2;object-fit:contain;background:#101a2e;border-radius:10px;margin-bottom:1.25rem}
+.posts a{display:block;height:100%;padding:1.25rem 1.5rem;border:1px solid var(--border);border-radius:16px;background:var(--card);text-decoration:none}
 .posts a:hover{border-color:var(--strong)}
 .posts h2{font-size:clamp(1.5rem,3.5vw,2rem);line-height:1.1}
 .posts p{color:var(--muted);margin-top:.5rem}
