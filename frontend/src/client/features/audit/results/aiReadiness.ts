@@ -8,7 +8,7 @@ import { sortBy } from "remeda";
 
 // Audits started before the crawler ran these checks cannot be scored: a
 // missing issue there means "not checked", not "passed".
-const AI_CHECKS_SINCE = "2026-10-26T15:00:00Z";
+const AI_CHECKS_SINCE = "2026-10-26T12:50:00Z";
 
 type Group = "read" | "know" | "quote";
 
