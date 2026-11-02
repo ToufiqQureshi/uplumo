@@ -148,3 +148,10 @@ Use the package tests next to the source files in `README.md`. For changes cross
 - **Trace:** `lookup.go`, `service.go`, `suggestions.go`; empty-result call-count and TTL regressions in `service_test.go`.
 
 Provider fixtures include task path and explicit cost, including zero on rejected tasks. Missing task billing metadata now keeps a purchase uncertain rather than proving it was free. Mapping and exact one-call failure assertions remain unchanged.
+
+## Overview delivers the whole organic block it pays for
+
+- **Decision:** `domain_rank_overview` results now carry `trafficValue` (`estimated_paid_traffic_cost`), `positions` (`pos_1`, `pos_2_3`, `pos_4_10`, `pos_11_20`) and `movement` (`is_new`, `is_up`, `is_down`, `is_lost`) through `OverviewResult`; the page shows them under the two headline tiles.
+- **Why:** The task bills once for the full organic block, but the decoder kept only `etv` and `count`. A live call for axisrooms.com (India, 2026-11-02) returned 13 #1 positions, 195 new and 38 dropped keywords and a $2,277 traffic value that the customer paid for and never saw.
+- **Preserve:** No new provider call, field or option: same request, same cost. A missing value stays null (shown "-"), never 0; `is_lost` is often absent. Older Redis/Postgres snapshots without the fields still decode (nil pointers) and the UI hides the breakdown. Position bands are organic only and, like the headline numbers, cover the hostname plus subdomains.
+- **Trace:** `provider.go` (`organicMetrics`), `service.go` (`PositionBands`, `RankMovement`, `Overview`); `TestProviderOverviewMapsDataForSEOResult`, `TestOverviewDeliversPaidPositionMovementAndValue` (a mutation swapping two bands failed it). Frontend: `features/domain/decision.md`.

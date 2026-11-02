@@ -64,6 +64,37 @@ func TestOverviewRoundsMetricsAndCachesPerOrganization(t *testing.T) {
 	}
 }
 
+// The overview task bills once for the whole organic block, so the result
+// must carry its position bands, movement and traffic value.
+func TestOverviewDeliversPaidPositionMovementAndValue(t *testing.T) {
+	t.Parallel()
+	provider := &fakeProvider{result: func(string) any {
+		return map[string]any{"items": []any{map[string]any{"metrics": map[string]any{"organic": map[string]any{
+			"etv": 4231.2, "count": 264.0, "estimated_paid_traffic_cost": 2276.7,
+			"pos_1": 13.0, "pos_2_3": 29.0, "pos_4_10": 62.0, "pos_11_20": 37.0,
+			"is_new": 195.0, "is_up": 28.0, "is_down": 38.0,
+		}}}}}
+	}}
+	svc := newTestService(t, provider, &memoryCache{})
+	got, err := svc.Overview(context.Background(), "org-a", "proj", "example.com", ScopeDomain, 2356, "en")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if floatValue(t, got.TrafficValue) != 2277 {
+		t.Errorf("trafficValue = %v, want 2277", got.TrafficValue)
+	}
+	p, m := got.Positions, got.Movement
+	if p == nil || floatValue(t, p.Top1) != 13 || floatValue(t, p.Top2To3) != 29 || floatValue(t, p.Top4To10) != 62 || floatValue(t, p.Top11To20) != 37 {
+		t.Errorf("positions = %+v", p)
+	}
+	if m == nil || floatValue(t, m.New) != 195 || floatValue(t, m.Up) != 28 || floatValue(t, m.Down) != 38 || m.Lost != nil {
+		t.Errorf("movement = %+v, want lost unknown (absent), not zero", m)
+	}
+	if provider.calls.Load() != 1 {
+		t.Fatalf("provider calls = %d, want 1", provider.calls.Load())
+	}
+}
+
 func TestOverviewBrieflyReusesSuccessfulEmptyResults(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
