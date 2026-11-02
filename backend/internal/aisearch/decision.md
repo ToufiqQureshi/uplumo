@@ -155,3 +155,13 @@ not necessarily answer-text order, so inline ranks require the saved URL to be
 present in the answer; absent evidence stays unavailable. Momentum compares
 complete runs with the same prompts and engines. Tests cover rank order,
 missing evidence, unequal scopes, unsafe URLs and Unicode questions.
+
+## Tracking asks Claude Haiku and Perplexity sonar, not the flagship
+
+- **Decision:** Saved AI tracking answers for Claude and Perplexity use `pickTracker` (`models.go`): the newest undated `claude-haiku-*` alias and plain `sonar` from the free model catalog. Prompt Explorer still uses the flagship (`pickLatest`). ChatGPT, Gemini and Google keep their queued consumer collection.
+- **Why:** Production `go_dataforseo_usage` (16 Oct–2 Nov 2026) showed tracking was the only recurring DataForSEO spend, and Claude was ~76% of it: $0.049 per answer against $0.0012 for a scraped ChatGPT answer. One tracked question on five engines cost ~84 credits a day, so four daily questions used a Pro month. A paid comparison on 2026-11-02 (same India prompt, web search on) cost $0.0478 on `claude-sonnet-5` and $0.0124 on `claude-haiku-5-5` with the same nine sources and brands; `sonar-pro` $0.0126 against `sonar` $0.0060 with identical citations. Input tokens (~12.5k of search results) drive the Claude price, so cutting `max_output_tokens` would not have helped. Tracking measures which brands and sources an answer names, which the cheaper tier reproduced; Prompt Explorer is where a customer reads one flagship answer closely.
+- **Preserve:**
+  - Tracking only sends a model name the catalog lists; with no low-cost alias listed it falls back to the flagship rather than guessing a name the provider would reject and still bill.
+  - The run ceiling (`AIResponseCeilingUSD`, 128 credits per model-API answer) and settlement at actual cost are unchanged, so customers pay less, never more than the estimate.
+  - `trackingScope` keys on prompts and engines, not model names, so the first momentum comparison after deploy spans Sonnet and Haiku answers. Accepted because both name the same sources in the test above; if a future tier changes answers materially, add the model name to the scope.
+- **Trace:** `models.go` (`trackerRules`, `pickTracker`, `newestMatch`), `tracking_worker.go` (`submit`); `TestPickTracker` (a mutation dropping the sonar rule failed it). Not verified: one scheduled production run on the new models; after deploy, check that `go_dataforseo_usage` claude rows fall to ~$0.012.

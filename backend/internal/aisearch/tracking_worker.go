@@ -183,7 +183,7 @@ func (s *Tracking) submit(ctx context.Context, org, run string, c TrackingConfig
 			return errors.New("AI answer was already claimed")
 		}
 		if engine == "claude" || engine == "perplexity" {
-			model := s.Search.provider.models.latest(ctx, org, engine)
+			model := s.Search.provider.models.tracker(ctx, org, engine)
 			for _, a := range group {
 				raw, e := s.Search.provider.llmResponse(ctx, responseRequest{organizationID: org, model: engine, modelName: model, prompt: a.Prompt, webSearch: true, countryCode: strings.ToUpper(market.ISOCode(c.LocationCode)), maxTokens: promptMaxOutputTokens})
 				if e != nil {

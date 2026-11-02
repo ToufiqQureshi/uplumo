@@ -157,6 +157,9 @@ configuration and evidence for 13 months. Organization/project deletion cascades
   collection queue even for Run now. Answers arrive asynchronously. Claude and
   Perplexity use their model APIs and can differ from consumer apps. Their
   country is passed to web search; their language follows the question itself.
+  Tracking asks their low-cost tier (`pickTracker` in `models.go`: newest
+  `claude-haiku-*` alias, plain `sonar`), falling back to the flagship only when
+  the catalog lists neither. Prompt Explorer keeps the flagship (`pickLatest`).
 - Each collected answer keeps what the scraper returns with it: the answer's
   markdown (rendered, with AI-vendor images shown as links, not loaded), its
   cited sources with publisher name and date, and the businesses the AI named

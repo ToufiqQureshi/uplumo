@@ -33,7 +33,7 @@ const catalogTTL = time.Hour
 // first. They are used when the catalog is unreachable or lists no flagship.
 var fallbackModelNames = map[string][]string{
 	modelChatGPT:    {"gpt-5.6-luna", "gpt-5.5", "gpt-5.4", "gpt-5.2", "gpt-5.1", "gpt-5"},
-	modelClaude:     {"claude-sonnet-5", "claude-sonnet-4-6", "claude-sonnet-4-5"},
+	modelClaude:     {"claude-sonnet-5", "claude-sonnet-4-6", "claude-sonnet-4-5", "claude-haiku-4-5"},
 	modelGemini:     {"gemini-2.5-pro"},
 	modelPerplexity: {"sonar-reasoning-pro", "sonar-pro", "sonar"},
 }
@@ -131,26 +131,39 @@ func (c *modelCatalog) known(ctx context.Context, organizationID, model, modelNa
 	return slices.Contains(c.names(ctx, organizationID, model), modelName)
 }
 
+// tracker returns the model name a scheduled tracking answer uses.
+func (c *modelCatalog) tracker(ctx context.Context, organizationID, model string) string {
+	return pickTracker(model, c.names(ctx, organizationID, model))
+}
+
+// trackerRules pick the low-cost tier for scheduled tracking, where the same
+// questions repeat every run. On 2026-11-02 one India prompt with web search
+// cost $0.0478 on claude-sonnet-5 and $0.0124 on claude-haiku-5-5 (same nine
+// sources, same brands named), and $0.0126 on sonar-pro against $0.0060 on
+// sonar (identical citations). Prompt Explorer keeps the flagship.
+var trackerRules = map[string]*regexp.Regexp{
+	// One- or two-digit parts only, so a dated snapshot (4-5-20251001) does
+	// not outrank its alias.
+	modelClaude:     regexp.MustCompile(`^claude-haiku-(\d{1,2}(?:-\d{1,2})*)$`),
+	modelPerplexity: regexp.MustCompile(`^sonar$`),
+}
+
+// pickTracker takes the newest low-cost alias the catalog lists, or the
+// flagship when it lists none, so tracking never sends an unknown name.
+func pickTracker(model string, names []string) string {
+	if rule, ok := trackerRules[model]; ok {
+		if name := newestMatch(rule, names); name != "" {
+			return name
+		}
+	}
+	return pickLatest(model, names)
+}
+
 func pickLatest(model string, names []string) string {
 	if pinned, ok := pinnedModelNames[model]; ok && slices.Contains(names, pinned) {
 		return pinned
 	}
-	var best string
-	var bestVersion []int
-	for _, name := range names {
-		match := flagshipRules[model].FindStringSubmatch(name)
-		if match == nil {
-			continue
-		}
-		version := []int{0} // the Perplexity rule has no version to compare
-		if len(match) > 1 {
-			version = parseVersion(match[1])
-		}
-		if best == "" || slices.Compare(padTo(version, len(bestVersion)), padTo(bestVersion, len(version))) > 0 {
-			best, bestVersion = name, version
-		}
-	}
-	if best != "" {
+	if best := newestMatch(flagshipRules[model], names); best != "" {
 		return best
 	}
 	// No flagship alias: take the newest snapshot name the catalog still lists,
@@ -162,6 +175,27 @@ func pickLatest(model string, names []string) string {
 		}
 	}
 	return fallback[0]
+}
+
+// newestMatch returns the name matching rule with the highest version, the
+// first listed on a tie, or "" when none match.
+func newestMatch(rule *regexp.Regexp, names []string) string {
+	var best string
+	var bestVersion []int
+	for _, name := range names {
+		match := rule.FindStringSubmatch(name)
+		if match == nil {
+			continue
+		}
+		version := []int{0} // a rule without a version group has nothing to compare
+		if len(match) > 1 {
+			version = parseVersion(match[1])
+		}
+		if best == "" || slices.Compare(padTo(version, len(bestVersion)), padTo(bestVersion, len(version))) > 0 {
+			best, bestVersion = name, version
+		}
+	}
+	return best
 }
 
 // parseVersion reads "5.5" or "4-6" as [5 5] or [4 6].
