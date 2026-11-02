@@ -47,11 +47,12 @@ type rankedKeywordItem struct {
 	Keyword           *string `json:"keyword"`
 	RankedSERPElement *struct {
 		SERPItem *struct {
-			Type         *string  `json:"type"`
-			URL          *string  `json:"url"`
-			RelativeURL  *string  `json:"relative_url"`
-			RankAbsolute *float64 `json:"rank_absolute"`
-			ETV          *float64 `json:"etv"`
+			Type         *string      `json:"type"`
+			URL          *string      `json:"url"`
+			RelativeURL  *string      `json:"relative_url"`
+			RankAbsolute *float64     `json:"rank_absolute"`
+			ETV          *float64     `json:"etv"`
+			RankChanges  *rankChanges `json:"rank_changes"`
 		} `json:"serp_item"`
 		Type         *string  `json:"type"`
 		URL          *string  `json:"url"`
@@ -59,6 +60,13 @@ type rankedKeywordItem struct {
 		RankAbsolute *float64 `json:"rank_absolute"`
 		ETV          *float64 `json:"etv"`
 	} `json:"ranked_serp_element"`
+}
+
+// rankChanges compares a row with DataForSEO's previous database update. It
+// comes with every ranked-keywords row at no extra cost.
+type rankChanges struct {
+	PreviousRankAbsolute *float64 `json:"previous_rank_absolute"`
+	IsNew                *bool    `json:"is_new"`
 }
 
 type relevantPageItem struct {

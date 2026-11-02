@@ -65,3 +65,8 @@ Shows organic estimates, keyword/page tables and filtered domain research.
 - **Why:** Opening a saved link after the cache expired bought the report again without a click (owner, 26 Oct).
 - **Preserve:** `cachedOnly` is read at request time, so the refetch a Retry starts is allowed to buy; it never goes in the request body. Paging, sorting and tabs after a Search in the same session still load normally.
 - **Trace:** `backend/internal/platform/dataforseo/decision.md`; tests in `client/lib/uplumoApi.test.ts`, `backlinksApi.test.ts`, `domain/domain-cache.test.ts`.
+
+- **Decision:** The Rank cell shows the change since DataForSEO's previous update (`RankWithChange`: ↑n green, ↓n red, "New"), and the keywords CSV adds Previous Rank, Type and Intent.
+- **Why:** The fields come with the paid row and were dropped; see `backend/internal/domain/decision.md`.
+- **Preserve:** No new request. Unknown change shows nothing, not "0". A lower rank number is an improvement.
+- **Trace:** `components/RankWithChange.tsx`, `components/DomainKeywordsTable.tsx`, `utils.ts`, `types.ts`, `domainApi.ts`; `RankWithChange.test.ts`, `keywordsExport.test.ts`.

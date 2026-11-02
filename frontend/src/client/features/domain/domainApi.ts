@@ -47,6 +47,8 @@ const keywordsPageSchema = z.object({
       // Present only when the provider reports them.
       intent: z.string().nullable().optional(),
       type: z.string().nullable().optional(),
+      previousPosition: nullableNumber.optional(),
+      isNew: z.boolean().nullable().optional(),
     }),
   ),
   fetchedAt: z.string(),

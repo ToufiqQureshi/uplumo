@@ -92,10 +92,24 @@ type ExportTable = { headers: string[]; rows: (string | number | null)[][] };
 
 export function keywordsToTable(rows: KeywordRow[]): ExportTable {
   return {
-    headers: ["Keyword", "Rank", "Volume", "Traffic", "CPC", "URL", "Score"],
+    headers: [
+      "Keyword",
+      "Rank",
+      "Previous Rank",
+      "Type",
+      "Intent",
+      "Volume",
+      "Traffic",
+      "CPC",
+      "URL",
+      "Score",
+    ],
     rows: rows.map((row) => [
       row.keyword,
       row.position,
+      row.isNew ? "new" : (row.previousPosition ?? null),
+      row.type ?? null,
+      row.intent ?? null,
       row.searchVolume,
       row.traffic,
       row.cpc,

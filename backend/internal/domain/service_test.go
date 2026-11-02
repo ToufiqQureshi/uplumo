@@ -569,3 +569,35 @@ func TestConcurrentOrganizationsAreRaceSafe(t *testing.T) {
 		}
 	}
 }
+
+// rank_changes arrives with every paid row; it used to be dropped.
+func TestKeywordsPageKeepsRankChanges(t *testing.T) {
+	t.Parallel()
+	moved := rankedItem("alpha", 3, 10, 100, 0.5, 20, "https://example.com/a", "")
+	moved["ranked_serp_element"].(map[string]any)["serp_item"].(map[string]any)["rank_changes"] = map[string]any{"previous_rank_absolute": 7.0, "is_up": true}
+	fresh := rankedItem("beta", 5, 10, 100, 0.5, 20, "https://example.com/b", "")
+	fresh["ranked_serp_element"].(map[string]any)["serp_item"].(map[string]any)["rank_changes"] = map[string]any{"is_new": true}
+	unknown := rankedItem("gamma", 9, 10, 100, 0.5, 20, "https://example.com/c", "")
+	provider := &fakeProvider{result: rankedKeywordsResult(3, moved, fresh, unknown)}
+	svc := newTestService(t, provider, &memoryCache{})
+	got, err := svc.KeywordsPage(context.Background(), "org", KeywordsPageInput{
+		ProjectID: "proj", Domain: "example.com", Scope: ScopeDomain, LocationCode: 2356, LanguageCode: "en",
+		Page: 1, PageSize: 50, SortMode: "volume",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Keywords) != 3 {
+		t.Fatalf("keywords = %d, want 3", len(got.Keywords))
+	}
+	a, b, c := got.Keywords[0], got.Keywords[1], got.Keywords[2]
+	if a.PreviousPosition == nil || *a.PreviousPosition != 7 || a.IsNew != nil {
+		t.Errorf("moved row = previous %v new %v, want 7 and unknown", a.PreviousPosition, a.IsNew)
+	}
+	if b.IsNew == nil || !*b.IsNew || b.PreviousPosition != nil {
+		t.Errorf("new row = previous %v new %v, want new with no previous rank", b.PreviousPosition, b.IsNew)
+	}
+	if c.PreviousPosition != nil || c.IsNew != nil {
+		t.Errorf("row without rank_changes = previous %v new %v, want both unknown", c.PreviousPosition, c.IsNew)
+	}
+}

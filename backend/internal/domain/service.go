@@ -112,6 +112,10 @@ type KeywordRow struct {
 	// Type labels the ranking result the position comes from (organic or paid),
 	// so the customer can tell the two apart.
 	Type *string `json:"type"`
+	// PreviousPosition is the absolute rank at DataForSEO's previous update;
+	// IsNew marks a keyword that did not rank then. Both are null when unknown.
+	PreviousPosition *float64 `json:"previousPosition"`
+	IsNew            *bool    `json:"isNew"`
 }
 
 // KeywordsPageInput is a validated request for one page of ranking keywords.
@@ -442,11 +446,12 @@ func mapKeyword(item rankedKeywordItem) (KeywordRow, bool) {
 		return KeywordRow{}, false
 	}
 	var serp *struct {
-		Type         *string  `json:"type"`
-		URL          *string  `json:"url"`
-		RelativeURL  *string  `json:"relative_url"`
-		RankAbsolute *float64 `json:"rank_absolute"`
-		ETV          *float64 `json:"etv"`
+		Type         *string      `json:"type"`
+		URL          *string      `json:"url"`
+		RelativeURL  *string      `json:"relative_url"`
+		RankAbsolute *float64     `json:"rank_absolute"`
+		ETV          *float64     `json:"etv"`
+		RankChanges  *rankChanges `json:"rank_changes"`
 	}
 	var rank, traffic *float64
 	var pageURL, relativeURL, rowType *string
@@ -471,6 +476,11 @@ func mapKeyword(item rankedKeywordItem) (KeywordRow, bool) {
 	if relativeURL == nil && pageURL != nil {
 		relativeURL = toRelativePath(*pageURL)
 	}
+	var previous *float64
+	var isNew *bool
+	if serp != nil && serp.RankChanges != nil {
+		previous, isNew = roundNullable(serp.RankChanges.PreviousRankAbsolute), serp.RankChanges.IsNew
+	}
 	var difficulty *float64
 	if properties != nil {
 		difficulty = properties.KeywordDifficulty
@@ -492,6 +502,7 @@ func mapKeyword(item rankedKeywordItem) (KeywordRow, bool) {
 			Traffic: traffic, CPC: cpc, KeywordDifficulty: roundNullable(difficulty), Intent: intent,
 		},
 		URL: pageURL, RelativeURL: relativeURL, Type: rowType,
+		PreviousPosition: previous, IsNew: isNew,
 	}, true
 }
 

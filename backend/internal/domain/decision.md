@@ -148,3 +148,10 @@ Use the package tests next to the source files in `README.md`. For changes cross
 - **Trace:** `lookup.go`, `service.go`, `suggestions.go`; empty-result call-count and TTL regressions in `service_test.go`.
 
 Provider fixtures include task path and explicit cost, including zero on rejected tasks. Missing task billing metadata now keeps a purchase uncertain rather than proving it was free. Mapping and exact one-call failure assertions remain unchanged.
+
+## Keyword rows keep their rank change
+
+- **Decision:** `mapKeyword` reads `serp_item.rank_changes` into `KeywordRow.previousPosition` (rounded) and `isNew`. The Domain keywords table shows the change next to the rank (↑/↓ or New), and the CSV export adds Previous Rank, Type and Intent.
+- **Why:** Every ranked-keywords row carries `rank_changes` at no extra cost (DataForSEO pricing bills per task and returned row, not per field; confirmed with DataForSEO's assistant on 2026-11-02). It was dropped. In a live axisrooms.com India sample of 50 rows, 40 were new and 10 had a previous rank. The export also lacked Type and Intent, so mixed organic/paid rows lost their context.
+- **Preserve:** No request change, same cost. Missing `rank_changes` stays null (no arrow), never 0. Previous rank is absolute, like `position`.
+- **Trace:** `provider.go` (`rankChanges`), `service.go` (`KeywordRow`, `mapKeyword`); `TestKeywordsPageKeepsRankChanges` (failed with the previous rank dropped). Frontend: `components/RankWithChange.tsx`, `utils.ts` (`keywordsToTable`), tests `RankWithChange.test.ts`, `keywordsExport.test.ts`.
