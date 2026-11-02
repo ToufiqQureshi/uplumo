@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -140,5 +141,33 @@ func TestConcurrentTableMissesShareOnePurchasePerOrganization(t *testing.T) {
 				t.Fatalf("provider calls=%d, want one per organization", calls.Load())
 			}
 		})
+	}
+}
+
+// The provider request always asks for live links only, so "Hide lost" can
+// never remove a row. It used to add an is_lost filter that changed the cache
+// key and bought the same 1,000-row block (~$0.06) again on a large profile.
+func TestHideLostDoesNotBuyTheSameRowsAgain(t *testing.T) {
+	var calls atomic.Int32
+	var bodies []string
+	server := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls.Add(1)
+		body, _ := io.ReadAll(r.Body)
+		bodies = append(bodies, string(body))
+		providerOK(w, r.URL.Path, map[string]any{"items": []any{map[string]any{"domain": "source.example", "url_from": "https://source.example/", "page": "https://example.com/"}}, "total_count": 5000})
+	})
+	svc := newService(testClient(t, server, &usageRecorder{}), &memoryCache{}, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Now)
+	in := lookupInput{Target: "example.com", Scope: string(ScopeDomain)}
+	page := pageInput{Page: 1, PageSize: 50, Sort: "rank,desc", Mode: "as_is"}
+	for _, f := range []rowsFilters{{}, {HideLost: new(true)}, {HideLost: new(false)}} {
+		if _, err := svc.Rows(t.Context(), "org", in, page, f, false); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if calls.Load() != 1 {
+		t.Fatalf("provider calls=%d, want 1: toggling Hide lost must reuse the bought block", calls.Load())
+	}
+	if strings.Contains(bodies[0], "is_lost") {
+		t.Fatalf("request %s carries an is_lost filter the live-only status makes pointless", bodies[0])
 	}
 }
