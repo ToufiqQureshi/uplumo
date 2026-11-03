@@ -13,6 +13,15 @@ priorities, corrections, and what still waits on him. Read it after
   decision, remove it when he answers.
 - Never write secrets, keys or customer data here.
 
+## Kal ka kaam (4 Nov se)
+
+1. **Analytics leads ko dynamic banao** (owner ne kaha: kuch hard-coded nahi, UI clean).
+   - Bug: `frontend/src/client/features/analytics/AnalyticsOverview.tsx:99-123` har site ko "Nobody tapped WhatsApp, call..." dikhata hai, chahe button ho ya na ho. `backend/internal/analytics/enquiry.go` event ke naam se lead guess karta hai (word list).
+   - Plan: tracker sab raw record kare; user kisi bhi element pe `data-uplumo-event="signup"` ya JS `uplumo("signup")` lagaye; user khud chune kaunsa event uska lead hai (nayi table, per project); UI sirf wahi dikhaye jo site pe hai; `enquiry.go` ki word list aur saara hard-coded copy hatao. 0 paid calls. Code se pehle owner ki "haan".
+2. **Phir "Fix → Proof" ka plan** (sirf plan, code nahi): Cite Fix → AI ne cite kiya → AI se visitor usi page pe aaya → lead aayi. Link "likely" hai, pakka nahi; UI mein waise hi likhna.
+   - Kyu: market research (3 Nov) mein AI visibility tracking sasti aur bhari hui hai (Otterly $29, Peec $95, Profound $99+). Sabse badi complaint "batata hai, fix nahi karta". Hamara apna analytics tracker hamein proof dikhane deta hai, jo competitors ke paas nahi.
+3. **Rejected, dobara mat lana:** TimesFM / "Real drop or normal?" alerts (Growth Monitor se overlap; TimesFM 3.0 weights non-commercial).
+
 ## Waiting for the owner
 
 - **Deploy** latest `main`, then compare credits charged with provider cost on 2-3 real Cite Fix pages and one Keywords answer.
@@ -23,7 +32,6 @@ priorities, corrections, and what still waits on him. Read it after
 - **Local SEO / Google Reviews / AI Mode engine:** bring back or drop.
 - **Google OAuth data-access verification:** scope justification + demo video, then submit.
 - **Railway GitHub auto-deploy** is broken ("Could not load branches"): reconnect GitHub in Railway, or keep deploying with `railway up` (`docs/DEPLOY.md`).
-- **Analytics leads:** approve the plan to make leads user-defined (no hard-coded WhatsApp/call/form guessing).
 
 ---
 
