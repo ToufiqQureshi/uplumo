@@ -21,7 +21,7 @@ feelings, business calls, priorities, corrections. Read it after
 
 - Owner: "muje global platform banana ha not only india samja docs me daal de".
 - Owner wants something valuable and different: "kuch valueble dena ha jo kaam ka ho, not other competitors jaise ek or site".
-- Claude proposed "Real drop or normal?" alerts (expected range + why + fix, zero new paid calls). TimesFM 3.0 was ruled out because its weights are non-commercial. The proposal is in `ROADMAP.md` and waits on the owner's yes.
+- Claude proposed "Real drop or normal?" alerts (TimesFM-style expected range + why + fix). Owner rejected it: "I don't [like] this idea"; it mostly overlaps the existing Growth Monitor (`ga4/growth_monitor.go`), Next Actions and SAM brief. TimesFM 3.0 is ruled out anyway (non-commercial weights). Owner asked for market research before choosing what to build.
 
 ## 3 Nov 2026: dollar prices for customers outside India
 
