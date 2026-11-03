@@ -365,3 +365,39 @@ func TestARetiredPlanReadsAsFree(t *testing.T) {
 		t.Fatalf("a retired plan allows white-label: %v, %v", ok, err)
 	}
 }
+
+// Pro and Business allowances were lowered on 3 Nov 2026. A paying workspace
+// that already has more sites keeps paid work running up to the old
+// allowance; only adding new sites stops at the new one.
+func TestLoweredSiteAllowanceDoesNotPauseExistingCustomers(t *testing.T) {
+	for _, tc := range []struct {
+		plan             string
+		kept, overOldCap int
+	}{{PlanPro, 8, 11}, {plans.Business, 15, 21}} {
+		t.Run(tc.plan, func(t *testing.T) {
+			ctx := t.Context()
+			f := newFixture(ctx, t)
+			f.sellTiers()
+			f.deliver(ctx, t, f.eventOnPlan(tc.plan, "subscription.activated", "sub_1", "active"))
+			addSites := func(n int) {
+				t.Helper()
+				for range n {
+					if _, err := f.pool.Exec(ctx, `INSERT INTO projects (id, organization_id, name, domain) VALUES ($1,$2,'Site',$1)`, "site-"+rand.Text(), f.org); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}
+			addSites(tc.kept)
+			if within, err := f.svc.WithinPlanLimits(ctx, f.org); err != nil || !within {
+				t.Fatalf("%d kept sites on %s: WithinPlanLimits = %v, %v; want true", tc.kept, tc.plan, within, err)
+			}
+			if limit, err := f.svc.SiteLimit(ctx, f.org); err != nil || limit >= tc.kept {
+				t.Fatalf("SiteLimit = %d, %v; new sites must stop below %d", limit, err, tc.kept)
+			}
+			addSites(tc.overOldCap - tc.kept)
+			if within, err := f.svc.WithinPlanLimits(ctx, f.org); err != nil || within {
+				t.Fatalf("%d sites on %s: WithinPlanLimits = %v, %v; want false above the old allowance", tc.overOldCap, tc.plan, within, err)
+			}
+		})
+	}
+}
