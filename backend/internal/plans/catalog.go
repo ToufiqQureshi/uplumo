@@ -3,7 +3,10 @@
 // so a plan cannot promise one thing and enforce another.
 package plans
 
-import "slices"
+import (
+	"fmt"
+	"slices"
+)
 
 // Plan ids, as stored on a subscription. They predate the customer-facing
 // names and stay as they are: subscriptions and Razorpay variables use them.
@@ -245,7 +248,7 @@ var catalog = []Definition{
 		Summary: "For several brands, freelancers and agencies, with reports under your own brand.",
 		Highlights: highlights([]string{
 			"20 websites",
-			"Add 5 more websites for ₹999 a month",
+			siteAddOnHighlight(INR),
 			"5 team members",
 			"15,000 credits every month",
 			creditPackHighlight,
@@ -254,6 +257,26 @@ var catalog = []Definition{
 		}, researchHighlights),
 		features: businessFeatures,
 	},
+}
+
+// siteAddOnHighlight states the site add-on's price in currency on the
+// Business card, from the pack itself so the two cannot disagree.
+func siteAddOnHighlight(currency string) string {
+	pack, _ := GetPack("sites_5")
+	symbol := "₹"
+	if currency == USD {
+		symbol = "$"
+	}
+	return fmt.Sprintf("Add %d more websites for %s%d a month", pack.Sites, symbol, pack.Price(currency))
+}
+
+// HighlightsIn is Highlights with every price in currency.
+func (d Definition) HighlightsIn(currency string) []string {
+	out := slices.Clone(d.Highlights)
+	if i := slices.Index(out, siteAddOnHighlight(INR)); i >= 0 {
+		out[i] = siteAddOnHighlight(currency)
+	}
+	return out
 }
 
 // Unlimited is what Uplumo's own workspaces get: every feature and no limit.

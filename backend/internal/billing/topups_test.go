@@ -200,7 +200,7 @@ func TestLateAuthorizedPackPaymentIsCaptured(t *testing.T) {
 	if got, err := authorized("pay_late", order.OrderID, order.Amount); err != nil || got != WebhookProcessed {
 		t.Fatalf("late authorization = %q, %v", got, err)
 	}
-	if want := []string{"capture pay_late 149900"}; !slices.Equal(f.payments, want) {
+	if want := []string{"capture pay_late 149900 INR"}; !slices.Equal(f.payments, want) {
 		t.Fatalf("payment calls = %v, want %v", f.payments, want)
 	}
 

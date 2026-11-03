@@ -198,6 +198,13 @@ func TestBusinessCardStatesTheSiteAddOnPrice(t *testing.T) {
 	if !slices.Contains(business.Highlights, want) {
 		t.Errorf("Business highlights do not contain %q", want)
 	}
+	usd := fmt.Sprintf("Add %d more websites for $%d a month", addOn.Sites, addOn.PriceUSD)
+	if got := business.HighlightsIn(USD); !slices.Contains(got, usd) || slices.Contains(got, want) {
+		t.Errorf("Business highlights in dollars = %q, want %q and no rupee price", got, usd)
+	}
+	if got := business.HighlightsIn(INR); !slices.Equal(got, business.Highlights) {
+		t.Errorf("Business highlights in rupees = %q, want the catalog's", got)
+	}
 }
 
 func TestCurrencyFor(t *testing.T) {

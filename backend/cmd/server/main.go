@@ -203,6 +203,7 @@ func run(logger *slog.Logger) (err error) {
 			if err := billingSvc.EnableUSD(usdCtx); err != nil {
 				logger.Error("US dollar billing stays off; customers outside India pay in rupees", "err", err)
 			} else {
+				pages.ShowUSD(country)
 				logger.Info("US dollar billing on for customers outside India")
 			}
 			cancelUSD()

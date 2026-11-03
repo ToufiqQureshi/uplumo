@@ -74,12 +74,13 @@ type planInfo struct {
 // running in the other currency still shows what it costs.
 func plansHandler(svc *Service, country func(*http.Request) string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		currency := checkoutCurrency(svc, country, r)
 		catalog := plans.Catalog()
 		out := make([]planInfo, len(catalog))
 		for i, plan := range catalog {
-			out[i] = planInfo{ID: plan.ID, Name: plan.Name, PriceINR: plan.PriceINR, PriceUSD: plan.PriceUSD, Summary: plan.Summary, Highlights: plan.Highlights}
+			out[i] = planInfo{ID: plan.ID, Name: plan.Name, PriceINR: plan.PriceINR, PriceUSD: plan.PriceUSD, Summary: plan.Summary, Highlights: plan.HighlightsIn(currency)}
 		}
-		httpx.WriteJSON(w, http.StatusOK, map[string]any{"plans": out, "currency": checkoutCurrency(svc, country, r)})
+		httpx.WriteJSON(w, http.StatusOK, map[string]any{"plans": out, "currency": currency})
 	}
 }
 

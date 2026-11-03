@@ -188,7 +188,7 @@ func (s *Service) captureTopUpPayment(ctx context.Context, body []byte) (Webhook
 	if p.Currency != currency || p.Amount != amount {
 		return "", ErrInvalidEvent
 	}
-	if _, err := s.razorpay.CapturePayment(ctx, p.ID, amount); err != nil {
+	if _, err := s.razorpay.CapturePayment(ctx, p.ID, amount, currency); err != nil {
 		return "", fmt.Errorf("%w: %w", ErrPaymentProvider, err)
 	}
 	return WebhookProcessed, nil

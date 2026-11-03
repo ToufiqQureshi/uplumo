@@ -16,7 +16,7 @@
 <h2 id="plans">See exactly what each plan includes.</h2>
 </div>
 {{template "plans" .}}
-<p class="note">Prices are per workspace, per month, in Indian rupees. Paid data and AI actions use credits; Billing shows your balance and typical action costs. Cancel in one click from Billing.</p>
+<p class="note">Prices are per workspace, per month, in {{if eq .Currency "USD"}}US dollars. In India, plans are priced and billed in Indian rupees{{else}}Indian rupees. Outside India, plans are priced and billed in US dollars{{end}}. Paid data and AI actions use credits; Billing shows your balance and typical action costs. Cancel in one click from Billing.</p>
 <p class="note">Scheduled rank checks, research and AI share the same credits. Five weekly runs in one billing month, multiple devices or other paid actions may use the allowance before month end. Billing forecasts scheduled usage; checks pause when credits cannot cover the next run.</p>
 </div>
 </section>

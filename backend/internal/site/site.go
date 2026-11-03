@@ -64,9 +64,12 @@ var (
 
 // Plan is a price tier as the pages show it.
 type Plan struct {
-	ID       string
-	Name     string
-	PriceINR int
+	ID   string
+	Name string
+	// Amount is the monthly price in the page's currency; Price is it
+	// formatted ("₹999", "$15").
+	Amount int
+	Price  string
 	// Period follows the price, e.g. "/month".
 	Period        string
 	Summary       string
@@ -98,11 +101,13 @@ type page struct {
 	Operator    string
 	Address     string
 	Phone       string
-	Compare     []CompareRow
-	Plans       []Plan
-	Packs       []PackOffer
-	FAQ         []QA
-	JSONLD      any
+	// Currency is what the page's prices are in: "INR" or "USD".
+	Currency string
+	Compare  []CompareRow
+	Plans    []Plan
+	Packs    []PackOffer
+	FAQ      []QA
+	JSONLD   any
 	// Posts is the blog index; Post is the post on a post page.
 	Posts []Post
 	Post  *Post
@@ -110,7 +115,12 @@ type page struct {
 
 // Site serves the pre-rendered pages and the static assets.
 type Site struct {
-	landing, pricing, blog renderedPage
+	// landing and pricing hold one page per currency (planCatalog.INR,
+	// planCatalog.USD); every other page has no prices.
+	landing, pricing map[string]renderedPage
+	blog             renderedPage
+	// country is set by ShowUSD; nil shows rupee prices to everyone.
+	country func(*http.Request) string
 	// posts are the rendered blog posts, keyed by slug.
 	posts map[string]renderedPage
 	// info holds the pages that are plain text (about, contact and the legal
@@ -169,42 +179,28 @@ func build(publicURL *url.URL, blogFiles fs.FS) (*Site, error) {
 	if err != nil {
 		return nil, err
 	}
-	plans := plans()
+	plans := plansFor(planCatalog.INR)
 	base := page{
 		OGImage: origin + ogImage, SignUp: signUpPath, Support: SupportEmail, Updated: policyUpdated,
 		Operator: operatorName, Address: operatorAddress, Phone: supportPhone,
-		Plans: plans, Packs: packOffers(), Compare: comparison(),
+		Currency: planCatalog.INR, Plans: plans, Packs: packOffers(planCatalog.INR), Compare: comparison(planCatalog.INR),
 	}
-
-	landing := base
-	landing.Path = "/"
-	landing.Title = "Uplumo: SEO and AI search analytics with honest INR pricing"
-	landing.Description = "Track Google rankings, audit your site and see where AI assistants mention you and send visitors. Choose Free, Basic, Pro or Business pricing in rupees."
-	landing.Canonical = origin + "/"
-	landing.FAQ = landingFAQ()
-	landing.JSONLD = jsonLD(origin, landing.Description, plans)
-
-	pricing := base
-	pricing.Path = "/pricing"
-	pricing.Title = "Uplumo pricing: Free, Basic, Pro and Business plans"
-	pricing.Description = fmt.Sprintf("Start free. Basic is %s, Pro is %s and Business is %s a month in rupees. Buy extra credits when you need them, cancel in one click.",
-		formatINR(price(planCatalog.Basic)), formatINR(price(planCatalog.Pro)), formatINR(price(planCatalog.Business)))
-	pricing.Canonical = origin + "/pricing"
-	pricing.FAQ = pricingFAQ()
-	pricing.JSONLD = jsonLD(origin, pricing.Description, plans)
 
 	posts, err := loadPosts(blogFiles)
 	if err != nil {
 		return nil, err
 	}
-	s := &Site{static: static, versions: versions, info: map[string]renderedPage{}, posts: map[string]renderedPage{}}
+	s := &Site{
+		static: static, versions: versions, info: map[string]renderedPage{}, posts: map[string]renderedPage{},
+		landing: map[string]renderedPage{}, pricing: map[string]renderedPage{},
+	}
 	blog := base
 	blog.Path = "/blog"
 	blog.Title = "Uplumo blog: SEO and AI search guides"
 	blog.Description = "Plain-language guides to ranking on Google and showing up in AI answers, for business owners and agencies in India."
 	blog.Canonical = origin + "/blog"
 	blog.Posts = posts
-	blog.JSONLD = jsonLD(origin, blog.Description, plans)
+	blog.JSONLD = jsonLD(origin, blog.Description, plans, planCatalog.INR)
 	if s.blog, err = render(tmpl, "blog.html", blog); err != nil {
 		return nil, err
 	}
@@ -233,31 +229,71 @@ func build(publicURL *url.URL, blogFiles fs.FS) (*Site, error) {
 		data.Title = p.title
 		data.Description = p.description
 		data.Canonical = origin + p.path
-		data.JSONLD = jsonLD(origin, p.description, plans)
+		data.JSONLD = jsonLD(origin, p.description, plans, planCatalog.INR)
 		if s.info[p.path], err = render(tmpl, p.file, data); err != nil {
 			return nil, err
 		}
 	}
 	s.robots = []byte("User-agent: *\nAllow: /\nDisallow: /api/\n\nSitemap: " + origin + "/sitemap.xml\n")
 	s.sitemap = sitemap(origin, posts)
-	if s.landing, err = render(tmpl, "landing.html", landing); err != nil {
-		return nil, err
-	}
-	if s.pricing, err = render(tmpl, "pricing.html", pricing); err != nil {
-		return nil, err
+	for _, currency := range []string{planCatalog.INR, planCatalog.USD} {
+		data := base
+		data.Currency = currency
+		data.Plans = plansFor(currency)
+		data.Packs = packOffers(currency)
+		data.Compare = comparison(currency)
+		basic, pro, business := priceOf(planCatalog.Basic, currency), priceOf(planCatalog.Pro, currency), priceOf(planCatalog.Business, currency)
+
+		landing := data
+		landing.Path = "/"
+		landing.Title = "Uplumo: SEO and AI search analytics with honest pricing"
+		landing.Description = fmt.Sprintf("Track Google rankings, audit your site and see where AI assistants mention you and send visitors. Start free; paid plans from %s a month.", basic)
+		landing.Canonical = origin + "/"
+		landing.FAQ = landingFAQ()
+		landing.JSONLD = jsonLD(origin, landing.Description, data.Plans, currency)
+		if s.landing[currency], err = render(tmpl, "landing.html", landing); err != nil {
+			return nil, err
+		}
+
+		pricing := data
+		pricing.Path = "/pricing"
+		pricing.Title = "Uplumo pricing: Free, Basic, Pro and Business plans"
+		pricing.Description = fmt.Sprintf("Start free. Basic is %s, Pro is %s and Business is %s a month. Buy extra credits when you need them, cancel in one click.", basic, pro, business)
+		pricing.Canonical = origin + "/pricing"
+		pricing.FAQ = pricingFAQ(currency)
+		pricing.JSONLD = jsonLD(origin, pricing.Description, data.Plans, currency)
+		if s.pricing[currency], err = render(tmpl, "pricing.html", pricing); err != nil {
+			return nil, err
+		}
 	}
 	return s, nil
+}
+
+// ShowUSD shows dollar prices on the landing and pricing pages to visitors
+// whose country (from country, "" when unknown) is outside India. Call it
+// before serving, and only once checkout bills in dollars: a page must never
+// show a price checkout cannot charge.
+func (s *Site) ShowUSD(country func(*http.Request) string) {
+	s.country = country
+}
+
+// currency is the currency r's visitor sees prices in.
+func (s *Site) currency(r *http.Request) string {
+	if s.country == nil {
+		return planCatalog.INR
+	}
+	return planCatalog.CurrencyFor(s.country(r))
 }
 
 // ServeLanding writes the landing page. It is revalidated on every visit
 // because the server answers / with the app for signed-in users.
 func (s *Site) ServeLanding(w http.ResponseWriter, r *http.Request) {
-	servePage(w, r, s.landing, "no-cache, no-transform")
+	servePage(w, r, s.landing[s.currency(r)], s.priceCacheControl("no-cache, no-transform"))
 }
 
 // ServePricing writes the pricing page.
 func (s *Site) ServePricing(w http.ResponseWriter, r *http.Request) {
-	servePage(w, r, s.pricing, "public, max-age=300, no-transform")
+	servePage(w, r, s.pricing[s.currency(r)], s.priceCacheControl("public, max-age=300, no-transform"))
 }
 
 // InfoPaths lists the URL paths ServeInfo answers, for the router.
@@ -372,6 +408,16 @@ func (s *Site) ServeAsset(w http.ResponseWriter, r *http.Request) {
 	http.ServeFileFS(w, r, s.static, file)
 }
 
+// priceCacheControl keeps a page whose prices depend on the visitor's
+// country out of shared caches, so one visitor's currency is never served to
+// another.
+func (s *Site) priceCacheControl(cacheControl string) string {
+	if s.country == nil {
+		return cacheControl
+	}
+	return "private, " + strings.TrimPrefix(cacheControl, "public, ")
+}
+
 // servePage writes a rendered page. Every caller passes no-transform: the
 // pages allow no script, so a proxy that rewrites them (Cloudflare swaps each
 // email address for a script-decoded placeholder) leaves "[email protected]"
@@ -425,6 +471,19 @@ func formatINR(rupees int) string {
 	return "₹" + formatNumber(int64(rupees))
 }
 
+// formatMoney formats a non-negative whole amount of currency: rupees with
+// Indian grouping, dollars with thousands grouping ($1,000).
+func formatMoney(amount int64, currency string) string {
+	if currency == planCatalog.USD {
+		s := strconv.FormatInt(amount, 10)
+		for i := len(s) - 3; i > 0; i -= 3 {
+			s = s[:i] + "," + s[i:]
+		}
+		return "$" + s
+	}
+	return formatINR(int(amount))
+}
+
 func formatNumber(number int64) string {
 	s := strconv.FormatInt(number, 10)
 	if len(s) > 3 {
@@ -455,7 +514,7 @@ var infoPages = []struct {
 		"Uplumo is online software: nothing is shipped, and access starts as soon as you sign up or pay."},
 }
 
-func plans() []Plan {
+func plansFor(currency string) []Plan {
 	catalog := planCatalog.Catalog()
 	result := make([]Plan, 0, len(catalog))
 	for _, item := range catalog {
@@ -464,9 +523,9 @@ func plans() []Plan {
 			period, cta = "forever", "Start free"
 		}
 		result = append(result, Plan{
-			ID: item.ID, Name: item.Name, PriceINR: item.PriceINR,
-			Period: period, Summary: item.Summary, Highlights: item.Highlights,
-			Limits: planLimits(item), IncludedTools: includedTools(item),
+			ID: item.ID, Name: item.Name, Amount: item.Price(currency), Price: formatMoney(int64(item.Price(currency)), currency),
+			Period: period, Summary: item.Summary, Highlights: item.HighlightsIn(currency),
+			Limits: planLimits(item, currency), IncludedTools: includedTools(item),
 			Credits: item.MonthlyCredits, CreditLabel: formatNumber(item.MonthlyCredits),
 			CTA: cta, Featured: item.ID == planCatalog.Pro,
 		})
@@ -474,7 +533,7 @@ func plans() []Plan {
 	return result
 }
 
-func planLimits(plan planCatalog.Definition) []string {
+func planLimits(plan planCatalog.Definition, currency string) []string {
 	limits := []string{
 		fmt.Sprintf("%d %s", plan.Sites, plural(plan.Sites, "website", "websites")),
 		fmt.Sprintf("%d %s", plan.Members, plural(plan.Members, "team member", "team members")),
@@ -482,7 +541,7 @@ func planLimits(plan planCatalog.Definition) []string {
 	if plan.Allows(planCatalog.SiteAddOn) {
 		for _, pack := range planCatalog.Packs() {
 			if pack.Feature == planCatalog.SiteAddOn {
-				limits = append(limits, fmt.Sprintf("Add %d more websites for %s a month", pack.Sites, formatINR(int(pack.PriceINR))))
+				limits = append(limits, fmt.Sprintf("Add %d more websites for %s a month", pack.Sites, formatMoney(pack.Price(currency), currency)))
 			}
 		}
 	}
@@ -537,10 +596,10 @@ func includedTools(plan planCatalog.Definition) []string {
 	return tools
 }
 
-// price returns the monthly price of the plan with id.
-func price(id string) int {
+// priceOf is the formatted monthly price of the plan with id in currency.
+func priceOf(id, currency string) string {
 	plan, _ := planCatalog.Get(id)
-	return plan.PriceINR
+	return formatMoney(int64(plan.Price(currency)), currency)
 }
 
 // CompareRow is one line of the plan comparison: a label and one cell per
@@ -552,7 +611,7 @@ type CompareRow struct {
 
 // comparison builds the comparison table from the catalog, so the page can
 // only show what a plan check enforces.
-func comparison() []CompareRow {
+func comparison(currency string) []CompareRow {
 	catalog := planCatalog.Catalog()
 	row := func(label string, cell func(planCatalog.Definition) string) CompareRow {
 		cells := make([]string, len(catalog))
@@ -609,10 +668,10 @@ func comparison() []CompareRow {
 		row("Buy extra credits", included(planCatalog.CreditPacks)),
 		row("Add more websites", included(planCatalog.SiteAddOn)),
 		row("Monthly price", func(plan planCatalog.Definition) string {
-			if plan.PriceINR == 0 {
+			if plan.Price(currency) == 0 {
 				return "Free"
 			}
-			return formatINR(plan.PriceINR)
+			return formatMoney(int64(plan.Price(currency)), currency)
 		}),
 	}
 }
@@ -639,14 +698,14 @@ func landingFAQ() []QA {
 	}
 }
 
-func pricingFAQ() []QA {
+func pricingFAQ(currency string) []QA {
 	basic, _ := planCatalog.Get(planCatalog.Basic)
 	pro, _ := planCatalog.Get(planCatalog.Pro)
 	business, _ := planCatalog.Get(planCatalog.Business)
 	sites, _ := planCatalog.GetPack("sites_5")
 	return []QA{
-		{"Is the Free plan really free?", "Yes. It costs " + formatINR(0) +
-			" and needs no card. Paid plans start at " + formatINR(basic.PriceINR) + " a month."},
+		{"Is the Free plan really free?", "Yes. It costs " + formatMoney(0, currency) +
+			" and needs no card. Paid plans start at " + formatMoney(int64(basic.Price(currency)), currency) + " a month."},
 		{"What is the difference between Basic and Pro?", "Basic is for ranking one site: keyword research, rank tracking and your Google data. " +
 			"Pro adds what you need to beat competitors: backlink and competitor research, AI Visibility, " +
 			strconv.Itoa(pro.Sites) + " websites, " + strconv.Itoa(pro.TrackedKeywords) + " tracked keywords and " + strconv.Itoa(pro.Members) + " team members."},
@@ -654,7 +713,7 @@ func pricingFAQ() []QA {
 			strconv.Itoa(business.Sites) + " websites, " + strconv.Itoa(business.Members) + " team members and " + formatNumber(business.MonthlyCredits) + " credits a month."},
 		{"How do site limits work?", fmt.Sprintf("Free and Basic include one active website, Pro includes %d and Business %d. "+
 			"On Business you can add %d more websites for %s, valid for %d days from payment. "+
-			"Archiving a site frees a slot; your data stays in the workspace.", pro.Sites, business.Sites, sites.Sites, formatINR(int(sites.PriceINR)), planCatalog.SiteAddOnDays)},
+			"Archiving a site frees a slot; your data stays in the workspace.", pro.Sites, business.Sites, sites.Sites, formatMoney(sites.Price(currency), currency), planCatalog.SiteAddOnDays)},
 		{"What happens when my credits run out?", "Paid data and AI actions stop until you have credits again: wait for the next month's credits, " +
 			"or, on Pro and Business, buy a credit pack from Billing. Pack credits are used after your monthly credits, " +
 			"last while your paid plan is active and expire when the plan ends. Packs are not refundable."},
@@ -663,8 +722,16 @@ func pricingFAQ() []QA {
 		{"How do I change plan?", "Write to us from your account's email address and we move you. Changing plan from Billing is not built yet."},
 		{"Will the price change without notice?", "No. If prices ever change, we tell you before your next bill " +
 			"and you can cancel in one click."},
-		{"How do I pay?", "Through Razorpay with UPI, cards or netbanking. Prices are in Indian rupees."},
+		payment(currency),
 	}
+}
+
+func payment(currency string) QA {
+	if currency == planCatalog.USD {
+		return QA{"How do I pay?", "Through Razorpay with an international card, billed in US dollars. Your bank may add its own foreign transaction fee. " +
+			"Customers in India pay in Indian rupees with UPI, cards or netbanking."}
+	}
+	return QA{"How do I pay?", "Through Razorpay with UPI, cards or netbanking. Prices are in Indian rupees. Customers outside India pay in US dollars."}
 }
 
 // PackOffer is one credit pack or add-on as the pricing page shows it.
@@ -673,7 +740,7 @@ type PackOffer struct {
 }
 
 // packOffers describes every one-time purchase from the catalog.
-func packOffers() []PackOffer {
+func packOffers(currency string) []PackOffer {
 	var offers []PackOffer
 	for _, pack := range planCatalog.Packs() {
 		var who []string
@@ -687,7 +754,7 @@ func packOffers() []PackOffer {
 			detail = fmt.Sprintf("Raises your website limit by %d for %d days from payment.", pack.Sites, planCatalog.SiteAddOnDays)
 		}
 		offers = append(offers, PackOffer{
-			Name: pack.Name, Price: formatINR(int(pack.PriceINR)), Detail: detail,
+			Name: pack.Name, Price: formatMoney(pack.Price(currency), currency), Detail: detail,
 			Who: "On " + strings.Join(who, " and "),
 		})
 	}
@@ -696,14 +763,14 @@ func packOffers() []PackOffer {
 
 // jsonLD describes the organization and the product, with each plan as an
 // offer, for search engines.
-func jsonLD(origin, description string, plans []Plan) map[string]any {
+func jsonLD(origin, description string, plans []Plan, currency string) map[string]any {
 	offers := make([]map[string]any, 0, len(plans))
 	for _, p := range plans {
 		offers = append(offers, map[string]any{
 			"@type":         "Offer",
 			"name":          p.Name,
-			"price":         strconv.Itoa(p.PriceINR),
-			"priceCurrency": "INR",
+			"price":         strconv.Itoa(p.Amount),
+			"priceCurrency": currency,
 			"url":           origin + "/pricing",
 		})
 	}

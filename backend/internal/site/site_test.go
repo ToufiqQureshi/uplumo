@@ -472,3 +472,88 @@ func TestPublicPagesKeepMeasurementClaimsHonest(t *testing.T) {
 		t.Error("AI traffic explanation must disclose missing attribution")
 	}
 }
+
+func TestPricesFollowTheVisitorsCountry(t *testing.T) {
+	s := newSite(t, &url.URL{Scheme: "https", Host: "uplumo.com"})
+	page := func(handler http.HandlerFunc, target string) *httptest.ResponseRecorder {
+		return get(handler, target, nil)
+	}
+	usd := []string{
+		"<th scope=\"row\">Monthly price</th><td>Free</td><td>$15</td><td>$39</td><td>$69</td>",
+		"<th scope=\"row\">5,000 credits</th><td>$19</td>",
+		"<th scope=\"row\">15,000 credits</th><td>$59</td>",
+		"<th scope=\"row\">5 more websites</th><td>$12</td>",
+		"Add 5 more websites for $12 a month",
+		"in US dollars. In India, plans are priced and billed in Indian rupees",
+		`"priceCurrency":"USD"`,
+	}
+	inr := []string{
+		"<th scope=\"row\">Monthly price</th><td>Free</td><td>₹999</td><td>₹2,499</td><td>₹4,999</td>",
+		"Add 5 more websites for ₹999 a month",
+		"in Indian rupees. Outside India, plans are priced and billed in US dollars",
+		`"priceCurrency":"INR"`,
+	}
+	expect := func(t *testing.T, rec *httptest.ResponseRecorder, want, notWant []string) {
+		t.Helper()
+		body := rec.Body.String()
+		for _, w := range want {
+			if !strings.Contains(body, w) {
+				t.Errorf("page lacks %q", w)
+			}
+		}
+		for _, w := range notWant {
+			if strings.Contains(body, w) {
+				t.Errorf("page shows %q from the other currency", w)
+			}
+		}
+	}
+
+	// Until checkout bills in dollars, everyone sees rupees, cached as before.
+	rec := page(s.ServePricing, "/pricing")
+	expect(t, rec, inr, usd)
+	if got := rec.Header().Get("Cache-Control"); got != "public, max-age=300, no-transform" {
+		t.Errorf("rupee-only pricing Cache-Control = %q", got)
+	}
+
+	country := "US"
+	s.ShowUSD(func(*http.Request) string { return country })
+	for _, tc := range []struct {
+		country       string
+		want, notWant []string
+	}{
+		{"US", usd, inr},
+		{"GB", usd, inr},
+		{"IN", inr, usd},
+		{"", inr, usd},
+	} {
+		t.Run(tc.country, func(t *testing.T) {
+			country = tc.country
+			rec := page(s.ServePricing, "/pricing")
+			expect(t, rec, tc.want, tc.notWant)
+			// A shared cache must never hand one country's prices to another.
+			if got := rec.Header().Get("Cache-Control"); got != "private, max-age=300, no-transform" {
+				t.Errorf("pricing Cache-Control = %q, want private", got)
+			}
+			landing := page(s.ServeLanding, "/")
+			expect(t, landing, tc.want[len(tc.want)-1:], tc.notWant[len(tc.notWant)-1:])
+			if got := landing.Header().Get("Cache-Control"); got != "private, no-cache, no-transform" {
+				t.Errorf("landing Cache-Control = %q, want private", got)
+			}
+		})
+	}
+}
+
+func TestFormatMoney(t *testing.T) {
+	for _, tc := range []struct {
+		amount   int64
+		currency string
+		want     string
+	}{
+		{0, "USD", "$0"}, {15, "USD", "$15"}, {1000, "USD", "$1,000"}, {1234567, "USD", "$1,234,567"},
+		{999, "INR", "₹999"}, {100000, "INR", "₹1,00,000"},
+	} {
+		if got := formatMoney(tc.amount, tc.currency); got != tc.want {
+			t.Errorf("formatMoney(%d, %s) = %q, want %q", tc.amount, tc.currency, got, tc.want)
+		}
+	}
+}
