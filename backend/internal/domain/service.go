@@ -81,15 +81,39 @@ func NewServiceWithCache(client *dataforseo.Client, c cache, logger *slog.Logger
 
 // OverviewResult is the Domain Overview card: organic traffic and keyword count.
 type OverviewResult struct {
-	Domain           string   `json:"domain"`
-	Scope            Scope    `json:"scope"`
-	DisplayTarget    string   `json:"displayTarget"`
-	OrganicTraffic   *float64 `json:"organicTraffic"`
-	OrganicKeywords  *float64 `json:"organicKeywords"`
-	Backlinks        *float64 `json:"backlinks"`
-	ReferringDomains *float64 `json:"referringDomains"`
-	HasData          bool     `json:"hasData"`
-	FetchedAt        string   `json:"fetchedAt"`
+	Domain          string   `json:"domain"`
+	Scope           Scope    `json:"scope"`
+	DisplayTarget   string   `json:"displayTarget"`
+	OrganicTraffic  *float64 `json:"organicTraffic"`
+	OrganicKeywords *float64 `json:"organicKeywords"`
+	// TrafficValue is DataForSEO's estimate, in USD, of what the organic
+	// traffic would cost as ads.
+	TrafficValue *float64 `json:"trafficValue"`
+	// Positions counts organic keywords by Google position band.
+	Positions *PositionBands `json:"positions"`
+	// Movement counts keywords that are new, moved up, moved down or were lost
+	// since DataForSEO's previous database update.
+	Movement         *RankMovement `json:"movement"`
+	Backlinks        *float64      `json:"backlinks"`
+	ReferringDomains *float64      `json:"referringDomains"`
+	HasData          bool          `json:"hasData"`
+	FetchedAt        string        `json:"fetchedAt"`
+}
+
+// PositionBands counts organic keywords per Google position band.
+type PositionBands struct {
+	Top1      *float64 `json:"top1"`
+	Top2To3   *float64 `json:"top2To3"`
+	Top4To10  *float64 `json:"top4To10"`
+	Top11To20 *float64 `json:"top11To20"`
+}
+
+// RankMovement counts keyword changes since the previous database update.
+type RankMovement struct {
+	New  *float64 `json:"new"`
+	Up   *float64 `json:"up"`
+	Down *float64 `json:"down"`
+	Lost *float64 `json:"lost"`
 }
 
 // KeywordSuggestion is a ranking keyword with its metrics.
@@ -112,6 +136,10 @@ type KeywordRow struct {
 	// Type labels the ranking result the position comes from (organic or paid),
 	// so the customer can tell the two apart.
 	Type *string `json:"type"`
+	// PreviousPosition is the absolute rank at DataForSEO's previous update;
+	// IsNew marks a keyword that did not rank then. Both are null when unknown.
+	PreviousPosition *float64 `json:"previousPosition"`
+	IsNew            *bool    `json:"isNew"`
 }
 
 // KeywordsPageInput is a validated request for one page of ranking keywords.
@@ -210,14 +238,20 @@ func (s *Service) Overview(ctx context.Context, organizationID, projectID, rawDo
 		if err != nil {
 			return OverviewResult{}, err
 		}
-		var traffic, keywords *float64
-		if metrics.Organic != nil {
-			traffic = roundNullable(metrics.Organic.ETV)
-			keywords = roundNullable(metrics.Organic.Count)
+		var traffic, keywords, value *float64
+		var positions *PositionBands
+		var movement *RankMovement
+		if o := metrics.Organic; o != nil {
+			traffic = roundNullable(o.ETV)
+			keywords = roundNullable(o.Count)
+			value = roundNullable(o.TrafficValue)
+			positions = &PositionBands{Top1: o.Pos1, Top2To3: o.Pos2To3, Top4To10: o.Pos4To10, Top11To20: o.Pos11To20}
+			movement = &RankMovement{New: o.IsNew, Up: o.IsUp, Down: o.IsDown, Lost: o.IsLost}
 		}
 		result := OverviewResult{
 			Domain: target.Hostname, Scope: target.Scope, DisplayTarget: target.Display,
-			OrganicTraffic: traffic, OrganicKeywords: keywords,
+			OrganicTraffic: traffic, OrganicKeywords: keywords, TrafficValue: value,
+			Positions: positions, Movement: movement,
 			Backlinks: nil, ReferringDomains: nil,
 			HasData:   keywords != nil && *keywords > 0,
 			FetchedAt: s.now().UTC().Format(time.RFC3339Nano),
@@ -442,11 +476,12 @@ func mapKeyword(item rankedKeywordItem) (KeywordRow, bool) {
 		return KeywordRow{}, false
 	}
 	var serp *struct {
-		Type         *string  `json:"type"`
-		URL          *string  `json:"url"`
-		RelativeURL  *string  `json:"relative_url"`
-		RankAbsolute *float64 `json:"rank_absolute"`
-		ETV          *float64 `json:"etv"`
+		Type         *string      `json:"type"`
+		URL          *string      `json:"url"`
+		RelativeURL  *string      `json:"relative_url"`
+		RankAbsolute *float64     `json:"rank_absolute"`
+		ETV          *float64     `json:"etv"`
+		RankChanges  *rankChanges `json:"rank_changes"`
 	}
 	var rank, traffic *float64
 	var pageURL, relativeURL, rowType *string
@@ -471,6 +506,11 @@ func mapKeyword(item rankedKeywordItem) (KeywordRow, bool) {
 	if relativeURL == nil && pageURL != nil {
 		relativeURL = toRelativePath(*pageURL)
 	}
+	var previous *float64
+	var isNew *bool
+	if serp != nil && serp.RankChanges != nil {
+		previous, isNew = roundNullable(serp.RankChanges.PreviousRankAbsolute), serp.RankChanges.IsNew
+	}
 	var difficulty *float64
 	if properties != nil {
 		difficulty = properties.KeywordDifficulty
@@ -492,6 +532,7 @@ func mapKeyword(item rankedKeywordItem) (KeywordRow, bool) {
 			Traffic: traffic, CPC: cpc, KeywordDifficulty: roundNullable(difficulty), Intent: intent,
 		},
 		URL: pageURL, RelativeURL: relativeURL, Type: rowType,
+		PreviousPosition: previous, IsNew: isNew,
 	}, true
 }
 

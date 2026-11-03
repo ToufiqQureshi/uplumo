@@ -169,7 +169,9 @@ jobs:
   # buys provider work. Provider APIs are mocked: no real paid call is made.
   paid-call-guards:
     name: Paid-call guards (browser)
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest moved to 26.04, where Playwright cannot install
+    # ffmpeg ("does not support ffmpeg on ubuntu26.04-x64", 3 Nov 2026).
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     defaults:
       run:

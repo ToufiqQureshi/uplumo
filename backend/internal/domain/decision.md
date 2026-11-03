@@ -149,6 +149,20 @@ Use the package tests next to the source files in `README.md`. For changes cross
 
 Provider fixtures include task path and explicit cost, including zero on rejected tasks. Missing task billing metadata now keeps a purchase uncertain rather than proving it was free. Mapping and exact one-call failure assertions remain unchanged.
 
+## Keyword rows keep their rank change
+
+- **Decision:** `mapKeyword` reads `serp_item.rank_changes` into `KeywordRow.previousPosition` (rounded) and `isNew`. The Domain keywords table shows the change next to the rank (↑/↓ or New), and the CSV export adds Previous Rank, Type and Intent.
+- **Why:** Every ranked-keywords row carries `rank_changes` at no extra cost (DataForSEO pricing bills per task and returned row, not per field; confirmed with DataForSEO's assistant on 2026-11-02). It was dropped. In a live axisrooms.com India sample of 50 rows, 40 were new and 10 had a previous rank. The export also lacked Type and Intent, so mixed organic/paid rows lost their context.
+- **Preserve:** No request change, same cost. Missing `rank_changes` stays null (no arrow), never 0. Previous rank is absolute, like `position`.
+- **Trace:** `provider.go` (`rankChanges`), `service.go` (`KeywordRow`, `mapKeyword`); `TestKeywordsPageKeepsRankChanges` (failed with the previous rank dropped). Frontend: `components/RankWithChange.tsx`, `utils.ts` (`keywordsToTable`), tests `RankWithChange.test.ts`, `keywordsExport.test.ts`.
+
+## Overview delivers the whole organic block it pays for
+
+- **Decision:** `domain_rank_overview` results now carry `trafficValue` (`estimated_paid_traffic_cost`), `positions` (`pos_1`, `pos_2_3`, `pos_4_10`, `pos_11_20`) and `movement` (`is_new`, `is_up`, `is_down`, `is_lost`) through `OverviewResult`; the page shows them under the two headline tiles.
+- **Why:** The task bills once for the full organic block, but the decoder kept only `etv` and `count`. A live call for axisrooms.com (India, 2026-11-02, via the DataForSEO MCP with `ignore_synonyms` on, so its counts are lower than Uplumo's request) returned 13 #1 positions, 195 new and 38 dropped keywords and a $2,277 traffic value; the same uplumo.com lookup showed only traffic (5,309) and keywords (538).
+- **Preserve:** No new provider call, field or option: same request, same cost. A missing value stays null (shown "-"), never 0; `is_lost` is often absent. Older Redis/Postgres snapshots without the fields still decode (nil pointers) and the UI hides the breakdown. Position bands are organic only and, like the headline numbers, cover the hostname plus subdomains.
+- **Trace:** `provider.go` (`organicMetrics`), `service.go` (`PositionBands`, `RankMovement`, `Overview`); `TestProviderOverviewMapsDataForSEOResult`, `TestOverviewDeliversPaidPositionMovementAndValue` (a mutation swapping two bands failed it). Frontend: `features/domain/decision.md`.
+
 ## MCP domain tools reuse one purchase
 
 - **Decision:** `RankedKeywordsForMCP` and `SerpCompetitorsForMCP` go through `cachedDomainLookup`, keyed on the workspace and the exact provider request (competitor keywords lower-cased and trimmed first): 12 hours for rows, 5 minutes for an empty answer, one shared purchase for concurrent identical calls. `get_ranked_keywords` rows now carry `type`.

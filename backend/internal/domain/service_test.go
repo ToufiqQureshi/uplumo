@@ -64,6 +64,37 @@ func TestOverviewRoundsMetricsAndCachesPerOrganization(t *testing.T) {
 	}
 }
 
+// The overview task bills once for the whole organic block, so the result
+// must carry its position bands, movement and traffic value.
+func TestOverviewDeliversPaidPositionMovementAndValue(t *testing.T) {
+	t.Parallel()
+	provider := &fakeProvider{result: func(string) any {
+		return map[string]any{"items": []any{map[string]any{"metrics": map[string]any{"organic": map[string]any{
+			"etv": 4231.2, "count": 264.0, "estimated_paid_traffic_cost": 2276.7,
+			"pos_1": 13.0, "pos_2_3": 29.0, "pos_4_10": 62.0, "pos_11_20": 37.0,
+			"is_new": 195.0, "is_up": 28.0, "is_down": 38.0,
+		}}}}}
+	}}
+	svc := newTestService(t, provider, &memoryCache{})
+	got, err := svc.Overview(context.Background(), "org-a", "proj", "example.com", ScopeDomain, 2356, "en")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if floatValue(t, got.TrafficValue) != 2277 {
+		t.Errorf("trafficValue = %v, want 2277", got.TrafficValue)
+	}
+	p, m := got.Positions, got.Movement
+	if p == nil || floatValue(t, p.Top1) != 13 || floatValue(t, p.Top2To3) != 29 || floatValue(t, p.Top4To10) != 62 || floatValue(t, p.Top11To20) != 37 {
+		t.Errorf("positions = %+v", p)
+	}
+	if m == nil || floatValue(t, m.New) != 195 || floatValue(t, m.Up) != 28 || floatValue(t, m.Down) != 38 || m.Lost != nil {
+		t.Errorf("movement = %+v, want lost unknown (absent), not zero", m)
+	}
+	if provider.calls.Load() != 1 {
+		t.Fatalf("provider calls = %d, want 1", provider.calls.Load())
+	}
+}
+
 func TestOverviewBrieflyReusesSuccessfulEmptyResults(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -567,5 +598,37 @@ func TestConcurrentOrganizationsAreRaceSafe(t *testing.T) {
 		if err := <-done; err != nil {
 			t.Fatal(err)
 		}
+	}
+}
+
+// rank_changes arrives with every paid row; it used to be dropped.
+func TestKeywordsPageKeepsRankChanges(t *testing.T) {
+	t.Parallel()
+	moved := rankedItem("alpha", 3, 10, 100, 0.5, 20, "https://example.com/a", "")
+	moved["ranked_serp_element"].(map[string]any)["serp_item"].(map[string]any)["rank_changes"] = map[string]any{"previous_rank_absolute": 7.0, "is_up": true}
+	fresh := rankedItem("beta", 5, 10, 100, 0.5, 20, "https://example.com/b", "")
+	fresh["ranked_serp_element"].(map[string]any)["serp_item"].(map[string]any)["rank_changes"] = map[string]any{"is_new": true}
+	unknown := rankedItem("gamma", 9, 10, 100, 0.5, 20, "https://example.com/c", "")
+	provider := &fakeProvider{result: rankedKeywordsResult(3, moved, fresh, unknown)}
+	svc := newTestService(t, provider, &memoryCache{})
+	got, err := svc.KeywordsPage(context.Background(), "org", KeywordsPageInput{
+		ProjectID: "proj", Domain: "example.com", Scope: ScopeDomain, LocationCode: 2356, LanguageCode: "en",
+		Page: 1, PageSize: 50, SortMode: "volume",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Keywords) != 3 {
+		t.Fatalf("keywords = %d, want 3", len(got.Keywords))
+	}
+	a, b, c := got.Keywords[0], got.Keywords[1], got.Keywords[2]
+	if a.PreviousPosition == nil || *a.PreviousPosition != 7 || a.IsNew != nil {
+		t.Errorf("moved row = previous %v new %v, want 7 and unknown", a.PreviousPosition, a.IsNew)
+	}
+	if b.IsNew == nil || !*b.IsNew || b.PreviousPosition != nil {
+		t.Errorf("new row = previous %v new %v, want new with no previous rank", b.PreviousPosition, b.IsNew)
+	}
+	if c.PreviousPosition != nil || c.IsNew != nil {
+		t.Errorf("row without rank_changes = previous %v new %v, want both unknown", c.PreviousPosition, c.IsNew)
 	}
 }
