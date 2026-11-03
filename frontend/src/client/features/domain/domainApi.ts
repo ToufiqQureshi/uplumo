@@ -11,6 +11,24 @@ const overviewSchema = z.object({
   displayTarget: z.string(),
   organicTraffic: nullableNumber,
   organicKeywords: nullableNumber,
+  // Older cached overviews predate these fields, so they may be absent.
+  trafficValue: nullableNumber.optional(),
+  positions: z
+    .object({
+      top1: nullableNumber,
+      top2To3: nullableNumber,
+      top4To10: nullableNumber,
+      top11To20: nullableNumber,
+    })
+    .nullish(),
+  movement: z
+    .object({
+      new: nullableNumber,
+      up: nullableNumber,
+      down: nullableNumber,
+      lost: nullableNumber,
+    })
+    .nullish(),
   backlinks: nullableNumber,
   referringDomains: nullableNumber,
   hasData: z.boolean(),

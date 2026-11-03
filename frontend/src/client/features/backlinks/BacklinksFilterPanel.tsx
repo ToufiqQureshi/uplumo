@@ -207,13 +207,6 @@ function BacklinksToggleControls({
       <DataTableFilterGroup label="Visibility">
         <div className="flex h-7 items-center gap-4">
           <VisibilityCheckbox
-            label="Hide lost"
-            checked={draft.hideLost === "true"}
-            onCheckedChange={(checked) =>
-              setValue("hideLost", checked ? "true" : "")
-            }
-          />
-          <VisibilityCheckbox
             label="Hide broken"
             checked={draft.hideBroken === "true"}
             onCheckedChange={(checked) =>

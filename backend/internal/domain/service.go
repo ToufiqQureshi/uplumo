@@ -81,15 +81,39 @@ func NewServiceWithCache(client *dataforseo.Client, c cache, logger *slog.Logger
 
 // OverviewResult is the Domain Overview card: organic traffic and keyword count.
 type OverviewResult struct {
-	Domain           string   `json:"domain"`
-	Scope            Scope    `json:"scope"`
-	DisplayTarget    string   `json:"displayTarget"`
-	OrganicTraffic   *float64 `json:"organicTraffic"`
-	OrganicKeywords  *float64 `json:"organicKeywords"`
-	Backlinks        *float64 `json:"backlinks"`
-	ReferringDomains *float64 `json:"referringDomains"`
-	HasData          bool     `json:"hasData"`
-	FetchedAt        string   `json:"fetchedAt"`
+	Domain          string   `json:"domain"`
+	Scope           Scope    `json:"scope"`
+	DisplayTarget   string   `json:"displayTarget"`
+	OrganicTraffic  *float64 `json:"organicTraffic"`
+	OrganicKeywords *float64 `json:"organicKeywords"`
+	// TrafficValue is DataForSEO's estimate, in USD, of what the organic
+	// traffic would cost as ads.
+	TrafficValue *float64 `json:"trafficValue"`
+	// Positions counts organic keywords by Google position band.
+	Positions *PositionBands `json:"positions"`
+	// Movement counts keywords that are new, moved up, moved down or were lost
+	// since DataForSEO's previous database update.
+	Movement         *RankMovement `json:"movement"`
+	Backlinks        *float64      `json:"backlinks"`
+	ReferringDomains *float64      `json:"referringDomains"`
+	HasData          bool          `json:"hasData"`
+	FetchedAt        string        `json:"fetchedAt"`
+}
+
+// PositionBands counts organic keywords per Google position band.
+type PositionBands struct {
+	Top1      *float64 `json:"top1"`
+	Top2To3   *float64 `json:"top2To3"`
+	Top4To10  *float64 `json:"top4To10"`
+	Top11To20 *float64 `json:"top11To20"`
+}
+
+// RankMovement counts keyword changes since the previous database update.
+type RankMovement struct {
+	New  *float64 `json:"new"`
+	Up   *float64 `json:"up"`
+	Down *float64 `json:"down"`
+	Lost *float64 `json:"lost"`
 }
 
 // KeywordSuggestion is a ranking keyword with its metrics.
@@ -214,14 +238,20 @@ func (s *Service) Overview(ctx context.Context, organizationID, projectID, rawDo
 		if err != nil {
 			return OverviewResult{}, err
 		}
-		var traffic, keywords *float64
-		if metrics.Organic != nil {
-			traffic = roundNullable(metrics.Organic.ETV)
-			keywords = roundNullable(metrics.Organic.Count)
+		var traffic, keywords, value *float64
+		var positions *PositionBands
+		var movement *RankMovement
+		if o := metrics.Organic; o != nil {
+			traffic = roundNullable(o.ETV)
+			keywords = roundNullable(o.Count)
+			value = roundNullable(o.TrafficValue)
+			positions = &PositionBands{Top1: o.Pos1, Top2To3: o.Pos2To3, Top4To10: o.Pos4To10, Top11To20: o.Pos11To20}
+			movement = &RankMovement{New: o.IsNew, Up: o.IsUp, Down: o.IsDown, Lost: o.IsLost}
 		}
 		result := OverviewResult{
 			Domain: target.Hostname, Scope: target.Scope, DisplayTarget: target.Display,
-			OrganicTraffic: traffic, OrganicKeywords: keywords,
+			OrganicTraffic: traffic, OrganicKeywords: keywords, TrafficValue: value,
+			Positions: positions, Movement: movement,
 			Backlinks: nil, ReferringDomains: nil,
 			HasData:   keywords != nil && *keywords > 0,
 			FetchedAt: s.now().UTC().Format(time.RFC3339Nano),

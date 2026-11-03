@@ -35,6 +35,38 @@ func TestPickLatest(t *testing.T) {
 	}
 }
 
+// The live catalog on 2026-11-02 lists these, and tracking must buy the
+// low-cost tier from it: Sonnet cost ~4x Haiku for the same answer.
+var liveClaudeCatalog = []string{"claude-sonnet-5-5", "claude-sonnet-5", "claude-opus-5-5", "claude-haiku-5-5", "claude-haiku-4-5", "claude-haiku-4-5-20251001", "claude-fable-5-1"}
+
+func TestPickTracker(t *testing.T) {
+	tests := []struct {
+		name  string
+		model string
+		names []string
+		want  string
+	}{
+		{"claude takes the newest haiku alias", modelClaude, liveClaudeCatalog, "claude-haiku-5-5"},
+		{"dated haiku snapshots are ignored", modelClaude, []string{"claude-haiku-4-5-20251001", "claude-haiku-4-5", "claude-sonnet-5"}, "claude-haiku-4-5"},
+		{"no haiku listed keeps the flagship", modelClaude, []string{"claude-sonnet-5", "claude-opus-5"}, "claude-sonnet-5"},
+		{"perplexity takes plain sonar", modelPerplexity, []string{"sonar-reasoning-pro", "sonar-pro", "sonar"}, "sonar"},
+		{"perplexity without sonar keeps the flagship", modelPerplexity, []string{"sonar-reasoning-pro", "sonar-pro"}, "sonar-reasoning-pro"},
+		{"unreachable catalog fallback still picks haiku", modelClaude, fallbackModelNames[modelClaude], "claude-haiku-4-5"},
+		{"models without a tracker rule keep the flagship", modelChatGPT, []string{"gpt-5.6-luna", "gpt-5.5-mini"}, "gpt-5.6-luna"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := pickTracker(tt.model, tt.names); got != tt.want {
+				t.Errorf("pickTracker(%q, %v) = %q, want %q", tt.model, tt.names, got, tt.want)
+			}
+		})
+	}
+	// Prompt Explorer keeps the flagship from the same catalog.
+	if got := pickLatest(modelClaude, liveClaudeCatalog); got != "claude-sonnet-5-5" {
+		t.Errorf("pickLatest(claude) = %q, want claude-sonnet-5-5", got)
+	}
+}
+
 func TestModelCatalogCachesTheCatalogAndFallsBackWhenItFails(t *testing.T) {
 	api := newFakeAPI(t)
 	svc := newTestService(t, api)

@@ -20,9 +20,21 @@ type provider struct {
 	client *dataforseo.Client
 }
 
+// organicMetrics is the organic block DataForSEO returns. The overview task
+// bills once for all of it, so the position buckets, movement counts and
+// traffic value are delivered too rather than dropped.
 type organicMetrics struct {
-	ETV   *float64 `json:"etv"`
-	Count *float64 `json:"count"`
+	ETV          *float64 `json:"etv"`
+	Count        *float64 `json:"count"`
+	TrafficValue *float64 `json:"estimated_paid_traffic_cost"`
+	Pos1         *float64 `json:"pos_1"`
+	Pos2To3      *float64 `json:"pos_2_3"`
+	Pos4To10     *float64 `json:"pos_4_10"`
+	Pos11To20    *float64 `json:"pos_11_20"`
+	IsNew        *float64 `json:"is_new"`
+	IsUp         *float64 `json:"is_up"`
+	IsDown       *float64 `json:"is_down"`
+	IsLost       *float64 `json:"is_lost"`
 }
 
 type providerMetrics struct {

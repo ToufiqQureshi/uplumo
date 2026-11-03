@@ -25,7 +25,7 @@ func TestProviderOverviewMapsDataForSEOResult(t *testing.T) {
 		if len(body) != 1 || body[0]["target"] != "example.com" {
 			t.Errorf("request body = %#v", body)
 		}
-		_, _ = w.Write([]byte(`{"status_code":20000,"tasks":[{"path":["v3","dataforseo_labs","google","domain_rank_overview","live"],"cost":0.01,"status_code":20000,"result":[{"items":[{"metrics":{"organic":{"etv":1234.6,"count":99.2}}}]}]}]}`))
+		_, _ = w.Write([]byte(`{"status_code":20000,"tasks":[{"path":["v3","dataforseo_labs","google","domain_rank_overview","live"],"cost":0.01,"status_code":20000,"result":[{"items":[{"metrics":{"organic":{"etv":1234.6,"count":99.2,"estimated_paid_traffic_cost":2276.7,"pos_1":13,"pos_2_3":29,"pos_4_10":62,"pos_11_20":37,"is_new":195,"is_up":28,"is_down":38,"is_lost":4}}}]}]}]}`))
 	}))
 	t.Cleanup(server.Close)
 
@@ -46,6 +46,10 @@ func TestProviderOverviewMapsDataForSEOResult(t *testing.T) {
 	}
 	if got.Organic == nil || got.Organic.ETV == nil || *got.Organic.ETV != 1234.6 || got.Organic.Count == nil || *got.Organic.Count != 99.2 {
 		t.Fatalf("overview = %+v", got)
+	}
+	o := got.Organic
+	if o.TrafficValue == nil || *o.TrafficValue != 2276.7 || o.Pos1 == nil || *o.Pos1 != 13 || o.Pos11To20 == nil || *o.Pos11To20 != 37 || o.IsNew == nil || *o.IsNew != 195 || o.IsLost == nil || *o.IsLost != 4 {
+		t.Fatalf("paid overview fields dropped: %+v", *o)
 	}
 }
 

@@ -94,3 +94,10 @@ Use the package tests next to the source files in `README.md`. For changes cross
 - **Trace:** `service.go`, `TestOverviewKeepsTheBilledSummaryWhenCreditsCannotCoverHistory`, existing history-error and persistence regressions. One summary provider call covers the tested repeated visit.
 
 Provider rejection fixtures include explicit zero cost and task path: missing billing metadata represents an uncertain purchase, not a confirmed free rejection. `TestProviderErrorIsNotRetried` still requires one request and the upstream error classification.
+
+## "Hide lost" no longer buys the same rows again
+
+- **Decision:** `Service.Rows` clears `HideLost` before building filters and the cache key, and `buildRowsFilters` no longer emits `is_lost=false`. The Backlinks screen drops the "Hide lost" checkbox. The MCP `get_backlinks_profile` schema still accepts `hideLost` so existing agent calls do not fail; it has no effect.
+- **Why:** `commonTarget` always sends `backlinks_status_type: "live"`, so lost links never arrive and the filter removed nothing. On a profile above 1,000 links the filter changed the block cache key, so each toggle (on, off, unset) bought the same 1,000-row block again, about $0.06 per toggle; `TestHideLostDoesNotBuyTheSameRowsAgain` counted 3 provider calls before the fix. It also spent one of the provider's 8 filter conditions.
+- **Preserve:** Live-only remains the request. Showing lost links would need `backlinks_status_type: "lost"` or `"all"` as its own priced, cached view, approved first; do not re-add a filter that cannot change the rows.
+- **Trace:** `service.go` (`Rows`, `buildRowsFilters`), `provider.go` (`commonTarget`); `table_purchase_test.go` (`TestHideLostDoesNotBuyTheSameRowsAgain`, failed with 3 calls before the fix), `target_test.go`. Frontend: `features/backlinks/BacklinksFilterPanel.tsx`, `backlinksFilterTypes.ts`, `types/schemas/backlinks.ts`.
