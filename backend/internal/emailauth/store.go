@@ -116,10 +116,16 @@ func setPassword(ctx context.Context, q querier, accountID, userID, hash string,
 }
 
 func insertSession(ctx context.Context, q querier, s Session) error {
-	if _, err := q.Exec(ctx, `INSERT INTO session (id, expires_at, token, created_at, updated_at, ip_address, user_agent, user_id, active_organization_id)
-		VALUES ($1, $2, $3, $4, $4, $5, $6, $7, $8)`,
-		s.ID, s.ExpiresAt, s.Token, s.CreatedAt, s.IPAddress, s.UserAgent, s.UserID, s.ActiveOrganizationID); err != nil {
+	// A user blocked by staff gets no new session (password or Google).
+	tag, err := q.Exec(ctx, `INSERT INTO session (id, expires_at, token, created_at, updated_at, ip_address, user_agent, user_id, active_organization_id)
+		SELECT $1, $2, $3, $4, $4, $5, $6, $7, $8
+		WHERE NOT EXISTS (SELECT 1 FROM go_user_blocks WHERE user_id = $7)`,
+		s.ID, s.ExpiresAt, s.Token, s.CreatedAt, s.IPAddress, s.UserAgent, s.UserID, s.ActiveOrganizationID)
+	if err != nil {
 		return fmt.Errorf("insert session: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return errAccountBlocked
 	}
 	return nil
 }

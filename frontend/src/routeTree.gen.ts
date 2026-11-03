@@ -15,6 +15,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthErrorRouteImport } from './routes/auth-error'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as StaffRouteRouteImport } from './routes/staff/route'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppAiRouteImport } from './routes/_app/ai'
@@ -27,7 +28,12 @@ import { Route as AuthSignUpRouteImport } from './routes/_auth.sign-up'
 import { Route as AuthenticatedOauthConsentRouteImport } from './routes/_authenticated.oauth-consent'
 import { Route as AuthenticatedSubscribeRouteImport } from './routes/_authenticated.subscribe'
 import { Route as AcceptInvitationIdRouteImport } from './routes/accept-invitation.$id'
-import { Route as AppAdminCustomersRouteImport } from './routes/_app/admin.customers'
+import { Route as StaffIndexRouteImport } from './routes/staff/index'
+import { Route as StaffActivityRouteImport } from './routes/staff/activity'
+import { Route as StaffCustomersRouteImport } from './routes/staff/customers'
+import { Route as StaffFinanceRouteImport } from './routes/staff/finance'
+import { Route as StaffMarketingRouteImport } from './routes/staff/marketing'
+import { Route as StaffSubscriptionsRouteImport } from './routes/staff/subscriptions'
 import { Route as AppBillingFixPaymentRouteImport } from './routes/_app/billing_.fix-payment'
 import { Route as AppBillingPlanRouteImport } from './routes/_app/billing_.plan'
 import { Route as AppPProjectIdRouteRouteImport } from './routes/_app/p/$projectId/route'
@@ -93,6 +99,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
   path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StaffRouteRoute = StaffRouteRouteImport.update({
+  id: '/staff',
+  path: '/staff',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
   id: '/verify-email',
   path: '/verify-email',
@@ -154,10 +165,35 @@ const AcceptInvitationIdRoute = AcceptInvitationIdRouteImport.update({
   path: '/accept-invitation/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppAdminCustomersRoute = AppAdminCustomersRouteImport.update({
-  id: '/admin/customers',
-  path: '/admin/customers',
-  getParentRoute: () => AppRouteRoute,
+const StaffIndexRoute = StaffIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => StaffRouteRoute,
+} as any)
+const StaffActivityRoute = StaffActivityRouteImport.update({
+  id: '/activity',
+  path: '/activity',
+  getParentRoute: () => StaffRouteRoute,
+} as any)
+const StaffCustomersRoute = StaffCustomersRouteImport.update({
+  id: '/customers',
+  path: '/customers',
+  getParentRoute: () => StaffRouteRoute,
+} as any)
+const StaffFinanceRoute = StaffFinanceRouteImport.update({
+  id: '/finance',
+  path: '/finance',
+  getParentRoute: () => StaffRouteRoute,
+} as any)
+const StaffMarketingRoute = StaffMarketingRouteImport.update({
+  id: '/marketing',
+  path: '/marketing',
+  getParentRoute: () => StaffRouteRoute,
+} as any)
+const StaffSubscriptionsRoute = StaffSubscriptionsRouteImport.update({
+  id: '/subscriptions',
+  path: '/subscriptions',
+  getParentRoute: () => StaffRouteRoute,
 } as any)
 const AppBillingFixPaymentRoute = AppBillingFixPaymentRouteImport.update({
   id: '/billing_/fix-payment',
@@ -367,6 +403,7 @@ const AppPProjectIdAuditIssuesResultIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
+  '/staff': typeof StaffRouteRouteWithChildren
   '/auth-error': typeof AuthErrorRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -381,8 +418,13 @@ export interface FileRoutesByFullPath {
   '/oauth-consent': typeof AuthenticatedOauthConsentRoute
   '/subscribe': typeof AuthenticatedSubscribeRoute
   '/accept-invitation/$id': typeof AcceptInvitationIdRoute
+  '/staff/activity': typeof StaffActivityRoute
+  '/staff/customers': typeof StaffCustomersRoute
+  '/staff/finance': typeof StaffFinanceRoute
+  '/staff/marketing': typeof StaffMarketingRoute
+  '/staff/subscriptions': typeof StaffSubscriptionsRoute
+  '/staff/': typeof StaffIndexRoute
   '/p/$projectId': typeof AppPProjectIdRouteRouteWithChildren
-  '/admin/customers': typeof AppAdminCustomersRoute
   '/billing/fix-payment': typeof AppBillingFixPaymentRoute
   '/billing/plan': typeof AppBillingPlanRoute
   '/settings/branding': typeof AppSettingsBrandingRoute
@@ -435,7 +477,12 @@ export interface FileRoutesByTo {
   '/oauth-consent': typeof AuthenticatedOauthConsentRoute
   '/subscribe': typeof AuthenticatedSubscribeRoute
   '/accept-invitation/$id': typeof AcceptInvitationIdRoute
-  '/admin/customers': typeof AppAdminCustomersRoute
+  '/staff/activity': typeof StaffActivityRoute
+  '/staff/customers': typeof StaffCustomersRoute
+  '/staff/finance': typeof StaffFinanceRoute
+  '/staff/marketing': typeof StaffMarketingRoute
+  '/staff/subscriptions': typeof StaffSubscriptionsRoute
+  '/staff': typeof StaffIndexRoute
   '/billing/fix-payment': typeof AppBillingFixPaymentRoute
   '/billing/plan': typeof AppBillingPlanRoute
   '/settings/branding': typeof AppSettingsBrandingRoute
@@ -474,6 +521,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteRouteWithChildren
+  '/staff': typeof StaffRouteRouteWithChildren
   '/_auth': typeof AuthRouteWithChildren
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/auth-error': typeof AuthErrorRoute
@@ -490,9 +538,14 @@ export interface FileRoutesById {
   '/_authenticated/oauth-consent': typeof AuthenticatedOauthConsentRoute
   '/_authenticated/subscribe': typeof AuthenticatedSubscribeRoute
   '/accept-invitation/$id': typeof AcceptInvitationIdRoute
+  '/staff/activity': typeof StaffActivityRoute
+  '/staff/customers': typeof StaffCustomersRoute
+  '/staff/finance': typeof StaffFinanceRoute
+  '/staff/marketing': typeof StaffMarketingRoute
+  '/staff/subscriptions': typeof StaffSubscriptionsRoute
   '/_app/': typeof AppIndexRoute
+  '/staff/': typeof StaffIndexRoute
   '/_app/p/$projectId': typeof AppPProjectIdRouteRouteWithChildren
-  '/_app/admin/customers': typeof AppAdminCustomersRoute
   '/_app/billing_/fix-payment': typeof AppBillingFixPaymentRoute
   '/_app/billing_/plan': typeof AppBillingPlanRoute
   '/_app/settings/branding': typeof AppSettingsBrandingRoute
@@ -534,6 +587,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/staff'
     | '/auth-error'
     | '/forgot-password'
     | '/reset-password'
@@ -548,8 +602,13 @@ export interface FileRouteTypes {
     | '/oauth-consent'
     | '/subscribe'
     | '/accept-invitation/$id'
+    | '/staff/activity'
+    | '/staff/customers'
+    | '/staff/finance'
+    | '/staff/marketing'
+    | '/staff/subscriptions'
+    | '/staff/'
     | '/p/$projectId'
-    | '/admin/customers'
     | '/billing/fix-payment'
     | '/billing/plan'
     | '/settings/branding'
@@ -602,7 +661,12 @@ export interface FileRouteTypes {
     | '/oauth-consent'
     | '/subscribe'
     | '/accept-invitation/$id'
-    | '/admin/customers'
+    | '/staff/activity'
+    | '/staff/customers'
+    | '/staff/finance'
+    | '/staff/marketing'
+    | '/staff/subscriptions'
+    | '/staff'
     | '/billing/fix-payment'
     | '/billing/plan'
     | '/settings/branding'
@@ -640,6 +704,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_app'
+    | '/staff'
     | '/_auth'
     | '/_authenticated'
     | '/auth-error'
@@ -656,9 +721,14 @@ export interface FileRouteTypes {
     | '/_authenticated/oauth-consent'
     | '/_authenticated/subscribe'
     | '/accept-invitation/$id'
+    | '/staff/activity'
+    | '/staff/customers'
+    | '/staff/finance'
+    | '/staff/marketing'
+    | '/staff/subscriptions'
     | '/_app/'
+    | '/staff/'
     | '/_app/p/$projectId'
-    | '/_app/admin/customers'
     | '/_app/billing_/fix-payment'
     | '/_app/billing_/plan'
     | '/_app/settings/branding'
@@ -699,6 +769,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AppRouteRoute: typeof AppRouteRouteWithChildren
+  StaffRouteRoute: typeof StaffRouteRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AuthErrorRoute: typeof AuthErrorRoute
@@ -750,6 +821,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/staff': {
+      id: '/staff'
+      path: '/staff'
+      fullPath: '/staff'
+      preLoaderRoute: typeof StaffRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/verify-email': {
@@ -836,12 +914,47 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AcceptInvitationIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_app/admin/customers': {
-      id: '/_app/admin/customers'
-      path: '/admin/customers'
-      fullPath: '/admin/customers'
-      preLoaderRoute: typeof AppAdminCustomersRouteImport
-      parentRoute: typeof AppRouteRoute
+    '/staff/': {
+      id: '/staff/'
+      path: '/'
+      fullPath: '/staff/'
+      preLoaderRoute: typeof StaffIndexRouteImport
+      parentRoute: typeof StaffRouteRoute
+    }
+    '/staff/activity': {
+      id: '/staff/activity'
+      path: '/activity'
+      fullPath: '/staff/activity'
+      preLoaderRoute: typeof StaffActivityRouteImport
+      parentRoute: typeof StaffRouteRoute
+    }
+    '/staff/customers': {
+      id: '/staff/customers'
+      path: '/customers'
+      fullPath: '/staff/customers'
+      preLoaderRoute: typeof StaffCustomersRouteImport
+      parentRoute: typeof StaffRouteRoute
+    }
+    '/staff/finance': {
+      id: '/staff/finance'
+      path: '/finance'
+      fullPath: '/staff/finance'
+      preLoaderRoute: typeof StaffFinanceRouteImport
+      parentRoute: typeof StaffRouteRoute
+    }
+    '/staff/marketing': {
+      id: '/staff/marketing'
+      path: '/marketing'
+      fullPath: '/staff/marketing'
+      preLoaderRoute: typeof StaffMarketingRouteImport
+      parentRoute: typeof StaffRouteRoute
+    }
+    '/staff/subscriptions': {
+      id: '/staff/subscriptions'
+      path: '/subscriptions'
+      fullPath: '/staff/subscriptions'
+      preLoaderRoute: typeof StaffSubscriptionsRouteImport
+      parentRoute: typeof StaffRouteRoute
     }
     '/_app/billing_/fix-payment': {
       id: '/_app/billing_/fix-payment'
@@ -1223,7 +1336,6 @@ interface AppRouteRouteChildren {
   AppSupportRoute: typeof AppSupportRoute
   AppIndexRoute: typeof AppIndexRoute
   AppPProjectIdRouteRoute: typeof AppPProjectIdRouteRouteWithChildren
-  AppAdminCustomersRoute: typeof AppAdminCustomersRoute
   AppBillingFixPaymentRoute: typeof AppBillingFixPaymentRoute
   AppBillingPlanRoute: typeof AppBillingPlanRoute
 }
@@ -1236,13 +1348,34 @@ const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppSupportRoute: AppSupportRoute,
   AppIndexRoute: AppIndexRoute,
   AppPProjectIdRouteRoute: AppPProjectIdRouteRouteWithChildren,
-  AppAdminCustomersRoute: AppAdminCustomersRoute,
   AppBillingFixPaymentRoute: AppBillingFixPaymentRoute,
   AppBillingPlanRoute: AppBillingPlanRoute,
 }
 
 const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
   AppRouteRouteChildren,
+)
+
+interface StaffRouteRouteChildren {
+  StaffActivityRoute: typeof StaffActivityRoute
+  StaffCustomersRoute: typeof StaffCustomersRoute
+  StaffFinanceRoute: typeof StaffFinanceRoute
+  StaffMarketingRoute: typeof StaffMarketingRoute
+  StaffSubscriptionsRoute: typeof StaffSubscriptionsRoute
+  StaffIndexRoute: typeof StaffIndexRoute
+}
+
+const StaffRouteRouteChildren: StaffRouteRouteChildren = {
+  StaffActivityRoute: StaffActivityRoute,
+  StaffCustomersRoute: StaffCustomersRoute,
+  StaffFinanceRoute: StaffFinanceRoute,
+  StaffMarketingRoute: StaffMarketingRoute,
+  StaffSubscriptionsRoute: StaffSubscriptionsRoute,
+  StaffIndexRoute: StaffIndexRoute,
+}
+
+const StaffRouteRouteWithChildren = StaffRouteRoute._addFileChildren(
+  StaffRouteRouteChildren,
 )
 
 interface AuthRouteChildren {
@@ -1275,6 +1408,7 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   AppRouteRoute: AppRouteRouteWithChildren,
+  StaffRouteRoute: StaffRouteRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AuthErrorRoute: AuthErrorRoute,

@@ -7,6 +7,7 @@ const customerSchema = z.object({
   email: z.string(),
   name: z.string(),
   emailVerified: z.boolean(),
+  blocked: z.boolean(),
   signedUpAt: z.string(),
   workspace: z.string(),
   role: z.string(),

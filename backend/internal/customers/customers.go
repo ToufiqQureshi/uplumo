@@ -25,6 +25,7 @@ type Customer struct {
 	Email                 string    `json:"email"`
 	Name                  string    `json:"name"`
 	EmailVerified         bool      `json:"emailVerified"`
+	Blocked               bool      `json:"blocked"`
 	SignedUpAt            time.Time `json:"signedUpAt"`
 	Workspace             string    `json:"workspace"`
 	Role                  string    `json:"role"`
@@ -69,7 +70,7 @@ func (s *Service) List(ctx context.Context, user auth.User) ([]Customer, error) 
 		return nil, ErrForbidden
 	}
 	rows, err := s.DB.Query(ctx, `
-		SELECT u.id, u.email, coalesce(u.name,''), u.email_verified, u.created_at,
+		SELECT u.id, u.email, coalesce(u.name,''), u.email_verified, EXISTS(SELECT 1 FROM go_user_blocks b WHERE b.user_id=u.id), u.created_at,
 		       coalesce(o.name,''), coalesce(m.role,''),
 		       coalesce(CASE WHEN bs.status IN ('authenticated','active','pending') THEN bs.plan END,'free'),
 		       coalesce(bs.status,''),
@@ -99,7 +100,7 @@ func (s *Service) List(ctx context.Context, user auth.User) ([]Customer, error) 
 	out := []Customer{}
 	for rows.Next() {
 		var c Customer
-		if err := rows.Scan(&c.UserID, &c.Email, &c.Name, &c.EmailVerified, &c.SignedUpAt, &c.Workspace, &c.Role,
+		if err := rows.Scan(&c.UserID, &c.Email, &c.Name, &c.EmailVerified, &c.Blocked, &c.SignedUpAt, &c.Workspace, &c.Role,
 			&c.Plan, &c.SubscriptionStatus, &c.ActiveSites, &c.Domains, &c.GSCConnected, &c.GA4Connected,
 			&c.InterestedFeatures, &c.WorkFor, &c.ClientWebsiteCount, &c.FoundVia, &c.MCPSetupIntent, &c.OnboardingCompletedAt); err != nil {
 			return nil, fmt.Errorf("scan customer: %w", err)
@@ -109,7 +110,7 @@ func (s *Service) List(ctx context.Context, user auth.User) ([]Customer, error) 
 	return out, rows.Err()
 }
 
-var csvHeader = []string{"email", "name", "email_verified", "signed_up_at", "workspace", "role", "plan", "subscription_status",
+var csvHeader = []string{"email", "name", "email_verified", "blocked", "signed_up_at", "workspace", "role", "plan", "subscription_status",
 	"active_sites", "domains", "gsc_connected", "ga4_connected", "interested_features", "work_for",
 	"client_website_count", "found_via", "mcp_setup_intent", "onboarding_completed_at"}
 
@@ -120,7 +121,7 @@ func WriteCSV(w io.Writer, list []Customer) error {
 		return err
 	}
 	for _, c := range list {
-		row := []string{c.Email, c.Name, strconv.FormatBool(c.EmailVerified), c.SignedUpAt.UTC().Format(time.RFC3339),
+		row := []string{c.Email, c.Name, strconv.FormatBool(c.EmailVerified), strconv.FormatBool(c.Blocked), c.SignedUpAt.UTC().Format(time.RFC3339),
 			c.Workspace, c.Role, c.Plan, c.SubscriptionStatus, strconv.Itoa(c.ActiveSites), strings.Join(c.Domains, " "),
 			strconv.FormatBool(c.GSCConnected), strconv.FormatBool(c.GA4Connected), c.InterestedFeatures, c.WorkFor,
 			c.ClientWebsiteCount, c.FoundVia, c.MCPSetupIntent, c.OnboardingCompletedAt}

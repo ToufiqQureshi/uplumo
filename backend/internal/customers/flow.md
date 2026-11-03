@@ -6,7 +6,7 @@
 
 - **API/trigger:** GET /api/v1/admin/access, /api/v1/admin/customers, /api/v1/admin/customers.csv
 - **Source:** `handler.go`, `customers.go`
-- **Caller:** `frontend/src/client/features/staff-customers/`
+- **Caller:** `frontend/src/client/features/staff-console/`
 
 ## Request flow
 

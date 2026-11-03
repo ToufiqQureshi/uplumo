@@ -175,6 +175,11 @@ func newAuthEnv(t *testing.T, opts envOptions) *authEnv {
 	if _, err := pool.Exec(ctx, string(ddl)); err != nil {
 		t.Fatalf("create legacy schema: %v", err)
 	}
+	// Staff blocks (migration 53), which sign-in checks.
+	if _, err := pool.Exec(ctx, `CREATE TABLE go_user_blocks (user_id text PRIMARY KEY REFERENCES "user"(id) ON DELETE CASCADE,
+		blocked_by text NOT NULL, reason text NOT NULL DEFAULT '', blocked_at timestamptz NOT NULL DEFAULT now())`); err != nil {
+		t.Fatalf("create go_user_blocks: %v", err)
+	}
 
 	base, _ := url2parse(testBase)
 	e := &authEnv{t: t, pool: pool, mailer: &fakeMailer{}, captcha: &fakeCaptcha{}, limiter: &fakeLimiter{},

@@ -74,7 +74,8 @@ func (s *Service) GetCurrentSession(r *http.Request) (CurrentSession, bool, erro
 		       coalesce(u.analytics_opted_out, false), u.created_at, u.updated_at
 		FROM session s
 		JOIN "user" u ON u.id = s.user_id
-		WHERE s.token = $1 AND s.expires_at > now()`, token,
+		WHERE s.token = $1 AND s.expires_at > now()
+			AND NOT EXISTS (SELECT 1 FROM go_user_blocks b WHERE b.user_id = s.user_id)`, token,
 	).Scan(
 		&result.Session.ID, &result.Session.ExpiresAt, &result.Session.Token,
 		&result.Session.CreatedAt, &result.Session.UpdatedAt,
