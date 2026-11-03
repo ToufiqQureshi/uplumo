@@ -73,7 +73,6 @@ Last updated: 3 Nov 2026
 - [ ] **Enquiry definition:** analytics counts WhatsApp, call, SMS, email and form actions as enquiries; sign-up, checkout and purchase clicks are not. Confirm or change (`backend/internal/analytics/enquiry.go`).
 - [ ] Codex PR 2 (SERP briefs and credits) and PR 3 (AI actions) still have to be built.
 - [ ] **AI tracker default schedule (DFS audit, 2 Nov):** tracking is the only recurring DataForSEO spend. Weekly instead of daily as the default would cut it ~86%. Choose the default.
-- [ ] **"Real drop or normal?" alerts (3 Nov):** expected-range alerts on own analytics and saved rank data, with the why and the fix; zero new paid calls; not TimesFM 3.0 (non-commercial weights). Details in `ROADMAP.md`. Say yes or no, and where it goes in the work order (FOUNDER.md stop list).
 - [ ] **New DataForSEO features (3 Nov):** Google AI Mode as a 6th tracker engine is ready to brief (`ROADMAP.md`). Google Reviews and draft #242's Maps grid both reverse the 21 Oct "Local SEO removed" decision: confirm or drop.
 
 ## 3. Keys and settings in Railway (names only)
