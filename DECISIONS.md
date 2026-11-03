@@ -353,7 +353,7 @@ Owner-approved scope: one focused PR adds optional 180-day browser recognition a
 - **Decision:** A `Paid-call guards (browser)` CI job runs the Playwright specs `dashboard-spend`, `content-editor`, `search-growth` and `audit-capabilities` on every PR and `main` push, against the built SPA with mocked APIs.
 - **Why:** These specs fail when a page load, reload, typing, autosave or double click buys provider work, but no CI job ran them, so a regression could ship. Owner asked for it on 26 Oct.
 - **Preserve:** No real provider is called (routes are mocked). The other specs stay local-only until they are needed; the job uses the runner's Chrome (the config's default `chrome` channel).
-- **Trace:** `.github/workflows/ci.yml`; all 14 tests in these specs passed locally in about 3 minutes. Agent/CI rule change: called out in the PR. Since then the job also runs `theme-preference` and `cite-fix` (27 Oct, Cite Fix PR 1: the page must read one free report and buy nothing).
+- **Trace:** `.github/workflows/ci.yml`; all 14 tests in these specs passed locally in about 3 minutes. Agent/CI rule change: called out in the PR. Since then the job also runs `theme-preference` and `cite-fix` (27 Oct, Cite Fix PR 1: the page must read one free report and buy nothing). On 3 Nov `ubuntu-latest` moved to Ubuntu 26.04, where `playwright install ffmpeg` fails ("does not support ffmpeg on ubuntu26.04-x64"), so the job broke on `main` and every PR; it is pinned to `ubuntu-24.04` until Playwright supports 26.04. Do not drop the ffmpeg step or the job to get green.
 
 ## Production settings fixed on 27 October
 
