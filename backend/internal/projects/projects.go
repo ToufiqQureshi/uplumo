@@ -288,46 +288,50 @@ func (r Repository) ProjectMarket(ctx context.Context, org, id string) (string, 
 
 // Create inserts a project for an organization.
 func (r Repository) Create(ctx context.Context, org string, in Input) (Project, error) {
-	id, err := ids.New()
-	if err != nil {
-		return Project{}, err
-	}
-	loc, lang := market.DefaultLocationCode, "en"
-	if in.LocationCode != nil {
-		loc = *in.LocationCode
-		lang = *in.LanguageCode
-	}
-	var p Project
-	err = r.DB.QueryRow(ctx, `INSERT INTO projects(id,organization_id,name,domain,location_code,language_code) VALUES($1,$2,$3,$4,$5,$6) RETURNING id,name,domain,location_code,language_code,created_at`, id, org, in.Name, in.Domain, loc, lang).Scan(&p.ID, &p.Name, &p.Domain, &p.LocationCode, &p.LanguageCode, &p.CreatedAt)
-	if err != nil {
-		if isUnique(err) {
-			return Project{}, fail("CONFLICT", `A project named "Default" with no domain already exists.`)
-		}
-		return Project{}, fmt.Errorf("create project: %w", err)
-	}
-	return p, nil
+	return r.CreateLimited(ctx, org, in, 0)
 }
 
+// countedSites is the active-site filter for plan limits. The domain-less
+// "Default" placeholder is not a website, so it never uses up an allowance.
+const countedSites = `organization_id=$1 AND archived_at IS NULL AND NOT (name='Default' AND domain IS NULL)`
+
 // CreateLimited serializes site creation per organization so concurrent
-// requests cannot exceed the plan's active-site limit.
+// requests cannot exceed the plan's active-site limit; limit <= 0 is uncapped.
+// A first website with a domain takes over the "Default" placeholder when it is
+// the only active project, keeping work already saved there.
 func (r Repository) CreateLimited(ctx context.Context, org string, in Input, limit int) (Project, error) {
-	if limit <= 0 {
-		return r.Create(ctx, org, in)
-	}
 	tx, err := r.DB.Begin(ctx)
 	if err != nil {
-		return Project{}, fmt.Errorf("begin limited project create: %w", err)
+		return Project{}, fmt.Errorf("begin project create: %w", err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 	if _, err := tx.Exec(ctx, `SELECT id FROM organization WHERE id=$1 FOR UPDATE`, org); err != nil {
 		return Project{}, fmt.Errorf("lock organization for project create: %w", err)
 	}
-	var count int
-	if err := tx.QueryRow(ctx, `SELECT count(*) FROM projects WHERE organization_id=$1 AND archived_at IS NULL`, org).Scan(&count); err != nil {
-		return Project{}, fmt.Errorf("count active sites: %w", err)
+	if limit > 0 {
+		var count int
+		if err := tx.QueryRow(ctx, `SELECT count(*) FROM projects WHERE `+countedSites, org).Scan(&count); err != nil {
+			return Project{}, fmt.Errorf("count active sites: %w", err)
+		}
+		if count >= limit {
+			return Project{}, fail("LIMIT_REACHED", fmt.Sprintf("Your plan allows %d active website(s). Archive a site or upgrade your plan to add another.", limit))
+		}
 	}
-	if count >= limit {
-		return Project{}, fail("LIMIT_REACHED", fmt.Sprintf("Your plan allows %d active website(s). Archive a site or upgrade your plan to add another.", limit))
+	var p Project
+	if in.Domain != nil {
+		err = tx.QueryRow(ctx, `UPDATE projects SET name=$2,domain=$3,location_code=COALESCE($4,location_code),language_code=COALESCE($5,language_code)
+			WHERE organization_id=$1 AND archived_at IS NULL AND name='Default' AND domain IS NULL
+			AND (SELECT count(*) FROM projects WHERE organization_id=$1 AND archived_at IS NULL)=1
+			RETURNING id,name,domain,location_code,language_code,created_at`, org, in.Name, in.Domain, in.LocationCode, in.LanguageCode).Scan(&p.ID, &p.Name, &p.Domain, &p.LocationCode, &p.LanguageCode, &p.CreatedAt)
+		if err == nil {
+			if err := tx.Commit(ctx); err != nil {
+				return Project{}, fmt.Errorf("commit project create: %w", err)
+			}
+			return p, nil
+		}
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return Project{}, fmt.Errorf("adopt default project: %w", err)
+		}
 	}
 	id, err := ids.New()
 	if err != nil {
@@ -337,7 +341,6 @@ func (r Repository) CreateLimited(ctx context.Context, org string, in Input, lim
 	if in.LocationCode != nil {
 		loc, lang = *in.LocationCode, *in.LanguageCode
 	}
-	var p Project
 	err = tx.QueryRow(ctx, `INSERT INTO projects(id,organization_id,name,domain,location_code,language_code) VALUES($1,$2,$3,$4,$5,$6) RETURNING id,name,domain,location_code,language_code,created_at`, id, org, in.Name, in.Domain, loc, lang).Scan(&p.ID, &p.Name, &p.Domain, &p.LocationCode, &p.LanguageCode, &p.CreatedAt)
 	if err != nil {
 		if isUnique(err) {
@@ -450,7 +453,7 @@ func (r Repository) RestoreLimited(ctx context.Context, org, id string, limit in
 		return fmt.Errorf("lock organization for project restore: %w", err)
 	}
 	var count int
-	if err := tx.QueryRow(ctx, `SELECT count(*) FROM projects WHERE organization_id=$1 AND archived_at IS NULL`, org).Scan(&count); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT count(*) FROM projects WHERE `+countedSites, org).Scan(&count); err != nil {
 		return fmt.Errorf("count active sites: %w", err)
 	}
 	if count >= limit {
