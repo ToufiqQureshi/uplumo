@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/csv"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -83,7 +84,7 @@ func TestOnlyVerifiedStaffSeeCustomersWithOnboardingAndSites(t *testing.T) {
 	s := &Service{DB: db, StaffEmails: []string{staff.Email, unverifiedStaff.Email}}
 
 	for _, u := range []auth.User{customer, unverifiedStaff} {
-		if _, err := s.List(ctx, u); err != ErrForbidden {
+		if _, err := s.List(ctx, u); !errors.Is(err, ErrForbidden) {
 			t.Fatalf("List(%s) error = %v, want ErrForbidden", u.Email, err)
 		}
 	}
@@ -141,7 +142,7 @@ func TestHandlersRequireSessionAndStaff(t *testing.T) {
 	} {
 		as = c.user
 		rec := httptest.NewRecorder()
-		mux.ServeHTTP(rec, httptest.NewRequest("GET", c.path, nil))
+		mux.ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), "GET", c.path, nil))
 		if rec.Code != c.want {
 			t.Fatalf("%s as %v = %d, want %d", c.path, c.user, rec.Code, c.want)
 		}
