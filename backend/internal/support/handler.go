@@ -11,12 +11,14 @@ import (
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/httpx"
 )
 
+// Deps wires the support routes to the service and session middleware.
 type Deps struct {
 	Service     *Service
 	Logger      *slog.Logger
 	WithSession func(http.Handler) http.Handler
 }
 
+// Mount registers the report submission and screenshot routes.
 func Mount(mux *http.ServeMux, d Deps) {
 	mux.Handle("POST /api/v1/support/reports", d.WithSession(http.HandlerFunc(d.create)))
 	mux.Handle("GET /api/v1/support/reports/{ticketID}/screenshot", d.WithSession(http.HandlerFunc(d.screenshot)))
