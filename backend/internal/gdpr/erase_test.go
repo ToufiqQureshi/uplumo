@@ -53,7 +53,9 @@ func TestFindPlanAndExecuteEraseOneUsersData(t *testing.T) {
 	if _, err := pool.Exec(ctx, `INSERT INTO go_billing_payments(payment_id,organization_id,kind,item,amount,currency,paid_at,source) VALUES('pay_'||$1,$1,'subscription','pro',249900,'INR',now(),'webhook')`, orgID); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _, _ = pool.Exec(context.WithoutCancel(ctx), `DELETE FROM go_billing_payments WHERE organization_id=$1`, orgID) })
+	t.Cleanup(func() {
+		_, _ = pool.Exec(context.WithoutCancel(ctx), `DELETE FROM go_billing_payments WHERE organization_id=$1`, orgID)
+	})
 	if err := eraser.Execute(ctx, plan); err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}

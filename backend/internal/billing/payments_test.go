@@ -28,7 +28,9 @@ func (f *fixture) ledger(t *testing.T) map[string]ledgerRow {
 		}
 		out[id] = r
 	}
-	t.Cleanup(func() { _, _ = f.pool.Exec(t.Context(), `DELETE FROM go_billing_payments WHERE organization_id=$1`, f.org) })
+	t.Cleanup(func() {
+		_, _ = f.pool.Exec(t.Context(), `DELETE FROM go_billing_payments WHERE organization_id=$1`, f.org)
+	})
 	return out
 }
 
