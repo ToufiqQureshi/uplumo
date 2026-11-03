@@ -214,8 +214,8 @@ Never edit tests while Vitest is running in the checkout.
 Commit, push, or open a PR only when authorized. Use the `merge-ready` skill
 for the review and PR flow. If a verified finding exposes a recurring
 invariant that `.greptile/` does not capture, use `maintain-greptile-rules`;
-do not promote one-off cleanups into permanent rules. Log repository friction
-met along the way with `papercuts`.
+do not promote one-off cleanups into permanent rules. Mention repository
+friction met along the way in the PR description.
 
 ## Handoff
 
