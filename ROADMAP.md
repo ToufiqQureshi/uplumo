@@ -139,8 +139,9 @@ mean each one has been tried on production with real provider keys.
 This is a shortlist for product discovery, not a claim that competitors lack these capabilities. Public feature pages are not exhaustive.
 
 - Ahrefs advertises always-on site audits, technical issue reporting and AI-assisted patches ([Site Audit](https://ahrefs.com/use-cases/seo), [product update](https://ahrefs.com/blog/new-features-apr-2025/)). Semrush also promotes technical audits and AI-crawler checks ([Site Audit](https://www.semrush.com/features/site-audit/)). So audits, internal links and AI-bot checks alone are not a defensible unique claim.
-- Ahrefs AI Content Helper offers content-gap recommendations and in-editor assistance ([product page](https://ahrefs.com/ai-content-helper)). Content scoring and AI writing are also competitive categories; Uplumo should differentiate through its India-first pricing and a simpler action workflow, not claim exclusivity.
+- Ahrefs AI Content Helper offers content-gap recommendations and in-editor assistance ([product page](https://ahrefs.com/ai-content-helper)). Content scoring and AI writing are also competitive categories; Uplumo should differentiate through fair local-currency pricing and a simpler action workflow, not claim exclusivity.
 - **Proposed: SEO Change Guard.** Save crawl snapshots and diff titles, canonicals, indexability, robots directives, schema and internal links. Show the exact URLs and dates affected, then recrawl after the owner fixes the change. Use Uplumo's crawler and stored snapshots; this needs no paid SEO-data API.
+- **Proposed (3 Nov, waits on the owner): "Real drop or normal?" alerts.** Learn each site's expected daily range (traffic, AI-referred visits, enquiries, ranks) from Uplumo's own analytics and saved rank data, and alert only when the actual number leaves that range. Seasonality (festivals, holidays, sales seasons) is learned per site, so it works in any country. Each alert links the "why" (rank drops, lost AI citations, audit changes) and the fix, and feeds Q3 ("why not you, what to fix"). Zero new DataForSEO or AI calls. Start with a classical model (statsforecast AutoETS); move to an Apache-2.0 foundation model (TimesFM 2.5 or Chronos-2) only if that falls short. Do **not** use TimesFM 3.0: its downloadable weights are non-commercial ([BigQuery docs](https://docs.cloud.google.com/bigquery/docs/timesfm-model)), and BigQuery `AI.FORECAST` adds a per-query bill. Competitors sell forecasts for pitches ([SEOmonitor](https://searchatlas.com/blog/rank-tracking-tools/), [Semrush Traffic Predictions](https://www.semrush.com/blog/ai-traffic-predictions/)), not expected-range alerts with a cause and fix.
 - **Potential extension:** connect the change timeline to Uplumo's first-party analytics to show whether a change coincided with visits or lead events moving. Treat this as correlation, not proof that the change caused the movement.
 
 ## Usage and saved AI tracking
@@ -168,7 +169,8 @@ Secrets go into Railway variables only, never into the repo or chat.
 ## Decided
 
 - Name: Uplumo. Domain: uplumo.com. Hosting: Railway. Redis: yes.
-- Launch market: India only, prices in INR. USD pricing comes later.
+- Market: global (owner, 3 Nov 2026). Prices are INR in India and USD
+  elsewhere (`backend/internal/plans/catalog.go`, PR #261).
 - GST: not registered at launch, so prices carry no tax line.
 - Credits (owner, 13 October 2026; public pricing clarified 15 October 2026).
   Every paid data lookup and AI call spends credits; customers see each plan's

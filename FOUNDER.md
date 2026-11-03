@@ -27,8 +27,12 @@ Question 3 is the product. Questions 1 and 2 are data any tool can buy; the
 
 ## 1a. Who, the goal, and what comes next (owner, 25 Oct 2026)
 
-- **Customer:** Indian businesses, small to big. Copy, UI and pricing are
-  written for them.
+- **Customer:** businesses worldwide, small to big (owner, 3 Nov 2026:
+  "global platform banana ha, not only India"). India is one market, not
+  the only one: prices are INR in India and USD elsewhere, default copy is
+  plain English, and Hinglish is for Indian users. Never add India-only
+  limits, examples or assumptions (locations, seasonality, currency,
+  language) to the product.
 - **Goal now:** the first **10 paying customers**. Judge every task by
   "does this help get or keep one of those 10?"
 - **Order of work** (one PR each; do not jump ahead without the owner):
