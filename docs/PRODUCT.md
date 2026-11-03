@@ -24,7 +24,8 @@ These are the complaints we exist to fix (2026 research):
    add-on costs another $99/mo per domain. Ahrefs Lite caps every report
    at 2,500 rows and charges by credits. → We give simple, honest pricing,
    include AI visibility in Pro with no per-domain add-on, put no row caps
-   on our own data, and keep INR pricing for India.
+   on our own data, and charge in the customer's currency (INR in India,
+   USD elsewhere). Uplumo is a global platform, not an India-only tool.
 2. **Overwhelming UI.** Both tools bury solo owners and beginners under
    features. → We give focused workflows with one clear next action per
    screen, plus a plain-language explanation and an "AI fix" for every
@@ -57,9 +58,10 @@ Full list and status: `ROADMAP.md`.
    (built, Basic and above); other platforms come next.
 4. **White-label client reports**: done. Every client-facing surface is
    agency-branded.
-5. Rank tracking with city-level India locations, a site audit with AI
-   fix steps (English + Hinglish). Local SEO was removed on the
-   owner's decision (see `DECISIONS.md`).
+5. Rank tracking with city-level locations in any country, a site audit
+   with AI fix steps (English, plus Hinglish for Indian users). Local SEO
+   was removed on 21 Oct; bringing it back waits on the owner (see
+   `DECISIONS.md`, "Waiting for the owner").
 
 The bar for any feature: a solo owner gets value in under 5 minutes, and
 an agency can show it to a client.

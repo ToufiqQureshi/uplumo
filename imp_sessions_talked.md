@@ -17,6 +17,12 @@ feelings, business calls, priorities, corrections. Read it after
 
 ---
 
+## 3 Nov 2026: global platform, not only India
+
+- Owner: "muje global platform banana ha not only india samja docs me daal de".
+- Owner wants something valuable and different: "kuch valueble dena ha jo kaam ka ho, not other competitors jaise ek or site".
+- Claude proposed "Real drop or normal?" alerts (expected range + why + fix, zero new paid calls). TimesFM 3.0 was ruled out because its weights are non-commercial. The proposal is in `ROADMAP.md` and waits on the owner's yes.
+
 ## 3 Nov 2026: dollar prices for customers outside India
 
 - Owner: "bro muje internation payment gatewy chahiye"; "outside india wale users ko dollar me dikhey".
