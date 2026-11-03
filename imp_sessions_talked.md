@@ -17,6 +17,13 @@ feelings, business calls, priorities, corrections. Read it after
 
 ---
 
+## 2 Nov 2026: DFS bill, "pura paisa deke adhey cheezey dikha re"
+
+- Owner: cache-only fixes won't solve it; the two problems are unnecessary paid calls and paying for full DFS data but showing half. Wants every claim verified on uplumo.com and with real (paid if needed) tests, then fixed.
+- Owner authorised small paid DataForSEO tests for this audit (~$0.13 spent).
+- Findings: AI tracker Claude = ~76% of recurring spend (#254); Domain overview dropped paid fields (#255); Backlinks "Hide lost" re-bought rows (#256).
+- DFS MCP/Playground calls bypass `go_dataforseo_usage`, so dashboard spend > ledger spend.
+
 ## 30 Oct 2026: remove all blogs
 
 - Owner explicitly requested: delete every blog, superseding the earlier content expansion.
