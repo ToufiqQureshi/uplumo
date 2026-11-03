@@ -372,3 +372,10 @@ Owner-approved scope: one focused PR adds optional 180-day browser recognition a
   follows the CPU count. Keep a cap in `DATABASE_URL` whenever the pool or
   compute changes.
 - The database password was rotated after it appeared in a chat screenshot.
+
+## Docs checked on every open; every change in the work report (3 Nov 2026)
+
+- **Decision:** the owner asked that every doc an agent opens is checked against the code and production and updated at once when stale, and that every piece of work is recorded in the stakeholder workbook `D:\seomarine\Uplumo work report.xlsx` (PR Log, Audit Findings, Open Decisions sheets). Both rules are in `CLAUDE.md` §7.
+- **Why:** stale docs mislead the next agent, and the owner reports progress to stakeholders from one sheet instead of chat or git history.
+- **Preserve:** the workbook stays outside the repo (a binary file would conflict between parallel PRs). An agent without access puts the row in its PR description for the next agent to copy in. Agent-rule change: called out in PR #261.
+

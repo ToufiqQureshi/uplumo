@@ -19,8 +19,12 @@ instead (`railway login` once):
 
 ```sh
 git fetch origin && git checkout --detach origin/main
-railway up --service uplumo -e production
+railway up --project 12af3d2f-29fa-41da-8a61-5a485a96fafa --service uplumo -e production
 ```
+
+Always pass `--project` when the checkout is not linked (a fresh worktree is
+not): without it `railway up` creates a new, empty Railway project named after
+the folder and deploys there (it happened on 3 Nov 2026).
 
 After a deploy, require `https://uplumo.com/readyz` to return 200, then open the
 page you changed. `/api/health` is only process liveness; `/readyz` checks
