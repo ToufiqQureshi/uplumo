@@ -66,8 +66,8 @@ func TestScopeFilters(t *testing.T) {
 
 func TestFilterTranslationMatchesLegacySemantics(t *testing.T) {
 	t.Parallel()
-	f := buildRowsFilters(rowsFilters{Include: "Blog, न्यूज़", Exclude: "spam", MinDomainRank: new(float64(30)), LinkType: "dofollow", HideLost: new(true)})
-	want := []any{[]any{[]any{"url_from", "ilike", "%blog%"}, "or", []any{"url_from", "ilike", "%न्यूज़%"}}, "and", []any{"url_from", "not_ilike", "%spam%"}, "and", []any{"domain_from_rank", ">=", float64(30)}, "and", []any{"dofollow", "=", true}, "and", []any{"is_lost", "=", false}}
+	f := buildRowsFilters(rowsFilters{Include: "Blog, न्यूज़", Exclude: "spam", MinDomainRank: new(float64(30)), LinkType: "dofollow"})
+	want := []any{[]any{[]any{"url_from", "ilike", "%blog%"}, "or", []any{"url_from", "ilike", "%न्यूज़%"}}, "and", []any{"url_from", "not_ilike", "%spam%"}, "and", []any{"domain_from_rank", ">=", float64(30)}, "and", []any{"dofollow", "=", true}}
 	got, err := json.Marshal(f)
 	if err != nil {
 		t.Fatal(err)
@@ -79,8 +79,8 @@ func TestFilterTranslationMatchesLegacySemantics(t *testing.T) {
 	if string(got) != string(expected) {
 		t.Fatalf("filters = %s, want %s", got, expected)
 	}
-	if got := countFilters(f); got != 6 {
-		t.Fatalf("condition count = %d, want 6", got)
+	if got := countFilters(f); got != 5 {
+		t.Fatalf("condition count = %d, want 5", got)
 	}
 	filtersGot := buildRowsFilters(rowsFilters{Include: "x%_\\y"})
 	condition, ok := filtersGot[0].([]any)

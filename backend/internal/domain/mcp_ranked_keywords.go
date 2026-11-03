@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 )
 
 // MCPRankedKeywordsInput contains the bounded filters exposed by the MCP tool.
@@ -28,6 +29,9 @@ type MCPRankedKeyword struct {
 	Volume  *float64 `json:"volume,omitempty"`
 	CPC     *float64 `json:"cpc,omitempty"`
 	URL     *string  `json:"url,omitempty"`
+	// Type is the SERP element (organic, featured_snippet, local_pack...),
+	// needed when the call asks for several result types.
+	Type *string `json:"type,omitempty"`
 }
 
 // MCPRankedKeywordsResult is one bounded page of ranked keywords.
@@ -122,10 +126,27 @@ func (s *Service) RankedKeywordsForMCP(ctx context.Context, organizationID, _ st
 	if len(input.ResultTypes) > 0 {
 		request["item_types"] = input.ResultTypes
 	}
-	response, err := s.provider.rankedKeywords(ctx, organizationID, request)
+	// The agent repeats tool calls across replies and in parallel, so the
+	// same workspace and request share one purchase, like the report tabs.
+	key, err := makeCacheKey("mcp-ranked-keywords", organizationID, "", request)
 	if err != nil {
 		return MCPRankedKeywordsResult{}, err
 	}
+	return cachedDomainLookup(ctx, s, key, func(r MCPRankedKeywordsResult) time.Duration {
+		if len(r.Items) == 0 {
+			return emptyResultCacheTTL
+		}
+		return cacheTTL
+	}, func(shared context.Context) (MCPRankedKeywordsResult, error) {
+		response, err := s.provider.rankedKeywords(shared, organizationID, request)
+		if err != nil {
+			return MCPRankedKeywordsResult{}, err
+		}
+		return mapMCPRankedKeywords(response), nil
+	})
+}
+
+func mapMCPRankedKeywords(response rankedKeywordsResponse) MCPRankedKeywordsResult {
 	rows := make([]MCPRankedKeyword, 0, len(response.Items))
 	for _, item := range response.Items {
 		keyword := item.Keyword
@@ -143,10 +164,13 @@ func (s *Service) RankedKeywordsForMCP(ctx context.Context, organizationID, _ st
 			continue
 		}
 		var rank *float64
-		var pageURL *string
+		var pageURL, rowType *string
 		if element := item.RankedSERPElement; element != nil {
-			rank, pageURL = element.RankAbsolute, element.URL
+			rank, pageURL, rowType = element.RankAbsolute, element.URL, element.Type
 			if serp := element.SERPItem; serp != nil {
+				if serp.Type != nil {
+					rowType = serp.Type
+				}
 				if serp.RankAbsolute != nil {
 					rank = serp.RankAbsolute
 				}
@@ -155,7 +179,7 @@ func (s *Service) RankedKeywordsForMCP(ctx context.Context, organizationID, _ st
 				}
 			}
 		}
-		rows = append(rows, MCPRankedKeyword{Keyword: *keyword, Rank: rank, Volume: volume, CPC: cpc, URL: pageURL})
+		rows = append(rows, MCPRankedKeyword{Keyword: *keyword, Rank: rank, Volume: volume, CPC: cpc, URL: pageURL, Type: rowType})
 	}
-	return MCPRankedKeywordsResult{Items: rows, TotalCount: response.TotalCount}, nil
+	return MCPRankedKeywordsResult{Items: rows, TotalCount: response.TotalCount}
 }

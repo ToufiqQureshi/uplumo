@@ -66,8 +66,8 @@ in export; do not silently describe every returned row as organic. Clickstream i
 fields are not purchased by these requests. Do not enable the documented double
 price to fill this audit. `load_rank_absolute` controls aggregate
 `metrics_absolute`; omitting it does not establish a missing row-rank defect.
-MCP's ranked-keywords/competitor methods are separate direct provider paths and
-are not covered by the page-query cache/coalescing change.
+MCP's ranked-keywords/competitor methods now share the same cache and
+coalescing (see "MCP domain tools reuse one purchase" below).
 
 Official contracts:
 
@@ -155,3 +155,11 @@ Provider fixtures include task path and explicit cost, including zero on rejecte
 - **Why:** The task bills once for the full organic block, but the decoder kept only `etv` and `count`. A live call for axisrooms.com (India, 2026-11-02, via the DataForSEO MCP with `ignore_synonyms` on, so its counts are lower than Uplumo's request) returned 13 #1 positions, 195 new and 38 dropped keywords and a $2,277 traffic value; the same uplumo.com lookup showed only traffic (5,309) and keywords (538).
 - **Preserve:** No new provider call, field or option: same request, same cost. A missing value stays null (shown "-"), never 0; `is_lost` is often absent. Older Redis/Postgres snapshots without the fields still decode (nil pointers) and the UI hides the breakdown. Position bands are organic only and, like the headline numbers, cover the hostname plus subdomains.
 - **Trace:** `provider.go` (`organicMetrics`), `service.go` (`PositionBands`, `RankMovement`, `Overview`); `TestProviderOverviewMapsDataForSEOResult`, `TestOverviewDeliversPaidPositionMovementAndValue` (a mutation swapping two bands failed it). Frontend: `features/domain/decision.md`.
+
+## MCP domain tools reuse one purchase
+
+- **Decision:** `RankedKeywordsForMCP` and `SerpCompetitorsForMCP` go through `cachedDomainLookup`, keyed on the workspace and the exact provider request (competitor keywords lower-cased and trimmed first): 12 hours for rows, 5 minutes for an empty answer, one shared purchase for concurrent identical calls. `get_ranked_keywords` rows now carry `type`.
+- **Why:** These were direct provider paths. The SAM agent repeats tool calls across replies and in parallel, so the same question bought a new Labs task each time ($0.011+ per ranked call, $0.015 per competitor call in production). `TestMCPDomainToolsReuseOnePurchasePerWorkspace` buys once for five identical calls; with the cache lifetime set to 0 it bought twice. The row type was dropped although several result types can be requested in one call.
+- **Preserve:** The key includes the organization, so one workspace never reads another's result (asserted). Validation still happens before any spend. The key is the provider body, so any input that changes the request (limit, offset, filters, types, market) is a separate purchase.
+- **Trace:** `mcp_ranked_keywords.go`, `mcp_serp_competitors.go`, `lookup.go`; `mcp_cache_test.go`.
+

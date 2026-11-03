@@ -62,7 +62,6 @@ export const backlinksRowsFiltersSchema = z.object({
   minSpamScore: optionalNumber,
   maxSpamScore: optionalNumber,
   linkType: z.enum(["dofollow", "nofollow"]).optional(),
-  hideLost: z.boolean().optional(),
   hideBroken: z.boolean().optional(),
   /** Exact-match on the linking domain; used to expand one domain's links. */
   domainFrom: z.string().max(255).optional(),
