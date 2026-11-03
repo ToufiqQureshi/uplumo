@@ -316,6 +316,9 @@ func (s *Service) Rows(ctx context.Context, org string, in lookupInput, page pag
 	if err != nil {
 		return Page[BacklinkRow]{}, err
 	}
+	// commonTarget asks for live links only, so no lost row can arrive. Hide
+	// lost is dropped before the cache key, or each toggle buys the same block.
+	filters.HideLost = nil
 	expr := buildRowsFilters(filters)
 	scope := scopeFilters("url_to", target)
 	if countFilters(expr)+countFilters(scope)+boolInt(hideSpam)*2 > maxFilterConditions {
@@ -644,9 +647,6 @@ func buildRowsFilters(f rowsFilters) []any {
 	appendRange(&out, "backlink_spam_score", f.MinSpamScore, f.MaxSpamScore)
 	if f.LinkType != "" {
 		out = append(out, []any{"dofollow", "=", f.LinkType == "dofollow"})
-	}
-	if f.HideLost != nil && *f.HideLost {
-		out = append(out, []any{"is_lost", "=", false})
 	}
 	if f.HideBroken != nil && *f.HideBroken {
 		out = append(out, []any{"is_broken", "=", false})

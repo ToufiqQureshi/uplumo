@@ -29,3 +29,8 @@ Shows domain/page backlink summaries, referring domains and top linked pages.
 - **Why:** Opening a saved link after the cache expired bought the report again without a click (owner, 26 Oct).
 - **Preserve:** `cachedOnly` is read at request time, so the refetch a Retry starts is allowed to buy; it never goes in the request body. Paging, sorting and tabs after a Search in the same session still load normally.
 - **Trace:** `backend/internal/platform/dataforseo/decision.md`; tests in `client/lib/uplumoApi.test.ts`, `backlinksApi.test.ts`, `domain/domain-cache.test.ts`.
+
+- **Decision:** Removed the "Hide lost" checkbox and its `hideLost` filter value.
+- **Why:** The server only ever requests live links, so the checkbox hid nothing, and on large profiles each toggle re-bought the same rows. See `backend/internal/backlinks/decision.md`.
+- **Preserve:** "Hide broken" stays. Any future lost-links view must be an explicit, priced mode.
+- **Trace:** `BacklinksFilterPanel.tsx`, `backlinksFilterTypes.ts`, `types/schemas/backlinks.ts`.
