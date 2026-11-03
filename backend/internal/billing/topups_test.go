@@ -322,7 +322,9 @@ func TestSiteAddOnRaisesTheBusinessSiteLimit(t *testing.T) {
 			}
 		}
 	}
-	addSites(14)
+	// Business pauses paid work above 20 sites (its allowance before 3 Nov)
+	// plus the most add-on sites ever running at once (5).
+	addSites(24)
 	// Three add-ons that ran out one after another: at most 5 at a time.
 	if _, err := f.pool.Exec(ctx, `UPDATE go_billing_topups SET sites_until = now() - interval '1 day' WHERE id = $1`, order.ID); err != nil {
 		t.Fatal(err)
@@ -337,11 +339,11 @@ func TestSiteAddOnRaisesTheBusinessSiteLimit(t *testing.T) {
 	}
 	usage, err := f.svc.UsageAgainstPlan(ctx, f.org)
 	if err != nil || usage.Sites.Exceeded {
-		t.Fatalf("14 sites after a 5-site add-on ran out = %+v, %v; want them kept working", usage.Sites, err)
+		t.Fatalf("24 sites after a 5-site add-on ran out = %+v, %v; want them kept working", usage.Sites, err)
 	}
 	addSites(2)
 	usage, err = f.svc.UsageAgainstPlan(ctx, f.org)
 	if err != nil || !usage.Sites.Exceeded {
-		t.Fatalf("16 sites = %+v, %v; want over the limit: expired add-ons must not stack", usage.Sites, err)
+		t.Fatalf("26 sites = %+v, %v; want over the limit: expired add-ons must not stack", usage.Sites, err)
 	}
 }
