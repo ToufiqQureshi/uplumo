@@ -32,6 +32,7 @@ import { DomainSearchCard } from "@/client/features/domain/components/DomainSear
 import { KeywordsTab } from "@/client/features/domain/components/KeywordsTab";
 import { PagesTab } from "@/client/features/domain/components/PagesTab";
 import { StatTile } from "@/client/components/StatTile";
+import { OverviewBreakdown } from "@/client/features/domain/components/OverviewBreakdown";
 import { SearchTabStrip } from "@/client/features/search-tabs/SearchTabStrip";
 import type { SearchTabInput } from "@/client/features/search-tabs/types";
 import { useSearchTabNavigation } from "@/client/features/search-tabs/useSearchTabNavigation";
@@ -640,7 +641,7 @@ export function DomainOverviewPage({
                 </Badge>
               </div>
               <div className="px-4 pb-4">
-                <div className="grid grid-cols-1 gap-3 rounded-lg border border-border p-3 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3 rounded-lg border border-border p-3 md:grid-cols-3">
                   <StatTile
                     label="Estimated Organic Traffic"
                     value={formatMetric(
@@ -657,7 +658,23 @@ export function DomainOverviewPage({
                     )}
                     hint={overviewMetricsHint}
                   />
+                  <StatTile
+                    label="Traffic Value"
+                    value={
+                      state.overview.hasData &&
+                      state.overview.trafficValue != null
+                        ? `$${formatMetric(state.overview.trafficValue, true)}`
+                        : "-"
+                    }
+                    hint="What this traffic would cost as Google Ads, per month (estimate)"
+                  />
                 </div>
+                {state.overview.hasData ? (
+                  <OverviewBreakdown
+                    positions={state.overview.positions}
+                    movement={state.overview.movement}
+                  />
+                ) : null}
               </div>
 
               <div className="px-4 pb-4">

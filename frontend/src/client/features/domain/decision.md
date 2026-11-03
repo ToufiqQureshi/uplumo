@@ -65,3 +65,8 @@ Shows organic estimates, keyword/page tables and filtered domain research.
 - **Why:** Opening a saved link after the cache expired bought the report again without a click (owner, 26 Oct).
 - **Preserve:** `cachedOnly` is read at request time, so the refetch a Retry starts is allowed to buy; it never goes in the request body. Paging, sorting and tabs after a Search in the same session still load normally.
 - **Trace:** `backend/internal/platform/dataforseo/decision.md`; tests in `client/lib/uplumoApi.test.ts`, `backlinksApi.test.ts`, `domain/domain-cache.test.ts`.
+
+- **Decision:** The overview card adds a Traffic Value tile and `OverviewBreakdown` (Google position bands and movement since the last update), read from fields the overview response now carries.
+- **Why:** These came with the paid overview task and were dropped; see `backend/internal/domain/decision.md`.
+- **Preserve:** No new request. Null shows "-", not 0. Schema fields are optional/nullish so an older cached overview still parses, and the breakdown renders nothing without them.
+- **Trace:** `domainApi.ts` (`overviewSchema`), `components/OverviewBreakdown.tsx`, `DomainOverviewPage.tsx`; `components/OverviewBreakdown.test.ts`.

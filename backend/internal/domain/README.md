@@ -11,7 +11,7 @@ and membership of the project's organization.
 
 | Name                  | Returns                                                        |
 | --------------------- | -------------------------------------------------------------- |
-| `overview`            | traffic, keywords, `hasData`, echoed `scope` and label         |
+| `overview`            | traffic, keywords, `trafficValue` (USD ads equivalent), `positions` (#1, #2–3, #4–10, #11–20), `movement` (new/up/down/lost), `hasData`, echoed `scope` and label |
 | `keyword-suggestions` | top 100 ranking keywords by traffic (no paging)                |
 | `keywords`            | one page of ranking keywords, with ranking `url`/`relativeUrl` |
 | `pages`               | one page of ranking pages                                      |
