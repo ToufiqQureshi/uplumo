@@ -214,10 +214,10 @@ func (s *Service) applyTopUpPayment(ctx context.Context, body []byte) (WebhookRe
 	}
 	result := WebhookIgnored
 	err := pgdb.InTx(ctx, s.repo.db, func(tx pgx.Tx) error {
-		var id, org, status, currency string
+		var id, org, pack, status, currency string
 		var amount, credits int64
 		var sites, days int
-		err := tx.QueryRow(ctx, `SELECT id,organization_id,status,amount_paise,currency,credits,sites,expires_after_days FROM go_billing_topups WHERE order_id=$1 FOR UPDATE`, p.OrderID).Scan(&id, &org, &status, &amount, &currency, &credits, &sites, &days)
+		err := tx.QueryRow(ctx, `SELECT id,organization_id,pack_id,status,amount_paise,currency,credits,sites,expires_after_days FROM go_billing_topups WHERE order_id=$1 FOR UPDATE`, p.OrderID).Scan(&id, &org, &pack, &status, &amount, &currency, &credits, &sites, &days)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
@@ -248,9 +248,11 @@ func (s *Service) applyTopUpPayment(ctx context.Context, body []byte) (WebhookRe
 			until := now.AddDate(0, 0, days)
 			sitesUntil = &until
 		}
-		_, err = tx.Exec(ctx, `UPDATE go_billing_topups SET status='paid',payment_id=$2,sites_until=$3 WHERE id=$1`, id, p.ID, sitesUntil)
+		if _, err = tx.Exec(ctx, `UPDATE go_billing_topups SET status='paid',payment_id=$2,sites_until=$3 WHERE id=$1`, id, p.ID, sitesUntil); err != nil {
+			return err
+		}
 		result = WebhookProcessed
-		return err
+		return s.repo.recordPayment(ctx, tx, p.ID, org, "topup", pack, amount, currency, now, sourceWebhook)
 	})
 	return result, err
 }

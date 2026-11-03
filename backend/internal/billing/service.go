@@ -616,6 +616,8 @@ func (s *Service) HandleWebhook(ctx context.Context, body []byte, signature, eve
 		return s.applyTopUpPayment(ctx, body)
 	case "payment.authorized":
 		return s.captureTopUpPayment(ctx, body)
+	case "payment.refunded":
+		return s.applyRefund(ctx, event)
 	}
 	if !slices.Contains(handledEvents, event.Event) {
 		return WebhookIgnored, nil
@@ -671,6 +673,13 @@ func (s *Service) HandleWebhook(ctx context.Context, body []byte, signature, eve
 	}, liveStatuses, grantCredits, grantIdentities)
 	if err != nil {
 		return "", fmt.Errorf("apply %s event %s: %w", event.Event, eventID, err)
+	}
+	if outcome != eventSecondLiveSubscription {
+		// After the state change, so a recording failure is retried by
+		// Razorpay's redelivery; the payment id keeps it counted once.
+		if err := s.recordSubscriptionCharge(ctx, orgID, plan, event); err != nil {
+			return "", err
+		}
 	}
 	switch outcome {
 	case eventDuplicateDelivery:

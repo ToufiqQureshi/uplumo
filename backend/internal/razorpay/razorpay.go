@@ -181,9 +181,7 @@ type Event struct {
 	Event   string `json:"event"`
 	Payload struct {
 		Payment *struct {
-			Entity struct {
-				ID string `json:"id"`
-			} `json:"entity"`
+			Entity PaymentEntity `json:"entity"`
 		} `json:"payment"`
 		Subscription *struct {
 			Entity Subscription `json:"entity"`
@@ -191,6 +189,17 @@ type Event struct {
 	} `json:"payload"`
 	// CreatedAt is in Unix seconds.
 	CreatedAt int64 `json:"created_at"`
+}
+
+// PaymentEntity is the part of a webhook payment the app records. Amounts are
+// in the currency's subunits (paise or cents); CreatedAt is Unix seconds.
+type PaymentEntity struct {
+	ID             string `json:"id"`
+	Amount         int64  `json:"amount"`
+	AmountRefunded int64  `json:"amount_refunded"`
+	Currency       string `json:"currency"`
+	Status         string `json:"status"`
+	CreatedAt      int64  `json:"created_at"`
 }
 
 // ValidSignature reports whether signature, the X-Razorpay-Signature header,

@@ -39,6 +39,6 @@ DATABASE_URL=... go run ./cmd/erase-user -email person@example.com -execute \
 
 ## Decision for the owner
 
-The sweep erases billing ledger rows (`go_billing_*`) together with the
-workspace. If tax or accounting rules require keeping payment records, exclude
-those tables before this runs in production.
+The sweep erases the workspace's billing state (`go_billing_*`) but keeps
+`go_billing_payments`, the revenue ledger (`retainedTables` in `erase.go`):
+payment records are needed for accounting and hold only opaque IDs and amounts.

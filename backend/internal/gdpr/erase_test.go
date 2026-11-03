@@ -49,8 +49,17 @@ func TestFindPlanAndExecuteEraseOneUsersData(t *testing.T) {
 	if plan.Rows[`session.user_id`] != 1 || plan.Rows[`member.user_id`] != 1 {
 		t.Fatalf("Plan() reference counts = %v", plan.Rows)
 	}
+	// Payment records are kept for accounting; they hold no email or name.
+	if _, err := pool.Exec(ctx, `INSERT INTO go_billing_payments(payment_id,organization_id,kind,item,amount,currency,paid_at,source) VALUES('pay_'||$1,$1,'subscription','pro',249900,'INR',now(),'webhook')`, orgID); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _, _ = pool.Exec(context.WithoutCancel(ctx), `DELETE FROM go_billing_payments WHERE organization_id=$1`, orgID) })
 	if err := eraser.Execute(ctx, plan); err != nil {
 		t.Fatalf("Execute() error = %v", err)
+	}
+	var kept int
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM go_billing_payments WHERE organization_id=$1`, orgID).Scan(&kept); err != nil || kept != 1 {
+		t.Fatalf("payment records after erase = %d, %v; want 1 kept", kept, err)
 	}
 	for table, query := range map[string]string{
 		"user":         `SELECT count(*) FROM "user" WHERE id=$1`,
