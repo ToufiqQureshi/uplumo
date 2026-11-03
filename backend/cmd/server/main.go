@@ -33,6 +33,7 @@ import (
 	"github.com/toufiqqureshi/uplumo/backend/internal/contentauthors"
 	"github.com/toufiqqureshi/uplumo/backend/internal/contenteditor"
 	"github.com/toufiqqureshi/uplumo/backend/internal/crawleraccess"
+	"github.com/toufiqqureshi/uplumo/backend/internal/customers"
 	"github.com/toufiqqureshi/uplumo/backend/internal/dashboard"
 	"github.com/toufiqqureshi/uplumo/backend/internal/dashboardoverview"
 	"github.com/toufiqqureshi/uplumo/backend/internal/database"
@@ -474,6 +475,7 @@ func run(logger *slog.Logger) (err error) {
 			Activation:              &activation.Service{Store: activation.Repository{DB: db}},
 			Reports:                 reportsSvc,
 			Support:                 supportSvc,
+			Customers:               &customers.Service{DB: db, StaffEmails: cfg.StaffEmails},
 			PublicURL:               cfg.PublicURL,
 			OpenRouterConfigured:    strings.TrimSpace(cfg.OpenRouterAPIKey) != "",
 			ContentWriterConfigured: strings.TrimSpace(cfg.OpenRouterAPIKey) != "",

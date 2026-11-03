@@ -27,6 +27,7 @@ import (
 	"github.com/toufiqqureshi/uplumo/backend/internal/contentauthors"
 	"github.com/toufiqqureshi/uplumo/backend/internal/contenteditor"
 	"github.com/toufiqqureshi/uplumo/backend/internal/crawleraccess"
+	"github.com/toufiqqureshi/uplumo/backend/internal/customers"
 	"github.com/toufiqqureshi/uplumo/backend/internal/dashboard"
 	"github.com/toufiqqureshi/uplumo/backend/internal/dashboardoverview"
 	"github.com/toufiqqureshi/uplumo/backend/internal/domain"
@@ -164,6 +165,8 @@ type Deps struct {
 	APIKeys *apikeys.Service
 	// SAMChat serves SAM conversations; nil answers 503 (no OpenRouter key).
 	SAMChat *sam.Chat
+	// Customers lists users and onboarding answers for verified staff.
+	Customers *customers.Service
 	// Support saves customer problem reports; nil answers 503.
 	Support *support.Service
 	// Onboarding stores account-scoped signup answers and the Search Console nudge.
@@ -429,6 +432,7 @@ func NewHandler(d Deps) http.Handler {
 		Logger: d.Logger, Service: d.SAMSessions, WithSession: withSession, Chat: d.SAMChat,
 		WithProjectAccess: func(next http.Handler) http.Handler { return requireProjectAccess(d.Logger, d.Auth, next) },
 	})
+	customers.Mount(mux, customers.Deps{Logger: d.Logger, Service: d.Customers, WithSession: withSession})
 	support.Mount(mux, support.Deps{Logger: d.Logger, Service: d.Support, WithSession: withSession})
 	onboarding.Mount(mux, onboarding.Deps{Logger: d.Logger, Service: d.Onboarding, WithSession: withSession})
 	audit.Mount(mux, audit.Deps{

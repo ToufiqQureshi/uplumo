@@ -8,6 +8,7 @@ import {
   Smile,
   Target,
   CircleHelp,
+  Users,
   ClipboardCheck,
   CreditCard,
   FileText,
@@ -210,6 +211,13 @@ export const accountNavGroup: NavGroup = {
     },
     { label: "Help", icon: CircleHelp, link: linkOptions({ to: "/support" }) },
   ],
+};
+
+/** Shown above Billing only when the server confirms the user is staff. */
+export const staffNavItem: NavItem = {
+  label: "Customers",
+  icon: Users,
+  link: linkOptions({ to: "/admin/customers" }),
 };
 
 /** One project page's link, label and icon, shared by the nav and shortcuts. */

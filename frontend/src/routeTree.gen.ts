@@ -27,6 +27,7 @@ import { Route as AuthSignUpRouteImport } from './routes/_auth.sign-up'
 import { Route as AuthenticatedOauthConsentRouteImport } from './routes/_authenticated.oauth-consent'
 import { Route as AuthenticatedSubscribeRouteImport } from './routes/_authenticated.subscribe'
 import { Route as AcceptInvitationIdRouteImport } from './routes/accept-invitation.$id'
+import { Route as AppAdminCustomersRouteImport } from './routes/_app/admin.customers'
 import { Route as AppBillingFixPaymentRouteImport } from './routes/_app/billing_.fix-payment'
 import { Route as AppBillingPlanRouteImport } from './routes/_app/billing_.plan'
 import { Route as AppPProjectIdRouteRouteImport } from './routes/_app/p/$projectId/route'
@@ -152,6 +153,11 @@ const AcceptInvitationIdRoute = AcceptInvitationIdRouteImport.update({
   id: '/accept-invitation/$id',
   path: '/accept-invitation/$id',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AppAdminCustomersRoute = AppAdminCustomersRouteImport.update({
+  id: '/admin/customers',
+  path: '/admin/customers',
+  getParentRoute: () => AppRouteRoute,
 } as any)
 const AppBillingFixPaymentRoute = AppBillingFixPaymentRouteImport.update({
   id: '/billing_/fix-payment',
@@ -376,6 +382,7 @@ export interface FileRoutesByFullPath {
   '/subscribe': typeof AuthenticatedSubscribeRoute
   '/accept-invitation/$id': typeof AcceptInvitationIdRoute
   '/p/$projectId': typeof AppPProjectIdRouteRouteWithChildren
+  '/admin/customers': typeof AppAdminCustomersRoute
   '/billing/fix-payment': typeof AppBillingFixPaymentRoute
   '/billing/plan': typeof AppBillingPlanRoute
   '/settings/branding': typeof AppSettingsBrandingRoute
@@ -428,6 +435,7 @@ export interface FileRoutesByTo {
   '/oauth-consent': typeof AuthenticatedOauthConsentRoute
   '/subscribe': typeof AuthenticatedSubscribeRoute
   '/accept-invitation/$id': typeof AcceptInvitationIdRoute
+  '/admin/customers': typeof AppAdminCustomersRoute
   '/billing/fix-payment': typeof AppBillingFixPaymentRoute
   '/billing/plan': typeof AppBillingPlanRoute
   '/settings/branding': typeof AppSettingsBrandingRoute
@@ -484,6 +492,7 @@ export interface FileRoutesById {
   '/accept-invitation/$id': typeof AcceptInvitationIdRoute
   '/_app/': typeof AppIndexRoute
   '/_app/p/$projectId': typeof AppPProjectIdRouteRouteWithChildren
+  '/_app/admin/customers': typeof AppAdminCustomersRoute
   '/_app/billing_/fix-payment': typeof AppBillingFixPaymentRoute
   '/_app/billing_/plan': typeof AppBillingPlanRoute
   '/_app/settings/branding': typeof AppSettingsBrandingRoute
@@ -540,6 +549,7 @@ export interface FileRouteTypes {
     | '/subscribe'
     | '/accept-invitation/$id'
     | '/p/$projectId'
+    | '/admin/customers'
     | '/billing/fix-payment'
     | '/billing/plan'
     | '/settings/branding'
@@ -592,6 +602,7 @@ export interface FileRouteTypes {
     | '/oauth-consent'
     | '/subscribe'
     | '/accept-invitation/$id'
+    | '/admin/customers'
     | '/billing/fix-payment'
     | '/billing/plan'
     | '/settings/branding'
@@ -647,6 +658,7 @@ export interface FileRouteTypes {
     | '/accept-invitation/$id'
     | '/_app/'
     | '/_app/p/$projectId'
+    | '/_app/admin/customers'
     | '/_app/billing_/fix-payment'
     | '/_app/billing_/plan'
     | '/_app/settings/branding'
@@ -823,6 +835,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/accept-invitation/$id'
       preLoaderRoute: typeof AcceptInvitationIdRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_app/admin/customers': {
+      id: '/_app/admin/customers'
+      path: '/admin/customers'
+      fullPath: '/admin/customers'
+      preLoaderRoute: typeof AppAdminCustomersRouteImport
+      parentRoute: typeof AppRouteRoute
     }
     '/_app/billing_/fix-payment': {
       id: '/_app/billing_/fix-payment'
@@ -1204,6 +1223,7 @@ interface AppRouteRouteChildren {
   AppSupportRoute: typeof AppSupportRoute
   AppIndexRoute: typeof AppIndexRoute
   AppPProjectIdRouteRoute: typeof AppPProjectIdRouteRouteWithChildren
+  AppAdminCustomersRoute: typeof AppAdminCustomersRoute
   AppBillingFixPaymentRoute: typeof AppBillingFixPaymentRoute
   AppBillingPlanRoute: typeof AppBillingPlanRoute
 }
@@ -1216,6 +1236,7 @@ const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppSupportRoute: AppSupportRoute,
   AppIndexRoute: AppIndexRoute,
   AppPProjectIdRouteRoute: AppPProjectIdRouteRouteWithChildren,
+  AppAdminCustomersRoute: AppAdminCustomersRoute,
   AppBillingFixPaymentRoute: AppBillingFixPaymentRoute,
   AppBillingPlanRoute: AppBillingPlanRoute,
 }
