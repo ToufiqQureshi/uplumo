@@ -65,13 +65,13 @@ Needed before real users sign up:
 | `CRUX_API_KEY`                                                        | Real-visitor (Core Web Vitals) data on audits comes only from what PageSpeed Insights still embeds. A free key with the Chrome UX Report API enabled; it may be the same key as `PAGESPEED_API_KEY` if both APIs are enabled and allowed on it. |
 
 `SENTRY_DSN` turns on error reporting: every error the server logs is sent
-to Sentry (`backend/internal/platform/errreport/README.md`). Without it
+to Sentry. Without it
 errors stay in the Railway logs only.
 
 Optional: `GOOGLE_TOKEN_ENCRYPTION_KEY` (base64, 32 bytes) encrypts Google
 tokens with its own key instead of one derived from `BETTER_AUTH_SECRET`.
-`TRUSTED_PROXY_CIDRS` and `OPENAI_APPS_CHALLENGE` are described in
-`backend/README.md`. On Railway set `TRUSTED_PROXY_CIDRS=100.64.0.0/10`
+`OPENAI_APPS_CHALLENGE` is the token served at
+`/.well-known/openai-apps-challenge`. On Railway set `TRUSTED_PROXY_CIDRS=100.64.0.0/10`
 (Railway's edge proxy range): without it every visitor looks like the proxy,
 so analytics visitors and countries are wrong and per-IP rate limits are
 shared by everyone. `/collect` logs a warning when it is missing.
@@ -93,7 +93,7 @@ The server refuses to start on a live `https` site when:
 | Domain     | In Railway add `uplumo.com` as a custom domain, then add the DNS record it shows in Cloudflare.                                                                                                                                                                                                                    |
 | Cloudflare | SSL mode Full. One redirect rule sends `www.uplumo.com` to `uplumo.com`. Email Routing forwards `support@uplumo.com` to the owner's mailbox: every public page links to that address.                                                                                                                              |
 | Google     | Authorised redirect URIs: `https://uplumo.com/api/auth/callback/google` (sign-in), `https://uplumo.com/api/gsc/oauth/callback` (Search Console) and `https://uplumo.com/api/ga4/oauth/callback` (Analytics). Enable the Search Console API and the Analytics Data and Admin APIs in the same Google Cloud project. |
-| Loops      | Verify the sending domain `mail.uplumo.com` and publish the three transactional templates. Template variables and checks are in `backend/internal/email/README.md`.                                                                                                                                                |
+| Loops      | Verify the sending domain `mail.uplumo.com` and publish the three transactional templates.                                                                                                                                                                                                                         |
 
 ### Razorpay
 
@@ -138,8 +138,15 @@ only move forward, so a rollback keeps the newer database schema.
 
 ## Erasing an account
 
-The image also carries `/erase-user`. Its use is in
-`backend/internal/gdpr/README.md`.
+The image also carries `/erase-user`. It erases one account and the data only
+that account owns, in one transaction, and refuses when a workspace has another
+member. Dry run first, then execute:
+
+```sh
+DATABASE_URL=... go run ./cmd/erase-user -email person@example.com
+DATABASE_URL=... go run ./cmd/erase-user -email person@example.com -execute \
+  -confirm person@example.com -confirm-database-host <host printed by the dry run>
+```
 
 ## Optional credit-pack checkout
 
@@ -157,3 +164,23 @@ Migration 41 adds provider settlement recovery. Existing open feature holds are 
 Migration 43 permits zero-amount reservations only for known postpaid outcomes. These rows hold no customer funds but retain the recoverable charge and provider cost before balance operations. They settle through the same reconciler; do not delete them as empty holds.
 
 The production frontend no longer imports browser fixtures; the Docker build copies frontend source without `frontend/tests`. Playwright builds and tests the same production SPA separately.
+
+## What is set in production (names only)
+
+Railway project `jubilant-kindness`, service `uplumo`: healthcheck `/readyz`,
+region Singapore, 1 replica. Never write values here.
+
+- Set: `DATABASE_URL` (with `pool_max_conns=5`), `REDIS_URL`,
+  `TRUSTED_PROXY_CIDRS`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `PUBLIC_URL`,
+  `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `RAZORPAY_KEY_ID`,
+  `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` (live),
+  `RAZORPAY_PLAN_ID_BASIC`, `_PRO`, `_BUSINESS`, `RAZORPAY_PLAN_ID_BASIC_USD`,
+  `_PRO_USD`, `_BUSINESS_USD`, `LOOPS_API_KEY` + 3 `LOOPS_TRANSACTIONAL_*_ID`,
+  `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_CONTENT_IMAGE_BUCKET`,
+  `DATAFORSEO_API_KEY`, `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`,
+  `PAGESPEED_API_KEY`, `CRUX_API_KEY`, `SENTRY_DSN`, `STAFF_EMAILS`, `PORT`,
+  `PROVIDER_DAILY_LIMIT_USD` (keep until the owner removes it).
+- Not set: `TURNSTILE_SECRET_KEY`, `GOOGLE_TOKEN_ENCRYPTION_KEY`.
+- Remove when seen: `RAZORPAY_PLAN_ID_AGENCY`, `BILLING_TOPUP_PACKS` (ignored).
+- Google Cloud project `agentproject-473109`: OAuth app in production,
+  branding verified; `analytics.readonly` still needs data-access verification.
