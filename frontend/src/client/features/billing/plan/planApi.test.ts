@@ -6,6 +6,8 @@ import {
   cancelSubscription,
   createCheckout,
   describeStatus,
+  formatPrice,
+  priceIn,
   waitForPaidPlan,
 } from "./planApi";
 
@@ -24,6 +26,8 @@ describe("billing status", () => {
     {
       plan: "free",
       status: "none",
+      currency: "",
+      checkoutCurrency: "INR",
       currentPeriodEnd: null,
       cancelAtPeriodEnd: false,
       unlimited: false,
@@ -35,6 +39,8 @@ describe("billing status", () => {
     {
       plan: "pro",
       status: "active",
+      currency: "USD",
+      checkoutCurrency: "USD",
       currentPeriodEnd: "2026-11-07T10:15:30.123456+05:30",
       cancelAtPeriodEnd: true,
       unlimited: false,
@@ -50,6 +56,19 @@ describe("billing status", () => {
   it.each([
     { plan: "enterprise", status: "active", currentPeriodEnd: null },
     { plan: "basic", status: "active", currentPeriodEnd: "next month" },
+    // A currency the server never bills in.
+    {
+      plan: "free",
+      status: "none",
+      currency: "",
+      checkoutCurrency: "EUR",
+      currentPeriodEnd: null,
+      cancelAtPeriodEnd: false,
+      unlimited: false,
+      paymentsConfigured: true,
+      availablePlans: [],
+      usage,
+    },
     { plan: "pro", status: "active" },
   ])("rejects %o", async (body) => {
     respondWith(body);
@@ -60,13 +79,51 @@ describe("billing status", () => {
 });
 
 describe("createCheckout", () => {
-  it("POSTs and rejects a session without a Razorpay key", async () => {
+  it("POSTs the currency shown and rejects a session without a Razorpay key", async () => {
     const fetchMock = respondWith({ subscriptionId: "sub_1", keyId: "" });
-    await expect(createCheckout("pro")).rejects.toBeInstanceOf(ApiError);
+    await expect(createCheckout("pro", "USD")).rejects.toBeInstanceOf(ApiError);
     expect(fetchMock.mock.calls[0]).toMatchObject([
       "/api/v1/billing/checkout",
-      { method: "POST", body: JSON.stringify({ plan: "pro" }) },
+      {
+        method: "POST",
+        body: JSON.stringify({ plan: "pro", currency: "USD" }),
+      },
     ]);
+  });
+
+  it("surfaces a currency change as its own error code", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      Response.json(
+        {
+          error: {
+            code: "currency_changed",
+            message: "Prices changed for your location.",
+          },
+        },
+        { status: 409 },
+      ),
+    );
+    await expect(createCheckout("basic", "INR")).rejects.toMatchObject({
+      status: 409,
+      code: "currency_changed",
+    });
+  });
+});
+
+describe("formatPrice", () => {
+  it.each([
+    [2499, "INR", "₹2,499"],
+    [100000, "INR", "₹1,00,000"],
+    [39, "USD", "$39"],
+    [1000, "USD", "$1,000"],
+  ] as const)("%d %s reads %s", (amount, currency, want) => {
+    expect(formatPrice(amount, currency)).toBe(want);
+  });
+
+  it("picks the catalog price in the currency", () => {
+    const item = { priceInr: 2499, priceUsd: 39 };
+    expect(priceIn(item, "INR")).toBe(2499);
+    expect(priceIn(item, "USD")).toBe(39);
   });
 });
 
@@ -75,6 +132,8 @@ describe("cancelSubscription", () => {
     const body = {
       plan: "pro",
       status: "active",
+      currency: "INR",
+      checkoutCurrency: "INR",
       currentPeriodEnd: "2026-11-07T10:15:30Z",
       cancelAtPeriodEnd: true,
       unlimited: false,
@@ -123,6 +182,7 @@ describe("billing plans", () => {
     id: "basic",
     name: "Basic",
     priceInr: 999,
+    priceUsd: 15,
     summary: "For one site.",
     highlights: ["1 website"],
   };
@@ -137,6 +197,7 @@ describe("billing plans", () => {
     { plans: [{ ...plan, id: "enterprise" }] },
     { plans: [{ ...plan, priceInr: "999" }] },
     { plans: [{ ...plan, priceInr: -1 }] },
+    { plans: [{ ...plan, priceUsd: undefined }] },
     {},
   ])("rejects a catalog it cannot trust: %j", async (body) => {
     respondWith(body);
@@ -150,6 +211,8 @@ function statusResponse(plan: string, state: string) {
   return Response.json({
     plan,
     status: state,
+    currency: "",
+    checkoutCurrency: "INR",
     currentPeriodEnd: null,
     cancelAtPeriodEnd: false,
     unlimited: false,

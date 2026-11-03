@@ -21,24 +21,24 @@ type Payment struct {
 	Captured bool   `json:"captured"`
 }
 
-// CapturePayment captures an authorized payment for exactly amount paise in
-// INR. Razorpay auto-captures only payments authorized within its window
+// CapturePayment captures an authorized payment for exactly amount subunits
+// (paise, cents) in currency, the currency of the order. Razorpay auto-captures only payments authorized within its window
 // (12 minutes on this account); a later authorization stays uncaptured and
 // is refunded days later unless it is captured. A payment that is already
 // captured is not an error: the capture already happened.
-func (c *Client) CapturePayment(ctx context.Context, id string, amount int64) (Payment, error) {
-	if id == "" || amount <= 0 {
+func (c *Client) CapturePayment(ctx context.Context, id string, amount int64, currency string) (Payment, error) {
+	if id == "" || amount <= 0 || (currency != "INR" && currency != "USD") {
 		return Payment{}, errors.New("invalid capture request")
 	}
 	var payment Payment
-	err := c.post(ctx, "/payments/"+url.PathEscape(id)+"/capture", map[string]any{"amount": amount, "currency": "INR"}, &payment)
+	err := c.post(ctx, "/payments/"+url.PathEscape(id)+"/capture", map[string]any{"amount": amount, "currency": currency}, &payment)
 	if apiErr, ok := errors.AsType[*APIError](err); ok && apiErr.StatusCode == http.StatusBadRequest && apiErr.Code == "BAD_REQUEST_ERROR" && alreadyCaptured(apiErr.Description) {
-		return Payment{ID: id, Amount: amount, Currency: "INR", Status: "captured", Captured: true}, nil
+		return Payment{ID: id, Amount: amount, Currency: currency, Status: "captured", Captured: true}, nil
 	}
 	if err != nil {
 		return Payment{}, fmt.Errorf("capture payment %s: %w", id, err)
 	}
-	if payment.ID != id || payment.Amount != amount || payment.Currency != "INR" || !payment.Captured {
+	if payment.ID != id || payment.Amount != amount || payment.Currency != currency || !payment.Captured {
 		return Payment{}, fmt.Errorf("capture payment %s: unexpected answer %+v", id, payment)
 	}
 	return payment, nil

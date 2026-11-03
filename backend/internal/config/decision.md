@@ -19,3 +19,8 @@ Environment variables and deployment secret store.
 ## Verification
 
 Use the package tests next to the source files in `README.md`. For changes crossing an API boundary, also check the mounted route/contract and the caller feature’s `flow.md`.
+
+## Dollar plan ids
+
+- **Decision:** `RAZORPAY_PLAN_ID_BASIC_USD`, `_PRO_USD` and `_BUSINESS_USD` are optional. Startup fails if any Razorpay plan id is used for two variables.
+- **Why:** a webhook names only the Razorpay plan; a shared id could grant the wrong plan or currency. See [billing decision](../billing/decision.md#us-dollar-billing-for-customers-outside-india).

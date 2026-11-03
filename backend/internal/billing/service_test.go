@@ -84,10 +84,10 @@ func TestCheckoutOfAnotherPlanCancelsTheUnpaidOneFirst(t *testing.T) {
 	ctx := context.Background()
 	f := newFixture(ctx, t)
 	f.sellTiers()
-	if _, err := f.svc.CheckoutPlan(ctx, f.org, PlanBasic); err != nil {
+	if _, err := f.svc.CheckoutPlan(ctx, f.org, PlanBasic, plans.INR); err != nil {
 		t.Fatal(err)
 	}
-	checkout, err := f.svc.CheckoutPlan(ctx, f.org, PlanPro)
+	checkout, err := f.svc.CheckoutPlan(ctx, f.org, PlanPro, plans.INR)
 	if err != nil || checkout.SubscriptionID != "sub_2" {
 		t.Fatalf("CheckoutPlan(pro) = %+v, %v; want the new sub_2", checkout, err)
 	}
@@ -103,11 +103,11 @@ func TestCheckoutOfAnotherPlanFailsWhenTheUnpaidOneCannotBeCancelled(t *testing.
 	ctx := context.Background()
 	f := newFixture(ctx, t)
 	f.sellTiers()
-	if _, err := f.svc.CheckoutPlan(ctx, f.org, PlanBasic); err != nil {
+	if _, err := f.svc.CheckoutPlan(ctx, f.org, PlanBasic, plans.INR); err != nil {
 		t.Fatal(err)
 	}
 	f.failWith = http.StatusBadGateway
-	if _, err := f.svc.CheckoutPlan(ctx, f.org, PlanPro); !errors.Is(err, ErrPaymentProvider) {
+	if _, err := f.svc.CheckoutPlan(ctx, f.org, PlanPro, plans.INR); !errors.Is(err, ErrPaymentProvider) {
 		t.Fatalf("CheckoutPlan(pro) error = %v, want ErrPaymentProvider", err)
 	}
 	if f.calls.Load() != 1 {
@@ -562,7 +562,7 @@ type fixture struct {
 	// cancels are the cancellations the fake Razorpay received, in order.
 	cancels []cancelCall
 	// payments are the capture and refund requests the fake Razorpay
-	// received, as "capture pay_x 149900" or "refund pay_x".
+	// received, as "capture pay_x 149900 INR" or "refund pay_x".
 	payments []string
 	// orders counts top-up orders created at the fake Razorpay.
 	orders atomic.Int32
@@ -605,11 +605,13 @@ func newFixture(ctx context.Context, t *testing.T) *fixture {
 		}
 		if id, ok := strings.CutPrefix(r.URL.Path, "/plans/"); ok {
 			got := razorpay.Plan{ID: id, Period: "monthly", Interval: 1}
-			got.Item.Currency = "INR"
-			for plan, configured := range f.svc.planIDs {
-				if configured == id {
-					definition, _ := plans.Get(plan)
-					got.Item.Amount = int64(definition.PriceINR) * 100
+			got.Item.Currency = plans.INR
+			for currency, ids := range map[string]map[string]string{plans.INR: f.svc.planIDs, plans.USD: f.svc.usdPlanIDs} {
+				for plan, configured := range ids {
+					if configured == id {
+						definition, _ := plans.Get(plan)
+						got.Item.Currency, got.Item.Amount = currency, int64(definition.Price(currency))*100
+					}
 				}
 			}
 			if f.planOverride != nil {
@@ -636,15 +638,15 @@ func newFixture(ctx context.Context, t *testing.T) *fixture {
 				Amount   int64  `json:"amount"`
 				Currency string `json:"currency"`
 			}
-			if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Currency != "INR" {
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil || (req.Currency != plans.INR && req.Currency != plans.USD) {
 				t.Errorf("capture request %+v, %v", req, err)
 			}
-			f.payments = append(f.payments, fmt.Sprintf("capture %s %d", id, req.Amount))
+			f.payments = append(f.payments, fmt.Sprintf("capture %s %d %s", id, req.Amount, req.Currency))
 			if f.captureAnswer != nil {
 				f.captureAnswer(w)
 				return
 			}
-			if err := json.NewEncoder(w).Encode(razorpay.Payment{ID: id, Amount: req.Amount, Currency: "INR", Status: "captured", Captured: true}); err != nil {
+			if err := json.NewEncoder(w).Encode(razorpay.Payment{ID: id, Amount: req.Amount, Currency: req.Currency, Status: "captured", Captured: true}); err != nil {
 				t.Errorf("encode capture: %v", err)
 			}
 			return
@@ -769,7 +771,7 @@ func TestCheckoutPlanUsesSelectedRazorpayPlan(t *testing.T) {
 				t.Fatalf("clear prior created subscription: %v", err)
 			}
 		}
-		if _, err := f.svc.CheckoutPlan(ctx, f.org, plan); err != nil {
+		if _, err := f.svc.CheckoutPlan(ctx, f.org, plan, plans.INR); err != nil {
 			t.Fatalf("CheckoutPlan(%s) error = %v", plan, err)
 		}
 		if got := f.lastPlanID.Load(); got != tierPlanIDs[plan] {

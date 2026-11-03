@@ -101,6 +101,9 @@ type Razorpay struct {
 	// PlanIDs maps a plan ("basic", "pro", "business") to the Razorpay plan
 	// that bills it. A plan without an id cannot be bought.
 	PlanIDs map[string]string
+	// USDPlanIDs maps a plan to the Razorpay plan that bills it in US dollars,
+	// for customers outside India. A plan without one is sold only in rupees.
+	USDPlanIDs map[string]string
 }
 
 const (
@@ -288,21 +291,34 @@ func loadRazorpay(getenv func(string) string) (*Razorpay, error) {
 			missing = append(missing, name)
 		}
 	}
-	planIDs := map[string]string{}
-	for plan, name := range map[string]string{
-		"basic": "RAZORPAY_PLAN_ID_BASIC", "pro": "RAZORPAY_PLAN_ID_PRO", "business": "RAZORPAY_PLAN_ID_BUSINESS",
-	} {
-		if id := strings.TrimSpace(getenv(name)); id != "" {
-			planIDs[plan] = id
+	planIDs, usdPlanIDs := map[string]string{}, map[string]string{}
+	// A webhook names only the Razorpay plan, so one id must never stand for
+	// two plans or two currencies.
+	owner := map[string]string{}
+	read := func(ids map[string]string, plan, name string) error {
+		id := strings.TrimSpace(getenv(name))
+		if id == "" {
+			return nil
+		}
+		if other, taken := owner[id]; taken {
+			return fmt.Errorf("%s and %s hold the same Razorpay plan id; each plan and currency needs its own", other, name)
+		}
+		owner[id], ids[plan] = name, id
+		return nil
+	}
+	for _, plan := range []string{"basic", "pro", "business"} {
+		name := "RAZORPAY_PLAN_ID_" + strings.ToUpper(plan)
+		if err := errors.Join(read(planIDs, plan, name), read(usdPlanIDs, plan, name+"_USD")); err != nil {
+			return nil, err
 		}
 	}
 	switch {
-	case len(missing) == len(names) && len(planIDs) == 0:
+	case len(missing) == len(names) && len(owner) == 0:
 		return nil, nil
 	case len(missing) > 0:
 		return nil, fmt.Errorf("set RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET and a plan id, or none; missing %s", strings.Join(missing, ", "))
 	case len(planIDs) == 0:
 		return nil, errors.New("set at least one of RAZORPAY_PLAN_ID_BASIC, RAZORPAY_PLAN_ID_PRO, RAZORPAY_PLAN_ID_BUSINESS: without a plan nothing can be bought")
 	}
-	return &Razorpay{KeyID: values[0], KeySecret: values[1], WebhookSecret: values[2], PlanIDs: planIDs}, nil
+	return &Razorpay{KeyID: values[0], KeySecret: values[1], WebhookSecret: values[2], PlanIDs: planIDs, USDPlanIDs: usdPlanIDs}, nil
 }

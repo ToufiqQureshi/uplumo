@@ -1,10 +1,12 @@
 package billing
 
 import (
+	"cmp"
 	"errors"
 	"net/http"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/toufiqqureshi/uplumo/backend/internal/plans"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/httpx"
 )
 
@@ -33,12 +35,21 @@ func mountTopUps(mux *http.ServeMux, d Deps) {
 		}
 		var in struct {
 			PackID string `json:"packId"`
+			// Currency is what the browser showed the price in.
+			Currency string `json:"currency"`
 		}
 		if err := httpx.DecodeJSONLimit(r.Body, 1024, &in); err != nil {
 			httpx.WriteError(w, 400, "invalid_request", "Choose a pack.")
 			return
 		}
-		out, err := d.Service.CheckoutTopUp(r.Context(), user.OrganizationID, in.PackID)
+		currency := checkoutCurrency(d.Service, d.Country, r)
+		// A browser built before dollar prices sends no currency; it showed
+		// rupees.
+		if cmp.Or(in.Currency, plans.INR) != currency {
+			httpx.WriteError(w, 409, "currency_changed", "Prices changed for your location. Check the new price and try again.")
+			return
+		}
+		out, err := d.Service.CheckoutTopUp(r.Context(), user.OrganizationID, in.PackID, currency)
 		switch {
 		case err == nil:
 			httpx.WriteJSON(w, 200, out)

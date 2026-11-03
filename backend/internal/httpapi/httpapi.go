@@ -177,6 +177,10 @@ type Deps struct {
 	MCP *mcp.Deps
 	// Site is the public landing and pricing pages.
 	Site *site.Site
+	// Country is the ISO country code of a request's trusted client address,
+	// or "" when unknown. It picks the currency prices are shown and billed
+	// in. Nil shows and bills rupees to everyone.
+	Country func(*http.Request) string
 	// StaticDir is the built React app that serves every route not listed here.
 	StaticDir         string
 	TrustedProxyCIDRs []netip.Prefix
@@ -306,7 +310,7 @@ func NewHandler(d Deps) http.Handler {
 	if billingRoutes == nil {
 		billingRoutes = d.Billing
 	}
-	billing.Mount(mux, billing.Deps{Logger: d.Logger, Service: billingRoutes, WithSession: withSession, Credits: d.Credits})
+	billing.Mount(mux, billing.Deps{Logger: d.Logger, Service: billingRoutes, WithSession: withSession, Credits: d.Credits, Country: d.Country})
 	// Without billing the server has no plans to gate on, so every feature
 	// below is open.
 	var brandingPlans branding.PaidPlans

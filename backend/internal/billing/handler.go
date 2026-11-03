@@ -1,6 +1,7 @@
 package billing
 
 import (
+	"cmp"
 	"encoding/json"
 	"errors"
 	"io"
@@ -17,6 +18,8 @@ const maxWebhookBody = 256 << 10
 
 type statusResponse struct {
 	Status
+	// CheckoutCurrency is what a new checkout from this request is billed in.
+	CheckoutCurrency   string    `json:"checkoutCurrency"`
 	PaymentsConfigured bool      `json:"paymentsConfigured"`
 	AvailablePlans     []string  `json:"availablePlans"`
 	Usage              PlanUsage `json:"usage"`
@@ -28,16 +31,28 @@ type Deps struct {
 	Service     *Service
 	WithSession func(http.Handler) http.Handler
 	Credits     *CreditLedgerService
+	// Country is the ISO country code of the request's trusted client
+	// address, or "" when unknown. It decides the checkout currency. Nil
+	// means unknown for every request: everyone is billed in rupees.
+	Country func(*http.Request) string
+}
+
+// checkoutCurrency is the currency a checkout from r is billed in.
+func checkoutCurrency(svc *Service, country func(*http.Request) string, r *http.Request) string {
+	if svc == nil || country == nil {
+		return plans.INR
+	}
+	return svc.CurrencyFor(country(r))
 }
 
 // Mount registers billing routes on mux.
 func Mount(mux *http.ServeMux, d Deps) {
 	mountTopUps(mux, d)
 	mux.Handle("POST /webhooks/razorpay", webhookHandler(d.Logger, d.Service))
-	mux.Handle("GET /api/v1/billing/plans", d.WithSession(http.HandlerFunc(plansHandler)))
-	mux.Handle("GET /api/v1/billing/status", d.WithSession(statusHandler(d.Logger, d.Service)))
-	mux.Handle("POST /api/v1/billing/checkout", d.WithSession(checkoutHandler(d.Logger, d.Service)))
-	mux.Handle("POST /api/v1/billing/cancel", d.WithSession(cancelHandler(d.Logger, d.Service)))
+	mux.Handle("GET /api/v1/billing/plans", d.WithSession(plansHandler(d.Service, d.Country)))
+	mux.Handle("GET /api/v1/billing/status", d.WithSession(statusHandler(d.Logger, d.Service, d.Country)))
+	mux.Handle("POST /api/v1/billing/checkout", d.WithSession(checkoutHandler(d.Logger, d.Service, d.Country)))
+	mux.Handle("POST /api/v1/billing/cancel", d.WithSession(cancelHandler(d.Logger, d.Service, d.Country)))
 	mux.Handle("GET /api/v1/billing/credits", d.WithSession(creditsHandler(d.Logger, d.Service, d.Credits)))
 	mux.Handle("POST /api/v1/billing/usage-events", d.WithSession(usageEventsHandler(d.Logger, d.Credits)))
 	mux.Handle("GET /api/v1/billing/usage", d.WithSession(usageHandler(d.Logger, d.Service, d.Credits, time.Now)))
@@ -48,23 +63,29 @@ type planInfo struct {
 	ID         string   `json:"id"`
 	Name       string   `json:"name"`
 	PriceINR   int      `json:"priceInr"`
+	PriceUSD   int      `json:"priceUsd"`
 	Summary    string   `json:"summary"`
 	Highlights []string `json:"highlights"`
 }
 
 // plansHandler returns the plan catalog, so the app shows the same prices
-// and promises as the public pricing page.
-func plansHandler(w http.ResponseWriter, _ *http.Request) {
-	catalog := plans.Catalog()
-	out := make([]planInfo, len(catalog))
-	for i, plan := range catalog {
-		out[i] = planInfo{ID: plan.ID, Name: plan.Name, PriceINR: plan.PriceINR, Summary: plan.Summary, Highlights: plan.Highlights}
+// and promises as the public pricing page, and the currency a checkout from
+// this request is billed in. Both prices are sent so a subscription already
+// running in the other currency still shows what it costs.
+func plansHandler(svc *Service, country func(*http.Request) string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		currency := checkoutCurrency(svc, country, r)
+		catalog := plans.Catalog()
+		out := make([]planInfo, len(catalog))
+		for i, plan := range catalog {
+			out[i] = planInfo{ID: plan.ID, Name: plan.Name, PriceINR: plan.PriceINR, PriceUSD: plan.PriceUSD, Summary: plan.Summary, Highlights: plan.HighlightsIn(currency)}
+		}
+		httpx.WriteJSON(w, http.StatusOK, map[string]any{"plans": out, "currency": currency})
 	}
-	httpx.WriteJSON(w, http.StatusOK, map[string]any{"plans": out})
 }
 
 // statusHandler returns the plan of the signed-in user's active organization.
-func statusHandler(logger *slog.Logger, svc *Service) http.HandlerFunc {
+func statusHandler(logger *slog.Logger, svc *Service, country func(*http.Request) string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		user, ok := billingUser(w, r, svc)
 		if !ok {
@@ -82,12 +103,17 @@ func statusHandler(logger *slog.Logger, svc *Service) http.HandlerFunc {
 			httpx.WriteError(w, http.StatusInternalServerError, "internal", "Something went wrong. Please try again.")
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, statusResponse{Status: status, PaymentsConfigured: svc.PaymentsConfigured(), AvailablePlans: svc.AvailablePlans(), Usage: usage})
+		httpx.WriteJSON(w, http.StatusOK, statusResponse{Status: status, CheckoutCurrency: checkoutCurrency(svc, country, r), PaymentsConfigured: svc.PaymentsConfigured(), AvailablePlans: svc.AvailablePlans(), Usage: usage})
 	}
 }
 
-// checkoutHandler starts a pro subscription for the signed-in user's active organization.
-func checkoutHandler(logger *slog.Logger, svc *Service) http.HandlerFunc {
+// checkoutHandler starts a subscription for the signed-in user's active
+// organization, billed in the currency of where the request comes from. The
+// browser sends the currency it showed the price in; when that is no longer
+// the currency the server would bill (a VPN switched on, a trip abroad), the
+// checkout is refused with 409 so the customer sees the new price before
+// paying it.
+func checkoutHandler(logger *slog.Logger, svc *Service, country func(*http.Request) string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		user, ok := billingUser(w, r, svc)
 		if !ok {
@@ -98,7 +124,8 @@ func checkoutHandler(logger *slog.Logger, svc *Service) http.HandlerFunc {
 			return
 		}
 		var input struct {
-			Plan string `json:"plan"`
+			Plan     string `json:"plan"`
+			Currency string `json:"currency"`
 		}
 		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 8<<10))
 		decoder.DisallowUnknownFields()
@@ -109,7 +136,14 @@ func checkoutHandler(logger *slog.Logger, svc *Service) http.HandlerFunc {
 		if input.Plan == "" {
 			input.Plan = PlanPro
 		}
-		checkout, err := svc.CheckoutPlan(r.Context(), user.OrganizationID, input.Plan)
+		currency := checkoutCurrency(svc, country, r)
+		// A browser built before dollar prices sends no currency; it showed
+		// rupees.
+		if shown := cmp.Or(input.Currency, plans.INR); shown != currency {
+			httpx.WriteError(w, http.StatusConflict, "currency_changed", "Prices changed for your location. Check the new price and try again.")
+			return
+		}
+		checkout, err := svc.CheckoutPlan(r.Context(), user.OrganizationID, input.Plan, currency)
 		if errors.Is(err, ErrAlreadySubscribed) {
 			httpx.WriteError(w, http.StatusConflict, "already_subscribed", "This workspace already has a subscription.")
 			return
@@ -133,7 +167,7 @@ func checkoutHandler(logger *slog.Logger, svc *Service) http.HandlerFunc {
 
 // cancelHandler cancels the subscription of the signed-in user's active
 // organization and answers with the plan that results.
-func cancelHandler(logger *slog.Logger, svc *Service) http.HandlerFunc {
+func cancelHandler(logger *slog.Logger, svc *Service, country func(*http.Request) string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		user, ok := billingUser(w, r, svc)
 		if !ok {
@@ -165,7 +199,7 @@ func cancelHandler(logger *slog.Logger, svc *Service) http.HandlerFunc {
 			httpx.WriteError(w, http.StatusInternalServerError, "internal", "Something went wrong. Please try again.")
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, statusResponse{Status: status, PaymentsConfigured: svc.PaymentsConfigured(), AvailablePlans: svc.AvailablePlans(), Usage: usage})
+		httpx.WriteJSON(w, http.StatusOK, statusResponse{Status: status, CheckoutCurrency: checkoutCurrency(svc, country, r), PaymentsConfigured: svc.PaymentsConfigured(), AvailablePlans: svc.AvailablePlans(), Usage: usage})
 	}
 }
 

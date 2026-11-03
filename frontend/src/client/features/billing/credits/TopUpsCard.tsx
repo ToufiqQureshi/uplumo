@@ -1,8 +1,13 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
-import { apiRequest } from "@/client/lib/uplumoApi";
+import { ApiError, apiRequest } from "@/client/lib/uplumoApi";
 import { Button } from "@/client/components/ui/button";
+import {
+  billingStatusQueryOptions,
+  formatPrice,
+  priceIn,
+} from "../plan/planApi";
 import { openTopUpCheckout } from "../plan/razorpay";
 
 const packsSchema = z.array(
@@ -10,6 +15,7 @@ const packsSchema = z.array(
     id: z.string(),
     name: z.string(),
     priceInr: z.number(),
+    priceUsd: z.number(),
     credits: z.number(),
     sites: z.number(),
   }),
@@ -51,6 +57,9 @@ export function TopUpsCard({
   // The purchase whose payment Razorpay reported as completed, waiting for
   // the signed webhook to grant it.
   const [paid, setPaid] = useState<string | null>(null);
+  // Packs are charged in the currency a checkout from here is billed in.
+  const billing = useQuery({ ...billingStatusQueryOptions, enabled });
+  const currency = billing.data?.checkoutCurrency;
   const packs = useQuery({
     queryKey: ["billing", "topups"],
     queryFn: () => apiRequest("/api/v1/billing/topups", packsSchema),
@@ -63,12 +72,20 @@ export function TopUpsCard({
         "/api/v1/billing/topups/checkout",
         checkoutSchema,
         "POST",
-        { packId },
+        { packId, currency },
       );
       // A closed window leaves the order unpaid; the next click reuses it.
       if (await openTopUpCheckout(order)) setPaid(order.id);
     },
     retry: false,
+    onError: (error) => {
+      // The location changed since the price was shown: show the new one.
+      if (error instanceof ApiError && error.code === "currency_changed") {
+        void queryClient.invalidateQueries({
+          queryKey: billingStatusQueryOptions.queryKey,
+        });
+      }
+    },
   });
   const status = useQuery({
     queryKey: ["billing", "topup", paid],
@@ -101,7 +118,7 @@ export function TopUpsCard({
         </Button>
       </p>
     );
-  if (!packs.data?.length) return null;
+  if (!packs.data?.length || !currency) return null;
   const waiting = Boolean(paid) && !granted;
   return (
     <section className="space-y-3 rounded-xl border border-border p-5">
@@ -117,7 +134,7 @@ export function TopUpsCard({
             className="max-w-xs space-y-2 rounded-lg border border-border p-4"
           >
             <p className="font-medium">{p.name}</p>
-            <p>₹{p.priceInr.toLocaleString("en-IN")}</p>
+            <p>{formatPrice(priceIn(p, currency), currency)}</p>
             <p className="text-xs text-muted-foreground">{lifetime(p)}</p>
             <Button
               disabled={!canManageBilling || checkout.isPending || waiting}

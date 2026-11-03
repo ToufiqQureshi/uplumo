@@ -27,3 +27,8 @@ Use the package tests next to the source files in `README.md`. For changes cross
 - **Why:** the owner wants usage to be paid in credits ("jitna use utne credit"), not by site count, and customers who run out to buy more instead of waiting a month. Agency had no customers. Basic cannot buy packs so it is not a cheaper Pro.
 - **Preserve:** one source for prices and limits (this package); a pack never sells a credit below the cheapest plan that may buy it and never costs over a third of its price at the provider; a plan id left out of the catalog unlocks nothing. The Business card's add-on line must equal the pack (`TestBusinessCardStatesTheSiteAddOnPrice`).
 - **Trace:** `catalog.go`, `catalog_test.go`; selling and granting in `../billing/topups.go`; the pricing page in `../site/site.go`.
+
+## Dollar prices
+
+- **Decision:** Every paid plan and pack also has a US dollar price (`PriceUSD`), set on its own, not converted from rupees. `CurrencyFor` maps a country to its currency; `Price`/`HighlightsIn` give a plan's price and copy in a currency, so the Business card states the site add-on in the visitor's currency.
+- **Why / Preserve:** see [billing decision](../billing/decision.md#us-dollar-billing-for-customers-outside-india). Dollar prices keep the same margin rule as rupees (monthly credits cost at most a third of the price; packs never cheaper per credit than a plan), asserted in `catalog_test.go`.

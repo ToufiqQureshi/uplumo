@@ -38,7 +38,7 @@ func TestCancelHandlerRefusesBeforeTouchingBilling(t *testing.T) {
 			}
 			req := httptest.NewRequestWithContext(ctx, http.MethodPost, "/api/v1/billing/cancel", nil)
 			rec := httptest.NewRecorder()
-			cancelHandler(logger, tt.svc).ServeHTTP(rec, req)
+			cancelHandler(logger, tt.svc, nil).ServeHTTP(rec, req)
 			if rec.Code != tt.wantCode || !strings.Contains(rec.Body.String(), tt.wantBody) {
 				t.Fatalf("status %d body %s, want %d with %s", rec.Code, rec.Body.String(), tt.wantCode, tt.wantBody)
 			}

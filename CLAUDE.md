@@ -9,9 +9,10 @@ Every coding agent (Claude, Codex, Cursor, others) follows this file.
   service `uplumo` (one Go server that also serves the React build, plus
   Railway Redis and Supabase Postgres). Merging to `main` does **not**
   deploy: see `docs/DEPLOY.md`.
-- Razorpay runs with **live** keys: customers pay real money. A billing,
-  credit or plan bug now takes or loses real money, so treat every billing
-  change as a finance change (section 3).
+- Razorpay runs with **live** keys: customers pay real money, in rupees in
+  India (and unknown locations) and in US dollars elsewhere (PR #261). A
+  billing, credit or plan bug now takes or loses real money, so treat every
+  billing change as a finance change (section 3).
 - `DATAFORSEO_API_KEY` and `OPENROUTER_API_KEY` **are set in production**.
   Every DataForSEO task and every OpenRouter token is billed to Uplumo for
   real, so a wasted call is lost money (section 3, "Money first").
@@ -199,7 +200,8 @@ static SPA that the Go server serves and that calls `/api/v1/`. No Next.js.
 - **Plans:** prices, limits and what each plan includes live in one place,
   `backend/internal/plans/catalog.go`. The pricing page, the Billing screen
   and every plan check read it; never copy a price or a limit anywhere else.
-  The amount on each Razorpay plan must equal the catalog's price.
+  The amount on each Razorpay plan must equal the catalog's price in that
+  plan's currency (INR and USD plans).
 - **Brand:** the product is Uplumo. Never add the upstream name, links,
   logos or copy. The only mention is the license attribution
   (`LICENSE-OPENSEO-MIT`, never delete it).
@@ -312,6 +314,22 @@ Propose with a recommendation; do not decide silently.
   in the PR.
 - **Every change records its decision** in the feature's `decision.md`
   (next section). There is no change too small for this.
+- **Every doc you open is checked, then fixed at once.** Whenever you open
+  any doc (this file, `DECISIONS.md`, `ROADMAP.md`, `docs/**`, a feature's
+  `README.md`/`flow.md`/`decision.md`), compare it with the code and
+  production as they are now. If anything is stale, update it right away in
+  the change you are making, even if the doc was opened only for reading.
+  Never leave a known-stale doc for later.
+- **Every piece of work goes in the work report.** The owner reports to
+  stakeholders from `D:\seomarine\Uplumo work report.xlsx` (outside the repo,
+  so parallel PRs never conflict on a binary file). For every PR, bug fix,
+  deploy, production change or audit, add a row to its **PR Log** sheet: PR #,
+  title, area, type, problem found, what changed, evidence, money/customer
+  impact, tests, lines +/−, files, merged date, status, verified live, link.
+  Update the row when the PR merges or deploys. Put audit results without a PR
+  in **Audit Findings** and owner asks in **Open Decisions**. An agent that
+  cannot reach that path puts the row, in those columns, in its PR
+  description, and the next agent with access copies it in.
 
 ### Weekly summary (`docs/WEEKLY.md`)
 

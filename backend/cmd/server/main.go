@@ -148,6 +148,17 @@ func run(logger *slog.Logger) (err error) {
 	if err != nil {
 		return err
 	}
+	// country is the visitor's country from their trusted client address
+	// (TRUSTED_PROXY_CIDRS), never from a header the browser could set. It
+	// decides the currency prices are shown and billed in.
+	country := func(r *http.Request) string {
+		code, err := countryLookup.Country(httpx.ClientIP(r, cfg.TrustedProxyCIDRs))
+		if err != nil {
+			logger.WarnContext(r.Context(), "look up visitor country; showing rupee prices", "err", err)
+			return ""
+		}
+		return code
+	}
 
 	credits := billing.NewCreditLedgerService(db)
 	reconcileCredits := func() {
@@ -183,11 +194,25 @@ func run(logger *slog.Logger) (err error) {
 	if rzp := cfg.Razorpay; rzp != nil {
 		billingSvc = billing.NewPlanService(db, razorpay.NewClient(razorpay.BaseURL, rzp.KeyID, rzp.KeySecret), rzp.PlanIDs, rzp.WebhookSecret)
 		billingRoutes = billingSvc
+		if len(rzp.USDPlanIDs) > 0 {
+			// Checked before serving: a dollar price must never show unless
+			// checkout can charge exactly that. Razorpay being slow or down
+			// here leaves everyone on rupees until the next start.
+			billingSvc.SetUSDPlanIDs(rzp.USDPlanIDs)
+			usdCtx, cancelUSD := context.WithTimeout(ctx, 20*time.Second)
+			if err := billingSvc.EnableUSD(usdCtx); err != nil {
+				logger.Error("US dollar billing stays off; customers outside India pay in rupees", "err", err)
+			} else {
+				pages.ShowUSD(country)
+				logger.Info("US dollar billing on for customers outside India")
+			}
+			cancelUSD()
+		}
 		go func() {
 			checkCtx, cancel := context.WithTimeout(ctx, time.Minute)
 			defer cancel()
 			for _, plan := range billingSvc.AvailablePlans() {
-				if err := billingSvc.VerifyPlan(checkCtx, plan); err != nil {
+				if err := billingSvc.VerifyPlan(checkCtx, plan, planCatalog.INR); err != nil {
 					logger.Error("billing plan verification failed", "plan", plan, "err", err)
 				} else {
 					logger.Info("billing plan verified", "plan", plan)
@@ -448,6 +473,7 @@ func run(logger *slog.Logger) (err error) {
 			ProjectContext:          projectContextSvc,
 			KeywordResearch:         keywordResearch,
 			Site:                    pages,
+			Country:                 country,
 			StaticDir:               cfg.StaticDir,
 		}),
 		ReadHeaderTimeout: 5 * time.Second,

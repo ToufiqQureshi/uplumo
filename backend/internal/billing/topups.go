@@ -61,13 +61,14 @@ func (s *Service) TopUpOffers(ctx context.Context, orgID string) ([]plans.Pack, 
 }
 
 // CheckoutTopUp reuses a pending order and never grants anything before a
-// captured payment.
-func (s *Service) CheckoutTopUp(ctx context.Context, org, packID string) (TopUpCheckout, error) {
+// captured payment. currency is decided by the caller from where the request
+// comes from (CurrencyFor), never by the browser.
+func (s *Service) CheckoutTopUp(ctx context.Context, org, packID, currency string) (TopUpCheckout, error) {
 	if !s.PaymentsConfigured() {
 		return TopUpCheckout{}, ErrPaymentUnavailable
 	}
 	p, ok := plans.GetPack(packID)
-	if !ok {
+	if !ok || p.Price(currency) <= 0 || (currency == plans.USD && !s.sellsUSD) {
 		return TopUpCheckout{}, errTopUpUnavailable
 	}
 	allowed, err := s.Allows(ctx, org, p.Feature)
@@ -81,7 +82,7 @@ func (s *Service) CheckoutTopUp(ctx context.Context, org, packID string) (TopUpC
 	if p.Sites > 0 {
 		days = plans.SiteAddOnDays
 	}
-	out := TopUpCheckout{ID: "tup_" + rand.Text(), PackID: p.ID, KeyID: s.razorpay.KeyID(), Amount: p.PriceINR * 100, Currency: "INR", Credits: p.Credits, Sites: p.Sites, Status: "creating"}
+	out := TopUpCheckout{ID: "tup_" + rand.Text(), PackID: p.ID, KeyID: s.razorpay.KeyID(), Amount: p.Price(currency) * 100, Currency: currency, Credits: p.Credits, Sites: p.Sites, Status: "creating"}
 	fresh := false
 	err = pgdb.InTx(ctx, s.repo.db, func(tx pgx.Tx) error {
 		var orgID string
@@ -94,16 +95,15 @@ func (s *Service) CheckoutTopUp(ctx context.Context, org, packID string) (TopUpC
 			return err
 		}
 		var existing TopUpCheckout
-		err := tx.QueryRow(ctx, `SELECT id,pack_id,COALESCE(order_id,''),amount_paise,credits,sites,status FROM go_billing_topups WHERE organization_id=$1 AND status IN ('creating','ready')`, org).Scan(&existing.ID, &existing.PackID, &existing.OrderID, &existing.Amount, &existing.Credits, &existing.Sites, &existing.Status)
+		err := tx.QueryRow(ctx, `SELECT id,pack_id,COALESCE(order_id,''),amount_paise,currency,credits,sites,status FROM go_billing_topups WHERE organization_id=$1 AND status IN ('creating','ready')`, org).Scan(&existing.ID, &existing.PackID, &existing.OrderID, &existing.Amount, &existing.Currency, &existing.Credits, &existing.Sites, &existing.Status)
 		switch {
 		case errors.Is(err, pgx.ErrNoRows):
 		case err != nil:
 			return err
 		case existing.Status == "creating":
 			return errTopUpPending
-		case existing.PackID == packID && existing.Amount == out.Amount:
+		case existing.PackID == packID && existing.Amount == out.Amount && existing.Currency == out.Currency:
 			existing.KeyID = out.KeyID
-			existing.Currency = out.Currency
 			out = existing
 			return nil
 		default:
@@ -114,14 +114,14 @@ func (s *Service) CheckoutTopUp(ctx context.Context, org, packID string) (TopUpC
 				return err
 			}
 		}
-		_, err = tx.Exec(ctx, `INSERT INTO go_billing_topups(id,organization_id,pack_id,amount_paise,credits,sites,expires_after_days) VALUES($1,$2,$3,$4,$5,$6,$7)`, out.ID, org, p.ID, out.Amount, out.Credits, out.Sites, days)
+		_, err = tx.Exec(ctx, `INSERT INTO go_billing_topups(id,organization_id,pack_id,amount_paise,currency,credits,sites,expires_after_days) VALUES($1,$2,$3,$4,$8,$5,$6,$7)`, out.ID, org, p.ID, out.Amount, out.Credits, out.Sites, days, out.Currency)
 		fresh = err == nil
 		return err
 	})
 	if err != nil || !fresh {
 		return out, err
 	}
-	order, err := s.razorpay.CreateOrder(ctx, out.ID, out.Amount)
+	order, err := s.razorpay.CreateOrder(ctx, out.ID, out.Amount, out.Currency)
 	// Persist even if the browser closed. A ready order is reused on the next
 	// checkout, and only the signed captured-payment webhook grants anything.
 	persist, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
@@ -176,19 +176,19 @@ func (s *Service) captureTopUpPayment(ctx context.Context, body []byte) (Webhook
 	if p.ID == "" || p.Status != "authorized" {
 		return WebhookIgnored, nil
 	}
-	var status string
+	var status, currency string
 	var amount int64
-	err := s.repo.db.QueryRow(ctx, `SELECT status,amount_paise FROM go_billing_topups WHERE order_id=$1`, p.OrderID).Scan(&status, &amount)
+	err := s.repo.db.QueryRow(ctx, `SELECT status,amount_paise,currency FROM go_billing_topups WHERE order_id=$1`, p.OrderID).Scan(&status, &amount, &currency)
 	if errors.Is(err, pgx.ErrNoRows) || status == "paid" {
 		return WebhookIgnored, nil
 	}
 	if err != nil {
 		return "", fmt.Errorf("load top-up for order %s: %w", p.OrderID, err)
 	}
-	if p.Currency != "INR" || p.Amount != amount {
+	if p.Currency != currency || p.Amount != amount {
 		return "", ErrInvalidEvent
 	}
-	if _, err := s.razorpay.CapturePayment(ctx, p.ID, amount); err != nil {
+	if _, err := s.razorpay.CapturePayment(ctx, p.ID, amount, currency); err != nil {
 		return "", fmt.Errorf("%w: %w", ErrPaymentProvider, err)
 	}
 	return WebhookProcessed, nil
@@ -214,17 +214,17 @@ func (s *Service) applyTopUpPayment(ctx context.Context, body []byte) (WebhookRe
 	}
 	result := WebhookIgnored
 	err := pgdb.InTx(ctx, s.repo.db, func(tx pgx.Tx) error {
-		var id, org, status string
+		var id, org, status, currency string
 		var amount, credits int64
 		var sites, days int
-		err := tx.QueryRow(ctx, `SELECT id,organization_id,status,amount_paise,credits,sites,expires_after_days FROM go_billing_topups WHERE order_id=$1 FOR UPDATE`, p.OrderID).Scan(&id, &org, &status, &amount, &credits, &sites, &days)
+		err := tx.QueryRow(ctx, `SELECT id,organization_id,status,amount_paise,currency,credits,sites,expires_after_days FROM go_billing_topups WHERE order_id=$1 FOR UPDATE`, p.OrderID).Scan(&id, &org, &status, &amount, &currency, &credits, &sites, &days)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
 		if err != nil {
 			return err
 		}
-		if p.Currency != "INR" || p.Amount != amount {
+		if p.Currency != currency || p.Amount != amount {
 			return ErrInvalidEvent
 		}
 		if status == "paid" {

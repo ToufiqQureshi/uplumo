@@ -183,3 +183,9 @@ Why: optional recognition changes the privacy behavior of enabled customer snipp
   no published posts, no blog assets/discovery links, and 404 responses for
   all former article URLs. Parser, escaping and safe-cover tests remain.
 - No billing, provider, database, authentication or product feature changes.
+
+## Prices in the visitor's currency
+
+- **Decision:** The landing and pricing pages are rendered once per currency. After billing has verified its dollar plans, `ShowUSD` serves the dollar pages to visitors outside India; otherwise everyone gets rupees, exactly as before. Those pages are then sent `private` so shared caches cannot mix currencies. Terms and About say rupees in India, dollars elsewhere.
+- **Why:** a page must never show a price checkout cannot charge ([billing decision](../billing/decision.md#us-dollar-billing-for-customers-outside-india)).
+- **Preserve / limit:** search crawlers mostly fetch from the US, so indexed snippets may show dollar prices; the owner may revisit this. Other pages carry rupee JSON-LD offers as before.

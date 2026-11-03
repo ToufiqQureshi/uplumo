@@ -17,6 +17,13 @@ feelings, business calls, priorities, corrections. Read it after
 
 ---
 
+## 3 Nov 2026: dollar prices for customers outside India
+
+- Owner: "bro muje internation payment gatewy chahiye"; "outside india wale users ko dollar me dikhey".
+- Chose real USD billing (not INR shown as approximate $), prices $15 / $39 / $69, on Razorpay International (already enabled on the live account; the second Razorpay account in his login is not the live one).
+- Owner: "production grade ho ... ek pr me sab code ... double payment, network timeout ... nai hone chahiye". Wants short Hinglish replies.
+- Pack prices ($19 / $59 / $12) were Claude's proposal; see DECISIONS.md.
+
 ## 2 Nov 2026: DFS bill, "pura paisa deke adhey cheezey dikha re"
 
 - Owner: cache-only fixes won't solve it; the two problems are unnecessary paid calls and paying for full DFS data but showing half. Wants every claim verified on uplumo.com and with real (paid if needed) tests, then fixed.

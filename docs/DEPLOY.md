@@ -19,8 +19,12 @@ instead (`railway login` once):
 
 ```sh
 git fetch origin && git checkout --detach origin/main
-railway up --service uplumo -e production
+railway up --project 12af3d2f-29fa-41da-8a61-5a485a96fafa --service uplumo -e production
 ```
+
+Always pass `--project` when the checkout is not linked (a fresh worktree is
+not): without it `railway up` creates a new, empty Railway project named after
+the folder and deploys there (it happened on 3 Nov 2026).
 
 After a deploy, require `https://uplumo.com/readyz` to return 200, then open the
 page you changed. `/api/health` is only process liveness; `/readyz` checks
@@ -103,6 +107,12 @@ in Live Mode:
    `RAZORPAY_PLAN_ID_BUSINESS`. Agency is no longer sold and
    `RAZORPAY_PLAN_ID_AGENCY` is ignored; remove it. A plan left without
    an id simply cannot be bought.
+   For customers outside India, also create one monthly **USD** plan per
+   plan at the catalog's `PriceUSD` (Basic $15, Pro $39, Business $69):
+   `RAZORPAY_PLAN_ID_BASIC_USD`, `RAZORPAY_PLAN_ID_PRO_USD`,
+   `RAZORPAY_PLAN_ID_BUSINESS_USD`. International payments must be enabled
+   on the account. The server checks all three at startup and logs
+   "US dollar billing on" or, on any mismatch, keeps everyone on rupees.
 2. Add a webhook to `https://uplumo.com/webhooks/razorpay` with a secret of
    your own; the same value is `RAZORPAY_WEBHOOK_SECRET`. Subscribe it to
    `subscription.activated`, `.charged`, `.cancelled`, `.halted` and

@@ -16,6 +16,21 @@ Owns plan access, credit ledger/reservations, subscriptions, usage and verified 
 
 - Preserve catalog prices, grants and limits during this replay fix. The current 4.35-week affordability assertion does not prove five weekly runs fit: Business may require 15,400 credits versus its 15,000 grant at the deepest allowed desktop check. See README for the calculation; no plan-policy change is implied.
 
+
+## US dollar billing for customers outside India
+
+- **Decision:** Customers outside India see and pay US dollar prices; India and unknown locations keep rupees. Plans: Basic $15, Pro $39, Business $69 (owner, 3 Nov 2026). Packs: 5,000 credits $19, 15,000 credits $59, 5 more websites $12 (Claude's proposal, owner to confirm). Prices live only in `internal/plans/catalog.go` (`PriceUSD`). Each plan has its own Razorpay dollar plan (`RAZORPAY_PLAN_ID_<PLAN>_USD`); packs use dollar Razorpay orders.
+- **Why:** Foreign customers were shown and charged rupees, which their banks convert with fees and some cards decline. Razorpay International is already enabled on the live account and supports dollar subscription plans.
+- **Preserve:**
+  - **The server picks the currency, never the browser.** Country comes from the trusted client address (`httpx.ClientIP` with `TRUSTED_PROXY_CIDRS`) looked up in the embedded geo database, not from a header a visitor can set. `plans.CurrencyFor`: `IN` or unknown pays rupees, every other country dollars.
+  - **The customer pays the currency they were shown.** Checkout and pack checkout carry the currency the browser displayed; when the server would bill another (VPN, travel) it answers 409 `currency_changed` before any Razorpay call, and the app reloads prices. A browser that sends no currency showed rupees.
+  - **All or nothing, verified first.** `EnableUSD` runs at startup before serving: every plan sold in rupees must have a dollar Razorpay plan that is monthly, in USD and exactly the catalog amount. Any failure (missing id, wrong amount, Razorpay down) leaves everyone on rupees and the pricing page in rupees (`site.ShowUSD` is only called after success). Every checkout re-verifies its plan.
+  - **Renewals never depend on that check.** Dollar plan ids are always known to webhooks (`SetUSDPlanIDs`), so a running dollar subscription renews and earns its credits even when dollar sales are off at this start. A dollar id equal to a rupee id is refused by config and ignored by the service: one Razorpay id must map to one plan and one currency.
+  - **No double payment.** The existing per-workspace checkout lock, unpaid-subscription reuse and second-live-subscription refund apply in both currencies. An unpaid subscription is reused only for the same plan *and* currency; otherwise it is cancelled before a new one is created, and checkout fails if that cancel fails. Pack orders are reused only for the same pack, amount and currency.
+  - **Amounts and currency are checked together.** Subscriptions store `currency` (migration 50); pack orders store `currency` next to `amount_paise` (subunits: paise or cents). A captured or authorized payment must match both; capture sends the order's currency.
+  - **Pages with country-dependent prices are `private`** in `Cache-Control`, so a shared cache never serves one country's prices to another.
+- **Trace:** `service.go` (`SetUSDPlanIDs`, `EnableUSD`, `CurrencyFor`, `VerifyPlan`, `CheckoutPlan`, webhook plan lookup), `topups.go`, `handler.go`, `topup_handler.go`, `cmd/server/main.go`, migration `00050_billing_currency.sql`, `usd_test.go` (dollar checkout, fail-closed enable, currency switch, concurrent double click, renewal while sales are off, dollar packs and mismatched-currency payments, handler 409). Real Razorpay dollar plans and a real international payment have not been exercised yet.
+
 ## Dependencies
 
 Postgres ledger/reservations/subscriptions; Razorpay adapter; plan catalog.
