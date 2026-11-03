@@ -43,6 +43,7 @@ type Customer struct {
 	OnboardingCompletedAt string    `json:"onboardingCompletedAt"`
 }
 
+// Service lists customers for verified staff.
 type Service struct {
 	DB *pgxpool.Pool
 	// StaffEmails is the server-configured list, normalized by config.Load.

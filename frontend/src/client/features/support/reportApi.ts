@@ -36,9 +36,14 @@ export async function readScreenshot(file: File): Promise<string> {
   }
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () =>
-      reject(new Error("Could not read the screenshot. Choose it again."));
+    reader.addEventListener("load", () =>
+      typeof reader.result === "string"
+        ? resolve(reader.result)
+        : reject(new Error("Could not read the screenshot. Choose it again.")),
+    );
+    reader.addEventListener("error", () =>
+      reject(new Error("Could not read the screenshot. Choose it again.")),
+    );
     reader.readAsDataURL(file);
   });
 }
