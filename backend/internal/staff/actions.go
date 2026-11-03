@@ -14,7 +14,9 @@ import (
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/pgdb"
 )
 
+// Errors the handler maps to 404, 409 and 400 responses.
 var (
+	// ErrUserNotFound means no user has the id.
 	ErrUserNotFound     = errors.New("user not found")
 	ErrProtectedUser    = errors.New("staff accounts and your own account cannot be blocked or deleted here")
 	ErrLiveSubscription = errors.New("cancel this user's paid plan in Razorpay first")
@@ -143,6 +145,7 @@ func (a Actions) LogSync(ctx context.Context, actorID, detail string) error {
 	return nil
 }
 
+// Action is one logged staff change.
 type Action struct {
 	ActorEmail  string    `json:"actorEmail"`
 	Action      string    `json:"action"`

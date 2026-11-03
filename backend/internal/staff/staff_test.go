@@ -204,7 +204,7 @@ func TestRoutesAreHiddenFromEveryoneButStaff(t *testing.T) {
 	call := func(u *auth.User, method, path, body string) int {
 		as = u
 		rec := httptest.NewRecorder()
-		mux.ServeHTTP(rec, httptest.NewRequest(method, path, bytes.NewBufferString(body)))
+		mux.ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), method, path, bytes.NewBufferString(body)))
 		return rec.Code
 	}
 	block := `{"userId":"` + user.ID + `"}`

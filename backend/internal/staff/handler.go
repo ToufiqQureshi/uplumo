@@ -13,13 +13,14 @@ import (
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/httpx"
 )
 
-// StaffCheck reports whether a session user is verified staff (customers.Service).
-type StaffCheck interface {
+// Checker reports whether a session user is verified staff (customers.Service).
+type Checker interface {
 	IsStaff(context.Context, auth.User) (bool, error)
 }
 
+// Deps wires the staff routes to their services and session middleware.
 type Deps struct {
-	Staff       StaffCheck
+	Staff       Checker
 	Stats       Stats
 	Actions     Actions
 	Billing     *billing.Service
@@ -27,6 +28,7 @@ type Deps struct {
 	WithSession func(http.Handler) http.Handler
 }
 
+// Mount registers every staff console route behind the staff gate.
 func Mount(mux *http.ServeMux, d Deps) {
 	get := func(path string, fn func(context.Context) (any, error)) {
 		mux.Handle("GET "+path, d.WithSession(d.staffOnly(func(w http.ResponseWriter, r *http.Request, _ auth.User) {

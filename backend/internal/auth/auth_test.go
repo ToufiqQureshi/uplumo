@@ -267,7 +267,7 @@ func TestAuthenticateRefusesABlockedUser(t *testing.T) {
 	ctx := context.Background()
 	f := newFixture(ctx, t)
 	req := httptest.NewRequestWithContext(ctx, http.MethodGet, "/", nil)
-	req.AddCookie(&http.Cookie{Name: sessionCookie, Value: goldenCookie})
+	req.AddCookie(&http.Cookie{Name: sessionCookie, Value: goldenCookie, HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode})
 	if _, err := f.svc.Authenticate(req); err != nil {
 		t.Fatalf("before block: %v", err)
 	}

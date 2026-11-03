@@ -22,16 +22,19 @@ type Money struct {
 	Amount   int64  `json:"amount"`
 }
 
+// Count is a labelled tally.
 type Count struct {
 	Label string `json:"label"`
 	Count int    `json:"count"`
 }
 
+// DayCount is signups on one day.
 type DayCount struct {
 	Day   string `json:"day"`
 	Count int    `json:"count"`
 }
 
+// Overview is the headline numbers.
 type Overview struct {
 	Users              int        `json:"users"`
 	VerifiedUsers      int        `json:"verifiedUsers"`
@@ -50,8 +53,10 @@ type Overview struct {
 	SignupsByDay       []DayCount `json:"signupsByDay"`
 }
 
+// Stats is reads the console numbers from Postgres.
 type Stats struct{ DB *pgxpool.Pool }
 
+// Overview counts users, paying workspaces, MRR and collected payments.
 func (s Stats) Overview(ctx context.Context) (Overview, error) {
 	var o Overview
 	err := s.DB.QueryRow(ctx, `SELECT
@@ -145,6 +150,7 @@ func pgxCollect[T any](ctx context.Context, db *pgxpool.Pool, sql string, scan p
 	return out, nil
 }
 
+// Subscription is one workspace's subscription as staff see it.
 type Subscription struct {
 	OrganizationID    string     `json:"organizationId"`
 	Workspace         string     `json:"workspace"`
@@ -173,6 +179,7 @@ func (s Stats) Subscriptions(ctx context.Context) ([]Subscription, error) {
 		}, liveStatuses)
 }
 
+// Marketing is onboarding answers and the signup funnel.
 type Marketing struct {
 	FoundVia  []Count `json:"foundVia"`
 	Interests []Count `json:"interests"`
@@ -180,6 +187,7 @@ type Marketing struct {
 	Funnel    []Count `json:"funnel"`
 }
 
+// Marketing tallies onboarding answers and the signup-to-paying funnel.
 func (s Stats) Marketing(ctx context.Context) (Marketing, error) {
 	var m Marketing
 	var err error
@@ -211,6 +219,7 @@ func (s Stats) Marketing(ctx context.Context) (Marketing, error) {
 	return m, nil
 }
 
+// MonthMoney is one month of payments in one currency.
 type MonthMoney struct {
 	Month    string `json:"month"`
 	Currency string `json:"currency"`
@@ -219,11 +228,13 @@ type MonthMoney struct {
 	Payments int    `json:"payments"`
 }
 
+// MonthCost is one month of provider cost in US dollars.
 type MonthCost struct {
 	Month   string  `json:"month"`
 	CostUSD float64 `json:"costUsd"`
 }
 
+// WorkspaceCost is a workspace's provider cost.
 type WorkspaceCost struct {
 	OrganizationID string  `json:"organizationId"`
 	Workspace      string  `json:"workspace"`
@@ -232,6 +243,7 @@ type WorkspaceCost struct {
 	CostUSD        float64 `json:"costUsd"`
 }
 
+// Finance is revenue and provider cost.
 type Finance struct {
 	Revenue          []MonthMoney    `json:"revenue"`
 	ProviderCost     []MonthCost     `json:"providerCost"`
@@ -239,6 +251,7 @@ type Finance struct {
 	TopCostWorkspace []WorkspaceCost `json:"topCostWorkspaces30Days"`
 }
 
+// FeatureCost is provider cost of one feature.
 type FeatureCost struct {
 	Feature string  `json:"feature"`
 	CostUSD float64 `json:"costUsd"`
