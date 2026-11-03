@@ -71,6 +71,12 @@ type Definition struct {
 	// Sites is how many active websites (projects) a workspace may have
 	// before any site add-on.
 	Sites int
+	// PauseAboveSites, when set, is the site count above which paid work
+	// pauses; it is higher than Sites only where Sites was lowered after
+	// customers bought the plan (Pro 10 -> 5, Business 20 -> 10 on 3 Nov
+	// 2026), so those customers keep every site working. New sites still
+	// stop at Sites.
+	PauseAboveSites int
 	// TrackedKeywords is how many keywords rank tracking may follow across
 	// the whole workspace.
 	TrackedKeywords int
@@ -232,7 +238,7 @@ var catalog = []Definition{
 		features: basicFeatures,
 	},
 	{
-		ID: Pro, Name: "Pro", PriceINR: 2499, PriceUSD: 39, Sites: 5, TrackedKeywords: 500, Members: 3, MonthlyCredits: 10000, MaxSerpDepth: 40, RankSchedule: RankScheduleWeekly,
+		ID: Pro, Name: "Pro", PriceINR: 2499, PriceUSD: 39, Sites: 5, PauseAboveSites: 10, TrackedKeywords: 500, Members: 3, MonthlyCredits: 10000, MaxSerpDepth: 40, RankSchedule: RankScheduleWeekly,
 		Summary: "For a growing business: beat competitors on Google and in AI answers.",
 		Highlights: highlights([]string{
 			"5 websites",
@@ -244,7 +250,7 @@ var catalog = []Definition{
 		features: proFeatures,
 	},
 	{
-		ID: Business, Name: "Business", PriceINR: 4999, PriceUSD: 69, Sites: 10, TrackedKeywords: 1000, Members: 5, MonthlyCredits: 15000, MaxSerpDepth: 40, RankSchedule: RankScheduleWeekly,
+		ID: Business, Name: "Business", PriceINR: 4999, PriceUSD: 69, Sites: 10, PauseAboveSites: 20, TrackedKeywords: 1000, Members: 5, MonthlyCredits: 15000, MaxSerpDepth: 40, RankSchedule: RankScheduleWeekly,
 		Summary: "For several brands, freelancers and agencies, with reports under your own brand.",
 		Highlights: highlights([]string{
 			"10 websites",

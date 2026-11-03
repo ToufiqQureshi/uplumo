@@ -385,6 +385,10 @@ func (s *Service) UsageAgainstPlan(ctx context.Context, orgID string) (PlanUsage
 		return LimitUsage{Used: used, Limit: limit, Exceeded: limit > 0 && used > limit}
 	}
 	sites := item(usage.Sites, definition.Sites)
+	// Sites kept from a plan's earlier, larger allowance keep working; only
+	// new sites stop at the current one (CreateLimited).
+	pauseAbove := max(definition.Sites, definition.PauseAboveSites)
+	sites.Exceeded = definition.Sites > 0 && usage.Sites > pauseAbove
 	if definition.Allows(plans.SiteAddOn) && definition.Sites > 0 {
 		active, peak, err := s.repo.addOnSites(ctx, orgID)
 		if err != nil {
@@ -393,7 +397,7 @@ func (s *Service) UsageAgainstPlan(ctx context.Context, orgID string) (PlanUsage
 		// New sites need a running add-on; sites added under an add-on that
 		// has since run out keep working, so paid work does not pause.
 		sites.Limit += active
-		sites.Exceeded = usage.Sites > definition.Sites+max(active, peak)
+		sites.Exceeded = usage.Sites > pauseAbove+max(active, peak)
 	}
 	return PlanUsage{
 		Sites:           sites,
