@@ -7,8 +7,8 @@ The one list of what each Uplumo plan costs, limits and includes
 | -------- | ------------- | ----- | ---------------- | ------- | --------------- | ---------------------------------------------------------------------------------------- |
 | Free     | ₹0            | 1     | none             | 1       | 0               | Uplumo Analytics with AI traffic detection, starter site audit                           |
 | Basic    | ₹999          | 1     | 100              | 1       | 4,000           | Keyword research, rank tracking, Google data, full site audit, AI writing, IndexNow, SAM |
-| Pro      | ₹2,499        | 10    | 500              | 3       | 10,000          | Backlinks, competitor research, AI Visibility, credit packs                              |
-| Business | ₹4,999        | 20    | 1,000            | 5       | 15,000          | White-label reports, site add-on                                                         |
+| Pro      | ₹2,499        | 5     | 500              | 3       | 10,000          | Backlinks, competitor research, AI Visibility, credit packs                              |
+| Business | ₹4,999        | 10    | 1,000            | 5       | 15,000          | White-label reports, site add-on                                                         |
 
 The ids (`basic`, `pro`, `business`) predate the names and stay: stored
 subscriptions and `RAZORPAY_PLAN_ID_*` use them. Agency was retired on

@@ -376,7 +376,7 @@ func TestPricingPageShowsWhatThePlanCatalogEnforces(t *testing.T) {
 	s.ServePricing(rec, httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/pricing", nil))
 	body := rec.Body.String()
 	for _, want := range []string{
-		"<th scope=\"row\">Websites</th><td>1</td><td>1</td><td>10</td><td>20</td>",
+		"<th scope=\"row\">Websites</th><td>1</td><td>1</td><td>5</td><td>10</td>",
 		"<th scope=\"row\">Team members</th><td>1</td><td>1</td><td>3</td><td>5</td>",
 		"<th scope=\"row\">Monthly credits</th><td>0</td><td>4,000</td><td>10,000</td><td>15,000</td>",
 		"<th scope=\"row\">SAM SEO assistant</th><td>—</td><td>Included</td><td>Included</td><td>Included</td>",
@@ -401,8 +401,8 @@ func TestPricingPageShowsWhatThePlanCatalogEnforces(t *testing.T) {
 		want []string
 	}{
 		{"Basic", []string{"4,000 credits / month", "1 website", "1 team member", "100 tracked keywords, checked weekly", "Rank checks cover the top 30 results", "Uplumo Analytics with AI traffic detection", "SAM SEO assistant", "Keyword research and SERP analysis", "Publish articles to WordPress"}},
-		{"Pro", []string{"10,000 credits / month", "10 websites", "3 team members", "500 tracked keywords, checked weekly", "Rank checks cover the top 40 results", "Publish articles to WordPress", "Backlink research", "AI Visibility"}},
-		{"Business", []string{"15,000 credits / month", "20 websites", "5 team members", "1,000 tracked keywords, checked weekly", "AI Visibility", "Backlink research", "White-label reports", "Add 5 more websites for ₹999 a month"}},
+		{"Pro", []string{"10,000 credits / month", "5 websites", "3 team members", "500 tracked keywords, checked weekly", "Rank checks cover the top 40 results", "Publish articles to WordPress", "Backlink research", "AI Visibility"}},
+		{"Business", []string{"15,000 credits / month", "10 websites", "5 team members", "1,000 tracked keywords, checked weekly", "AI Visibility", "Backlink research", "White-label reports", "Add 5 more websites for ₹999 a month"}},
 	} {
 		start := strings.Index(body, `<h3 id="plan-`+tc.plan+`">`)
 		if start < 0 {

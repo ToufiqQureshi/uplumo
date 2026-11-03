@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/toufiqqureshi/uplumo/backend/internal/database"
+	"github.com/toufiqqureshi/uplumo/backend/internal/plans"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/pgdb"
 )
 
@@ -181,4 +182,101 @@ func seedProjectOwner(ctx context.Context, t *testing.T, pool *pgxpool.Pool) (st
 		}
 	})
 	return orgID, userID
+}
+
+func TestPaidPlanCreateAndRestoreEnforceWebsiteAllowance(t *testing.T) {
+	for _, test := range []struct {
+		plan  string
+		sites int
+	}{{plans.Pro, 5}, {plans.Business, 10}} {
+		t.Run(test.plan, func(t *testing.T) {
+			ctx := t.Context()
+			pool := projectTestPool(ctx, t)
+			org, user := seedProjectOwner(ctx, t, pool)
+			definition, _ := plans.Get(test.plan)
+			repo := Repository{DB: pool}
+			svc := Service{Store: repo, Plans: fixedSiteLimit(definition.Sites)}
+			first, err := svc.Create(ctx, org, user, Input{Name: "First"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			for i := 1; i < test.sites; i++ {
+				if _, err := svc.Create(ctx, org, user, Input{Name: fmt.Sprintf("Site %d", i)}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			assertLimited := func(err error) {
+				t.Helper()
+				var typed *Error
+				if !errors.As(err, &typed) || typed.Code != "LIMIT_REACHED" {
+					t.Fatalf("error = %v, want LIMIT_REACHED", err)
+				}
+			}
+			_, err = svc.Create(ctx, org, user, Input{Name: "Over limit"})
+			assertLimited(err)
+			if err := svc.Archive(ctx, org, user, first.ID); err != nil {
+				t.Fatal(err)
+			}
+			replacement, err := svc.Create(ctx, org, user, Input{Name: "Replacement"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			assertLimited(svc.Restore(ctx, org, user, first.ID))
+			if err := svc.Archive(ctx, org, user, replacement.ID); err != nil {
+				t.Fatal(err)
+			}
+			if err := svc.Restore(ctx, org, user, first.ID); err != nil {
+				t.Fatal(err)
+			}
+			if count, err := repo.Count(ctx, org); err != nil || count != test.sites {
+				t.Fatalf("active sites = %d, %v; want %d", count, err, test.sites)
+			}
+		})
+	}
+}
+
+func TestDefaultPlaceholderBecomesFirstSiteAndIsNotCounted(t *testing.T) {
+	ctx := t.Context()
+	pool := projectTestPool(ctx, t)
+	org, user := seedProjectOwner(ctx, t, pool)
+	repo := Repository{DB: pool}
+	svc := Service{Store: repo, Plans: fixedSiteLimit(2)}
+	domain := func(d string) *string { return &d }
+
+	// A workspace with no sites gets the placeholder; it holds no allowance.
+	rows, err := svc.List(ctx, org, false, true)
+	if err != nil || len(rows) != 1 || rows[0].Name != "Default" || rows[0].Domain != nil {
+		t.Fatalf("List() = %+v, %v; want Default placeholder", rows, err)
+	}
+	placeholder := rows[0].ID
+
+	// The first real website takes over the placeholder and keeps its ID, so
+	// research saved there stays with the site.
+	first, err := svc.Create(ctx, org, user, Input{Name: "Shop", Domain: domain("shopexample.com")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.ID != placeholder || first.Name != "Shop" || first.Domain == nil || *first.Domain != "shopexample.com" {
+		t.Fatalf("first site = %+v, want placeholder %s renamed to Shop", first, placeholder)
+	}
+	if count, _ := repo.Count(ctx, org); count != 1 {
+		t.Fatalf("active projects = %d, want 1", count)
+	}
+
+	// A placeholder created beside real sites never uses up the allowance.
+	if _, err := pool.Exec(ctx, `INSERT INTO projects(id,organization_id,name) VALUES($1,$2,'Default')`, "default-"+org, org); err != nil {
+		t.Fatal(err)
+	}
+	second, err := svc.Create(ctx, org, user, Input{Name: "Blog", Domain: domain("blogexample.com")})
+	if err != nil {
+		t.Fatalf("second site with placeholder present: %v", err)
+	}
+	if second.ID == "default-"+org {
+		t.Fatal("placeholder was adopted although real sites already exist")
+	}
+	_, err = svc.Create(ctx, org, user, Input{Name: "Third", Domain: domain("thirdexample.com")})
+	var typed *Error
+	if !errors.As(err, &typed) || typed.Code != "LIMIT_REACHED" {
+		t.Fatalf("third site error = %v, want LIMIT_REACHED", err)
+	}
 }

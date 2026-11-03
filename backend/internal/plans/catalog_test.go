@@ -17,8 +17,8 @@ func TestCatalogMatchesTheOwnersPlanTable(t *testing.T) {
 	}{
 		{Free, 0, 0, 1, 0, 1, 0},
 		{Basic, 999, 15, 1, 100, 1, 4000},
-		{Pro, 2499, 39, 10, 500, 3, 10000},
-		{Business, 4999, 69, 20, 1000, 5, 15000},
+		{Pro, 2499, 39, 5, 500, 3, 10000},
+		{Business, 4999, 69, 10, 1000, 5, 15000},
 	}
 	got := Catalog()
 	if len(got) != len(want) {

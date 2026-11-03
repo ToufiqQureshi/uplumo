@@ -10,11 +10,51 @@ import { z } from "zod";
 import {
   ApiError,
   apiRequest,
+  getRecentApiFailure,
   onCreditsUsed,
   shouldRetryApiError,
 } from "./uplumoApi";
 
 const schema = z.object({ plan: z.enum(["free", "pro"]) });
+
+it("keeps only the originating page path and server request ID for support", async () => {
+  vi.stubGlobal("window", {
+    location: {
+      pathname: "/billing",
+      search: "?token=private",
+      hash: "#secret",
+    },
+  });
+  const failed = vi
+    .spyOn(globalThis, "fetch")
+    .mockResolvedValue(
+      Response.json(
+        { error: { code: "internal", message: "Unavailable" } },
+        { status: 500, headers: { "X-Request-Id": "request-123" } },
+      ),
+    );
+  try {
+    await expect(
+      apiRequest("/api/v1/billing/usage", schema),
+    ).rejects.toMatchObject({ requestId: "request-123" });
+    expect(getRecentApiFailure()).toEqual({
+      pagePath: "/billing",
+      requestId: "request-123",
+    });
+    failed.mockResolvedValue(
+      Response.json(
+        { error: { code: "internal", message: "Unavailable" } },
+        { status: 500, headers: { "X-Request-Id": "support-retry" } },
+      ),
+    );
+    await expect(
+      apiRequest("/api/v1/support/reports", schema),
+    ).rejects.toBeInstanceOf(ApiError);
+    expect(getRecentApiFailure()?.requestId).toBe("request-123");
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
 // restoreMocks undoes the spy after each test, so each test spies again.
 let fetchMock: MockInstance<typeof fetch>;
 

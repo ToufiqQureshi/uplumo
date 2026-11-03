@@ -289,8 +289,8 @@ func TestSiteAddOnRaisesTheBusinessSiteLimit(t *testing.T) {
 		}
 		return got
 	}
-	if got := limit(); got != 20 {
-		t.Fatalf("Business site limit = %d, want 20", got)
+	if got := limit(); got != 10 {
+		t.Fatalf("Business site limit = %d, want 10", got)
 	}
 	order, err := f.svc.CheckoutTopUp(ctx, f.org, "sites_5", plans.INR)
 	if err != nil {
@@ -300,8 +300,8 @@ func TestSiteAddOnRaisesTheBusinessSiteLimit(t *testing.T) {
 		t.Fatalf("site add-on order = %+v", order)
 	}
 	f.capture(ctx, t, order)
-	if got := limit(); got != 25 {
-		t.Fatalf("site limit with the add-on = %d, want 25", got)
+	if got := limit(); got != 15 {
+		t.Fatalf("site limit with the add-on = %d, want 15", got)
 	}
 	if balance, err := NewCreditLedgerService(f.pool).GetBalance(ctx, f.org); err != nil || balance != 0 {
 		t.Fatalf("a site add-on granted credits: %d, %v", balance, err)
@@ -322,6 +322,8 @@ func TestSiteAddOnRaisesTheBusinessSiteLimit(t *testing.T) {
 			}
 		}
 	}
+	// Business pauses paid work above 20 sites (its allowance before 3 Nov)
+	// plus the most add-on sites ever running at once (5).
 	addSites(24)
 	// Three add-ons that ran out one after another: at most 5 at a time.
 	if _, err := f.pool.Exec(ctx, `UPDATE go_billing_topups SET sites_until = now() - interval '1 day' WHERE id = $1`, order.ID); err != nil {
@@ -332,8 +334,8 @@ func TestSiteAddOnRaisesTheBusinessSiteLimit(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if got := limit(); got != 20 {
-		t.Fatalf("site limit after the add-on ran out = %d, want 20", got)
+	if got := limit(); got != 10 {
+		t.Fatalf("site limit after the add-on ran out = %d, want 10", got)
 	}
 	usage, err := f.svc.UsageAgainstPlan(ctx, f.org)
 	if err != nil || usage.Sites.Exceeded {

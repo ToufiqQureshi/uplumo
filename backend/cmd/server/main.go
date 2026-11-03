@@ -65,6 +65,7 @@ import (
 	"github.com/toufiqqureshi/uplumo/backend/internal/sam"
 	"github.com/toufiqqureshi/uplumo/backend/internal/site"
 	"github.com/toufiqqureshi/uplumo/backend/internal/sitepublish"
+	"github.com/toufiqqureshi/uplumo/backend/internal/support"
 	"github.com/toufiqqureshi/uplumo/backend/internal/team"
 )
 
@@ -359,6 +360,14 @@ func run(logger *slog.Logger) (err error) {
 		return rank + ai, err
 	}
 	reportsSvc := &reports.Service{Store: reports.Repository{DB: db}}
+	supportSvc := &support.Service{DB: db, StaffEmails: cfg.StaffEmails, PublicURL: cfg.BetterAuthURL.String()}
+	if cfg.LoopsAPIKey != "" && cfg.LoopsSupportReportTemplateID != "" {
+		supportSvc.Mailer = email.LoopsClient{APIKey: cfg.LoopsAPIKey}
+		supportSvc.TemplateID = cfg.LoopsSupportReportTemplateID
+		go supportSvc.RunNotifications(ctx, logger)
+	} else {
+		logger.Warn("support notifications not configured; reports remain saved pending LOOPS_TRANSACTIONAL_SUPPORT_REPORT_ID and LOOPS_API_KEY")
+	}
 
 	authService := auth.NewService(db, cfg.BetterAuthSecret)
 	savedKeywordsSvc := &keywords.SavedService{Store: keywords.SavedRepository{DB: db}}
@@ -464,6 +473,7 @@ func run(logger *slog.Logger) (err error) {
 			CrawlerAccess:           crawlerAccessSvc,
 			Activation:              &activation.Service{Store: activation.Repository{DB: db}},
 			Reports:                 reportsSvc,
+			Support:                 supportSvc,
 			PublicURL:               cfg.PublicURL,
 			OpenRouterConfigured:    strings.TrimSpace(cfg.OpenRouterAPIKey) != "",
 			ContentWriterConfigured: strings.TrimSpace(cfg.OpenRouterAPIKey) != "",

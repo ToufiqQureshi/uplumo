@@ -27,7 +27,9 @@ func (r repository) planUsage(ctx context.Context, orgID string) (planUsage, err
 	var usage planUsage
 	err := r.db.QueryRow(ctx, `
 		SELECT
-			(SELECT count(*) FROM projects WHERE organization_id = $1 AND archived_at IS NULL),
+			-- The domain-less "Default" placeholder is not a website.
+			(SELECT count(*) FROM projects WHERE organization_id = $1 AND archived_at IS NULL
+			 AND NOT (name = 'Default' AND domain IS NULL)),
 			(SELECT count(*) FROM member WHERE organization_id = $1)
 			  + (SELECT count(*) FROM invitation WHERE organization_id = $1 AND status = 'pending' AND expires_at > now()),
 			(SELECT count(*) FROM go_rank_tracking_keywords k

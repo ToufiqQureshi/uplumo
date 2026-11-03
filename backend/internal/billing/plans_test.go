@@ -42,8 +42,8 @@ func TestPlanDecidesFeaturesAndLimits(t *testing.T) {
 	}{
 		{PlanFree, 0, 1, 0, 1},
 		{PlanBasic, 7, 1, 100, 1},
-		{PlanPro, 11, 10, 500, 3},
-		{plans.Business, 13, 20, 1000, 5},
+		{PlanPro, 11, 5, 500, 3},
+		{plans.Business, 13, 10, 1000, 5},
 	} {
 		t.Run(test.plan, func(t *testing.T) {
 			f := newFixture(ctx, t)
@@ -363,5 +363,41 @@ func TestARetiredPlanReadsAsFree(t *testing.T) {
 	f.assertStatus(ctx, t, Status{Plan: PlanFree, Status: "active"})
 	if ok, err := f.svc.Allows(ctx, f.org, plans.WhiteLabel); err != nil || ok {
 		t.Fatalf("a retired plan allows white-label: %v, %v", ok, err)
+	}
+}
+
+// Pro and Business allowances were lowered on 3 Nov 2026. A paying workspace
+// that already has more sites keeps paid work running up to the old
+// allowance; only adding new sites stops at the new one.
+func TestLoweredSiteAllowanceDoesNotPauseExistingCustomers(t *testing.T) {
+	for _, tc := range []struct {
+		plan             string
+		kept, overOldCap int
+	}{{PlanPro, 8, 11}, {plans.Business, 15, 21}} {
+		t.Run(tc.plan, func(t *testing.T) {
+			ctx := t.Context()
+			f := newFixture(ctx, t)
+			f.sellTiers()
+			f.deliver(ctx, t, f.eventOnPlan(tc.plan, "subscription.activated", "sub_1", "active"))
+			addSites := func(n int) {
+				t.Helper()
+				for range n {
+					if _, err := f.pool.Exec(ctx, `INSERT INTO projects (id, organization_id, name, domain) VALUES ($1,$2,'Site',$1)`, "site-"+rand.Text(), f.org); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}
+			addSites(tc.kept)
+			if within, err := f.svc.WithinPlanLimits(ctx, f.org); err != nil || !within {
+				t.Fatalf("%d kept sites on %s: WithinPlanLimits = %v, %v; want true", tc.kept, tc.plan, within, err)
+			}
+			if limit, err := f.svc.SiteLimit(ctx, f.org); err != nil || limit >= tc.kept {
+				t.Fatalf("SiteLimit = %d, %v; new sites must stop below %d", limit, err, tc.kept)
+			}
+			addSites(tc.overOldCap - tc.kept)
+			if within, err := f.svc.WithinPlanLimits(ctx, f.org); err != nil || within {
+				t.Fatalf("%d sites on %s: WithinPlanLimits = %v, %v; want false above the old allowance", tc.overOldCap, tc.plan, within, err)
+			}
+		})
 	}
 }

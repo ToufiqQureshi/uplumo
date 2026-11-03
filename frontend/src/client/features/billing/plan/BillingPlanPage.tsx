@@ -75,7 +75,10 @@ export function BillingPlanPage() {
                 </h2>
                 <p className="text-sm text-muted-foreground">
                   Prices are per workspace, per month. Cancel in one click, any
-                  time. Pro and Business can buy extra credits in Billing.
+                  time. Pro and Business can buy extra credits.{" "}
+                  <Link to="/billing" className="underline underline-offset-4">
+                    Buy extra credits or view usage
+                  </Link>
                 </p>
               </div>
               <div className="grid gap-4 lg:grid-cols-3">
