@@ -48,9 +48,11 @@ type querier interface {
 
 // subscription is an organization's stored subscription state.
 type subscription struct {
-	OrganizationID   string
-	ID               string
-	Plan             string
+	OrganizationID string
+	ID             string
+	Plan           string
+	// Currency is the currency of the Razorpay plan (plans.INR, plans.USD).
+	Currency         string
 	Status           string
 	CurrentPeriodEnd *time.Time
 	// CancelAtPeriodEnd is set when the customer cancelled and keeps the
@@ -119,10 +121,10 @@ func (r repository) subscription(ctx context.Context, orgID string) (subscriptio
 func loadSubscription(ctx context.Context, q querier, orgID string) (subscription, bool, error) {
 	var s subscription
 	err := q.QueryRow(ctx, `
-		SELECT razorpay_subscription_id, plan, status, current_period_end, cancel_at_period_end, event_at
+		SELECT razorpay_subscription_id, plan, currency, status, current_period_end, cancel_at_period_end, event_at
 		FROM go_billing_subscriptions WHERE organization_id = $1`,
 		orgID,
-	).Scan(&s.ID, &s.Plan, &s.Status, &s.CurrentPeriodEnd, &s.CancelAtPeriodEnd, &s.EventAt)
+	).Scan(&s.ID, &s.Plan, &s.Currency, &s.Status, &s.CurrentPeriodEnd, &s.CancelAtPeriodEnd, &s.EventAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return subscription{}, false, nil
 	}
@@ -153,15 +155,16 @@ func (r repository) ownedByAny(ctx context.Context, orgID string, emails []strin
 // orgID's current subscription has one of liveStatuses. It reports whether
 // the subscription was stored. event_at never moves back, so a late webhook
 // about the replaced subscription stays stale.
-func startSubscription(ctx context.Context, q querier, orgID, plan, subID, status string, createdAt time.Time, liveStatuses []string) (bool, error) {
+func startSubscription(ctx context.Context, q querier, orgID, plan, currency, subID, status string, createdAt time.Time, liveStatuses []string) (bool, error) {
 	var stored bool
 	err := q.QueryRow(ctx, `
 		INSERT INTO go_billing_subscriptions
-			(organization_id, razorpay_subscription_id, plan, status, current_period_end, event_at)
-		VALUES ($1, $2, $3, $4, NULL, $5)
+			(organization_id, razorpay_subscription_id, plan, currency, status, current_period_end, event_at)
+		VALUES ($1, $2, $3, $7, $4, NULL, $5)
 		ON CONFLICT (organization_id) DO UPDATE SET
 			razorpay_subscription_id = EXCLUDED.razorpay_subscription_id,
 			plan = EXCLUDED.plan,
+			currency = EXCLUDED.currency,
 			status = EXCLUDED.status,
 			current_period_end = NULL,
 			cancel_at_period_end = false,
@@ -169,7 +172,7 @@ func startSubscription(ctx context.Context, q querier, orgID, plan, subID, statu
 			updated_at = now()
 		WHERE go_billing_subscriptions.status <> ALL ($6)
 		RETURNING true`,
-		orgID, subID, plan, status, createdAt, liveStatuses,
+		orgID, subID, plan, status, createdAt, liveStatuses, currency,
 	).Scan(&stored)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
@@ -272,11 +275,12 @@ func (r repository) applyEvent(ctx context.Context, eventID string, s subscripti
 
 		_, err = tx.Exec(ctx, `
 		INSERT INTO go_billing_subscriptions
-			(organization_id, razorpay_subscription_id, plan, status, current_period_end, event_at)
-		SELECT $1, $2, $3, $4, $5, $6 FROM organization WHERE id = $1
+			(organization_id, razorpay_subscription_id, plan, currency, status, current_period_end, event_at)
+		SELECT $1, $2, $3, $8, $4, $5, $6 FROM organization WHERE id = $1
 		ON CONFLICT (organization_id) DO UPDATE SET
 			razorpay_subscription_id = EXCLUDED.razorpay_subscription_id,
 			plan = EXCLUDED.plan,
+			currency = EXCLUDED.currency,
 			status = EXCLUDED.status,
 			current_period_end = EXCLUDED.current_period_end,
 			event_at = EXCLUDED.event_at,
@@ -284,7 +288,7 @@ func (r repository) applyEvent(ctx context.Context, eventID string, s subscripti
 		WHERE go_billing_subscriptions.event_at <= EXCLUDED.event_at
 			AND (go_billing_subscriptions.razorpay_subscription_id = EXCLUDED.razorpay_subscription_id
 				OR go_billing_subscriptions.status <> ALL ($7))`,
-			s.OrganizationID, s.ID, s.Plan, s.Status, s.CurrentPeriodEnd, s.EventAt, liveStatuses,
+			s.OrganizationID, s.ID, s.Plan, s.Status, s.CurrentPeriodEnd, s.EventAt, liveStatuses, s.Currency,
 		)
 		if err != nil {
 			return fmt.Errorf("store subscription %s: %w", s.ID, err)

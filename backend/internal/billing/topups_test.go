@@ -63,7 +63,7 @@ func TestPacksFollowThePlan(t *testing.T) {
 				t.Fatalf("offers = %v, want %v", got, tc.want)
 			}
 			for _, pack := range plans.Packs() {
-				_, err := f.svc.CheckoutTopUp(ctx, f.org, pack.ID)
+				_, err := f.svc.CheckoutTopUp(ctx, f.org, pack.ID, plans.INR)
 				if slices.Contains(tc.want, pack.ID) {
 					if err != nil {
 						t.Errorf("checkout %s on %s: %v", pack.ID, tc.plan, err)
@@ -83,7 +83,7 @@ func TestTopUpVerifiedPaymentExactlyOnce(t *testing.T) {
 	ctx := t.Context()
 	f := newFixture(ctx, t)
 	f.deliver(ctx, t, f.event("subscription.activated", "sub_1", "active", t1))
-	order, err := f.svc.CheckoutTopUp(ctx, f.org, "credits_5000")
+	order, err := f.svc.CheckoutTopUp(ctx, f.org, "credits_5000", plans.INR)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +93,7 @@ func TestTopUpVerifiedPaymentExactlyOnce(t *testing.T) {
 	if _, err := f.svc.topUpStatus(ctx, "foreign-org", order.ID); !errors.Is(err, pgx.ErrNoRows) {
 		t.Fatal("foreign workspace read payment", err)
 	}
-	again, err := f.svc.CheckoutTopUp(ctx, f.org, "credits_5000")
+	again, err := f.svc.CheckoutTopUp(ctx, f.org, "credits_5000", plans.INR)
 	if err != nil || again.OrderID != order.OrderID || f.orders.Load() != 1 {
 		t.Fatalf("duplicate checkout=%+v %v, %d orders", again, err, f.orders.Load())
 	}
@@ -141,7 +141,7 @@ func TestPackCreditsEndWithThePlan(t *testing.T) {
 	ctx := t.Context()
 	f := newFixture(ctx, t)
 	f.deliver(ctx, t, f.event("subscription.charged", "sub_1", "active", t1))
-	order, err := f.svc.CheckoutTopUp(ctx, f.org, "credits_5000")
+	order, err := f.svc.CheckoutTopUp(ctx, f.org, "credits_5000", plans.INR)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -183,7 +183,7 @@ func TestLateAuthorizedPackPaymentIsCaptured(t *testing.T) {
 	ctx := t.Context()
 	f := newFixture(ctx, t)
 	f.deliver(ctx, t, f.event("subscription.activated", "sub_1", "active", t1))
-	order, err := f.svc.CheckoutTopUp(ctx, f.org, "credits_5000")
+	order, err := f.svc.CheckoutTopUp(ctx, f.org, "credits_5000", plans.INR)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -239,7 +239,7 @@ func TestTopUpCreditsDoNotReduceTheMonthlyPlanGrant(t *testing.T) {
 	}
 	charge() // 10000 Pro credits
 
-	order, err := f.svc.CheckoutTopUp(ctx, f.org, "credits_15000")
+	order, err := f.svc.CheckoutTopUp(ctx, f.org, "credits_15000", plans.INR)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -257,11 +257,11 @@ func TestTopUpCheckoutCanSwitchToAnotherPack(t *testing.T) {
 	ctx := t.Context()
 	f := newFixture(ctx, t)
 	f.deliver(ctx, t, f.event("subscription.activated", "sub_1", "active", t1))
-	abandoned, err := f.svc.CheckoutTopUp(ctx, f.org, "credits_5000")
+	abandoned, err := f.svc.CheckoutTopUp(ctx, f.org, "credits_5000", plans.INR)
 	if err != nil {
 		t.Fatal(err)
 	}
-	switched, err := f.svc.CheckoutTopUp(ctx, f.org, "credits_15000")
+	switched, err := f.svc.CheckoutTopUp(ctx, f.org, "credits_15000", plans.INR)
 	if err != nil {
 		t.Fatalf("switching pack after closing checkout: %v", err)
 	}
@@ -292,7 +292,7 @@ func TestSiteAddOnRaisesTheBusinessSiteLimit(t *testing.T) {
 	if got := limit(); got != 20 {
 		t.Fatalf("Business site limit = %d, want 20", got)
 	}
-	order, err := f.svc.CheckoutTopUp(ctx, f.org, "sites_5")
+	order, err := f.svc.CheckoutTopUp(ctx, f.org, "sites_5", plans.INR)
 	if err != nil {
 		t.Fatal(err)
 	}

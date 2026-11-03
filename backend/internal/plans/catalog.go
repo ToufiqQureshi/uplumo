@@ -60,6 +60,9 @@ type Definition struct {
 	ID       string
 	Name     string
 	PriceINR int
+	// PriceUSD is the monthly price in whole US dollars for customers outside
+	// India. It is a price of its own, not a conversion of PriceINR.
+	PriceUSD int
 	// Summary says who the plan is for, on the pricing page.
 	Summary string
 	// Sites is how many active websites (projects) a workspace may have
@@ -87,6 +90,34 @@ type Definition struct {
 	features   []Feature
 }
 
+// Currencies a plan is sold in.
+const (
+	INR = "INR"
+	USD = "USD"
+)
+
+// CurrencyFor is the currency a visitor from country (ISO 3166-1 alpha-2)
+// pays in: rupees in India, US dollars elsewhere. An unknown country pays in
+// rupees, as every customer did before dollar prices existed.
+func CurrencyFor(country string) string {
+	if country == "" || country == "IN" {
+		return INR
+	}
+	return USD
+}
+
+// Price is the monthly price in currency's whole units; 0 when the plan is
+// not sold in it.
+func (d Definition) Price(currency string) int {
+	switch currency {
+	case INR:
+		return d.PriceINR
+	case USD:
+		return d.PriceUSD
+	}
+	return 0
+}
+
 // Allows reports whether the plan includes feature.
 func (d Definition) Allows(feature Feature) bool {
 	return slices.Contains(d.features, feature)
@@ -97,6 +128,8 @@ type Pack struct {
 	ID       string `json:"id"`
 	Name     string `json:"name"`
 	PriceINR int64  `json:"priceInr"`
+	// PriceUSD is the price in whole US dollars for customers outside India.
+	PriceUSD int64 `json:"priceUsd"`
 	// Credits is what a credit pack adds. Pack credits last while the
 	// workspace's paid plan does and expire when the plan ends.
 	Credits int64 `json:"credits"`
@@ -112,15 +145,27 @@ type Pack struct {
 const SiteAddOnDays = 30
 
 var packs = []Pack{
-	{ID: "credits_5000", Name: "5,000 credits", PriceINR: 1499, Credits: 5000, Feature: CreditPacks},
-	{ID: "credits_15000", Name: "15,000 credits", PriceINR: 3999, Credits: 15000, Feature: CreditPacks},
-	{ID: "sites_5", Name: "5 more websites", PriceINR: 999, Sites: 5, Feature: SiteAddOn},
+	{ID: "credits_5000", Name: "5,000 credits", PriceINR: 1499, PriceUSD: 19, Credits: 5000, Feature: CreditPacks},
+	{ID: "credits_15000", Name: "15,000 credits", PriceINR: 3999, PriceUSD: 59, Credits: 15000, Feature: CreditPacks},
+	{ID: "sites_5", Name: "5 more websites", PriceINR: 999, PriceUSD: 12, Sites: 5, Feature: SiteAddOn},
 }
 
 // Packs lists every one-time purchase, credit packs first. The caller owns
 // the result.
 func Packs() []Pack {
 	return slices.Clone(packs)
+}
+
+// Price is the pack's price in currency's whole units; 0 when it is not sold
+// in it.
+func (p Pack) Price(currency string) int64 {
+	switch currency {
+	case INR:
+		return p.PriceINR
+	case USD:
+		return p.PriceUSD
+	}
+	return 0
 }
 
 // GetPack returns the pack with id.
@@ -173,7 +218,7 @@ var catalog = []Definition{
 		},
 	},
 	{
-		ID: Basic, Name: "Basic", PriceINR: 999, Sites: 1, TrackedKeywords: 100, Members: 1, MonthlyCredits: 4000, MaxSerpDepth: 30, RankSchedule: RankScheduleWeekly,
+		ID: Basic, Name: "Basic", PriceINR: 999, PriceUSD: 15, Sites: 1, TrackedKeywords: 100, Members: 1, MonthlyCredits: 4000, MaxSerpDepth: 30, RankSchedule: RankScheduleWeekly,
 		Summary: "For one business website that wants to rank on Google.",
 		Highlights: highlights([]string{
 			"1 website",
@@ -184,7 +229,7 @@ var catalog = []Definition{
 		features: basicFeatures,
 	},
 	{
-		ID: Pro, Name: "Pro", PriceINR: 2499, Sites: 10, TrackedKeywords: 500, Members: 3, MonthlyCredits: 10000, MaxSerpDepth: 40, RankSchedule: RankScheduleWeekly,
+		ID: Pro, Name: "Pro", PriceINR: 2499, PriceUSD: 39, Sites: 10, TrackedKeywords: 500, Members: 3, MonthlyCredits: 10000, MaxSerpDepth: 40, RankSchedule: RankScheduleWeekly,
 		Summary: "For a growing business: beat competitors on Google and in AI answers.",
 		Highlights: highlights([]string{
 			"10 websites",
@@ -196,7 +241,7 @@ var catalog = []Definition{
 		features: proFeatures,
 	},
 	{
-		ID: Business, Name: "Business", PriceINR: 4999, Sites: 20, TrackedKeywords: 1000, Members: 5, MonthlyCredits: 15000, MaxSerpDepth: 40, RankSchedule: RankScheduleWeekly,
+		ID: Business, Name: "Business", PriceINR: 4999, PriceUSD: 69, Sites: 20, TrackedKeywords: 1000, Members: 5, MonthlyCredits: 15000, MaxSerpDepth: 40, RankSchedule: RankScheduleWeekly,
 		Summary: "For several brands, freelancers and agencies, with reports under your own brand.",
 		Highlights: highlights([]string{
 			"20 websites",

@@ -87,7 +87,9 @@ var handledEvents = []string{
 type Status struct {
 	Plan string `json:"plan"`
 	// Status is the Razorpay subscription state, or "none".
-	Status           string     `json:"status"`
+	Status string `json:"status"`
+	// Currency is what the subscription is billed in; "" without one.
+	Currency         string     `json:"currency"`
 	CurrentPeriodEnd *time.Time `json:"currentPeriodEnd"`
 	// CancelAtPeriodEnd is true when the customer cancelled: the plan runs
 	// until CurrentPeriodEnd and is not charged again.
@@ -131,9 +133,16 @@ const (
 
 // Service is the billing use cases.
 type Service struct {
-	repo          repository
-	razorpay      *razorpay.Client
-	planIDs       map[string]string
+	repo     repository
+	razorpay *razorpay.Client
+	// planIDs and usdPlanIDs map a plan to the Razorpay plan that bills it in
+	// rupees and in US dollars.
+	planIDs    map[string]string
+	usdPlanIDs map[string]string
+	// sellsUSD is set by EnableUSD once every dollar plan matched the
+	// catalog. Until then dollar plan ids are known to webhooks (a running
+	// dollar subscription keeps renewing) but nothing new is sold in dollars.
+	sellsUSD      bool
 	webhookSecret string
 	staffEmails   []string
 	Forecast      func(context.Context, string, time.Time) (int64, error)
@@ -167,6 +176,71 @@ func (s *Service) PaymentsConfigured() bool {
 	return s != nil && s.razorpay != nil && s.webhookSecret != ""
 }
 
+// SetUSDPlanIDs records the Razorpay plan that bills each plan in US
+// dollars, so webhooks recognise dollar subscriptions. It does not start
+// selling in dollars; EnableUSD does. Call it before the service is used. An
+// id that is also a rupee plan id is ignored: a webhook could not tell the
+// currencies apart.
+func (s *Service) SetUSDPlanIDs(ids map[string]string) {
+	s.usdPlanIDs = make(map[string]string, len(ids))
+	for plan, id := range ids {
+		if id != "" && s.planForRazorpayID(id) == "" {
+			s.usdPlanIDs[plan] = id
+		}
+	}
+}
+
+// ErrUSDIncomplete means not every plan sold in rupees has a dollar plan.
+var ErrUSDIncomplete = errors.New("not every plan sold in rupees has a US dollar Razorpay plan")
+
+// EnableUSD starts billing customers outside India in US dollars, after
+// checking that every plan sold in rupees has a dollar Razorpay plan at the
+// catalog price. Selling some plans in each currency would show a visitor
+// prices in two currencies, so it is all or nothing. On any failure nothing
+// changes and everyone keeps paying in rupees. Call it before the service is
+// used.
+func (s *Service) EnableUSD(ctx context.Context) error {
+	available := s.AvailablePlans()
+	if len(available) == 0 {
+		return ErrUSDIncomplete
+	}
+	for _, plan := range available {
+		if s.usdPlanIDs[plan] == "" {
+			return fmt.Errorf("%w: %s has none", ErrUSDIncomplete, plan)
+		}
+		if err := s.VerifyPlan(ctx, plan, plans.USD); err != nil {
+			return err
+		}
+	}
+	s.sellsUSD = true
+	return nil
+}
+
+// SellsInUSD reports whether customers outside India are billed in US
+// dollars.
+func (s *Service) SellsInUSD() bool {
+	return s != nil && s.sellsUSD
+}
+
+// CurrencyFor is the currency a visitor from country is billed in.
+func (s *Service) CurrencyFor(country string) string {
+	if !s.SellsInUSD() {
+		return plans.INR
+	}
+	return plans.CurrencyFor(country)
+}
+
+// razorpayPlanID is the Razorpay plan that bills plan in currency, or "".
+func (s *Service) razorpayPlanID(plan, currency string) string {
+	switch currency {
+	case plans.INR:
+		return s.planIDs[plan]
+	case plans.USD:
+		return s.usdPlanIDs[plan]
+	}
+	return ""
+}
+
 // AvailablePlans reports plans configured for checkout.
 func (s *Service) AvailablePlans() []string {
 	if s == nil {
@@ -181,21 +255,26 @@ func (s *Service) AvailablePlans() []string {
 	return available
 }
 
-// VerifyPlan checks provider terms without creating a subscription or payment.
-func (s *Service) VerifyPlan(ctx context.Context, plan string) error {
+// VerifyPlan checks the Razorpay plan that bills plan in currency without
+// creating a subscription or payment: monthly, in that currency, at exactly
+// the catalog price. A customer must never be charged other than what the
+// pricing page showed.
+func (s *Service) VerifyPlan(ctx context.Context, plan, currency string) error {
 	if !s.PaymentsConfigured() {
 		return ErrPaymentUnavailable
 	}
 	definition, ok := plans.Get(plan)
-	if !ok || definition.PriceINR <= 0 || s.planIDs[plan] == "" {
+	id := s.razorpayPlanID(plan, currency)
+	if !ok || definition.Price(currency) <= 0 || id == "" {
 		return ErrPlanUnavailable
 	}
-	terms, err := s.razorpay.FetchPlan(ctx, s.planIDs[plan])
+	terms, err := s.razorpay.FetchPlan(ctx, id)
 	if err != nil {
 		return fmt.Errorf("verify checkout plan: %w: %w", ErrPaymentProvider, err)
 	}
-	if terms.Period != "monthly" || terms.Interval != 1 || terms.Item.Currency != "INR" || terms.Item.Amount != int64(definition.PriceINR)*100 {
-		return fmt.Errorf("%w: provider plan differs from catalog", ErrPlanUnavailable)
+	// Both currencies have 100 minor units (paise, cents).
+	if terms.Period != "monthly" || terms.Interval != 1 || terms.Item.Currency != currency || terms.Item.Amount != int64(definition.Price(currency))*100 {
+		return fmt.Errorf("%w: provider plan %s differs from the %s %s catalog price", ErrPlanUnavailable, id, plan, currency)
 	}
 	return nil
 }
@@ -255,7 +334,7 @@ func (s *Service) subscribedStatus(ctx context.Context, orgID string) (Status, e
 		periodEnd = &utc
 	}
 	return Status{
-		Plan: plan, Status: sub.Status, CurrentPeriodEnd: periodEnd,
+		Plan: plan, Status: sub.Status, Currency: sub.Currency, CurrentPeriodEnd: periodEnd,
 		CancelAtPeriodEnd: sub.CancelAtPeriodEnd && slices.Contains(liveStatuses, sub.Status),
 	}, nil
 }
@@ -411,23 +490,26 @@ func (s *Service) MemberLimit(ctx context.Context, orgID string) (int, error) {
 // caller must have checked that the user may manage the organization's
 // billing. It returns ErrAlreadySubscribed when orgID's subscription is live.
 func (s *Service) Checkout(ctx context.Context, orgID string) (Checkout, error) {
-	return s.CheckoutPlan(ctx, orgID, PlanPro)
+	return s.CheckoutPlan(ctx, orgID, PlanPro, plans.INR)
 }
 
-// CheckoutPlan starts a subscription for a selected configured plan.
+// CheckoutPlan starts a subscription for a selected configured plan, billed
+// in currency. The caller decides the currency from where the request comes
+// from (CurrencyFor), never from what the browser asks for.
 //
 // A workspace has at most one payable subscription at a time, so a second
 // tab or a double click can never be charged twice. Checkouts of one
-// workspace are serialized; an unpaid subscription to the same plan is
-// handed out again (Razorpay keeps it payable, since no start_at is set), and
-// one to another plan is cancelled before the new one is created. If that
-// cancel fails, checkout fails rather than leave two payable subscriptions.
-func (s *Service) CheckoutPlan(ctx context.Context, orgID, plan string) (Checkout, error) {
+// workspace are serialized; an unpaid subscription to the same plan in the
+// same currency is handed out again (Razorpay keeps it payable, since no
+// start_at is set), and any other unpaid one is cancelled before the new one
+// is created. If that cancel fails, checkout fails rather than leave two
+// payable subscriptions.
+func (s *Service) CheckoutPlan(ctx context.Context, orgID, plan, currency string) (Checkout, error) {
 	if !s.PaymentsConfigured() {
 		return Checkout{}, ErrPaymentUnavailable
 	}
-	planID := s.planIDs[plan]
-	if planID == "" {
+	planID := s.razorpayPlanID(plan, currency)
+	if planID == "" || (currency == plans.USD && !s.sellsUSD) {
 		return Checkout{}, ErrPlanUnavailable
 	}
 	q, unlock, err := s.repo.lockCheckout(ctx, orgID)
@@ -442,11 +524,11 @@ func (s *Service) CheckoutPlan(ctx context.Context, orgID, plan string) (Checkou
 	if found && slices.Contains(liveStatuses, current.Status) {
 		return Checkout{}, ErrAlreadySubscribed
 	}
-	if err := s.VerifyPlan(ctx, plan); err != nil {
+	if err := s.VerifyPlan(ctx, plan, currency); err != nil {
 		return Checkout{}, err
 	}
 	if found && current.Status == "created" {
-		if current.Plan == plan {
+		if current.Plan == plan && current.Currency == currency {
 			return Checkout{SubscriptionID: current.ID, KeyID: s.razorpay.KeyID()}, nil
 		}
 		if _, err := s.razorpay.CancelSubscription(ctx, current.ID, false); err != nil {
@@ -460,7 +542,7 @@ func (s *Service) CheckoutPlan(ctx context.Context, orgID, plan string) (Checkou
 	}
 	// A webhook may have made another subscription live since the check
 	// above; the new one then stays unpaid and expires.
-	replaced, err := startSubscription(ctx, q, orgID, plan, sub.ID, sub.Status, time.Unix(sub.CreatedAt, 0), liveStatuses)
+	replaced, err := startSubscription(ctx, q, orgID, plan, currency, sub.ID, sub.Status, time.Unix(sub.CreatedAt, 0), liveStatuses)
 	if err != nil {
 		return Checkout{}, fmt.Errorf("checkout for organization %s: %w", orgID, err)
 	}
@@ -560,7 +642,10 @@ func (s *Service) HandleWebhook(ctx context.Context, body []byte, signature, eve
 	}
 	// The plan comes from Razorpay, which knows what was paid for, never
 	// from what the browser asked for at checkout.
-	plan := s.planForRazorpayID(sub.PlanID)
+	plan, currency := s.planForRazorpayID(sub.PlanID), plans.INR
+	if plan == "" {
+		plan, currency = planFor(s.usdPlanIDs, sub.PlanID), plans.USD
+	}
 	if plan == "" {
 		return "", fmt.Errorf("%w: subscription %s of organization %s is on plan %q", ErrUnknownPlan, sub.ID, orgID, sub.PlanID)
 	}
@@ -579,6 +664,7 @@ func (s *Service) HandleWebhook(ctx context.Context, body []byte, signature, eve
 		OrganizationID:   orgID,
 		ID:               sub.ID,
 		Plan:             plan,
+		Currency:         currency,
 		Status:           sub.Status,
 		CurrentPeriodEnd: periodEnd,
 		EventAt:          time.Unix(event.CreatedAt, 0).UTC(),
@@ -635,8 +721,13 @@ func (s *Service) grantFor(event, status, plan string) int64 {
 	return s.MonthlyGrantFor(plan)
 }
 
+// planForRazorpayID is the plan the rupee Razorpay plan id bills, or "".
 func (s *Service) planForRazorpayID(id string) string {
-	for plan, configuredID := range s.planIDs {
+	return planFor(s.planIDs, id)
+}
+
+func planFor(ids map[string]string, id string) string {
+	for plan, configuredID := range ids {
 		if id != "" && id == configuredID {
 			return plan
 		}

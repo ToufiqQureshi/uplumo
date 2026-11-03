@@ -11,14 +11,14 @@ import (
 
 func TestCatalogMatchesTheOwnersPlanTable(t *testing.T) {
 	want := []struct {
-		id                              string
-		price, sites, keywords, members int
-		credits                         int64
+		id                                   string
+		price, usd, sites, keywords, members int
+		credits                              int64
 	}{
-		{Free, 0, 1, 0, 1, 0},
-		{Basic, 999, 1, 100, 1, 4000},
-		{Pro, 2499, 10, 500, 3, 10000},
-		{Business, 4999, 20, 1000, 5, 15000},
+		{Free, 0, 0, 1, 0, 1, 0},
+		{Basic, 999, 15, 1, 100, 1, 4000},
+		{Pro, 2499, 39, 10, 500, 3, 10000},
+		{Business, 4999, 69, 20, 1000, 5, 15000},
 	}
 	got := Catalog()
 	if len(got) != len(want) {
@@ -26,9 +26,9 @@ func TestCatalogMatchesTheOwnersPlanTable(t *testing.T) {
 	}
 	for i, w := range want {
 		g := got[i]
-		if g.ID != w.id || g.PriceINR != w.price || g.Sites != w.sites || g.TrackedKeywords != w.keywords || g.Members != w.members || g.MonthlyCredits != w.credits {
-			t.Errorf("plan %d = %s ₹%d, %d sites, %d keywords, %d members, %d credits; want %+v",
-				i, g.ID, g.PriceINR, g.Sites, g.TrackedKeywords, g.Members, g.MonthlyCredits, w)
+		if g.ID != w.id || g.PriceINR != w.price || g.PriceUSD != w.usd || g.Sites != w.sites || g.TrackedKeywords != w.keywords || g.Members != w.members || g.MonthlyCredits != w.credits {
+			t.Errorf("plan %d = %s ₹%d $%d, %d sites, %d keywords, %d members, %d credits; want %+v",
+				i, g.ID, g.PriceINR, g.PriceUSD, g.Sites, g.TrackedKeywords, g.Members, g.MonthlyCredits, w)
 		}
 		if g.Name == "" || g.Summary == "" || len(g.Highlights) == 0 {
 			t.Errorf("plan %s has no name, summary or highlights to show a customer", g.ID)
@@ -102,6 +102,10 @@ func TestNoPlanCanCostMoreThanAThirdOfItsPrice(t *testing.T) {
 		providerINR := float64(plan.MonthlyCredits) / 1280 * inrPerUSD
 		if providerINR > float64(plan.PriceINR)/3 {
 			t.Errorf("%s: credits can cost ₹%.0f a month at the provider, more than a third of ₹%d", plan.ID, providerINR, plan.PriceINR)
+		}
+		// The USD price is set on its own, so it needs the same margin.
+		if providerUSD := float64(plan.MonthlyCredits) / 1280; providerUSD > float64(plan.PriceUSD)/3 {
+			t.Errorf("%s: credits can cost $%.2f a month at the provider, more than a third of $%d", plan.ID, providerUSD, plan.PriceUSD)
 		}
 	}
 }
@@ -193,5 +197,17 @@ func TestBusinessCardStatesTheSiteAddOnPrice(t *testing.T) {
 	want := fmt.Sprintf("Add %d more websites for ₹%d a month", addOn.Sites, addOn.PriceINR)
 	if !slices.Contains(business.Highlights, want) {
 		t.Errorf("Business highlights do not contain %q", want)
+	}
+}
+
+func TestCurrencyFor(t *testing.T) {
+	for country, want := range map[string]string{"IN": INR, "": INR, "US": USD, "GB": USD, "AE": USD} {
+		if got := CurrencyFor(country); got != want {
+			t.Errorf("CurrencyFor(%q) = %s, want %s", country, got, want)
+		}
+	}
+	pro, _ := Get(Pro)
+	if pro.Price(INR) != 2499 || pro.Price(USD) != 39 || pro.Price("EUR") != 0 {
+		t.Errorf("Pro prices = %d INR, %d USD, %d EUR; want 2499, 39, 0", pro.Price(INR), pro.Price(USD), pro.Price("EUR"))
 	}
 }

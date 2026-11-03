@@ -100,7 +100,7 @@ func TestThePlanComesFromRazorpayNotFromCheckout(t *testing.T) {
 	f.sellTiers()
 
 	// The browser asks for Basic; Razorpay then reports a Business subscription.
-	checkout, err := f.svc.CheckoutPlan(ctx, f.org, PlanBasic)
+	checkout, err := f.svc.CheckoutPlan(ctx, f.org, PlanBasic, plans.INR)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +114,7 @@ func TestCheckoutRefusesAPlanThatIsNotSold(t *testing.T) {
 	f.svc = NewPlanService(f.pool, f.svc.razorpay, map[string]string{PlanPro: "plan_tier_pro", plans.Business: ""}, testWebhookSecret)
 
 	for _, plan := range []string{PlanBasic, plans.Business, PlanFree, "agency", "enterprise", ""} {
-		if _, err := f.svc.CheckoutPlan(ctx, f.org, plan); !errors.Is(err, ErrPlanUnavailable) {
+		if _, err := f.svc.CheckoutPlan(ctx, f.org, plan, plans.INR); !errors.Is(err, ErrPlanUnavailable) {
 			t.Errorf("CheckoutPlan(%q) error = %v, want ErrPlanUnavailable", plan, err)
 		}
 	}

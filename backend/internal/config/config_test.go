@@ -189,7 +189,7 @@ func TestLoadRazorpay(t *testing.T) {
 	}
 
 	cfg, err = load(full)
-	want := Razorpay{KeyID: "rzp_test_key", KeySecret: "key-secret", WebhookSecret: "webhook-secret", PlanIDs: map[string]string{"pro": "plan_pro"}}
+	want := Razorpay{KeyID: "rzp_test_key", KeySecret: "key-secret", WebhookSecret: "webhook-secret", PlanIDs: map[string]string{"pro": "plan_pro"}, USDPlanIDs: map[string]string{}}
 	if err != nil || cfg.Razorpay == nil || !reflect.DeepEqual(*cfg.Razorpay, want) {
 		t.Fatalf("with every RAZORPAY_* Load() = %+v, %v; want %+v", cfg.Razorpay, err, want)
 	}
@@ -216,6 +216,24 @@ func TestLoadRazorpay(t *testing.T) {
 	cfg, err = load(plans)
 	if err != nil || cfg.Razorpay.PlanIDs["basic"] != "plan_basic" || cfg.Razorpay.PlanIDs["pro"] != "plan_pro_tier" || cfg.Razorpay.PlanIDs["business"] != "plan_business" || cfg.Razorpay.PlanIDs["agency"] != "" {
 		t.Fatalf("tier Razorpay config = %+v, %v", cfg.Razorpay, err)
+	}
+	if len(cfg.Razorpay.USDPlanIDs) != 0 {
+		t.Fatalf("without USD variables USD plans = %v, want none (rupees only)", cfg.Razorpay.USDPlanIDs)
+	}
+
+	usd := maps.Clone(plans)
+	maps.Copy(usd, map[string]string{"RAZORPAY_PLAN_ID_BASIC_USD": " plan_basic_usd ", "RAZORPAY_PLAN_ID_PRO_USD": "plan_pro_usd"})
+	cfg, err = load(usd)
+	if err != nil || cfg.Razorpay.USDPlanIDs["basic"] != "plan_basic_usd" || cfg.Razorpay.USDPlanIDs["pro"] != "plan_pro_usd" || cfg.Razorpay.USDPlanIDs["business"] != "" || cfg.Razorpay.PlanIDs["basic"] != "plan_basic" {
+		t.Fatalf("USD Razorpay config = %+v, %v", cfg.Razorpay, err)
+	}
+
+	// One Razorpay id for two currencies would let a webhook grant the wrong
+	// one; refuse to start.
+	reused := maps.Clone(usd)
+	reused["RAZORPAY_PLAN_ID_PRO_USD"] = "plan_pro_tier"
+	if _, err := load(reused); err == nil || !strings.Contains(err.Error(), "RAZORPAY_PLAN_ID_PRO_USD") {
+		t.Fatalf("a USD id equal to a rupee id: Load() error = %v, want one naming it", err)
 	}
 }
 

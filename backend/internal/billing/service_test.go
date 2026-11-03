@@ -84,10 +84,10 @@ func TestCheckoutOfAnotherPlanCancelsTheUnpaidOneFirst(t *testing.T) {
 	ctx := context.Background()
 	f := newFixture(ctx, t)
 	f.sellTiers()
-	if _, err := f.svc.CheckoutPlan(ctx, f.org, PlanBasic); err != nil {
+	if _, err := f.svc.CheckoutPlan(ctx, f.org, PlanBasic, plans.INR); err != nil {
 		t.Fatal(err)
 	}
-	checkout, err := f.svc.CheckoutPlan(ctx, f.org, PlanPro)
+	checkout, err := f.svc.CheckoutPlan(ctx, f.org, PlanPro, plans.INR)
 	if err != nil || checkout.SubscriptionID != "sub_2" {
 		t.Fatalf("CheckoutPlan(pro) = %+v, %v; want the new sub_2", checkout, err)
 	}
@@ -103,11 +103,11 @@ func TestCheckoutOfAnotherPlanFailsWhenTheUnpaidOneCannotBeCancelled(t *testing.
 	ctx := context.Background()
 	f := newFixture(ctx, t)
 	f.sellTiers()
-	if _, err := f.svc.CheckoutPlan(ctx, f.org, PlanBasic); err != nil {
+	if _, err := f.svc.CheckoutPlan(ctx, f.org, PlanBasic, plans.INR); err != nil {
 		t.Fatal(err)
 	}
 	f.failWith = http.StatusBadGateway
-	if _, err := f.svc.CheckoutPlan(ctx, f.org, PlanPro); !errors.Is(err, ErrPaymentProvider) {
+	if _, err := f.svc.CheckoutPlan(ctx, f.org, PlanPro, plans.INR); !errors.Is(err, ErrPaymentProvider) {
 		t.Fatalf("CheckoutPlan(pro) error = %v, want ErrPaymentProvider", err)
 	}
 	if f.calls.Load() != 1 {
@@ -769,7 +769,7 @@ func TestCheckoutPlanUsesSelectedRazorpayPlan(t *testing.T) {
 				t.Fatalf("clear prior created subscription: %v", err)
 			}
 		}
-		if _, err := f.svc.CheckoutPlan(ctx, f.org, plan); err != nil {
+		if _, err := f.svc.CheckoutPlan(ctx, f.org, plan, plans.INR); err != nil {
 			t.Fatalf("CheckoutPlan(%s) error = %v", plan, err)
 		}
 		if got := f.lastPlanID.Load(); got != tierPlanIDs[plan] {
