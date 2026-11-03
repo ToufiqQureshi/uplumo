@@ -10,8 +10,8 @@ import (
 	"errors"
 	"fmt"
 	"image"
-	_ "image/jpeg"
-	_ "image/png"
+	_ "image/jpeg" // registers JPEG for image.DecodeConfig
+	_ "image/png"  // registers PNG for image.DecodeConfig
 	"net/url"
 	"regexp"
 	"strings"
@@ -24,10 +24,14 @@ import (
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/ids"
 )
 
+// MaxScreenshotBytes caps one attached screenshot (1 MiB).
 const MaxScreenshotBytes = 1 << 20
 
 var uuidPattern = regexp.MustCompile(`^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$`)
+
+// Errors the handler maps to HTTP responses.
 var (
+	// ErrInvalid is a report that fails validation.
 	ErrInvalid   = errors.New("invalid support report")
 	ErrConflict  = errors.New("submission ID already used for another report")
 	ErrRateLimit = errors.New("support report limit reached")
@@ -45,6 +49,7 @@ type Input struct {
 	Screenshot   string `json:"screenshot,omitempty"`
 }
 
+// Service saves reports and notifies support.
 type Service struct {
 	DB *pgxpool.Pool
 	// StaffEmails is the server-configured list, normalized by config.Load.

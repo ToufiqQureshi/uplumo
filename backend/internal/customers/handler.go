@@ -10,12 +10,14 @@ import (
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/httpx"
 )
 
+// Deps wires the customer routes to the service and session middleware.
 type Deps struct {
 	Service     *Service
 	Logger      *slog.Logger
 	WithSession func(http.Handler) http.Handler
 }
 
+// Mount registers the staff access, customer list and CSV routes.
 func Mount(mux *http.ServeMux, d Deps) {
 	mux.Handle("GET /api/v1/admin/access", d.WithSession(http.HandlerFunc(d.access)))
 	mux.Handle("GET /api/v1/admin/customers", d.WithSession(http.HandlerFunc(d.list)))
