@@ -271,7 +271,7 @@ func TestHTTPRequiresSessionAndBoundsJSON(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			mux := http.NewServeMux()
 			Mount(mux, Deps{Service: &Service{}, Logger: logger, WithSession: func(h http.Handler) http.Handler { return h }})
-			r := httptest.NewRequest("POST", "/api/v1/support/reports", strings.NewReader(test.body))
+			r := httptest.NewRequestWithContext(t.Context(), "POST", "/api/v1/support/reports", strings.NewReader(test.body))
 			if test.user.ID != "" {
 				r = r.WithContext(auth.WithUser(r.Context(), test.user))
 			}

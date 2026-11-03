@@ -1,6 +1,9 @@
 import { expect, test } from "@playwright/test";
 import { installGrowthFixtures } from "./search-growth.fixtures";
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
 for (const width of [1280, 375]) {
   test(`support report preserves failed input and retries one ticket at ${width}px`, async ({
     page,
@@ -8,7 +11,8 @@ for (const width of [1280, 375]) {
     const { paid } = await installGrowthFixtures(page);
     const submissions: Array<Record<string, unknown>> = [];
     await page.route("**/api/v1/support/reports", async (route) => {
-      submissions.push(route.request().postDataJSON());
+      const body: unknown = route.request().postDataJSON();
+      submissions.push(isRecord(body) ? body : {});
       await route.fulfill({
         status: submissions.length === 1 ? 503 : 201,
         contentType: "application/json",

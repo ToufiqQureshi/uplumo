@@ -6,8 +6,8 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { ReportProblemForm } from "./ReportProblemForm";
 import { readScreenshot, reportPath, submitReport } from "./reportApi";
 
-vi.mock("./reportApi", async (original) => ({
-  ...(await original<typeof import("./reportApi")>()),
+vi.mock("./reportApi", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   submitReport: vi.fn(),
 }));
 
@@ -74,10 +74,10 @@ it("keeps failed reports and their submission ID for manual retry, then confirms
   );
   expect(submitReport).toHaveBeenCalledTimes(1);
   expect(host.querySelector("textarea")!.value).toContain("balance");
-  const first = vi.mocked(submitReport).mock.calls[0]![0];
-  expect(first.pagePath).toBe("/billing");
-  expect(first.description).toContain("balance");
-  expect(first.appVersion).toBeTruthy();
+  const first = vi.mocked(submitReport).mock.calls[0]?.[0];
+  expect(first?.pagePath).toBe("/billing");
+  expect(first?.description).toContain("balance");
+  expect(first?.appVersion).toBeTruthy();
   vi.mocked(submitReport).mockResolvedValue({
     ticketId: "12345678-1234-4234-8234-123456789012",
   });
@@ -85,14 +85,14 @@ it("keeps failed reports and their submission ID for manual retry, then confirms
   await vi.waitFor(() =>
     expect(host.textContent).toContain("12345678-1234-4234-8234-123456789012"),
   );
-  expect(vi.mocked(submitReport).mock.calls[1]![0].submissionId).toBe(
-    first.submissionId,
+  expect(vi.mocked(submitReport).mock.calls[1]?.[0].submissionId).toBe(
+    first?.submissionId,
   );
   expect(host.querySelector("form")).toBeNull();
 });
 
 it("dispatches once when the same form is submitted twice before rendering", async () => {
-  let resolve: (result: { ticketId: string }) => void = () => {};
+  let resolve: ((result: { ticketId: string }) => void) | undefined;
   vi.mocked(submitReport).mockReturnValue(
     new Promise((done) => {
       resolve = done;
@@ -110,7 +110,7 @@ it("dispatches once when the same form is submitted twice before rendering", asy
   });
   expect(submitReport).toHaveBeenCalledTimes(1);
   await act(async () =>
-    resolve({ ticketId: "12345678-1234-4234-8234-123456789012" }),
+    resolve?.({ ticketId: "12345678-1234-4234-8234-123456789012" }),
   );
 });
 
