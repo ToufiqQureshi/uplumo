@@ -14,6 +14,7 @@ import { organizationContextQueryOptions } from "@/client/features/team/organiza
 import { switchOrganization } from "@/client/features/team/organizationApi";
 import {
   accountNavGroup,
+  staffNavItem,
   connectNavGroup,
   findActivePage,
   getProjectNavGroups,
@@ -28,6 +29,7 @@ import { ThemePreferenceRadio } from "@/client/components/ThemePreferenceMenuIte
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { signOutAndRedirect, useSession } from "@/lib/auth-client";
 import { BILLING_ROUTE } from "@/shared/billing";
+import { staffAccessQueryOptions } from "@/client/features/staff-customers/customersApi";
 import {
   Sidebar as UiSidebar,
   SidebarContent,
@@ -203,6 +205,10 @@ function AccountFooter({ ready }: { ready: boolean }) {
   });
   const organizations = orgContextQuery.data?.organizations ?? [];
   const activeOrganizationId = orgContextQuery.data?.organizationId;
+  const staffAccess = useQuery({
+    ...staffAccessQueryOptions(),
+    enabled: Boolean(email),
+  });
 
   async function handleSwitchOrganization(organizationId: string) {
     if (isSwitching || organizationId === activeOrganizationId) return;
@@ -219,6 +225,9 @@ function AccountFooter({ ready }: { ready: boolean }) {
   return (
     <UiSidebarFooter className="gap-1 border-t border-sidebar-border px-3 pb-safe">
       <SidebarMenu>
+        {staffAccess.data?.staff ? (
+          <SidebarNavLink item={staffNavItem} />
+        ) : null}
         {accountNavGroup.items.map((item) => (
           <SidebarNavLink key={item.label} item={item} />
         ))}
