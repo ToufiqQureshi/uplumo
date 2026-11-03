@@ -11,6 +11,8 @@ export type KeywordRow = {
   keywordDifficulty: number | null;
   intent?: string | null;
   type?: string | null;
+  previousPosition?: number | null;
+  isNew?: boolean | null;
 };
 
 export type PageRow = {

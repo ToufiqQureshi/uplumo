@@ -24,6 +24,7 @@ import type {
   KeywordRow,
   SortOrder,
 } from "@/client/features/domain/types";
+import { RankWithChange } from "@/client/features/domain/components/RankWithChange";
 import { ResultTypeBadge } from "@/client/features/domain/components/ResultTypeBadge";
 
 type Props = DataTableFrameProps & {
@@ -78,7 +79,13 @@ export function DomainKeywordsTable({
             )}
           />
         ),
-        cell: ({ getValue }) => getValue() ?? "-",
+        cell: ({ row }) => (
+          <RankWithChange
+            position={row.original.position}
+            previousPosition={row.original.previousPosition}
+            isNew={row.original.isNew}
+          />
+        ),
       }),
       keywordColumnHelper.display({
         id: "type",

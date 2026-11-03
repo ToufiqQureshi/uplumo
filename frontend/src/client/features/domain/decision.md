@@ -66,6 +66,11 @@ Shows organic estimates, keyword/page tables and filtered domain research.
 - **Preserve:** `cachedOnly` is read at request time, so the refetch a Retry starts is allowed to buy; it never goes in the request body. Paging, sorting and tabs after a Search in the same session still load normally.
 - **Trace:** `backend/internal/platform/dataforseo/decision.md`; tests in `client/lib/uplumoApi.test.ts`, `backlinksApi.test.ts`, `domain/domain-cache.test.ts`.
 
+- **Decision:** The Rank cell shows the change since DataForSEO's previous update (`RankWithChange`: ↑n green, ↓n red, "New"), and the keywords CSV adds Previous Rank, Type and Intent.
+- **Why:** The fields come with the paid row and were dropped; see `backend/internal/domain/decision.md`.
+- **Preserve:** No new request. Unknown change shows nothing, not "0". A lower rank number is an improvement.
+- **Trace:** `components/RankWithChange.tsx`, `components/DomainKeywordsTable.tsx`, `utils.ts`, `types.ts`, `domainApi.ts`; `RankWithChange.test.ts`, `keywordsExport.test.ts`.
+
 - **Decision:** The overview card adds a Traffic Value tile and `OverviewBreakdown` (Google position bands and movement since the last update), read from fields the overview response now carries.
 - **Why:** These came with the paid overview task and were dropped; see `backend/internal/domain/decision.md`.
 - **Preserve:** No new request. Null shows "-", not 0. Schema fields are optional/nullish so an older cached overview still parses, and the breakdown renders nothing without them.
