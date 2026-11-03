@@ -216,7 +216,7 @@ for them.
 - `GET /billing/topups`: the packs this workspace's plan includes (none while
   payments are off); `POST /billing/topups/checkout` accepts only `packId`,
   requires a plan that includes the pack (else 402) and an owner/admin, and creates a
-  server-priced INR order. One pending order per workspace is reused across
+  server-priced order in the checkout currency (rupees in India, dollars elsewhere once dollar billing is on). One pending order per workspace is reused across
   duplicate requests for the same pack. A simultaneous creation returns 409
   rather than creating another payable order. Choosing a different pack
   abandons the pending one (status `failed`) and creates a new order; a late
@@ -254,6 +254,8 @@ Migration 41 marks provider holds before dispatch and stores the first settlemen
 
 A provider hold with no recorded outcome stays reserved and emits an error containing its reservation/workspace IDs. Reconcile it against provider usage before explicitly settling or refunding through `CreditLedgerService`; do not infer a zero cost from age or re-run the paid request. The same rule applies to pre-migration open feature holds. Production provider reconciliation is not performed by the tests.
 
-Checkout verifies provider ID, INR amount and monthly frequency against the catalog before creating or reusing an unpaid subscription. Startup performs the same read-only checks and logs each configured plan for release verification; failed verification does not stop free features. No payment is created by these checks.
+Checkout verifies provider ID, currency, amount and monthly frequency against the catalog before creating or reusing an unpaid subscription. Startup performs the same read-only checks and logs each configured plan for release verification; failed verification does not stop free features. No payment is created by these checks.
+
+**Currency.** Customers outside India pay in US dollars once every rupee plan has a verified dollar plan (`EnableUSD` at startup); India and unknown locations pay rupees. The server picks the currency from the trusted client address; checkout and pack checkout refuse with 409 `currency_changed` when it differs from what the browser showed. Rules and invariants: [decision.md](decision.md#us-dollar-billing-for-customers-outside-india).
 
 Known costs after a zero estimate use a zero-amount outcome reservation (migration 43), committed before staff top-up, expiry or customer charging. The existing settlement/reconciler charges available credits and records provider spend once; charging failure cannot turn it into an ordinary refundable hold.

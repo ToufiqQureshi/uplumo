@@ -3,7 +3,10 @@ import {
   getBillingCredits,
   type BillingCredits,
 } from "@/client/features/billing/billingApi";
-import { createCheckout } from "@/client/features/billing/plan/planApi";
+import {
+  billingStatusQueryOptions,
+  createCheckout,
+} from "@/client/features/billing/plan/planApi";
 import { openRazorpayCheckout } from "@/client/features/billing/plan/razorpay";
 import { SUPPORT_EMAIL } from "@/client/lib/support";
 import {
@@ -87,7 +90,9 @@ export function useBillingCustomer({
     if (planId === AUTUMN_SEO_DATA_TOP_UP_PLAN_ID) {
       throw new Error("Credit top-ups are not available yet.");
     }
-    const checkout = await createCheckout("pro");
+    // Read the currency fresh: the server bills where the request comes from.
+    const { checkoutCurrency } = await billingStatusQueryOptions.queryFn();
+    const checkout = await createCheckout("pro", checkoutCurrency);
     const paid = await openRazorpayCheckout(checkout);
     if (!paid) throw new Error("The payment window was closed before paying.");
     if (successUrl) window.location.assign(successUrl);

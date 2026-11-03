@@ -14,9 +14,9 @@ This is an internal developer/AI-agent guide, not customer-facing product copy. 
 
 Called by `backend/internal/billing`; no public direct route.
 
-`orders.go` creates one-time INR orders for credit top-ups. The browser never
+`orders.go` creates one-time orders (INR or USD) for credit top-ups. The browser never
 supplies an amount; billing passes the saved pack price. Returned receipt,
 currency and amount must match. Captured-payment webhook validation and
 idempotent grants belong to `internal/billing/topups.go`.
 
-`plans.go` fetches a plan with a bounded authenticated GET. Before creating or reusing an unpaid checkout, billing verifies its ID, monthly interval, INR currency and exact catalog amount. Payment entities in signed subscription events expose their ID for credit-grant deduplication; byte-identical body fingerprints are retained for compatibility.
+`plans.go` fetches a plan with a bounded authenticated GET. Before creating or reusing an unpaid checkout, billing verifies its ID, monthly interval, currency (INR or USD) and exact catalog amount in that currency. Payment entities in signed subscription events expose their ID for credit-grant deduplication; byte-identical body fingerprints are retained for compatibility.

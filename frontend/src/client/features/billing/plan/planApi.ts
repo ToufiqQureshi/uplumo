@@ -1,9 +1,17 @@
 import { z } from "zod";
 import { apiRequest, shouldRetryApiError } from "@/client/lib/uplumoApi";
 
+const currencySchema = z.enum(["INR", "USD"]);
+export type Currency = z.infer<typeof currencySchema>;
+
 const statusSchema = z.object({
   plan: z.enum(["free", "basic", "pro", "business"]),
   status: z.string(),
+  // What the subscription is billed in; "" without one.
+  currency: z.union([currencySchema, z.literal("")]),
+  // What a new checkout from this browser is billed in, decided by the
+  // server from where the request comes from.
+  checkoutCurrency: currencySchema,
   currentPeriodEnd: z.iso.datetime({ offset: true }).nullable(),
   // True once the owner cancelled: Pro runs until currentPeriodEnd, then stops.
   cancelAtPeriodEnd: z.boolean(),
@@ -61,12 +69,45 @@ export async function waitForPaidPlan(
   return status;
 }
 
+/**
+ * Starts a subscription. `currency` is the currency the customer was shown
+ * the price in; the server refuses with 409 `currency_changed` when it would
+ * now bill another, so nobody pays a price they did not see.
+ */
 export function createCheckout(
   plan: "basic" | "pro" | "business",
+  currency: Currency,
 ): Promise<CheckoutSession> {
   return apiRequest("/api/v1/billing/checkout", checkoutSchema, "POST", {
     plan,
+    currency,
   });
+}
+
+const formats: Record<Currency, Intl.NumberFormat> = {
+  INR: new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }),
+  USD: new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }),
+};
+
+/** Formats whole rupees or dollars: ₹2,499 or $39. */
+export function formatPrice(amount: number, currency: Currency): string {
+  return formats[currency].format(amount);
+}
+
+/** A price from the catalog in currency. */
+export function priceIn(
+  item: { priceInr: number; priceUsd: number },
+  currency: Currency,
+): number {
+  return currency === "USD" ? item.priceUsd : item.priceInr;
 }
 
 /** Cancels the subscription and returns the plan that results. */
@@ -78,6 +119,7 @@ const planSchema = z.object({
   id: z.enum(["free", "basic", "pro", "business"]),
   name: z.string().min(1),
   priceInr: z.number().int().nonnegative(),
+  priceUsd: z.number().int().nonnegative(),
   summary: z.string(),
   highlights: z.array(z.string()),
 });

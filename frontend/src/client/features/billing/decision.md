@@ -56,3 +56,8 @@ event. Shared configuration and opt-outs live in the backend site `decision.md`.
 - **Why:** owner decisions of 27 Oct (`DECISIONS.md`). The old card offered "Choose pack again" while a paid order was still being verified, which invited a second payment.
 - **Preserve:** the browser never prices a pack or decides who may buy it; checkout calls are not retried (`retry: false`); a closed payment window leaves the order reusable; paid-status polling stops once granted or after 40 tries.
 - **Trace:** `credits/TopUpsCard.tsx`, `plan/planApi.ts`, `plan/BillingPlanPage.tsx`, `usageApi.ts`, `billingApi.ts`; backend `../../../../../backend/internal/billing/decision.md`.
+
+## Prices in the billed currency
+
+- **Decision:** Billing shows each plan and pack in `checkoutCurrency` from `GET /api/v1/billing/status` (the current plan in its subscription's `currency`) and sends that currency with every checkout. A 409 `currency_changed` reloads status and plans so the new price shows before any payment. Checkout mutations are never retried.
+- **Why / Preserve:** the server picks the currency; the browser only proves what it showed. See [billing decision](../../../../../backend/internal/billing/decision.md#us-dollar-billing-for-customers-outside-india).

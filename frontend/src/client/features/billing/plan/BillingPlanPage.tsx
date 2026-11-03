@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { AlertTriangle, Check } from "lucide-react";
-import { useState } from "react";
 import { toast } from "sonner";
 import { ErrorState } from "@/client/components/ErrorState";
 import { PageHeader } from "@/client/components/PageHeader";
@@ -25,19 +24,14 @@ import {
   billingPlansQueryOptions,
   billingStatusQueryOptions,
   cancelSubscription,
-  createCheckout,
   describeStatus,
-  waitForPaidPlan,
+  formatPrice,
+  priceIn,
   type BillingPlan,
   type BillingStatus,
+  type Currency,
 } from "./planApi";
-import { openRazorpayCheckout } from "./razorpay";
-
-const inr = new Intl.NumberFormat("en-IN", {
-  style: "currency",
-  currency: "INR",
-  maximumFractionDigits: 0,
-});
+import { UpgradeButton } from "./UpgradeButton";
 
 type PaidPlan = BillingPlan & { id: "basic" | "pro" | "business" };
 
@@ -252,6 +246,11 @@ function PlanOption({
   const hasLivePaidSubscription =
     status.plan !== "free" && !describeStatus(status.status).canUpgrade;
   const available = status.availablePlans.includes(plan.id);
+  // The current plan shows what it is billed in; every other plan what a
+  // checkout from here would charge.
+  const currency: Currency =
+    isCurrent && status.currency ? status.currency : status.checkoutCurrency;
+  const price = priceIn(plan, currency);
 
   return (
     <Card className={plan.id === "pro" ? "border-primary" : undefined}>
@@ -262,7 +261,7 @@ function PlanOption({
         </CardTitle>
         <CardDescription>{plan.summary}</CardDescription>
         <p className="text-2xl font-semibold">
-          {inr.format(plan.priceInr)}
+          {formatPrice(price, currency)}
           <span className="text-sm font-normal text-muted-foreground">
             /month
           </span>
@@ -299,7 +298,8 @@ function PlanOption({
         ) : available ? (
           <UpgradeButton
             plan={plan.id}
-            price={plan.priceInr}
+            price={price}
+            currency={currency}
             name={plan.name}
           />
         ) : (
@@ -348,67 +348,6 @@ function CancelButton({
         <ErrorState
           variant="inline"
           message={getStandardErrorMessage(cancel.error)}
-        />
-      ) : null}
-    </div>
-  );
-}
-
-function UpgradeButton({
-  plan,
-  name,
-  price,
-}: {
-  plan: "basic" | "pro" | "business";
-  name: string;
-  price: number;
-}) {
-  const queryClient = useQueryClient();
-  const [activating, setActivating] = useState(false);
-  const upgrade = useMutation({
-    mutationFn: async () => {
-      const paid = await openRazorpayCheckout(await createCheckout(plan), name);
-      if (!paid) return null;
-      setActivating(true);
-      try {
-        return await waitForPaidPlan();
-      } finally {
-        setActivating(false);
-      }
-    },
-    meta: { errorToast: false },
-    onSuccess: async (status) => {
-      if (!status) return;
-      if (status.plan === "free") {
-        toast.success(
-          `Payment received. Uplumo ${name} turns on within a few minutes.`,
-        );
-      } else {
-        toast.success(`Payment received. Welcome to Uplumo ${name}!`);
-      }
-      queryClient.setQueryData(billingStatusQueryOptions.queryKey, status);
-      // Every screen reads the plan and credits; refresh them all.
-      await queryClient.invalidateQueries();
-    },
-  });
-
-  return (
-    <div className="w-full space-y-3">
-      <Button
-        data-uplumo-event={`subscription_checkout_${plan}`}
-        onClick={() => upgrade.mutate()}
-        disabled={upgrade.isPending}
-      >
-        {activating
-          ? "Activating your plan…"
-          : upgrade.isPending
-            ? "Opening checkout…"
-            : `Choose ${name} · ${inr.format(price)}/month`}
-      </Button>
-      {upgrade.isError ? (
-        <ErrorState
-          variant="inline"
-          message={getStandardErrorMessage(upgrade.error)}
         />
       ) : null}
     </div>
