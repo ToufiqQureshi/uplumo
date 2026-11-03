@@ -66,8 +66,8 @@ in export; do not silently describe every returned row as organic. Clickstream i
 fields are not purchased by these requests. Do not enable the documented double
 price to fill this audit. `load_rank_absolute` controls aggregate
 `metrics_absolute`; omitting it does not establish a missing row-rank defect.
-MCP's ranked-keywords/competitor methods are separate direct provider paths and
-are not covered by the page-query cache/coalescing change.
+MCP's ranked-keywords/competitor methods now share the same cache and
+coalescing (see "MCP domain tools reuse one purchase" below).
 
 Official contracts:
 
@@ -148,3 +148,11 @@ Use the package tests next to the source files in `README.md`. For changes cross
 - **Trace:** `lookup.go`, `service.go`, `suggestions.go`; empty-result call-count and TTL regressions in `service_test.go`.
 
 Provider fixtures include task path and explicit cost, including zero on rejected tasks. Missing task billing metadata now keeps a purchase uncertain rather than proving it was free. Mapping and exact one-call failure assertions remain unchanged.
+
+## MCP domain tools reuse one purchase
+
+- **Decision:** `RankedKeywordsForMCP` and `SerpCompetitorsForMCP` go through `cachedDomainLookup`, keyed on the workspace and the exact provider request (competitor keywords lower-cased and trimmed first): 12 hours for rows, 5 minutes for an empty answer, one shared purchase for concurrent identical calls. `get_ranked_keywords` rows now carry `type`.
+- **Why:** These were direct provider paths. The SAM agent repeats tool calls across replies and in parallel, so the same question bought a new Labs task each time ($0.011+ per ranked call, $0.015 per competitor call in production). `TestMCPDomainToolsReuseOnePurchasePerWorkspace` buys once for five identical calls; with the cache lifetime set to 0 it bought twice. The row type was dropped although several result types can be requested in one call.
+- **Preserve:** The key includes the organization, so one workspace never reads another's result (asserted). Validation still happens before any spend. The key is the provider body, so any input that changes the request (limit, offset, filters, types, market) is a separate purchase.
+- **Trace:** `mcp_ranked_keywords.go`, `mcp_serp_competitors.go`, `lookup.go`; `mcp_cache_test.go`.
+

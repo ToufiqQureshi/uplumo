@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 )
 
 const serpCompetitorsPath = "/v3/dataforseo_labs/google/serp_competitors/live"
@@ -67,13 +68,32 @@ func (s *Service) SerpCompetitorsForMCP(ctx context.Context, org string, in MCPS
 			return nil, badRequest("resultTypes contains an unsupported value.")
 		}
 	}
-	body := map[string]any{"keywords": in.Keywords, "location_code": in.LocationCode, "language_code": in.LanguageCode, "item_types": types, "limit": in.Limit}
+	keywords := make([]string, len(in.Keywords))
+	for i, k := range in.Keywords {
+		keywords[i] = strings.ToLower(strings.TrimSpace(k))
+	}
+	body := map[string]any{"keywords": keywords, "location_code": in.LocationCode, "language_code": in.LanguageCode, "item_types": types, "limit": in.Limit}
 	if in.IncludeSubdomains != nil {
 		body["include_subdomains"] = *in.IncludeSubdomains
 	}
 	if in.Offset > 0 {
 		body["offset"] = in.Offset
 	}
+	key, err := makeCacheKey("mcp-serp-competitors", org, "", body)
+	if err != nil {
+		return nil, err
+	}
+	return cachedDomainLookup(ctx, s, key, func(r []MCPSerpCompetitor) time.Duration {
+		if len(r) == 0 {
+			return emptyResultCacheTTL
+		}
+		return cacheTTL
+	}, func(shared context.Context) ([]MCPSerpCompetitor, error) {
+		return s.buySerpCompetitors(shared, org, body)
+	})
+}
+
+func (s *Service) buySerpCompetitors(ctx context.Context, org string, body map[string]any) ([]MCPSerpCompetitor, error) {
 	results, err := s.provider.post(ctx, org, serpCompetitorsPath, []map[string]any{body})
 	if err != nil {
 		return nil, err
