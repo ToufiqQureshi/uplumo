@@ -232,10 +232,10 @@ var catalog = []Definition{
 		features: basicFeatures,
 	},
 	{
-		ID: Pro, Name: "Pro", PriceINR: 2499, PriceUSD: 39, Sites: 10, TrackedKeywords: 500, Members: 3, MonthlyCredits: 10000, MaxSerpDepth: 40, RankSchedule: RankScheduleWeekly,
+		ID: Pro, Name: "Pro", PriceINR: 2499, PriceUSD: 39, Sites: 5, TrackedKeywords: 500, Members: 3, MonthlyCredits: 10000, MaxSerpDepth: 40, RankSchedule: RankScheduleWeekly,
 		Summary: "For a growing business: beat competitors on Google and in AI answers.",
 		Highlights: highlights([]string{
-			"10 websites",
+			"5 websites",
 			"3 team members",
 			"10,000 credits every month",
 			creditPackHighlight,
@@ -244,10 +244,10 @@ var catalog = []Definition{
 		features: proFeatures,
 	},
 	{
-		ID: Business, Name: "Business", PriceINR: 4999, PriceUSD: 69, Sites: 20, TrackedKeywords: 1000, Members: 5, MonthlyCredits: 15000, MaxSerpDepth: 40, RankSchedule: RankScheduleWeekly,
+		ID: Business, Name: "Business", PriceINR: 4999, PriceUSD: 69, Sites: 10, TrackedKeywords: 1000, Members: 5, MonthlyCredits: 15000, MaxSerpDepth: 40, RankSchedule: RankScheduleWeekly,
 		Summary: "For several brands, freelancers and agencies, with reports under your own brand.",
 		Highlights: highlights([]string{
-			"20 websites",
+			"10 websites",
 			siteAddOnHighlight(INR),
 			"5 team members",
 			"15,000 credits every month",

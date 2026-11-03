@@ -42,8 +42,8 @@ func TestPlanDecidesFeaturesAndLimits(t *testing.T) {
 	}{
 		{PlanFree, 0, 1, 0, 1},
 		{PlanBasic, 7, 1, 100, 1},
-		{PlanPro, 11, 10, 500, 3},
-		{plans.Business, 13, 20, 1000, 5},
+		{PlanPro, 11, 5, 500, 3},
+		{plans.Business, 13, 10, 1000, 5},
 	} {
 		t.Run(test.plan, func(t *testing.T) {
 			f := newFixture(ctx, t)

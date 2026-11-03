@@ -10,10 +10,18 @@ export class ApiError extends Error {
     readonly status: number,
     readonly code: string,
     message: string,
+    readonly requestId?: string,
   ) {
     super(message);
     this.name = "ApiError";
   }
+}
+
+let recentFailure: { pagePath: string; requestId?: string } | undefined;
+
+/** Only the page path and server request ID; never response bodies or query strings. */
+export function getRecentApiFailure() {
+  return recentFailure ? { ...recentFailure } : undefined;
 }
 
 const errorBodySchema = z.object({
@@ -134,6 +142,11 @@ export async function apiRequest<T>(
   const body: unknown = await response.json().catch(() => undefined);
 
   if (!response.ok) {
+    const requestId =
+      response.headers.get("X-Request-Id")?.slice(0, 128) || undefined;
+    if (typeof window !== "undefined" && !path.startsWith("/api/v1/support/")) {
+      recentFailure = { pagePath: window.location.pathname, requestId };
+    }
     const parsed = errorBodySchema.safeParse(body);
     const code = parsed.success ? parsed.data.error.code : "unknown";
     if (idempotency && response.status < 500 && code !== "duplicate_request") {
@@ -143,6 +156,7 @@ export async function apiRequest<T>(
       response.status,
       code,
       messageForStatus(response.status, code, parsed.data?.error.message),
+      requestId,
     );
   }
 

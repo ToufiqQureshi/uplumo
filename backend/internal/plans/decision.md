@@ -32,3 +32,14 @@ Use the package tests next to the source files in `README.md`. For changes cross
 
 - **Decision:** Every paid plan and pack also has a US dollar price (`PriceUSD`), set on its own, not converted from rupees. `CurrencyFor` maps a country to its currency; `Price`/`HighlightsIn` give a plan's price and copy in a currency, so the Business card states the site add-on in the visitor's currency.
 - **Why / Preserve:** see [billing decision](../billing/decision.md#us-dollar-billing-for-customers-outside-india). Dollar prices keep the same margin rule as rupees (monthly credits cost at most a third of the price; packs never cheaper per credit than a plan), asserted in `catalog_test.go`.
+
+
+## Website allowances (3 Nov 2026)
+
+The owner reduced Pro to 5 active websites and Business to 10, retaining the
+Business +5-site purchase. This replaces the site counts in the 27 Oct decision.
+Pricing, billing status and create/restore checks read the shared catalog.
+Existing excess sites remain intact; new creation and restoration require room
+under the current allowance. PostgreSQL tests cover the first rejected site,
+archiving/replacement/restoration, and simultaneous creation. INR/USD prices,
+credits, keywords and seats are unchanged.

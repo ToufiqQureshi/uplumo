@@ -374,3 +374,16 @@ func TestLoadProviderDailyLimit(t *testing.T) {
 		}
 	}
 }
+
+func TestSupportReportTemplateConfiguration(t *testing.T) {
+	env := map[string]string{"DATABASE_URL": "postgres://localhost/uplumo", "REDIS_URL": "redis://localhost:6379/0", "BETTER_AUTH_SECRET": secret, "PUBLIC_URL": "http://localhost:8080", "LOOPS_TRANSACTIONAL_SUPPORT_REPORT_ID": "  support-template  "}
+	cfg, err := Load(func(key string) string { return env[key] })
+	if err != nil || cfg.LoopsSupportReportTemplateID != "support-template" {
+		t.Fatalf("support template = %q, %v", cfg.LoopsSupportReportTemplateID, err)
+	}
+	delete(env, "LOOPS_TRANSACTIONAL_SUPPORT_REPORT_ID")
+	cfg, err = Load(func(key string) string { return env[key] })
+	if err != nil || cfg.LoopsSupportReportTemplateID != "" {
+		t.Fatalf("optional support template = %q, %v", cfg.LoopsSupportReportTemplateID, err)
+	}
+}

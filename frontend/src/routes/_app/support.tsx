@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from "@/client/components/ui/card";
 import { SUPPORT_EMAIL } from "@/client/lib/support";
+import { ReportProblemForm } from "@/client/features/support/ReportProblemForm";
 
 export const Route = createFileRoute("/_app/support")({
   component: SupportPage,
@@ -20,10 +21,11 @@ function SupportPage() {
       <div className="mx-auto max-w-7xl space-y-8">
         <PageHeader
           title="Help"
-          description="Stuck, or have an idea? Write to us. A real person reads every email and we use your feedback to make Uplumo better."
+          description="Stuck, or have an idea? Send a report or email our team."
         />
 
         <div className="space-y-3">
+          <ReportProblemForm />
           <Card>
             <CardHeader>
               <CardTitle>

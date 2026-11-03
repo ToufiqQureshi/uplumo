@@ -29,3 +29,7 @@ UTC does not see the previous day for a midnight refill.
 The owner website tracking loader records checkout-button intent as
 `subscription_checkout_<plan>` through `data-uplumo-event`. These click counts
 are not confirmed payments; see `decision.md` for the boundary.
+
+The Plan and billing page links directly to Usage & credits, where the pack
+purchase controls live, so the sidebar Billing destination does not hide the
+buying path.

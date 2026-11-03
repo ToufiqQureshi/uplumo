@@ -59,8 +59,9 @@ type Config struct {
 	// OpenRouterModel overrides the SAM chat model (OPENROUTER_MODEL).
 	OpenRouterModel string
 	// Loops configures hosted teammate invitation email.
-	LoopsAPIKey               string
-	LoopsInvitationTemplateID string
+	LoopsAPIKey                  string
+	LoopsInvitationTemplateID    string
+	LoopsSupportReportTemplateID string
 	// Loops templates for the sign-up verification and password reset emails.
 	LoopsVerifyEmailTemplateID   string
 	LoopsResetPasswordTemplateID string
@@ -234,6 +235,7 @@ func Load(getenv func(string) string) (Config, error) {
 		OpenRouterAPIKey:             openRouterKey,
 		OpenRouterModel:              strings.TrimSpace(getenv("OPENROUTER_MODEL")),
 		LoopsAPIKey:                  strings.TrimSpace(getenv("LOOPS_API_KEY")),
+		LoopsSupportReportTemplateID: strings.TrimSpace(getenv("LOOPS_TRANSACTIONAL_SUPPORT_REPORT_ID")),
 		LoopsInvitationTemplateID:    strings.TrimSpace(getenv("LOOPS_TRANSACTIONAL_INVITATION_ID")),
 		LoopsVerifyEmailTemplateID:   strings.TrimSpace(getenv("LOOPS_TRANSACTIONAL_VERIFY_EMAIL_ID")),
 		LoopsResetPasswordTemplateID: strings.TrimSpace(getenv("LOOPS_TRANSACTIONAL_RESET_PASSWORD_ID")),

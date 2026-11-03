@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/toufiqqureshi/uplumo/backend/internal/database"
+	"github.com/toufiqqureshi/uplumo/backend/internal/plans"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/pgdb"
 )
 
@@ -181,4 +182,55 @@ func seedProjectOwner(ctx context.Context, t *testing.T, pool *pgxpool.Pool) (st
 		}
 	})
 	return orgID, userID
+}
+
+func TestPaidPlanCreateAndRestoreEnforceWebsiteAllowance(t *testing.T) {
+	for _, test := range []struct {
+		plan  string
+		sites int
+	}{{plans.Pro, 5}, {plans.Business, 10}} {
+		t.Run(test.plan, func(t *testing.T) {
+			ctx := t.Context()
+			pool := projectTestPool(ctx, t)
+			org, user := seedProjectOwner(ctx, t, pool)
+			definition, _ := plans.Get(test.plan)
+			repo := Repository{DB: pool}
+			svc := Service{Store: repo, Plans: fixedSiteLimit(definition.Sites)}
+			first, err := svc.Create(ctx, org, user, Input{Name: "First"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			for i := 1; i < test.sites; i++ {
+				if _, err := svc.Create(ctx, org, user, Input{Name: fmt.Sprintf("Site %d", i)}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			assertLimited := func(err error) {
+				t.Helper()
+				var typed *Error
+				if !errors.As(err, &typed) || typed.Code != "LIMIT_REACHED" {
+					t.Fatalf("error = %v, want LIMIT_REACHED", err)
+				}
+			}
+			_, err = svc.Create(ctx, org, user, Input{Name: "Over limit"})
+			assertLimited(err)
+			if err := svc.Archive(ctx, org, user, first.ID); err != nil {
+				t.Fatal(err)
+			}
+			replacement, err := svc.Create(ctx, org, user, Input{Name: "Replacement"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			assertLimited(svc.Restore(ctx, org, user, first.ID))
+			if err := svc.Archive(ctx, org, user, replacement.ID); err != nil {
+				t.Fatal(err)
+			}
+			if err := svc.Restore(ctx, org, user, first.ID); err != nil {
+				t.Fatal(err)
+			}
+			if count, err := repo.Count(ctx, org); err != nil || count != test.sites {
+				t.Fatalf("active sites = %d, %v; want %d", count, err, test.sites)
+			}
+		})
+	}
 }

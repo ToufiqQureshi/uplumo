@@ -218,3 +218,13 @@ feelings, business calls, priorities, corrections. Read it after
 - **His ask to all AIs:** "Jab tak founder ke saath vision aur feelings nahi
   samjhoge, koi saath milke kaam nahi kar payega." Read `FOUNDER.md` and this
   file every session.
+
+
+## 2026-11-03: Website allowances
+
+Owner set Pro to 5 active websites and Business to 10; users must not add beyond their allowance. Updated the shared catalog, pricing expectations, SAM facts and billing tests. Existing transactional create/restore checks enforce the allowance, including concurrent requests; Business retains its paid +5-site add-on. Existing excess sites are retained, with new additions blocked. No production deployment performed.
+
+
+## 2026-11-03: Credit purchase discoverability and enforcement review
+
+Chrome inspection confirmed the live Plan and billing page has no pack card, while /billing shows Buy more credits (5,000 and 15,000 credits). Added a direct Usage & credits purchase link to the plan comparison. The current owner workspace is intentionally staff/unlimited. Reviewed server-side verified-owner allowlist and credit reservation/settlement protections; local billing, provider transport, server wiring and AI metering tests passed against disposable services. No live payment or paid provider calls made; changes remain undeployed.
