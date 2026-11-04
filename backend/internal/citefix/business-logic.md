@@ -28,7 +28,8 @@
   pages Cite Fix found, never for an arbitrary URL.
 - **Fix proof is "likely linked, not proven"**: AI assistants do not say who
   clicked, so the UI never claims a fix caused the change.
-- **Topics name a subject, not a shared word:** a one-word topic needs at
+- **Topics name a subject, not a shared word:** on a site with 5+ pages a
+  topic needs at least 2 pages, and a one-word topic needs at
   least 3 pages, and plural spellings fold into a singular the same scan
   has ("small businesses" into "small business").
 - **A list page lists firms, not footer links:** a host that most read pages
