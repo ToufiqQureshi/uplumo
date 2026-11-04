@@ -12,6 +12,8 @@ Finds, previews and erases only the data owned by one user within one Postgres t
 - Never erase shared organization data when another member owns it. _Why:_ Callers can tamper with IDs and UI state, so server-verified ownership must prevent cross-customer access.
 - Report completion only after the whole transaction commits; preserve auditability without retaining erased personal data. _Why:_ Collecting or retaining less identifying data reduces privacy exposure if logs, storage or exports are accessed improperly.
 
+- Payment records in `go_billing_payments` survive erasure (`retainedTables`). _Why:_ the owner chose to keep payment records for tax and accounting; they carry no email or name, only workspace ID, item, amount and date.
+
 ## Dependencies
 
 Postgres tables; CLI and database connection.

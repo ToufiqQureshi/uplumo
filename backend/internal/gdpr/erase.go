@@ -75,6 +75,10 @@ func (e Eraser) Find(ctx context.Context, email, userID string) (Subject, error)
 }
 
 // referenceColumns lists every base table column that holds one of the ids.
+// retainedTables survive erasure: they hold payment records
+// for accounting, keyed by opaque IDs with no email or name.
+var retainedTables = []string{"go_billing_payments"}
+
 func referenceColumns(ctx context.Context, q interface {
 	Query(context.Context, string, ...any) (pgx.Rows, error)
 }) ([]column, error) {
@@ -83,7 +87,8 @@ func referenceColumns(ctx context.Context, q interface {
 		JOIN information_schema.tables t ON t.table_schema = c.table_schema AND t.table_name = c.table_name
 		WHERE c.table_schema = current_schema() AND t.table_type = 'BASE TABLE'
 			AND c.column_name IN ('user_id', 'organization_id', 'project_id')
-		ORDER BY c.table_name, c.column_name`)
+			AND c.table_name <> ALL($1)
+		ORDER BY c.table_name, c.column_name`, retainedTables)
 	if err != nil {
 		return nil, fmt.Errorf("list reference columns: %w", err)
 	}
