@@ -1,8 +1,8 @@
 package citefix
 
 import (
-	"fmt"
 	"context"
+	"fmt"
 	"slices"
 	"testing"
 	"time"

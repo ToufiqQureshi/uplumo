@@ -1,13 +1,13 @@
 package citefix
 
 import (
-	"slices"
-	"fmt"
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
 	"net/url"
+	"slices"
 	"strings"
 	"sync/atomic"
 	"testing"

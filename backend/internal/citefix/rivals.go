@@ -28,8 +28,8 @@ const (
 	// maxLinkedHosts bounds the outbound link hosts kept per rival page.
 	maxLinkedHosts = 300
 	// maxListedRivals bounds the rival names reported for one list page.
-	maxListedRivals = 10
-	rivalFetchTimeout    = 12 * time.Second
+	maxListedRivals   = 10
+	rivalFetchTimeout = 12 * time.Second
 	// rivalFetchBudget caps the whole rival step of one report: the report is
 	// read on page load (and every 15 s while a scan runs), so a slow
 	// third-party site must never hold it up.
