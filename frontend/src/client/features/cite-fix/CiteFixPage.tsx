@@ -112,7 +112,14 @@ export function CiteFixPage({ projectId }: { projectId: string }) {
           projectId={projectId}
           report={report.data}
           scanAction={
-            report.data.running ? null : scanLink("Scan my site", "default")
+            report.data.running
+              ? null
+              : scanLink(
+                  report.data.state === "no_scan"
+                    ? "Scan my site"
+                    : "Scan again",
+                  "default",
+                )
           }
         />
       )}

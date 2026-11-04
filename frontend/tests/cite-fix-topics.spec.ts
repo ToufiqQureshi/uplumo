@@ -77,6 +77,7 @@ test("topics open a free pillar draft and saved citation history", async ({
   await expect(
     page.getByText("Topic coverage: 24/100", { exact: false }),
   ).toBeVisible();
+  await page.getByText("All citation data", { exact: false }).click();
   await expect(
     page.getByText("Citation history", { exact: true }),
   ).toBeVisible();
