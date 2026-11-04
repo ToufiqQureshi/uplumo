@@ -34,6 +34,19 @@ const MODEL_ACCENTS: Record<PromptExplorerModel, ModelAccent> = {
   },
 };
 
+const ENGINE_LABELS: Record<string, string> = {
+  chat_gpt: "ChatGPT",
+  gemini: "Gemini",
+  google_ai_overview: "Google AI Overviews",
+  claude: "Claude",
+  perplexity: "Perplexity",
+};
+
+/** An AI Visibility engine's name ("ChatGPT"); unknown ones read plainly. */
+export function engineLabel(engine: string): string {
+  return ENGINE_LABELS[engine] ?? engine.replaceAll("_", " ");
+}
+
 export function formatPlatformLabel(platform: "chat_gpt" | "google"): string {
   return MENTION_PLATFORM_LABELS[platform];
 }

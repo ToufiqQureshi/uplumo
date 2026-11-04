@@ -8,16 +8,8 @@ import { AiVisibilityGuide } from "./AiVisibilityGuide";
 import { MarkdownAnswer } from "./components/MarkdownAnswer";
 import { WhyNotCitedCard } from "./components/WhyNotCitedCard";
 import { VisibilityInsights } from "./components/VisibilityInsights";
+import { engineLabel } from "./platformLabels";
 
-const ENGINE_LABELS: Record<string, string> = {
-  chat_gpt: "ChatGPT",
-  gemini: "Gemini",
-  google_ai_overview: "Google AI Overviews",
-  claude: "Claude",
-  perplexity: "Perplexity",
-};
-const engineLabel = (engine: string) =>
-  ENGINE_LABELS[engine] ?? engine.replaceAll("_", " ");
 import { trackingApi, trackingKey, summarizeTracking } from "./trackingApi";
 
 const pct = (n: number, d: number) =>

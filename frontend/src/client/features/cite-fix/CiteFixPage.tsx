@@ -19,7 +19,26 @@ import {
 import { AgentPanel } from "./AgentPanel";
 import { AgentResults } from "./AgentResults";
 import { ProofCard } from "./ProofCard";
-import { AIMentionsSection, RivalComparisonsSection } from "./EvidenceSections";
+import { AIMentionsSection } from "./EvidenceSections";
+import { VisibilityInsights } from "../ai-search/components/VisibilityInsights";
+import { engineLabel } from "../ai-search/platformLabels";
+import {
+  buildMatrix,
+  listPages,
+  nextSteps,
+  rivalRanks,
+  signalRivals,
+  type StepKind,
+} from "./citeFixInsights";
+import {
+  CitationMatrix,
+  CiteFixHeadline,
+  LIST_PAGES_ID,
+  ListPagesCard,
+  NextStepsCard,
+  RivalRanksCard,
+  SignalsCard,
+} from "./DecisionSections";
 import { GoogleAIOverviewSection, SEOIssuesSection } from "./CitationSections";
 import { scoreBand } from "./scoreBand";
 import { TopicsSection } from "./TopicsSection";
@@ -88,53 +107,130 @@ export function CiteFixPage({ projectId }: { projectId: string }) {
           onRetry={() => void report.refetch()}
           isRetrying={report.isFetching}
         />
-      ) : report.data.state === "no_scan" ? (
-        <>
-          <EmptyState
-            title="Scan your site first"
-            description="Cite Fix reads the pages a site scan collects. Run a free scan from Site Audit; your score appears here when it finishes."
-            action={
-              report.data.running ? null : scanLink("Scan my site", "default")
-            }
-          />
-          <ProofCard projectId={projectId} proof={report.data.proof} />
-          <RivalComparisonsSection
-            proof={report.data.proof}
-            comparisons={report.data.rivals}
-          />
-        </>
-      ) : report.data.state === "needs_rescan" ? (
-        <>
-          <EmptyState
-            title="Scan your site again"
-            description="Your last scan did not collect the latest citation and topic signals. A new scan is free."
-            action={
-              report.data.running ? null : scanLink("Scan again", "default")
-            }
-          />
-          <ProofCard projectId={projectId} proof={report.data.proof} />
-          <RivalComparisonsSection
-            proof={report.data.proof}
-            comparisons={report.data.rivals}
-          />
-        </>
       ) : (
-        <Ready projectId={projectId} report={report.data} />
+        <Decisions
+          projectId={projectId}
+          report={report.data}
+          scanAction={
+            report.data.running ? null : scanLink("Scan my site", "default")
+          }
+        />
       )}
-      {report.data ? (
-        <>
-          <AIMentionsSection
-            projectId={projectId}
-            mentions={report.data.mentions}
-          />
+    </div>
+  );
+}
+
+const scrollTo = (id: string) =>
+  document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+
+/**
+ * The whole report in decision order: what is happening, what to do, the
+ * evidence behind it, then the site fixes and every saved detail.
+ */
+function Decisions({
+  projectId,
+  report,
+  scanAction,
+}: {
+  projectId: string;
+  report: CiteFixReport;
+  scanAction: React.ReactNode;
+}) {
+  const proof = report.proof && report.proof.answers > 0 ? report.proof : null;
+  const matrix = buildMatrix(proof);
+  const lists = listPages(report.rivals);
+  const steps = nextSteps(report, matrix, lists, engineLabel);
+  const canRunAgent =
+    report.state === "ready" &&
+    report.pages.length > 0 &&
+    report.agent.available;
+  const actionFor = (kind: StepKind) => {
+    switch (kind) {
+      case "scan":
+        return scanAction;
+      case "track":
+        return (
+          <Button
+            variant="outline"
+            nativeButton={false}
+            render={
+              <Link to="/p/$projectId/prompt-tracking" params={{ projectId }} />
+            }
+          >
+            Open AI Visibility
+          </Button>
+        );
+      case "win_back":
+        return canRunAgent ? (
+          <Button onClick={() => scrollTo("cite-fix-pages")}>
+            Write the fixes with AI
+            <span className="font-mono text-xs opacity-70">
+              ≤{report.agent.quickMaxCredits} credits a page
+            </span>
+          </Button>
+        ) : null;
+      case "get_listed":
+        return (
+          <Button variant="outline" onClick={() => scrollTo(LIST_PAGES_ID)}>
+            See the pages
+          </Button>
+        );
+      case "fix":
+        return (
+          <Button variant="outline" onClick={() => scrollTo("cite-fix-fixes")}>
+            See the fix
+          </Button>
+        );
+    }
+  };
+  return (
+    <>
+      {proof ? (
+        <CiteFixHeadline proof={proof} matrix={matrix} />
+      ) : (
+        <ProofCard projectId={projectId} />
+      )}
+      <NextStepsCard steps={steps} actionFor={actionFor} />
+      {matrix ? <CitationMatrix matrix={matrix} /> : null}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {proof ? <RivalRanksCard rivals={rivalRanks(proof)} /> : null}
+        <ListPagesCard pages={lists} />
+      </div>
+      <SignalsCard
+        rivals={signalRivals(report.rivals)}
+        scanAction={scanAction}
+      />
+      {report.state === "ready" ? (
+        <Ready projectId={projectId} report={report} />
+      ) : (
+        <EmptyState
+          title={
+            report.state === "no_scan"
+              ? "Scan your site to get your score and fixes"
+              : "Scan again to get your score and fixes"
+          }
+          description="Cite Fix reads the pages a site scan collects. The scan is free; your score, topics and page fixes appear here when it finishes."
+          action={scanAction}
+        />
+      )}
+      <details className="rounded-2xl border bg-card p-5">
+        <summary className="cursor-pointer font-medium">
+          All citation data: history, mentions, Google AI Overview and SEO
+          issues
+        </summary>
+        <div className="mt-5 flex flex-col gap-6">
+          {proof?.visibility ? (
+            <VisibilityInsights metrics={proof.visibility} />
+          ) : null}
+          <AIMentionsSection projectId={projectId} mentions={report.mentions} />
           <GoogleAIOverviewSection
             projectId={projectId}
-            initial={report.data.googleAiOverview}
+            initial={report.googleAiOverview}
           />
-          <SEOIssuesSection projectId={projectId} report={report.data} />
-        </>
-      ) : null}
-    </div>
+          <SEOIssuesSection projectId={projectId} report={report} />
+        </div>
+      </details>
+    </>
   );
 }
 
@@ -166,11 +262,14 @@ function Ready({
               <p className="font-mono text-xs text-muted-foreground">
                 {report.pagesChecked} of {report.pagesTotal} pages checked ·
                 scanned{" "}
-                {new Date(report.scan.completedAt).toLocaleDateString("en-IN", {
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                })}
+                {new Date(report.scan.completedAt).toLocaleDateString(
+                  undefined,
+                  {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  },
+                )}
               </p>
             ) : null}
           </div>
@@ -195,15 +294,9 @@ function Ready({
         </p>
       </section>
 
-      <ProofCard projectId={projectId} proof={report.proof} />
       {report.topics ? (
         <TopicsSection projectId={projectId} topics={report.topics} />
       ) : null}
-      <RivalComparisonsSection
-        proof={report.proof}
-        comparisons={report.rivals}
-      />
-
       <section aria-labelledby="cite-fix-fixes" className="flex flex-col gap-3">
         <h2 id="cite-fix-fixes" className="font-serif text-2xl">
           What to fix first

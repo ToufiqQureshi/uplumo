@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -21,7 +22,13 @@ import (
 
 const (
 	rivalRefreshInterval = 7 * 24 * time.Hour
-	rivalPageLimit       = 3
+	// rivalPageLimit bounds the cited pages read per report: one per missed
+	// question first, so every question gets evidence before any gets two.
+	rivalPageLimit = 8
+	// maxLinkedHosts bounds the outbound link hosts kept per rival page.
+	maxLinkedHosts = 300
+	// maxListedRivals bounds the rival names reported for one list page.
+	maxListedRivals = 10
 	rivalFetchTimeout    = 12 * time.Second
 	// rivalFetchBudget caps the whole rival step of one report: the report is
 	// read on page load (and every 15 s while a scan runs), so a slow
@@ -61,6 +68,19 @@ type RivalPage struct {
 	FetchedAt   time.Time      `json:"fetchedAt"`
 	ContentHash string         `json:"contentHash"`
 	Signals     SignalSnapshot `json:"signals"`
+	// LinkedHosts are the hosts the page links to, read with the page and
+	// kept in the cache. LinksRead is false for pages cached before links
+	// were read, so they are fetched once more.
+	LinkedHosts []string `json:"-"`
+	LinksRead   bool     `json:"-"`
+}
+
+// storedSignals is the cached signals_json: the signals plus the page's
+// outbound link hosts, which the report reduces to ListsRivals and LinksYou.
+type storedSignals struct {
+	SignalSnapshot
+	LinkedHosts []string `json:"linkedHosts,omitempty"`
+	LinksRead   bool     `json:"linksRead,omitempty"`
 }
 
 // RivalComparison links a missed AI question and a cited rival page with the
@@ -70,6 +90,11 @@ type RivalComparison struct {
 	Engine string            `json:"engine"`
 	Rival  RivalPage         `json:"rival"`
 	Yours  *RivalPageSummary `json:"yours"`
+	// ListsRivals are other AI-cited sites this page links to: a page that
+	// links to several is a list or directory the customer could join.
+	// LinksYou is whether it already links to the customer's site.
+	ListsRivals []string `json:"listsRivals"`
+	LinksYou    bool     `json:"linksYou"`
 }
 
 // RivalPageSummary is the customer's own best signal page from the latest
@@ -112,22 +137,35 @@ func (s Store) rivalComparisons(ctx context.Context, organizationID, projectID s
 	}
 	picks := make([]*pick, 0, rivalPageLimit)
 	seen := map[string]bool{}
-	for _, miss := range proof.Misses {
-		for _, candidate := range rivalCandidates(miss, proof.Domain, mentions) {
-			if len(picks) >= rivalPageLimit {
+	candidates := make([][]rivalCandidate, len(proof.Misses))
+	for i, miss := range proof.Misses {
+		candidates[i] = rivalCandidates(miss, proof.Domain, mentions)
+	}
+	// Round by round, each missed question takes its next new page, so the
+	// evidence covers every question before any question gets a second page.
+	next := make([]int, len(proof.Misses))
+	for added := true; added && len(picks) < rivalPageLimit; {
+		added = false
+		for i, miss := range proof.Misses {
+			for len(picks) < rivalPageLimit && next[i] < len(candidates[i]) {
+				candidate := candidates[i][next[i]]
+				next[i]++
+				candidate.page.URL = canonicalCitedURL(candidate.page.URL)
+				if seen[candidate.page.URL] || !isPublicHTTPURL(candidate.page.URL) {
+					continue
+				}
+				seen[candidate.page.URL] = true
+				cached, err := s.rivalCache(ctx, organizationID, projectID, candidate.page.URL)
+				if err != nil {
+					return nil, err
+				}
+				picks = append(picks, &pick{prompt: miss.Prompt, engine: candidate.engine, cited: candidate.page, cached: cached})
+				added = true
 				break
 			}
-			if seen[candidate.page.URL] || !isPublicHTTPURL(candidate.page.URL) {
-				continue
-			}
-			seen[candidate.page.URL] = true
-			cached, err := s.rivalCache(ctx, organizationID, projectID, candidate.page.URL)
-			if err != nil {
-				return nil, err
-			}
-			picks = append(picks, &pick{prompt: miss.Prompt, engine: candidate.engine, cited: candidate.page, cached: cached})
 		}
 	}
+	rivalHosts := citedRivalHosts(proof)
 
 	// Stale or missing pages are fetched together under one budget; a page
 	// that does not answer in time is left out of this report only.
@@ -163,7 +201,11 @@ func (s Store) rivalComparisons(ctx context.Context, organizationID, projectID s
 		if page == nil || page.ContentHash == "" {
 			continue
 		}
-		comparisons = append(comparisons, RivalComparison{Prompt: p.prompt, Engine: p.engine, Rival: page.RivalPage, Yours: yours})
+		listed, linksYou := listedRivals(page.RivalPage, rivalHosts, proof.Domain)
+		comparisons = append(comparisons, RivalComparison{
+			Prompt: p.prompt, Engine: p.engine, Rival: page.RivalPage, Yours: yours,
+			ListsRivals: listed, LinksYou: linksYou,
+		})
 	}
 	return comparisons, nil
 }
@@ -178,7 +220,7 @@ func rivalNeedsFetch(cached *cachedRivalPage, now time.Time) bool {
 	if cached.ContentHash == "" {
 		return now.Sub(cached.FetchedAt) >= rivalRetryInterval
 	}
-	return now.Sub(cached.FetchedAt) >= rivalRefreshInterval
+	return !cached.LinksRead || now.Sub(cached.FetchedAt) >= rivalRefreshInterval
 }
 
 type rivalCandidate struct {
@@ -242,14 +284,16 @@ func (s Store) rivalCache(ctx context.Context, organizationID, projectID, pageUR
 	if err != nil {
 		return nil, fmt.Errorf("read Cite Fix rival cache: %w", err)
 	}
-	if err := json.Unmarshal(signals, &cached.Signals); err != nil {
+	var stored storedSignals
+	if err := json.Unmarshal(signals, &stored); err != nil {
 		return nil, fmt.Errorf("decode Cite Fix rival signals: %w", err)
 	}
+	cached.Signals, cached.LinkedHosts, cached.LinksRead = stored.SignalSnapshot, stored.LinkedHosts, stored.LinksRead
 	return &cached, nil
 }
 
 func (s Store) saveRivalCache(ctx context.Context, organizationID, projectID string, page RivalPage) error {
-	signals, err := json.Marshal(page.Signals)
+	signals, err := json.Marshal(storedSignals{SignalSnapshot: page.Signals, LinkedHosts: page.LinkedHosts, LinksRead: page.LinksRead})
 	if err != nil {
 		return fmt.Errorf("encode Cite Fix rival signals: %w", err)
 	}
@@ -344,7 +388,83 @@ func fetchRivalPage(ctx context.Context, guard *audit.Guard, client *http.Client
 		Title: analysis.Title, AppShell: analysis.JavaScriptShell, FetchedAt: fetchedAt.UTC(),
 		ContentHash: hex.EncodeToString(sum[:]),
 		Signals:     snapshotSignals(analysis.AI, analysis.WordCount),
+		LinkedHosts: linkedHosts(analysis.Links), LinksRead: true,
 	}, nil
+}
+
+// linkedHosts are the distinct hosts of a page's links to other sites,
+// without "www.", in page order, at most maxLinkedHosts.
+func linkedHosts(links []audit.PageLink) []string {
+	hosts := []string{}
+	seen := map[string]bool{}
+	for _, link := range links {
+		if link.IsInternal || len(hosts) >= maxLinkedHosts {
+			continue
+		}
+		parsed, err := url.Parse(link.TargetURL)
+		if err != nil {
+			continue
+		}
+		host := bareHost(parsed.Hostname())
+		if host != "" && !seen[host] {
+			seen[host] = true
+			hosts = append(hosts, host)
+		}
+	}
+	return hosts
+}
+
+// citedRivalHosts are every other site AI cited in the latest check.
+func citedRivalHosts(proof *Proof) map[string]bool {
+	hosts := map[string]bool{}
+	for _, rival := range proof.Rivals {
+		hosts[rival.Domain] = true
+	}
+	for _, miss := range proof.Misses {
+		for _, host := range miss.Cited {
+			hosts[host] = true
+		}
+		for _, page := range miss.CitedPages {
+			hosts[page.Domain] = true
+		}
+	}
+	if proof.Visibility != nil {
+		for _, domain := range proof.Visibility.Domains {
+			hosts[bareHost(domain.Name)] = true
+		}
+	}
+	delete(hosts, proof.Domain)
+	return hosts
+}
+
+// listedRivals are the AI-cited sites, other than its own, that a page links
+// to, sorted, and whether it links to the customer's domain.
+func listedRivals(page RivalPage, rivalHosts map[string]bool, ownDomain string) ([]string, bool) {
+	listed := []string{}
+	linksYou := false
+	for _, host := range page.LinkedHosts {
+		switch {
+		case ownDomain != "" && isOwnHost(host, ownDomain):
+			linksYou = true
+		case !isOwnHost(host, page.Domain) && matchesHost(host, rivalHosts):
+			listed = append(listed, host)
+		}
+	}
+	slices.Sort(listed)
+	listed = slices.Compact(listed)
+	return listed[:min(len(listed), maxListedRivals)], linksYou
+}
+
+// matchesHost is whether host or one of its parent domains is in hosts, so
+// a link to in.linkedin.com matches a cited linkedin.com.
+func matchesHost(host string, hosts map[string]bool) bool {
+	for h := host; strings.Contains(h, "."); {
+		if hosts[h] {
+			return true
+		}
+		_, h, _ = strings.Cut(h, ".")
+	}
+	return false
 }
 
 func readBounded(body io.Reader, limit int) (string, error) {
