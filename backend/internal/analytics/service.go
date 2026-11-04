@@ -83,18 +83,15 @@ type Summary struct {
 	TotalEngagementMS   int64              `json:"totalEngagementMs"`
 	AvgEngagementMS     int64              `json:"avgEngagementMs"`
 	Audience            []AudienceDay      `json:"audience"`
-	// Enquiries are custom events that mean a visitor tried to reach the
-	// business (isEnquiry): WhatsApp, call, SMS, email and form actions.
-	Enquiries EnquirySummary `json:"enquiries"`
-}
-
-// EnquirySummary counts enquiry actions. Visitors is distinct visitor-days
-// across every enquiry action, so one visitor who taps WhatsApp and Call
-// counts once; adding Actions' visitors would count them twice.
-type EnquirySummary struct {
-	Count    int64        `json:"count"`
-	Visitors int64        `json:"visitors"`
-	Actions  []EventCount `json:"actions"`
+	// PreviousVisitors is the visitor-days of the same-length period just
+	// before the range.
+	PreviousVisitors int64 `json:"previousVisitors"`
+	// Leads are the custom events the owner chose as leads (LeadEvents).
+	Leads LeadSummary `json:"leads"`
+	// SourceLeads and AILandings tie visits to leads by visit; their lead
+	// counts are zero until the owner picks lead actions.
+	SourceLeads []SourceLeads `json:"sourceLeads"`
+	AILandings  []AILanding   `json:"aiLandings"`
 }
 
 // CampaignCount is a tagged campaign's visitor-day and session counts.

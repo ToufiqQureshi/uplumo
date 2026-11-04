@@ -47,11 +47,32 @@ const summarySchema = z.object({
     }),
   ),
   events: z.array(z.object({ name: z.string(), count, visitors: count })),
-  enquiries: z.object({
+  previousVisitors: count,
+  leads: z.object({
+    configured: z.boolean(),
     count,
     visitors: count,
+    previousVisitors: count,
     actions: z.array(z.object({ name: z.string(), count, visitors: count })),
+    pages: z.array(
+      z.object({ path: z.string(), visitors: count, leadVisitors: count }),
+    ),
   }),
+  sourceLeads: z.array(
+    z.object({
+      channel: z.enum(CHANNELS),
+      visitors: count,
+      leadVisitors: count,
+    }),
+  ),
+  aiLandings: z.array(
+    z.object({
+      source: z.enum(AI_SOURCES),
+      path: z.string(),
+      visitors: count,
+      leadVisitors: count,
+    }),
+  ),
   campaigns: z.array(
     z.object({
       source: z.string(),
@@ -203,4 +224,31 @@ export function analyticsClicksQueryOptions(
     retry: shouldRetryApiError,
     staleTime: 60_000,
   };
+}
+
+const leadNamesSchema = z.object({ names: z.array(z.string()) });
+
+export function analyticsLeadsQueryOptions(projectId: string) {
+  return {
+    queryKey: ["goAnalyticsLeads", projectId],
+    queryFn: async () =>
+      (await apiRequest(`${projectPath(projectId)}/leads`, leadNamesSchema))
+        .names,
+    retry: shouldRetryApiError,
+    staleTime: Infinity,
+  };
+}
+
+/** Replaces the project's lead actions; the API returns the saved list. */
+export async function saveAnalyticsLeads(
+  projectId: string,
+  names: string[],
+): Promise<string[]> {
+  const saved = await apiRequest(
+    `${projectPath(projectId)}/leads`,
+    leadNamesSchema,
+    "POST",
+    { names },
+  );
+  return saved.names;
 }

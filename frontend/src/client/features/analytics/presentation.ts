@@ -13,6 +13,11 @@ const CHANNEL_LABELS: Record<Channel, { label: string; hint: string }> = {
   direct: { label: "Direct", hint: "Typed the address or used a bookmark" },
 };
 
+/** A channel's plain name, as people read it ("Search engines"). */
+export function channelLabel(channel: Channel): string {
+  return CHANNEL_LABELS[channel].label;
+}
+
 export function formatDuration(milliseconds: number): string {
   if (milliseconds < 1000) return "<1s";
   const totalSeconds = Math.floor(milliseconds / 1000);
@@ -32,6 +37,11 @@ const AI_SOURCE_LABELS: Record<AiSource, string> = {
   copilot: "Copilot",
   other_ai: "Other AI tools",
 };
+
+/** An AI assistant's name ("ChatGPT"). */
+export function aiSourceLabel(source: AiSource): string {
+  return AI_SOURCE_LABELS[source];
+}
 
 // The assistants every owner asks about. Each gets a row even at zero, so
 // "nobody came from Claude" reads as a fact rather than a missing row.
@@ -133,7 +143,8 @@ export function actionLabel(name: string): string {
   return ACTION_LABELS[name] ?? name;
 }
 
-const percent = new Intl.NumberFormat("en-IN", {
+// The viewer's own locale: Uplumo is used worldwide.
+const percent = new Intl.NumberFormat(undefined, {
   style: "percent",
   maximumFractionDigits: 0,
 });
