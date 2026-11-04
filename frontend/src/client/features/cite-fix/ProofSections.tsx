@@ -160,7 +160,9 @@ export function PitchButton({
         url,
         idempotencyKey: crypto.randomUUID(),
       }),
-    onSuccess: () => {
+    // Close the dialog either way, so a failure message is not hidden
+    // behind it; the balance may have changed even on a failure.
+    onSettled: () => {
       setConfirming(false);
       void client.invalidateQueries({ queryKey: billingUsageQueryKey });
     },
