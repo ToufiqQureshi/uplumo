@@ -1,21 +1,51 @@
 # Important session talks
 
-Short record of the important things the owner (Toufiq) said to any AI agent:
-feelings, business calls, priorities, corrections. Read it after
-`FOUNDER.md`, so you understand him without asking again.
+What the owner (Toufiq) said to any AI agent: decisions, feelings,
+priorities, corrections, and what still waits on him. Read it after
+`CLAUDE.md`, so you understand him without asking again.
 
 **Rules for every agent:**
 
 - Before your session ends, add one entry at the top if anything important
-  was said: a feeling, a worry, a business or product decision, a priority
-  change, or a correction of an agent. Skip routine coding chatter.
-- Max ~10 lines per entry. Use his words (Hinglish) for feelings; plain
-  English for decisions. Link the PR if there is one.
-- A real decision also goes into `DECISIONS.md` or `FOUNDER.md`; this file is
-  the story behind it, not the rulebook.
+  was said. Max ~10 lines. His words (Hinglish) for feelings; plain English
+  for decisions. Link the PR if there is one.
+- Keep "Waiting for the owner" current: add an ask when you need his
+  decision, remove it when he answers.
 - Never write secrets, keys or customer data here.
 
+## Kal ka kaam (4 Nov se)
+
+1. **Analytics leads ko dynamic banao** (owner ne kaha: kuch hard-coded nahi, UI clean).
+   - Bug: `frontend/src/client/features/analytics/AnalyticsOverview.tsx:99-123` har site ko "Nobody tapped WhatsApp, call..." dikhata hai, chahe button ho ya na ho. `backend/internal/analytics/enquiry.go` event ke naam se lead guess karta hai (word list).
+   - Plan: tracker sab raw record kare; user kisi bhi element pe `data-uplumo-event="signup"` ya JS `uplumo("signup")` lagaye; user khud chune kaunsa event uska lead hai (nayi table, per project); UI sirf wahi dikhaye jo site pe hai; `enquiry.go` ki word list aur saara hard-coded copy hatao. 0 paid calls. Code se pehle owner ki "haan".
+2. **Phir "Fix → Proof" ka plan** (sirf plan, code nahi): Cite Fix → AI ne cite kiya → AI se visitor usi page pe aaya → lead aayi. Link "likely" hai, pakka nahi; UI mein waise hi likhna.
+   - Kyu: market research (3 Nov) mein AI visibility tracking sasti aur bhari hui hai (Otterly $29, Peec $95, Profound $99+). Sabse badi complaint "batata hai, fix nahi karta". Hamara apna analytics tracker hamein proof dikhane deta hai, jo competitors ke paas nahi.
+3. **Rejected, dobara mat lana:** TimesFM / "Real drop or normal?" alerts (Growth Monitor se overlap; TimesFM 3.0 weights non-commercial).
+
+## Waiting for the owner
+
+- **Deploy** latest `main`, then compare credits charged with provider cost on 2-3 real Cite Fix pages and one Keywords answer.
+- **USD packs:** confirm $19 (5,000 credits), $59 (15,000 credits) and $12 (5 more websites). After deploy, check the log line "US dollar billing on", then one real international test payment and refund.
+- **Razorpay webhook:** also subscribe to `payment.authorized`, so late UPI approvals are captured instead of refunded.
+- **Keywords agent limits:** confirm 3 research seeds + 2 SERP checks per reply and the 1,200-credit answer limit; decide whether SAM chat summaries count inside it.
+- **AI tracker default schedule:** weekly instead of daily cuts recurring DataForSEO spend ~86%. Choose.
+- **Local SEO / Google Reviews / AI Mode engine:** bring back or drop.
+- **Google OAuth data-access verification:** scope justification + demo video, then submit.
+- **Railway GitHub auto-deploy** is broken ("Could not load branches"): reconnect GitHub in Railway, or keep deploying with `railway up` (`docs/DEPLOY.md`).
+
 ---
+
+## 3 Nov 2026: only three docs, flag hard-coding everywhere
+
+- Owner: "ye hardcoded sabse ghatiya kaam tha"; "kuch hardcoded nai chahiye"; analytics UI must be clean, not messy.
+- Found on his own site: Analytics said nobody tapped WhatsApp although uplumo.com has no WhatsApp button. Cause: hard-coded copy in `AnalyticsOverview.tsx` and name-guessing in `analytics/enquiry.go`. For him WhatsApp is not the lead; the user must choose what a lead is and tag any element.
+- Decision: the repo keeps only `CLAUDE.md`, `imp_sessions_talked.md` and `docs/DEPLOY.md`; all other docs deleted. Feature docs (`README.md`, `flow.md`, `how-it-works.md`, `business-logic.md`) are created one feature at a time when that feature is worked on. `CLAUDE.md` made short, with a rule to flag hard-coding, business loss, bugs and unnecessary lines on every file touched.
+
+## 3 Nov 2026: global platform, not only India
+
+- Owner: "muje global platform banana ha not only india samja docs me daal de".
+- Owner wants something valuable and different: "kuch valueble dena ha jo kaam ka ho, not other competitors jaise ek or site".
+- Claude proposed "Real drop or normal?" alerts (TimesFM-style expected range + why + fix). Owner rejected it: "I don't [like] this idea"; it mostly overlaps the existing Growth Monitor (`ga4/growth_monitor.go`), Next Actions and SAM brief. TimesFM 3.0 is ruled out anyway (non-commercial weights). Owner asked for market research before choosing what to build.
 
 ## 3 Nov 2026: dollar prices for customers outside India
 
@@ -37,15 +67,12 @@ feelings, business calls, priorities, corrections. Read it after
 - Remove all published articles and blog-only visuals, old redirects, navigation and sitemap entries. Shared product assets remain.
 - Former article URLs must not serve content or redirect to deleted guides.
 
-
 ## 29 Oct 2026: replace generic blog volume with useful product evidence
 
 - Owner explicitly authorised removal of the 29 generic posts; improve the retained guides and keep product information accurate.
 - At least three relevant explanatory images per maintained article; show features so readers can understand the output.
 - Cover all main features and make the buying case from actual workflows. No personal name, fabricated results or unsupported “best”/ranking guarantees.
 - Preserve retired URLs with relevant redirects and maintain canonical internal links.
-
-
 
 ## 29 Oct 2026: public pages, trust and anonymous experience
 
@@ -219,11 +246,9 @@ feelings, business calls, priorities, corrections. Read it after
   samjhoge, koi saath milke kaam nahi kar payega." Read `FOUNDER.md` and this
   file every session.
 
-
 ## 2026-11-03: Website allowances
 
 Owner set Pro to 5 active websites and Business to 10; users must not add beyond their allowance. Updated the shared catalog, pricing expectations, SAM facts and billing tests. Existing transactional create/restore checks enforce the allowance, including concurrent requests; Business retains its paid +5-site add-on. Existing excess sites are retained, with new additions blocked. No production deployment performed.
-
 
 ## 2026-11-03: Credit purchase discoverability and enforcement review
 

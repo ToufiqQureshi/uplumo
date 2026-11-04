@@ -1,7 +1,16 @@
 import { useState } from "react";
-import { AnalyticsOverview } from "./AnalyticsOverview";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { Code } from "lucide-react";
+import {
+  AiVisitorsCard,
+  AnalyticsOverview,
+  LeadPagesCard,
+  LeadSourcesCard,
+  TrackingProblemCard,
+} from "./AnalyticsOverview";
+import { LEAD_ACTIONS_ID, LeadActionsCard } from "./LeadActionsCard";
+import { trackingProblem } from "./visitSummary";
 import { QueryError } from "@/client/components/QueryState";
 import { SegmentedToggle } from "@/client/components/SegmentedToggle";
 import { SkeletonStatGrid } from "@/client/components/SkeletonPresets";
@@ -118,19 +127,57 @@ export function AnalyticsPage({
                 isRetrying={summaryQuery.isFetching}
               />
             ) : null}
-            <AnalyticsOverview
+            <TrackingProblemCard
               summary={summary}
-              range={rangeForDays(days, new Date())}
               onOpenTracking={() => setShowCode(true)}
             />
             {showCode ? (
               <TrackingCodeCard key={projectId} projectId={projectId} />
             ) : null}
-            <Dashboard
-              summary={summary}
-              projectId={projectId}
-              range={rangeForDays(days, new Date())}
-            />
+            {trackingProblem(summary) ? null : (
+              <>
+                <AnalyticsOverview
+                  summary={summary}
+                  days={days}
+                  onPickLeads={() =>
+                    document
+                      .getElementById(LEAD_ACTIONS_ID)
+                      ?.scrollIntoView({ behavior: "smooth" })
+                  }
+                />
+                <LeadActionsCard
+                  projectId={projectId}
+                  events={summary.events}
+                />
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <LeadSourcesCard summary={summary} />
+                  <AiVisitorsCard
+                    summary={summary}
+                    citeFixLink={
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        nativeButton={false}
+                        render={
+                          <Link
+                            to="/p/$projectId/cite-fix"
+                            params={{ projectId }}
+                          />
+                        }
+                      >
+                        See which AI answers name you
+                      </Button>
+                    }
+                  />
+                </div>
+                <LeadPagesCard summary={summary} />
+                <Dashboard
+                  summary={summary}
+                  projectId={projectId}
+                  range={rangeForDays(days, new Date())}
+                />
+              </>
+            )}
           </>
         )}
       </div>
@@ -174,77 +221,82 @@ function Dashboard({
   range: { from: string; to: string };
 }) {
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardContent className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
-          <StatTile
-            label="Visitors"
-            value={formatCount(summary.visitors)}
-            hint="Anonymous visitor-days, not people"
+    <details className="rounded-2xl border bg-card p-5">
+      <summary className="cursor-pointer font-medium">
+        All numbers: visits, pages, actions, audience and campaigns
+      </summary>
+      <div className="mt-5 space-y-6">
+        <Card>
+          <CardContent className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
+            <StatTile
+              label="Visitors"
+              value={formatCount(summary.visitors)}
+              hint="Anonymous visitor-days, not people"
+            />
+            <StatTile
+              label="Sessions"
+              value={formatCount(summary.sessions)}
+              hint="Tab-scoped visits"
+            />
+            <StatTile
+              label="Pageviews"
+              value={formatCount(summary.pageviews)}
+            />
+            <StatTile
+              label="Avg visible time"
+              value={
+                summary.sessions > 0
+                  ? formatDuration(summary.avgEngagementMs)
+                  : "—"
+              }
+              hint="Visible page time per session"
+            />
+            <StatTile
+              label="Bounce rate"
+              value={
+                summary.sessions > 0 ? formatShare(summary.bounceRate) : "—"
+              }
+              hint={`${formatCount(summary.engagedSessions)} engaged sessions`}
+            />
+          </CardContent>
+        </Card>
+        <TrafficChartCard series={summary.series} />
+        <div className="grid gap-6 lg:grid-cols-2">
+          <ChannelsCard
+            acquisitionChannels={summary.acquisitionChannels}
+            sessions={summary.sessions}
           />
-          <StatTile
-            label="Sessions"
-            value={formatCount(summary.sessions)}
-            hint="Tab-scoped visits"
-          />
-          <StatTile label="Pageviews" value={formatCount(summary.pageviews)} />
-          <StatTile
-            label="Avg visible time"
-            value={
-              summary.sessions > 0
-                ? formatDuration(summary.avgEngagementMs)
-                : "—"
-            }
-            hint="Visible page time per session"
-          />
-          <StatTile
-            label="Bounce rate"
-            value={summary.sessions > 0 ? formatShare(summary.bounceRate) : "—"}
-            hint={`${formatCount(summary.engagedSessions)} engaged sessions`}
-          />
-        </CardContent>
-      </Card>
-      <TrafficChartCard series={summary.series} />
-      <div className="grid gap-6 lg:grid-cols-2">
-        <ChannelsCard
-          acquisitionChannels={summary.acquisitionChannels}
-          sessions={summary.sessions}
-        />
 
-        <CountListCard
-          title="Top pages"
-          unit="Pageviews"
-          emptyTitle="No pages viewed in this period"
-          rows={summary.topPages.map((row) => ({
-            key: row.path,
-            label: `${displayPath(row.path)} · avg ${formatDuration(row.avgEngagementMs)}`,
-            count: row.pageviews,
-          }))}
-        />
-      </div>
-      <section id="visitor-actions" className="space-y-3 scroll-mt-4">
-        <h2 className="text-lg font-semibold">Actions visitors take</h2>
-        <p className="text-sm text-muted-foreground">
-          Recorded clicks and custom events show activity. They do not confirm
-          an enquiry, booking or sale.
-        </p>
-        <ClickDestinationsCard projectId={projectId} range={range} />
-        <CountListCard
-          title="Custom events"
-          unit="Events"
-          emptyTitle="No custom events recorded. Tag important buttons in Tracking code to start measuring actions."
-          rows={summary.events.map((row) => ({
-            key: row.name,
-            label: `${row.name} · ${row.visitors} visitor-days`,
-            count: row.count,
-          }))}
-        />
-      </section>
-      <details className="rounded-xl border border-border bg-card p-4">
-        <summary className="cursor-pointer font-medium">
-          Explore audience, campaigns and page journeys
-        </summary>
-        <div className="mt-4 space-y-6">
+          <CountListCard
+            title="Top pages"
+            unit="Pageviews"
+            emptyTitle="No pages viewed in this period"
+            rows={summary.topPages.map((row) => ({
+              key: row.path,
+              label: `${displayPath(row.path)} · avg ${formatDuration(row.avgEngagementMs)}`,
+              count: row.pageviews,
+            }))}
+          />
+        </div>
+        <section id="visitor-actions" className="space-y-3 scroll-mt-4">
+          <h2 className="text-lg font-semibold">Actions visitors take</h2>
+          <p className="text-sm text-muted-foreground">
+            Recorded clicks and custom events show activity. They do not confirm
+            an enquiry, booking or sale.
+          </p>
+          <ClickDestinationsCard projectId={projectId} range={range} />
+          <CountListCard
+            title="Custom events"
+            unit="Events"
+            emptyTitle="No custom events recorded. Tag important buttons in Tracking code to start measuring actions."
+            rows={summary.events.map((row) => ({
+              key: row.name,
+              label: `${row.name} · ${row.visitors} visitor-days`,
+              count: row.count,
+            }))}
+          />
+        </section>
+        <div className="space-y-6">
           <DailyAudienceCard days={summary.audience} />
           <div className="grid gap-6 lg:grid-cols-2">
             <AiTrafficCard
@@ -291,8 +343,8 @@ function Dashboard({
             />
           </div>
         </div>
-      </details>
-    </div>
+      </div>
+    </details>
   );
 }
 

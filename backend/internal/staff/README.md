@@ -2,7 +2,7 @@
 
 Serves `/api/v1/staff/*`: business numbers (users, payments, subscriptions, marketing funnel, provider cost) and account actions (block, unblock, delete, Razorpay payment sync). Every route answers 404 unless the session user is verified and in `STAFF_EMAILS`.
 
-This is an internal developer/AI-agent guide. Read [flow.md](flow.md) and [decision.md](decision.md) before changing it.
+This is an internal developer/AI-agent guide. Read [flow.md](flow.md) and [business-logic.md](business-logic.md) before changing it.
 
 ## Source map
 

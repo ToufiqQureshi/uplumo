@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -139,49 +138,98 @@ const customEventsInRange = `
 	WHERE site_id = (SELECT id FROM go_analytics_sites WHERE project_id = $1)
 		AND occurred_at >= $2 AND occurred_at < $3`
 
-// maxEventNames bounds how many distinct custom event names one summary
-// inspects for enquiries. A site with more names is mis-tagged (a unique
-// value in every name); the busiest names are checked first.
-const maxEventNames = 1000
+// leadPageLimit bounds the pages compared for lead conversion.
+const leadPageLimit = 10
 
-// enquiryNames returns the range's custom event names that are enquiries
-// (isEnquiry). Classification runs in Go so the summary, its tests and the
-// tracker share one definition.
-func (r repository) enquiryNames(ctx context.Context, args []any) ([]string, error) {
-	rows, err := r.db.Query(ctx, `SELECT name`+customEventsInRange+`
-		GROUP BY name ORDER BY count(*) DESC, name LIMIT $4`, append(args, maxEventNames)...)
-	if err != nil {
-		return nil, fmt.Errorf("query custom event names: %w", err)
-	}
-	names, err := pgx.CollectRows(rows, pgx.RowTo[string])
-	if err != nil {
-		return nil, fmt.Errorf("read custom event names: %w", err)
-	}
-	return slices.DeleteFunc(names, func(name string) bool { return !isEnquiry(name) }), nil
-}
+// aiLandingLimit bounds the AI assistant landing pages in a summary.
+const aiLandingLimit = 20
+
+// visitLeads is the start of a query over the range's visits: first_page is
+// each visit's first page (from the whole visit, so one that crosses the
+// range's start keeps its real source) and lead_visits the visits with a
+// lead action ($4) in the range. $1-$3 are eventsInRange's.
+const visitLeads = `WITH in_range AS (
+		SELECT DISTINCT session_hash` + eventsInRange + `
+			AND session_hash IS NOT NULL
+	), first_page AS (
+		SELECT DISTINCT ON (e.session_hash) e.session_hash, e.visitor_hash, e.channel, e.ai_source, e.path
+		FROM go_analytics_events e JOIN in_range USING (session_hash)
+		WHERE e.site_id = (SELECT id FROM go_analytics_sites WHERE project_id = $1)
+		ORDER BY e.session_hash, e.occurred_at, e.pageview_hash
+	), lead_visits AS (
+		SELECT DISTINCT session_hash` + customEventsInRange + `
+			AND name = ANY($4) AND session_hash IS NOT NULL
+	)`
 
 // summary aggregates the project's events in [start, end), whole UTC days,
-// with every query sent in one round trip.
+// with every query sent in one round trip. Leads are the custom events the
+// owner chose (go_analytics_lead_events); nothing is guessed from names.
 func (r repository) summary(ctx context.Context, projectID string, start, end time.Time) (Summary, error) {
-	s := Summary{Enquiries: EnquirySummary{Actions: []EventCount{}}}
+	s := Summary{Leads: LeadSummary{Actions: []EventCount{}, Pages: []LeadPage{}}}
 	args := []any{projectID, start, end}
-	enquiryNames, err := r.enquiryNames(ctx, args)
+	leadNames, err := r.leadNames(ctx, projectID)
 	if err != nil {
 		return Summary{}, err
 	}
+	s.Leads.Configured = len(leadNames) > 0
 	b := &pgx.Batch{}
-	if len(enquiryNames) > 0 {
+	if s.Leads.Configured {
 		b.Queue(`SELECT count(*), count(DISTINCT visitor_hash)`+customEventsInRange+`
-			AND name = ANY($4)`, append(args, enquiryNames)...).
-			QueryRow(func(row pgx.Row) error { return row.Scan(&s.Enquiries.Count, &s.Enquiries.Visitors) })
+			AND name = ANY($4)`, append(args, leadNames)...).
+			QueryRow(func(row pgx.Row) error { return row.Scan(&s.Leads.Count, &s.Leads.Visitors) })
 		b.Queue(`SELECT name, count(*), count(DISTINCT visitor_hash)`+customEventsInRange+`
 			AND name = ANY($4)
-			GROUP BY name ORDER BY 2 DESC, name LIMIT $5`, append(args, enquiryNames, topLimit)...).
-			Query(collectInto(&s.Enquiries.Actions, pgx.RowToStructByPos[EventCount]))
+			GROUP BY name ORDER BY 2 DESC, name LIMIT $5`, append(args, leadNames, topLimit)...).
+			Query(collectInto(&s.Leads.Actions, pgx.RowToStructByPos[EventCount]))
+		// The busiest pages and how many of their visitors did a lead action
+		// on that page, so the screen can name the page that loses people.
+		b.Queue(`WITH views AS (
+				SELECT path, count(DISTINCT visitor_hash) AS visitors`+eventsInRange+`
+				GROUP BY path ORDER BY 2 DESC, path LIMIT $5
+			), leads AS (
+				SELECT path, count(DISTINCT visitor_hash) AS lead_visitors`+customEventsInRange+`
+				AND name = ANY($4)
+				GROUP BY path
+			)
+			SELECT v.path, v.visitors, coalesce(l.lead_visitors, 0)
+			FROM views v LEFT JOIN leads l USING (path)
+			ORDER BY v.visitors DESC, v.path`, append(args, leadNames, leadPageLimit)...).
+			Query(collectInto(&s.Leads.Pages, pgx.RowToStructByPos[LeadPage]))
 	}
 
 	b.Queue(`SELECT count(DISTINCT visitor_hash), count(*)`+eventsInRange, args...).
 		QueryRow(func(row pgx.Row) error { return row.Scan(&s.Visitors, &s.Pageviews) })
+
+	// The same-length period just before, for a "compared with last period"
+	// line. Visitor ids rotate daily, so this is visitor-days too.
+	previousStart := start.Add(-end.Sub(start))
+	b.Queue(`SELECT count(DISTINCT visitor_hash)`+eventsInRange, projectID, previousStart, start).
+		QueryRow(func(row pgx.Row) error { return row.Scan(&s.PreviousVisitors) })
+	if s.Leads.Configured {
+		b.Queue(`SELECT count(DISTINCT visitor_hash)`+customEventsInRange+`
+			AND name = ANY($4)`, projectID, previousStart, start, leadNames).
+			QueryRow(func(row pgx.Row) error { return row.Scan(&s.Leads.PreviousVisitors) })
+	}
+
+	// Visits by the channel of their first page, and the visitors whose
+	// visit included a lead action. With no lead actions chosen the lead
+	// column is zero. Lead events from old snippets have no session and
+	// cannot be tied to a visit.
+	b.Queue(visitLeads+`
+		SELECT CASE WHEN f.channel = $5 THEN $6 ELSE f.channel END,
+			count(DISTINCT f.visitor_hash),
+			count(DISTINCT f.visitor_hash) FILTER (WHERE l.session_hash IS NOT NULL)
+		FROM first_page f LEFT JOIN lead_visits l USING (session_hash)
+		GROUP BY 1 ORDER BY 2 DESC, 1`, append(args, leadNames, channelInternal, channelDirect)...).
+		Query(collectInto(&s.SourceLeads, pgx.RowToStructByPos[SourceLeads]))
+
+	b.Queue(visitLeads+`
+		SELECT f.ai_source, f.path, count(DISTINCT f.visitor_hash),
+			count(DISTINCT f.visitor_hash) FILTER (WHERE l.session_hash IS NOT NULL)
+		FROM first_page f LEFT JOIN lead_visits l USING (session_hash)
+		WHERE f.ai_source IS NOT NULL
+		GROUP BY 1, 2 ORDER BY 3 DESC, 1, 2 LIMIT $5`, append(args, leadNames, aiLandingLimit)...).
+		Query(collectInto(&s.AILandings, pgx.RowToStructByPos[AILanding]))
 
 	b.Queue(`
 		WITH daily AS (
