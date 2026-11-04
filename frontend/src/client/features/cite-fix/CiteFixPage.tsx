@@ -35,10 +35,10 @@ import {
   CiteFixHeadline,
   LIST_PAGES_ID,
   ListPagesCard,
-  NextStepsCard,
   RivalRanksCard,
-  SignalsCard,
 } from "./DecisionSections";
+import { NextStepsCard } from "./NextStepsCard";
+import { SignalsCard } from "./SignalsCard";
 import { GoogleAIOverviewSection, SEOIssuesSection } from "./CitationSections";
 import { scoreBand } from "./scoreBand";
 import { TopicsSection } from "./TopicsSection";

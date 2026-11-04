@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import { cn } from "cn";
 import { SafeExternalLink } from "@/client/components/SafeExternalLink";
 import { engineLabel } from "@/client/features/ai-search/platformLabels";
-import type { CiteFixProof, CiteFixReport } from "./citeFixApi";
+import type { CiteFixProof } from "./citeFixApi";
 import {
   allCells,
   headline,
@@ -10,8 +10,6 @@ import {
   type ListPage,
   type Matrix,
   type RivalRank,
-  type Step,
-  type StepKind,
 } from "./citeFixInsights";
 
 const dateFormat = new Intl.DateTimeFormat(undefined, {
@@ -20,7 +18,7 @@ const dateFormat = new Intl.DateTimeFormat(undefined, {
   year: "numeric",
 });
 
-function formatDate(value: string): string {
+export function formatDate(value: string): string {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? value : dateFormat.format(date);
 }
@@ -370,178 +368,6 @@ export function ListPagesCard({ pages }: { pages: ListPage[] }) {
           </li>
         ))}
       </ul>
-    </section>
-  );
-}
-
-type Comparison = CiteFixReport["rivals"][number];
-type Signals = Comparison["rival"]["signals"];
-
-const SIGNALS: {
-  label: string;
-  why: string;
-  show: (signals: Signals) => string;
-}[] = [
-  {
-    label: "Answers in the first lines",
-    why: "AI lifts the opening sentence",
-    show: (s) => (s.answerFirstWords ? `${s.answerFirstWords} words` : "No"),
-  },
-  {
-    label: "FAQ",
-    why: "Matches how people ask AI",
-    show: (s) => (s.faq ? "Yes" : "No"),
-  },
-  {
-    label: "Structured data",
-    why: "Tells AI what the page is about",
-    show: (s) => (s.schema.length ? `${s.schema.length} types` : "None"),
-  },
-  {
-    label: "Numbers and facts",
-    why: "Specific claims get quoted",
-    show: (s) => (s.statistics ? String(s.statistics) : "None"),
-  },
-  {
-    label: "Author",
-    why: "Shows who stands behind it",
-    show: (s) => (s.author ? "Yes" : "No"),
-  },
-  {
-    label: "Last updated",
-    why: "Fresh pages are preferred",
-    show: (s) => (s.date ? formatDate(s.date) : "Not shown"),
-  },
-  {
-    label: "Words",
-    why: "Depth of the page",
-    show: (s) => s.wordCount.toLocaleString(),
-  },
-];
-
-/** Rival pages and the customer's best page, signal by signal. */
-export function SignalsCard({
-  rivals,
-  scanAction,
-}: {
-  rivals: Comparison[];
-  scanAction: ReactNode;
-}) {
-  if (rivals.length === 0) return null;
-  const yours = rivals.find((comparison) => comparison.yours)?.yours ?? null;
-  const columns = {
-    gridTemplateColumns: `minmax(0, 1.6fr) repeat(${rivals.length + 1}, minmax(5rem, 1fr))`,
-  };
-  return (
-    <section
-      aria-labelledby="cite-fix-signals"
-      className="space-y-3 rounded-2xl border bg-card p-5"
-    >
-      <div>
-        <h2 id="cite-fix-signals" className="font-serif text-2xl">
-          What their pages have
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          Read for free from the pages AI cited
-          {yours ? ", next to your strongest scanned page" : ""}. A gap here is
-          a likely reason, not proof: the AI decides.
-        </p>
-      </div>
-      <div className="overflow-x-auto">
-        <div className="min-w-[34rem] text-sm">
-          <div
-            className="grid gap-3 py-2 font-mono text-xs text-muted-foreground"
-            style={columns}
-          >
-            <span>Signal</span>
-            {rivals.map((comparison) => (
-              <span key={comparison.rival.url} className="truncate">
-                {comparison.rival.domain}
-              </span>
-            ))}
-            <span>You</span>
-          </div>
-          {SIGNALS.map((signal) => (
-            <div
-              key={signal.label}
-              className="grid items-center gap-3 border-t py-2"
-              style={columns}
-            >
-              <span>
-                {signal.label}
-                <span className="block text-xs text-muted-foreground">
-                  {signal.why}
-                </span>
-              </span>
-              {rivals.map((comparison) => (
-                <span key={comparison.rival.url} className="font-mono">
-                  {signal.show(comparison.rival.signals)}
-                </span>
-              ))}
-              <span className="font-mono">
-                {yours ? signal.show(yours.signals) : "–"}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-      {yours ? (
-        <p className="text-xs text-muted-foreground">
-          Your page: {yours.title || yours.url}
-        </p>
-      ) : (
-        <div className="flex flex-wrap items-center gap-3">
-          {scanAction}
-          <span className="text-sm text-muted-foreground">
-            A free scan fills the “You” column.
-          </span>
-        </div>
-      )}
-    </section>
-  );
-}
-
-/** The ordered moves, each with its reason, its evidence and its action. */
-export function NextStepsCard({
-  steps,
-  actionFor,
-}: {
-  steps: Step[];
-  actionFor: (kind: StepKind) => ReactNode;
-}) {
-  if (steps.length === 0) return null;
-  return (
-    <section aria-labelledby="cite-fix-steps" className="space-y-3">
-      <h2 id="cite-fix-steps" className="font-serif text-2xl">
-        What to do next
-      </h2>
-      <ol className="space-y-3">
-        {steps.map((step, index) => (
-          <li
-            key={step.kind}
-            className="flex flex-wrap items-start gap-4 rounded-2xl border bg-card p-5"
-          >
-            <span className="font-mono text-xs text-primary">
-              STEP {index + 1}
-            </span>
-            <div className="min-w-0 flex-[999_1_24rem] space-y-1">
-              <p className="text-lg font-semibold">{step.title}</p>
-              <p className="text-sm text-muted-foreground">{step.why}</p>
-              <p className="text-sm">
-                <span className="text-muted-foreground">Evidence: </span>
-                {step.proof}
-              </p>
-            </div>
-            <div className="flex flex-[1_1_12rem] justify-end">
-              {actionFor(step.kind)}
-            </div>
-          </li>
-        ))}
-      </ol>
-      <p className="text-xs text-muted-foreground">
-        No tool can promise a citation: the AI decides. These are the gaps the
-        evidence points to.
-      </p>
     </section>
   );
 }

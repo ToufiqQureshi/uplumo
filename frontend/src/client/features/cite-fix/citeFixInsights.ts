@@ -64,7 +64,7 @@ export function allCells(matrix: Matrix): Cell[] {
   return [...matrix.cells.values()].flatMap((row) => [...row.values()]);
 }
 
-export interface Headline {
+interface Headline {
   cited: Cell[];
   /** Named in earlier checks but not the latest, most often named first. */
   lost: Cell[];

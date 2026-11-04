@@ -1,6 +1,5 @@
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/client/components/ui/button";
-import { SafeExternalLink } from "@/client/components/SafeExternalLink";
 import { BrandLookupResults } from "@/client/features/ai-search/components/BrandLookupResults";
 import type { CiteFixReport } from "./citeFixApi";
 
