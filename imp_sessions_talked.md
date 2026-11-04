@@ -13,6 +13,14 @@ priorities, corrections, and what still waits on him. Read it after
   decision, remove it when he answers.
 - Never write secrets, keys or customer data here.
 
+## 4 Nov 2026: Analytics + Cite Fix are Claude's responsibility
+
+- Owner: "analytics and cite fix teri zimmedaari ha"; Analytics "ek dum bekkar"; "sab dynamic ho koi bhi cheez hardcoded nai"; wants 3 PRs, then merge, deploy and UI-level testing, fast.
+- Decision: outreach pitch draft costs at most **25 credits** ("haan 25 credits theek hai"). Cite Fix caps now live in `plans/catalog.go`.
+- Built as 3 stacked branches: `feat/analytics-simple` (owner-chosen leads, leads by source/page, AI visitors; also carries the 3-doc cleanup commits), `feat/cite-fix-decisions` (every question covered, list pages, decision-first layout), `feat/cite-fix-proof` (pitch, fix proof, what AI says).
+- Pending: push was blocked by permissions; owner pushes, then merge in order 1 → 2 → 3, deploy, live UI check.
+- Not built yet: AI keyword search volume (DataForSEO) for questions to track.
+
 ## Kal ka kaam (4 Nov se)
 
 1. **Analytics leads ko dynamic banao** (owner ne kaha: kuch hard-coded nahi, UI clean).
