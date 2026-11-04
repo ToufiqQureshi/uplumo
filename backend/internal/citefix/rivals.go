@@ -188,7 +188,11 @@ func (s Store) rivalComparisons(ctx context.Context, organizationID, projectID s
 	wg.Wait()
 	cancel()
 
-	comparisons := make([]RivalComparison, 0, len(picks))
+	type read struct {
+		pick *pick
+		page RivalPage
+	}
+	readPages := make([]read, 0, len(picks))
 	for _, p := range picks {
 		page := p.cached
 		if p.fetched != nil {
@@ -201,13 +205,43 @@ func (s Store) rivalComparisons(ctx context.Context, organizationID, projectID s
 		if page == nil || page.ContentHash == "" {
 			continue
 		}
-		listed, linksYou := listedRivals(page.RivalPage, rivalHosts, proof.Domain)
+		readPages = append(readPages, read{p, page.RivalPage})
+	}
+	linked := make([][]string, len(readPages))
+	for i, r := range readPages {
+		linked[i] = r.page.LinkedHosts
+	}
+	listable := withoutCommonHosts(rivalHosts, linked)
+	comparisons := make([]RivalComparison, 0, len(readPages))
+	for _, r := range readPages {
+		listed, linksYou := listedRivals(r.page, listable, proof.Domain)
 		comparisons = append(comparisons, RivalComparison{
-			Prompt: p.prompt, Engine: p.engine, Rival: page.RivalPage, Yours: yours,
+			Prompt: r.pick.prompt, Engine: r.pick.engine, Rival: r.page, Yours: yours,
 			ListsRivals: listed, LinksYou: linksYou,
 		})
 	}
 	return comparisons, nil
+}
+
+// withoutCommonHosts drops from rivalHosts the hosts that most of the read
+// pages link to (at least three pages, and at least half): those are site
+// furniture such as social profiles in a footer, not a list of firms. A
+// page that links to LinkedIn and YouTube is not a directory.
+func withoutCommonHosts(rivalHosts map[string]bool, linked [][]string) map[string]bool {
+	threshold := max(3, (len(linked)+1)/2)
+	kept := make(map[string]bool, len(rivalHosts))
+	for host := range rivalHosts {
+		pages := 0
+		for _, hosts := range linked {
+			if slices.ContainsFunc(hosts, func(h string) bool { return h == host || strings.HasSuffix(h, "."+host) }) {
+				pages++
+			}
+		}
+		if pages < threshold {
+			kept[host] = true
+		}
+	}
+	return kept
 }
 
 // rivalNeedsFetch says whether a rival page must be fetched for this report:

@@ -222,11 +222,20 @@ func said(brand, domain string, answers []proofAnswer) []Said {
 		if len(quotes) == maxSaid {
 			break
 		}
-		if excerpt := aisearch.BrandExcerpt(answer.answer, brand, domain); excerpt != "" {
+		if excerpt := plainText(aisearch.BrandExcerpt(answer.answer, brand, domain)); excerpt != "" {
 			quotes = append(quotes, Said{Prompt: answer.prompt, Engine: answer.engine, Excerpt: excerpt})
 		}
 	}
 	return quotes
+}
+
+// markdownMarks are the emphasis and heading marks AI answers use; quoted
+// as plain text they read like noise.
+var markdownMarks = strings.NewReplacer("**", "", "__", "", "`", "", "### ", "", "## ", "", "# ", "")
+
+// plainText is an answer excerpt without markdown marks or extra spaces.
+func plainText(excerpt string) string {
+	return strings.Join(strings.Fields(markdownMarks.Replace(excerpt)), " ")
 }
 
 // canonicalCitedURL drops what makes one page look like several: the

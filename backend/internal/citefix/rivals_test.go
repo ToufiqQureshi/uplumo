@@ -396,3 +396,30 @@ func TestMatchesHost(t *testing.T) {
 		}
 	}
 }
+
+func TestCommonFooterLinksDoNotMakeAListPage(t *testing.T) {
+	rivals := map[string]bool{"linkedin.com": true, "youtube.com": true, "rival-one.example": true, "rival-two.example": true}
+	linked := [][]string{
+		{"in.linkedin.com", "youtube.com"},
+		{"linkedin.com", "youtube.com", "rival-one.example", "rival-two.example"},
+		{"linkedin.com", "youtube.com"},
+		{"youtube.com"},
+	}
+	kept := withoutCommonHosts(rivals, linked)
+	if kept["linkedin.com"] || kept["youtube.com"] || !kept["rival-one.example"] || !kept["rival-two.example"] {
+		t.Fatalf("kept = %v; want footer hosts dropped and firms kept", kept)
+	}
+	social := RivalPage{Domain: "firm.example", LinkedHosts: linked[0]}
+	if listed, _ := listedRivals(social, kept, "shop.example"); len(listed) != 0 {
+		t.Errorf("a page with only social links listed %v", listed)
+	}
+	directory := RivalPage{Domain: "dir.example", LinkedHosts: linked[1]}
+	if listed, _ := listedRivals(directory, kept, "shop.example"); len(listed) != 2 {
+		t.Errorf("the directory listed %v; want the two firms", listed)
+	}
+	// Two directories listing the same firms are not furniture: fewer than
+	// three pages never drop a host.
+	if two := withoutCommonHosts(rivals, [][]string{linked[1], linked[1]}); len(two) != len(rivals) {
+		t.Errorf("with two pages kept %v", two)
+	}
+}

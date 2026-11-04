@@ -116,8 +116,15 @@ test("daily audience and destination counts render with scoped paging and option
   const requests = await installAnalytics(page);
   await page.goto("/p/e2e-project/analytics");
   await expect(
+    page.getByRole("heading", { name: "What counts as a lead?" }),
+  ).toBeVisible();
+  await expect(
     page.getByRole("heading", { name: "Daily new and returning" }),
   ).toBeHidden();
+  // A closed "All numbers" section loads none of its reports.
+  expect(
+    requests.filter((url) => /\/(clicks|countries)$/u.test(url.pathname)),
+  ).toEqual([]);
   await page.getByText("All numbers", { exact: false }).click();
   await expect(
     page.getByRole("heading", { name: "Visitors over time" }),

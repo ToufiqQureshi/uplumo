@@ -184,3 +184,28 @@ func TestTopicURLKeepsTrailingSlashPagesApart(t *testing.T) {
 		t.Fatalf("topicURL(root) = %q", got)
 	}
 }
+
+func TestTopicReportNeedsASubjectNotASharedWord(t *testing.T) {
+	pages := []Page{
+		topicPage("https://site.example/a", "SEO plan for a small business", 600),
+		topicPage("https://site.example/b", "Search Console for small businesses", 600),
+		topicPage("https://site.example/c", "Content brief for small business", 600),
+		topicPage("https://site.example/d", "Core Web Vitals explained", 600),
+		topicPage("https://site.example/e", "Traffic drop after a core update", 600),
+		topicPage("https://site.example/f", "Different search volume in tools", 600),
+		topicPage("https://site.example/g", "Different language page in results", 600),
+	}
+	got := buildTopics(pages, nil, nil)
+	byTopic := map[string]int{}
+	for _, cluster := range got.Clusters {
+		byTopic[cluster.Topic] = cluster.PageCount
+	}
+	if byTopic["small business"] != 3 {
+		t.Errorf("clusters = %v; want \"small business\" with its plural folded in (3 pages)", byTopic)
+	}
+	for _, word := range []string{"core", "different", "small businesses"} {
+		if _, ok := byTopic[word]; ok {
+			t.Errorf("clusters = %v; %q is not a subject", byTopic, word)
+		}
+	}
+}

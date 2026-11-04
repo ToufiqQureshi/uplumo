@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 )
@@ -119,5 +120,13 @@ func TestBuildProofMergesHighlightAndTrackingVariantsOfAPage(t *testing.T) {
 	}
 	if got := canonicalCitedURL("%zz"); got != "%zz" {
 		t.Errorf("unparseable URL = %q, want it kept", got)
+	}
+}
+
+func TestSaidQuotesPlainText(t *testing.T) {
+	got := said("Shop", "shop.example", []proofAnswer{{prompt: "q", engine: "claude",
+		answer: "## Picks\n- **Shop**: a `leading`   firm in __Mumbai__."}})
+	if len(got) != 1 || strings.ContainsAny(got[0].Excerpt, "*`#_") || strings.Contains(got[0].Excerpt, "  ") {
+		t.Fatalf("said = %+v; want plain text", got)
 	}
 }

@@ -28,3 +28,9 @@
   pages Cite Fix found, never for an arbitrary URL.
 - **Fix proof is "likely linked, not proven"**: AI assistants do not say who
   clicked, so the UI never claims a fix caused the change.
+- **Topics name a subject, not a shared word:** a one-word topic needs at
+  least 3 pages, and plural spellings fold into a singular the same scan
+  has ("small businesses" into "small business").
+- **A list page lists firms, not footer links:** a host that most read pages
+  (3 or more, and at least half) link to is site furniture such as social
+  profiles, and does not make a page a list of rivals.
