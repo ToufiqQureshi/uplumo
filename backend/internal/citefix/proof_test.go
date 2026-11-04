@@ -2,6 +2,7 @@ package citefix
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"testing"
 	"time"
@@ -51,8 +52,8 @@ func TestBuildProofCountsCitationsPerAnswer(t *testing.T) {
 
 func TestBuildProofCapsItsLists(t *testing.T) {
 	answers := []proofAnswer{}
-	for i := range 12 {
-		answers = append(answers, proofAnswer{prompt: string(rune('a' + i)), engine: "chatgpt", citations: cite("https://r"+string(rune('a'+i))+".example/", "https://x1.example/", "https://x2.example/", "https://x3.example/")})
+	for i := range maxProofMisses + 5 {
+		answers = append(answers, proofAnswer{prompt: fmt.Sprintf("q%d", i), engine: "chatgpt", citations: cite(fmt.Sprintf("https://r%d.example/", i), "https://x1.example/", "https://x2.example/", "https://x3.example/")})
 	}
 	proof := buildProof(time.Unix(0, 0), "shop.example", answers)
 	if len(proof.Rivals) != maxProofRivals || len(proof.Misses) != maxProofMisses || len(proof.Misses[0].Cited) != maxMissCited || len(proof.Misses[0].CitedPages) != maxMissCited {
@@ -93,5 +94,30 @@ func TestStoreProofReadsTheLatestFinishedRunOfTheWorkspace(t *testing.T) {
 	}
 	if proof, err := store.proof(ctx, otherOrganization, projectID); err != nil || proof != nil {
 		t.Fatalf("foreign workspace: %+v, %v", proof, err)
+	}
+}
+
+func TestBuildProofMergesHighlightAndTrackingVariantsOfAPage(t *testing.T) {
+	answers := []proofAnswer{
+		{prompt: "q", engine: "gemini", citations: cite(
+			"https://rival.example/a#:~:text=Built%20for",
+			"https://rival.example/a?utm_source=chatgpt.com",
+			"https://rival.example/a?id=7&utm_medium=ai",
+		)},
+		{prompt: "q", engine: "claude", citations: cite(
+			"https://shop.example/x#top",
+			"https://shop.example/x?utm_source=chatgpt.com",
+		)},
+	}
+	proof := buildProof(time.Unix(0, 0), "shop.example", answers)
+	pages := proof.Misses[0].CitedPages
+	if len(pages) != 2 || pages[0].URL != "https://rival.example/a" || pages[1].URL != "https://rival.example/a?id=7" {
+		t.Fatalf("cited pages = %+v; want the page once plus the one with a real query", pages)
+	}
+	if len(proof.YourPages) != 1 || proof.YourPages[0].Count != 2 {
+		t.Fatalf("your pages = %+v; want one page cited twice", proof.YourPages)
+	}
+	if got := canonicalCitedURL("%zz"); got != "%zz" {
+		t.Errorf("unparseable URL = %q, want it kept", got)
 	}
 }

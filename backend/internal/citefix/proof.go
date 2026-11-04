@@ -64,7 +64,9 @@ type CitedPage struct {
 const (
 	maxProofRivals = 5
 	maxProofPages  = 5
-	maxProofMisses = 5
+	// maxProofMisses keeps every missed question and engine of a normal run
+	// (a few prompts times six engines), so each one can show who AI cited.
+	maxProofMisses = 60
 	// maxProofAnswers bounds the answers read; a run holds at most a few
 	// hundred (prompts times engines).
 	maxProofAnswers = 2_000
@@ -157,15 +159,16 @@ func buildProof(checkedAt time.Time, domain string, answers []proofAnswer) *Proo
 			seenURL[citation.URL] = true
 			if isOwnHost(host, own) {
 				citesYou = true
-				pages[citation.URL]++
+				pages[canonicalCitedURL(citation.URL)]++
 			} else if !seenHost[host] {
 				seenHost[host] = true
 				rivals[host]++
 				cited = append(cited, host)
 			}
-			if !isOwnHost(host, own) && !seenPage[citation.URL] && len(citedPages) < maxMissCited {
-				seenPage[citation.URL] = true
-				page := CitedPage{URL: citation.URL, Domain: host}
+			pageURL := canonicalCitedURL(citation.URL)
+			if !isOwnHost(host, own) && !seenPage[pageURL] && len(citedPages) < maxMissCited {
+				seenPage[pageURL] = true
+				page := CitedPage{URL: pageURL, Domain: host}
 				if citation.Title != nil {
 					page.Title = *citation.Title
 				}
@@ -197,6 +200,30 @@ func buildProof(checkedAt time.Time, domain string, answers []proofAnswer) *Proo
 	})
 	proof.YourPages = proof.YourPages[:min(len(proof.YourPages), maxProofPages)]
 	return proof
+}
+
+// canonicalCitedURL drops what makes one page look like several: the
+// fragment (AI engines add "#:~:text=" highlights) and utm_ tracking
+// parameters (some engines tag their own links). A URL that does not parse
+// is kept as sent.
+func canonicalCitedURL(raw string) string {
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return raw
+	}
+	parsed.Fragment, parsed.RawFragment = "", ""
+	query := parsed.Query()
+	changed := false
+	for key := range query {
+		if strings.HasPrefix(strings.ToLower(key), "utm_") {
+			query.Del(key)
+			changed = true
+		}
+	}
+	if changed {
+		parsed.RawQuery = query.Encode()
+	}
+	return parsed.String()
 }
 
 // citationHost is the citation's domain, or its URL's host when the provider

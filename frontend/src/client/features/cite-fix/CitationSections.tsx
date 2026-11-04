@@ -4,12 +4,21 @@ import { useState } from "react";
 import { Button } from "@/client/components/ui/button";
 import { ConfirmDialog } from "@/client/components/ConfirmDialog";
 import { SafeExternalLink } from "@/client/components/SafeExternalLink";
+import { MarkdownAnswer } from "@/client/features/ai-search/components/MarkdownAnswer";
 import type { CiteFixReport, GoogleAIOverviewState } from "./citeFixApi";
 import {
   citeFixKey,
   collectCiteFixGoogleAIOverview,
   refreshCiteFixGoogleAIOverview,
 } from "./citeFixApi";
+
+/**
+ * Google marks the sentence its AI Overview leads with in backticks; shown
+ * as code it reads like a bug, so it becomes bold. Code fences are kept.
+ */
+export function overviewMarkdown(answer: string): string {
+  return answer.replace(/(?<!`)`([^`\n]+)`(?!`)/g, "**$1**");
+}
 
 export function GoogleAIOverviewSection({
   projectId,
@@ -118,9 +127,9 @@ export function GoogleAIOverviewSection({
                     AI Overview.
                   </p>
                   {result.answer ? (
-                    <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
-                      {result.answer}
-                    </p>
+                    <div className="mt-2 text-sm text-muted-foreground">
+                      <MarkdownAnswer text={overviewMarkdown(result.answer)} />
+                    </div>
                   ) : null}
                   <ul className="mt-3 flex flex-col gap-2">
                     {result.citations.map((citation) => (

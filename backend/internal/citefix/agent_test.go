@@ -532,3 +532,19 @@ func TestPromptsKeepUntrustedTextInsideItsFence(t *testing.T) {
 		}
 	}
 }
+
+func TestEvidencePromptKeepsItsSizeAsTheReportGrows(t *testing.T) {
+	proof := &Proof{Domain: "shop.example", Answers: 20}
+	rivals := []RivalComparison{}
+	for i := range 20 {
+		proof.Misses = append(proof.Misses, Miss{Prompt: fmt.Sprintf("q%d", i), Engine: "gemini", Cited: []string{"r.example"}})
+		rivals = append(rivals, RivalComparison{Prompt: fmt.Sprintf("q%d", i), Engine: "gemini", Rival: RivalPage{URL: fmt.Sprintf("https://r.example/%d", i)}})
+	}
+	prompt := evidencePrompt(agentEvidence{Proof: proof, Rivals: rivals})
+	if got := strings.Count(prompt, "cited r.example, not this site"); got != agentPromptMisses {
+		t.Errorf("missed-question lines = %d, want %d", got, agentPromptMisses)
+	}
+	if got := strings.Count(prompt, "; cited rival "); got != agentPromptRivals {
+		t.Errorf("rival lines = %d, want %d", got, agentPromptRivals)
+	}
+}

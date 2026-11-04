@@ -172,6 +172,8 @@ const reportSchema = z.object({
             signals: rivalSignalsSchema,
           })
           .nullable(),
+        listsRivals: z.array(z.string()).default([]),
+        linksYou: z.boolean().default(false),
       }),
     )
     .default([]),
