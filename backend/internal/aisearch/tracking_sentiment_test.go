@@ -61,14 +61,14 @@ func TestSentimentPricesMatchTheWriter(t *testing.T) {
 }
 
 func TestBrandExcerptAndParsing(t *testing.T) {
-	if got := brandExcerpt("Try Brew Lab for coffee.", "Sunrise Café", "sunrisecafe.in"); got != "" {
+	if got := BrandExcerpt("Try Brew Lab for coffee.", "Sunrise Café", "sunrisecafe.in"); got != "" {
 		t.Fatalf("excerpt without the brand = %q, want none (no model call)", got)
 	}
-	if got := brandExcerpt("Locals like sunrisecafe.in for views.", "Sunrise Café", "www.sunrisecafe.in"); !strings.Contains(got, "sunrisecafe.in") {
+	if got := BrandExcerpt("Locals like sunrisecafe.in for views.", "Sunrise Café", "www.sunrisecafe.in"); !strings.Contains(got, "sunrisecafe.in") {
 		t.Fatalf("domain mention not found: %q", got)
 	}
 	long := strings.Repeat("मौसम अच्छा है। ", 400) + "Sunrise Café is slow on weekends."
-	if got := brandExcerpt(long, "sunrise café", ""); !strings.Contains(got, "Sunrise Café is slow") || len([]rune(got)) > sentimentExcerptRunes {
+	if got := BrandExcerpt(long, "sunrise café", ""); !strings.Contains(got, "Sunrise Café is slow") || len([]rune(got)) > sentimentExcerptRunes {
 		t.Fatalf("excerpt = %d runes, must contain the mention and stay bounded", len([]rune(got)))
 	}
 	batch := []sentimentRow{{id: "a1", excerpt: "Sunrise Café has slow service at night"}}
