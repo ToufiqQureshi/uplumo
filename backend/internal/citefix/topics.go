@@ -298,6 +298,11 @@ func buildTopics(pages []Page, duplicateURLs, shellURLs map[string]struct{}) Top
 		if !strings.Contains(term, " ") && len(members) < minWordTopicPages {
 			continue
 		}
+		// On a site with several pages, one page is not a topic: "30 day" or
+		// "5xx debug" from a single title would crowd out real clusters.
+		if len(eligible) >= 5 && len(members) < 2 {
+			continue
+		}
 		var key strings.Builder
 		for _, i := range members {
 			fmt.Fprintf(&key, "%d,", i)
