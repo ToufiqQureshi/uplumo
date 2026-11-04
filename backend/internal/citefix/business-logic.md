@@ -21,3 +21,10 @@
   tags, so one page is never counted as several.
 - **Global:** engine names and dates come from shared labels and the viewer's
   locale; nothing assumes one country.
+- **Pitch drafts:** one click, one charge, at most 25 credits (plan catalog);
+  replays by key and drafts of the same page within 30 days are free; one
+  draft per page at a time; 20 per project per 10 minutes; a failed or
+  unusable answer costs the customer nothing. Drafts are offered only for
+  pages Cite Fix found, never for an arbitrary URL.
+- **Fix proof is "likely linked, not proven"**: AI assistants do not say who
+  clicked, so the UI never claims a fix caused the change.

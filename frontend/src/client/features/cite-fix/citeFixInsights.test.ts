@@ -46,6 +46,7 @@ beforeEach(() => {
         citedPages: [],
       },
     ],
+    said: [],
     visibility: {
       runs: 13,
       historyLimited: false,
@@ -254,10 +255,12 @@ function report(over: Partial<CiteFixReport>): CiteFixReport {
     googleAiOverview: null,
     rivals: [],
     seoIssues: [],
+    fixProofs: [],
     agent: {
       available: false,
       planAllowed: false,
       quickMaxCredits: 25,
+      pitchMaxCredits: 25,
       deepMaxCredits: 60,
       maxPages: 3,
       defaultPages: 1,

@@ -57,6 +57,14 @@ func (s Store) Report(ctx context.Context, organizationID, projectID string) (Re
 	if err != nil {
 		return Report{}, err
 	}
+	now := time.Now
+	if s.Now != nil {
+		now = s.Now
+	}
+	fixProofs, err := s.fixProofs(ctx, organizationID, projectID, proof, now())
+	if err != nil {
+		return Report{}, err
+	}
 	var scan Scan
 	err = s.DB.QueryRow(ctx, `SELECT a.id, a.start_url, a.completed_at FROM go_audits a
 		JOIN projects p ON p.id = a.project_id AND p.organization_id = $1
@@ -64,7 +72,7 @@ func (s Store) Report(ctx context.Context, organizationID, projectID string) (Re
 		ORDER BY a.started_at DESC LIMIT 1`, organizationID, projectID).Scan(&scan.AuditID, &scan.StartURL, &scan.CompletedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		report := emptyReport(StateNoScan)
-		report.Running, report.Proof, report.Mentions, report.GoogleAIOverview = running, proof, mentions, googleAIOverview
+		report.Running, report.Proof, report.Mentions, report.GoogleAIOverview, report.FixProofs = running, proof, mentions, googleAIOverview, fixProofs
 		report.Rivals, err = s.rivalComparisons(ctx, organizationID, projectID, proof, mentions, nil)
 		if err != nil {
 			return Report{}, err
@@ -81,7 +89,7 @@ func (s Store) Report(ctx context.Context, organizationID, projectID string) (Re
 	}
 	if legacy {
 		report := emptyReport(StateNeedsRescan)
-		report.Running, report.Scan, report.PagesTotal, report.Proof, report.Mentions, report.GoogleAIOverview = running, &scan, len(pages), proof, mentions, googleAIOverview
+		report.Running, report.Scan, report.PagesTotal, report.Proof, report.Mentions, report.GoogleAIOverview, report.FixProofs = running, &scan, len(pages), proof, mentions, googleAIOverview, fixProofs
 		report.Rivals, err = s.rivalComparisons(ctx, organizationID, projectID, proof, mentions, pages)
 		if err != nil {
 			return Report{}, err
@@ -97,7 +105,7 @@ func (s Store) Report(ctx context.Context, organizationID, projectID string) (Re
 		return Report{}, err
 	}
 	report := Build(scan, pages, issues)
-	report.Running, report.Proof, report.Mentions, report.GoogleAIOverview = running, proof, mentions, googleAIOverview
+	report.Running, report.Proof, report.Mentions, report.GoogleAIOverview, report.FixProofs = running, proof, mentions, googleAIOverview, fixProofs
 	report.Rivals, err = s.rivalComparisons(ctx, organizationID, projectID, proof, mentions, pages)
 	if err != nil {
 		return Report{}, err

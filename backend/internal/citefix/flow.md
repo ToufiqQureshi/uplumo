@@ -31,3 +31,16 @@ ordered next steps (`citeFixInsights.ts`).
   shown cap per page before the model calls; the same page and content
   answers from cache for 0 credits. The prompt carries at most 5 missed
   questions and 3 rival pages, whatever the report shows.
+- **Outreach pitch:** "Draft a pitch" on a list page → confirm with the cap
+  (`plans.CiteFixPitchMaxCredits`, sent as `agent.pitchMaxCredits`) →
+  `POST .../cite-fix/pitch` → only a cached AI-cited page linking to 2+ other
+  sites and not to the customer qualifies → one OpenRouter call under one
+  hold → saved; the same page within 30 days is shown again for 0 credits.
+
+## Proof after a fix (free)
+
+`report.fixProofs`: for each page the agent fixed (last 180 days), AI
+visitors to that path and the leads in their visits (owner-chosen lead
+actions, from Analytics) for the same number of days before and after the
+fix (at most 28), and whether the latest AI check cites the page.
+`proof.said`: up to 6 excerpts of saved answers that name the brand or domain.

@@ -32,6 +32,15 @@ type Proof struct {
 	// Misses are answers that cite other sites and not the customer's.
 	Misses     []Miss                      `json:"misses"`
 	Visibility *aisearch.VisibilityMetrics `json:"visibility"`
+	// Said is what answers that name the customer say, in their own words.
+	Said []Said `json:"said"`
+}
+
+// Said is the part of one saved AI answer that names the customer.
+type Said struct {
+	Prompt  string `json:"prompt"`
+	Engine  string `json:"engine"`
+	Excerpt string `json:"excerpt"`
 }
 
 // DomainCount is a cited domain and how many answers cite it.
@@ -71,6 +80,7 @@ const (
 	// hundred (prompts times engines).
 	maxProofAnswers = 2_000
 	maxMissCited    = 3
+	maxSaid         = 6
 )
 
 // storedCitation is the part of a saved citation the proof reads.
@@ -82,8 +92,8 @@ type storedCitation struct {
 
 // proofAnswer is one saved answer's citations.
 type proofAnswer struct {
-	prompt, engine string
-	citations      []storedCitation
+	prompt, engine, answer string
+	citations              []storedCitation
 }
 
 // proof loads the latest finished AI Visibility run of the project. nil means
@@ -103,12 +113,13 @@ func (s Store) proof(ctx context.Context, organizationID, projectID string) (*Pr
 		return nil, fmt.Errorf("find latest AI visibility run: %w", err)
 	}
 	var config struct {
+		Brand  string `json:"brand"`
 		Domain string `json:"domain"`
 	}
 	if err := json.Unmarshal(configJSON, &config); err != nil {
 		return nil, fmt.Errorf("decode AI visibility configuration: %w", err)
 	}
-	rows, err := s.DB.Query(ctx, `SELECT prompt, engine, citations FROM go_ai_tracking_answers
+	rows, err := s.DB.Query(ctx, `SELECT prompt, engine, answer, citations FROM go_ai_tracking_answers
 		WHERE run_id = $1 AND status = 'completed' ORDER BY prompt, engine LIMIT $2`, runID, maxProofAnswers)
 	if err != nil {
 		return nil, fmt.Errorf("list AI visibility answers: %w", err)
@@ -118,7 +129,7 @@ func (s Store) proof(ctx context.Context, organizationID, projectID string) (*Pr
 	for rows.Next() {
 		var answer proofAnswer
 		var citationsJSON []byte
-		if err := rows.Scan(&answer.prompt, &answer.engine, &citationsJSON); err != nil {
+		if err := rows.Scan(&answer.prompt, &answer.engine, &answer.answer, &citationsJSON); err != nil {
 			return nil, fmt.Errorf("scan AI visibility answer: %w", err)
 		}
 		if err := json.Unmarshal(citationsJSON, &answer.citations); err != nil {
@@ -131,6 +142,7 @@ func (s Store) proof(ctx context.Context, organizationID, projectID string) (*Pr
 	}
 	rows.Close()
 	proof := buildProof(checkedAt, config.Domain, answers)
+	proof.Said = said(config.Brand, proof.Domain, answers)
 	proof.Visibility, err = aisearch.LoadVisibilityMetrics(ctx, s.DB, organizationID, projectID, runID)
 	if err != nil {
 		return nil, err
@@ -142,7 +154,7 @@ func (s Store) proof(ctx context.Context, organizationID, projectID string) (*Pr
 // per answer, however many of its pages the answer cites.
 func buildProof(checkedAt time.Time, domain string, answers []proofAnswer) *Proof {
 	own := bareHost(domain)
-	proof := &Proof{CheckedAt: checkedAt, Domain: own, Rivals: []DomainCount{}, YourPages: []URLCount{}, Misses: []Miss{}}
+	proof := &Proof{CheckedAt: checkedAt, Domain: own, Rivals: []DomainCount{}, YourPages: []URLCount{}, Misses: []Miss{}, Said: []Said{}}
 	rivals := map[string]int{}
 	pages := map[string]int{}
 	for _, answer := range answers {
@@ -200,6 +212,21 @@ func buildProof(checkedAt time.Time, domain string, answers []proofAnswer) *Proo
 	})
 	proof.YourPages = proof.YourPages[:min(len(proof.YourPages), maxProofPages)]
 	return proof
+}
+
+// said quotes the answers that name the customer, by brand or domain, in
+// prompt and engine order, at most maxSaid.
+func said(brand, domain string, answers []proofAnswer) []Said {
+	quotes := []Said{}
+	for _, answer := range answers {
+		if len(quotes) == maxSaid {
+			break
+		}
+		if excerpt := aisearch.BrandExcerpt(answer.answer, brand, domain); excerpt != "" {
+			quotes = append(quotes, Said{Prompt: answer.prompt, Engine: answer.engine, Excerpt: excerpt})
+		}
+	}
+	return quotes
 }
 
 // canonicalCitedURL drops what makes one page look like several: the

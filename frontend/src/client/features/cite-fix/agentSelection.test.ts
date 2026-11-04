@@ -5,6 +5,7 @@ const offer = {
   available: true,
   planAllowed: true,
   quickMaxCredits: 25,
+  pitchMaxCredits: 25,
   deepMaxCredits: 60,
   maxPages: 20,
   defaultPages: 2,

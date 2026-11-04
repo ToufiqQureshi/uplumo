@@ -332,7 +332,13 @@ export function RivalRanksCard({ rivals }: { rivals: RivalRank[] }) {
 export const LIST_PAGES_ID = "cite-fix-list-pages";
 
 /** AI-cited pages that list rivals but not the customer. */
-export function ListPagesCard({ pages }: { pages: ListPage[] }) {
+export function ListPagesCard({
+  pages,
+  renderAction,
+}: {
+  pages: ListPage[];
+  renderAction?: (page: ListPage) => ReactNode;
+}) {
   if (pages.length === 0) return null;
   return (
     <section
@@ -365,6 +371,7 @@ export function ListPagesCard({ pages }: { pages: ListPage[] }) {
               <span className="text-muted-foreground">Lists: </span>
               {page.listsRivals.join(", ")}
             </p>
+            {renderAction?.(page)}
           </li>
         ))}
       </ul>

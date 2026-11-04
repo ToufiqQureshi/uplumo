@@ -18,6 +18,7 @@ const proof: CiteFixProof = {
   rivals: [],
   yourPages: [],
   misses: [],
+  said: [],
   visibility: {
     runs: 13,
     historyLimited: false,

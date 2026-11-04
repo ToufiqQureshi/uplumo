@@ -124,6 +124,7 @@ type fakeRunner struct {
 	input   AgentInput
 	runs    int
 	results []AgentResult
+	pitch   Pitch
 }
 
 func (f *fakeRunner) Offer(context.Context, string) (AgentOffer, error) { return f.offer, nil }
@@ -136,6 +137,38 @@ func (f *fakeRunner) Run(_ context.Context, _, _ string, input AgentInput) (Agen
 
 func (f *fakeRunner) Results(context.Context, string, string) ([]AgentResult, error) {
 	return f.results, nil
+}
+
+func (f *fakeRunner) DraftPitch(context.Context, string, string, PitchInput) (Pitch, error) {
+	f.runs++
+	return f.pitch, f.err
+}
+
+func TestPitchRouteMapsErrors(t *testing.T) {
+	tests := []struct {
+		err        error
+		wantStatus int
+		wantCode   string
+	}{
+		{nil, http.StatusOK, ""},
+		{ErrPitchUnknownPage, http.StatusNotFound, "page_not_found"},
+		{ErrPitchBusy, http.StatusConflict, "pitch_busy"},
+		{ErrAgentPlanRequired, http.StatusPaymentRequired, "plan_required"},
+		{ErrAgentRateLimited, http.StatusTooManyRequests, "rate_limited"},
+		{ErrAgentFailed, http.StatusBadGateway, "pitch_failed"},
+		{&AgentValidationError{Message: "bad"}, http.StatusBadRequest, "invalid_request"},
+	}
+	for _, tt := range tests {
+		runner := &fakeRunner{err: tt.err, pitch: Pitch{Subject: "Hi"}}
+		rec := serveDeps(Deps{Reporter: &fakeReporter{}, Agent: runner}, "org-1", "pitch", `{"url":"https://dir.example/","idempotencyKey":"k"}`)
+		if rec.Code != tt.wantStatus || (tt.wantCode != "" && !strings.Contains(rec.Body.String(), tt.wantCode)) {
+			t.Errorf("%v: status %d body %s; want %d %s", tt.err, rec.Code, rec.Body, tt.wantStatus, tt.wantCode)
+		}
+	}
+	rec := serveDeps(Deps{Reporter: &fakeReporter{}}, "org-1", "pitch", `{}`)
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Errorf("without an agent: status %d, want 503", rec.Code)
+	}
 }
 
 func TestReportCarriesTheAgentOffer(t *testing.T) {
