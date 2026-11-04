@@ -63,6 +63,9 @@ export function AnalyticsPage({
     analyticsSummaryQueryOptions(projectId, rangeForDays(days, new Date())),
   );
   const [showCode, setShowCode] = useState(false);
+  // Kept here so a range change, which shows the skeleton for a moment,
+  // does not close "All numbers".
+  const [numbersOpen, setNumbersOpen] = useState(false);
   const summary = summaryQuery.data;
   const hasVisits = summary !== undefined && summary.pageviews > 0;
 
@@ -175,6 +178,8 @@ export function AnalyticsPage({
                   summary={summary}
                   projectId={projectId}
                   range={rangeForDays(days, new Date())}
+                  open={numbersOpen}
+                  onOpenChange={setNumbersOpen}
                 />
               </>
             )}
@@ -215,135 +220,147 @@ function Dashboard({
   summary,
   projectId,
   range,
+  open,
+  onOpenChange,
 }: {
   summary: AnalyticsSummary;
   projectId: string;
   range: { from: string; to: string };
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
+  // The reports inside load their own data (clicks, countries); they mount
+  // only once the section is opened, so a closed section asks for nothing.
   return (
-    <details className="rounded-2xl border bg-card p-5">
+    <details
+      className="rounded-2xl border bg-card p-5"
+      open={open}
+      onToggle={(event) => onOpenChange(event.currentTarget.open)}
+    >
       <summary className="cursor-pointer font-medium">
         All numbers: visits, pages, actions, audience and campaigns
       </summary>
-      <div className="mt-5 space-y-6">
-        <Card>
-          <CardContent className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
-            <StatTile
-              label="Visitors"
-              value={formatCount(summary.visitors)}
-              hint="Anonymous visitor-days, not people"
-            />
-            <StatTile
-              label="Sessions"
-              value={formatCount(summary.sessions)}
-              hint="Tab-scoped visits"
-            />
-            <StatTile
-              label="Pageviews"
-              value={formatCount(summary.pageviews)}
-            />
-            <StatTile
-              label="Avg visible time"
-              value={
-                summary.sessions > 0
-                  ? formatDuration(summary.avgEngagementMs)
-                  : "—"
-              }
-              hint="Visible page time per session"
-            />
-            <StatTile
-              label="Bounce rate"
-              value={
-                summary.sessions > 0 ? formatShare(summary.bounceRate) : "—"
-              }
-              hint={`${formatCount(summary.engagedSessions)} engaged sessions`}
-            />
-          </CardContent>
-        </Card>
-        <TrafficChartCard series={summary.series} />
-        <div className="grid gap-6 lg:grid-cols-2">
-          <ChannelsCard
-            acquisitionChannels={summary.acquisitionChannels}
-            sessions={summary.sessions}
-          />
-
-          <CountListCard
-            title="Top pages"
-            unit="Pageviews"
-            emptyTitle="No pages viewed in this period"
-            rows={summary.topPages.map((row) => ({
-              key: row.path,
-              label: `${displayPath(row.path)} · avg ${formatDuration(row.avgEngagementMs)}`,
-              count: row.pageviews,
-            }))}
-          />
-        </div>
-        <section id="visitor-actions" className="space-y-3 scroll-mt-4">
-          <h2 className="text-lg font-semibold">Actions visitors take</h2>
-          <p className="text-sm text-muted-foreground">
-            Recorded clicks and custom events show activity. They do not confirm
-            an enquiry, booking or sale.
-          </p>
-          <ClickDestinationsCard projectId={projectId} range={range} />
-          <CountListCard
-            title="Custom events"
-            unit="Events"
-            emptyTitle="No custom events recorded. Tag important buttons in Tracking code to start measuring actions."
-            rows={summary.events.map((row) => ({
-              key: row.name,
-              label: `${row.name} · ${row.visitors} visitor-days`,
-              count: row.count,
-            }))}
-          />
-        </section>
-        <div className="space-y-6">
-          <DailyAudienceCard days={summary.audience} />
+      {open ? (
+        <div className="mt-5 space-y-6">
+          <Card>
+            <CardContent className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
+              <StatTile
+                label="Visitors"
+                value={formatCount(summary.visitors)}
+                hint="Anonymous visitor-days, not people"
+              />
+              <StatTile
+                label="Sessions"
+                value={formatCount(summary.sessions)}
+                hint="Tab-scoped visits"
+              />
+              <StatTile
+                label="Pageviews"
+                value={formatCount(summary.pageviews)}
+              />
+              <StatTile
+                label="Avg visible time"
+                value={
+                  summary.sessions > 0
+                    ? formatDuration(summary.avgEngagementMs)
+                    : "—"
+                }
+                hint="Visible page time per session"
+              />
+              <StatTile
+                label="Bounce rate"
+                value={
+                  summary.sessions > 0 ? formatShare(summary.bounceRate) : "—"
+                }
+                hint={`${formatCount(summary.engagedSessions)} engaged sessions`}
+              />
+            </CardContent>
+          </Card>
+          <TrafficChartCard series={summary.series} />
           <div className="grid gap-6 lg:grid-cols-2">
-            <AiTrafficCard
-              aiSources={summary.aiSources}
+            <ChannelsCard
               acquisitionChannels={summary.acquisitionChannels}
+              sessions={summary.sessions}
             />
-            <CampaignPerformanceCard campaigns={summary.campaigns} />
-            <CountriesCard projectId={projectId} range={range} />
+
             <CountListCard
-              title="Landing pages"
-              unit="Sessions"
-              emptyTitle="No session entry pages yet"
-              rows={summary.entries.map((row) => ({
+              title="Top pages"
+              unit="Pageviews"
+              emptyTitle="No pages viewed in this period"
+              rows={summary.topPages.map((row) => ({
                 key: row.path,
                 label: `${displayPath(row.path)} · avg ${formatDuration(row.avgEngagementMs)}`,
-                count: row.sessions,
+                count: row.pageviews,
               }))}
-            />
-            <CountListCard
-              title="Exit pages"
-              unit="Sessions"
-              emptyTitle="No session exit pages yet"
-              rows={summary.exits.map((row) => ({
-                key: row.path,
-                label: `${displayPath(row.path)} · avg ${formatDuration(row.avgEngagementMs)}`,
-                count: row.sessions,
-              }))}
-            />
-            <CountListCard
-              title="Referring websites"
-              unit="Visitors"
-              emptyTitle="No visitors came from other websites"
-              rows={summary.referrers.map((row) => ({
-                key: row.host,
-                label: row.host,
-                count: row.visitors,
-              }))}
-            />
-            <CountListCard
-              title="Devices"
-              unit="Visitors"
-              emptyTitle="No device data in this period"
-              rows={deviceRows(summary.devices)}
             />
           </div>
+          <section id="visitor-actions" className="space-y-3 scroll-mt-4">
+            <h2 className="text-lg font-semibold">Actions visitors take</h2>
+            <p className="text-sm text-muted-foreground">
+              Recorded clicks and custom events show activity. They do not
+              confirm an enquiry, booking or sale.
+            </p>
+            <ClickDestinationsCard projectId={projectId} range={range} />
+            <CountListCard
+              title="Custom events"
+              unit="Events"
+              emptyTitle="No custom events recorded. Tag important buttons in Tracking code to start measuring actions."
+              rows={summary.events.map((row) => ({
+                key: row.name,
+                label: `${row.name} · ${row.visitors} visitor-days`,
+                count: row.count,
+              }))}
+            />
+          </section>
+          <div className="space-y-6">
+            <DailyAudienceCard days={summary.audience} />
+            <div className="grid gap-6 lg:grid-cols-2">
+              <AiTrafficCard
+                aiSources={summary.aiSources}
+                acquisitionChannels={summary.acquisitionChannels}
+              />
+              <CampaignPerformanceCard campaigns={summary.campaigns} />
+              <CountriesCard projectId={projectId} range={range} />
+              <CountListCard
+                title="Landing pages"
+                unit="Sessions"
+                emptyTitle="No session entry pages yet"
+                rows={summary.entries.map((row) => ({
+                  key: row.path,
+                  label: `${displayPath(row.path)} · avg ${formatDuration(row.avgEngagementMs)}`,
+                  count: row.sessions,
+                }))}
+              />
+              <CountListCard
+                title="Exit pages"
+                unit="Sessions"
+                emptyTitle="No session exit pages yet"
+                rows={summary.exits.map((row) => ({
+                  key: row.path,
+                  label: `${displayPath(row.path)} · avg ${formatDuration(row.avgEngagementMs)}`,
+                  count: row.sessions,
+                }))}
+              />
+              <CountListCard
+                title="Referring websites"
+                unit="Visitors"
+                emptyTitle="No visitors came from other websites"
+                rows={summary.referrers.map((row) => ({
+                  key: row.host,
+                  label: row.host,
+                  count: row.visitors,
+                }))}
+              />
+              <CountListCard
+                title="Devices"
+                unit="Visitors"
+                emptyTitle="No device data in this period"
+                rows={deviceRows(summary.devices)}
+              />
+            </div>
+          </div>
         </div>
-      </div>
+      ) : null}
     </details>
   );
 }

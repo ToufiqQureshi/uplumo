@@ -306,7 +306,9 @@ export function RivalRanksCard({ rivals }: { rivals: RivalRank[] }) {
                 {row.averageRank === null
                   ? ""
                   : `#${row.averageRank.toFixed(1)}`}
-                {row.latestCount > 0 ? ` · ${row.latestCount} answers` : ""}
+                {row.latestCount > 0
+                  ? ` · ${row.latestCount} answer${row.latestCount === 1 ? "" : "s"}`
+                  : ""}
               </span>
             </div>
             {row.averageRank === null ? null : (

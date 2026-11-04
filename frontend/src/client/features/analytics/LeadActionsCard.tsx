@@ -5,13 +5,12 @@ import { Button } from "@/client/components/ui/button";
 import { Checkbox } from "@/client/components/ui/checkbox";
 import { Skeleton } from "@/client/components/ui/skeleton";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
-import { formatCount } from "@/client/features/search-performance/SearchPerformanceColumns";
 import {
   analyticsLeadsQueryOptions,
   saveAnalyticsLeads,
   type AnalyticsSummary,
 } from "./analyticsApi";
-import { actionLabel } from "./presentation";
+import { actionLabel, countOf } from "./presentation";
 
 export const LEAD_ACTIONS_ID = "lead-actions";
 
@@ -152,7 +151,7 @@ export function LeadActionsCard({
                         </span>
                         <span className="block text-xs text-muted-foreground">
                           {option.seen
-                            ? `${formatCount(option.count)} times · ${formatCount(option.visitors)} visitor-days`
+                            ? `${countOf(option.count, "time", "times")} · ${countOf(option.visitors, "visitor-day", "visitor-days")}`
                             : "Not recorded in this period"}
                         </span>
                       </span>

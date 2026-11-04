@@ -23,26 +23,6 @@ const savedKeywordPageSizeSchema = z.union([
   z.literal(250),
 ]);
 
-const researchKeywordsSchema = z.object({
-  projectId: z.string().min(1),
-  keywords: z.array(z.string().min(1)).min(1).max(200),
-  locationCode: z.number().int().positive().optional(),
-  languageCode: z.string().min(2).max(8).optional(),
-  // Canonical DataForSEO name of a city, county, or region inside the
-  // country. Scopes volume, CPC, and competition to that area.
-  locationName: z.string().trim().min(1).max(200).optional(),
-  resultLimit: z
-    .union([z.literal(150), z.literal(300), z.literal(500)])
-    .default(150),
-  mode: z
-    .enum(["auto", "related", "suggestions", "ideas"])
-    .optional()
-    .default("auto"),
-  // Clickstream-refined volumes double the DataForSEO request cost; opt-in.
-  clickstream: z.boolean().optional().default(false),
-  groupKeywords: z.boolean().optional().default(false),
-});
-
 export const getSavedKeywordsSchema = z.object({
   projectId: z.string().min(1),
   search: z.string().trim().max(200).optional(),
@@ -93,13 +73,6 @@ export const exportSavedKeywordsSchema = getSavedKeywordsSchema.omit({
   pageSize: true,
 });
 
-type ResearchKeywordsInput = z.infer<typeof researchKeywordsSchema>;
-type ResolvedMarket = { locationCode: number; languageCode: string };
-export type ResolvedResearchKeywordsInput = Omit<
-  ResearchKeywordsInput,
-  keyof ResolvedMarket
-> &
-  ResolvedMarket;
 export type GetSavedKeywordsInput = z.infer<typeof getSavedKeywordsSchema>;
 export type ExportSavedKeywordsInput = z.infer<
   typeof exportSavedKeywordsSchema

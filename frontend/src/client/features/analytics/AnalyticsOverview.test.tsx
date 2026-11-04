@@ -248,7 +248,8 @@ describe("AI visitors", () => {
     );
     expect(html).toContain("ChatGPT");
     expect(html).toContain("/guide");
-    expect(html).toContain("1 became leads");
+    expect(html).toContain("1 became a lead");
+    expect(html).toContain("3 · 1 lead<");
   });
 });
 

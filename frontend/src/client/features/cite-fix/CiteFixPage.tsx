@@ -12,7 +12,6 @@ import { citeFixKey, getCiteFixReport, type CiteFixReport } from "./citeFixApi";
 import { AgentPanel } from "./AgentPanel";
 import { FixRow } from "./FixRow";
 import { AgentResults } from "./AgentResults";
-import { ProofCard } from "./ProofCard";
 import { AIMentionsSection } from "./EvidenceSections";
 import { VisibilityInsights } from "../ai-search/components/VisibilityInsights";
 import { engineLabel } from "../ai-search/platformLabels";
@@ -181,11 +180,7 @@ function Decisions({
   };
   return (
     <>
-      {proof ? (
-        <CiteFixHeadline proof={proof} matrix={matrix} />
-      ) : (
-        <ProofCard projectId={projectId} />
-      )}
+      {proof ? <CiteFixHeadline proof={proof} matrix={matrix} /> : null}
       <NextStepsCard steps={steps} actionFor={actionFor} />
       {matrix ? <CitationMatrix matrix={matrix} /> : null}
       <div className="grid gap-6 lg:grid-cols-2">
