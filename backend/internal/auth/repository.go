@@ -58,7 +58,8 @@ func (r repository) userBySessionToken(ctx context.Context, token string) (User,
 		FROM session s
 		JOIN "user" u ON u.id = s.user_id
 		LEFT JOIN member m ON m.organization_id = s.active_organization_id AND m.user_id = s.user_id
-		WHERE s.token = $1 AND s.expires_at > now()`,
+		WHERE s.token = $1 AND s.expires_at > now()
+			AND NOT EXISTS (SELECT 1 FROM go_user_blocks b WHERE b.user_id = s.user_id)`,
 		token,
 	).Scan(&u.ID, &u.Name, &u.Email, &u.OrganizationID, &u.Role)
 	if errors.Is(err, pgx.ErrNoRows) {
