@@ -13,6 +13,14 @@ priorities, corrections, and what still waits on him. Read it after
   decision, remove it when he answers.
 - Never write secrets, keys or customer data here.
 
+## 5 Nov 2026: Search Growth (GSC + GA4) and AI actions
+
+- Owner: "UI bhohat gandha ha", "paisa gaya to gaya, user se credits cut hote hain, value dena hi padega", "gsc ga4 ka pura data dikhao, sirf 10 nahi, with our valuable analysis", "best golang code". Wants it done in **2 PRs only**, UI clean and easy.
+- Decisions: Analytics (own tracker) and Search Growth (GSC + GA4) are two separate sidebar rows. Free analysis first (PR 1); AI buttons with credits second (PR 2). No Google Indexing API (200 URLs/day for the whole Uplumo project, only meant for job and livestream pages). IndexNow already existed.
+- PR 1: regex filters, `insights` endpoint (segments, competing pages, CTR gaps, decay, top actions), six Search Growth screens. 0 paid calls.
+- PR 2 (not built): AI "explain", "topic clusters", "draft title/meta" with credits shown before the click, cache, refund on failure, plus a before/after tracker.
+- Found, not fixed: `searchVerdict.ts` formats numbers as `en-IN` for every user; the older table is `gsc_connections`, not `go_`-prefixed.
+
 ## 4 Nov 2026: Analytics + Cite Fix are Claude's responsibility
 
 - Owner: "analytics and cite fix teri zimmedaari ha"; Analytics "ek dum bekkar"; "sab dynamic ho koi bhi cheez hardcoded nai"; wants 3 PRs, then merge, deploy and UI-level testing, fast.
@@ -32,6 +40,7 @@ priorities, corrections, and what still waits on him. Read it after
 
 ## Waiting for the owner
 
+- **AI credits for PR 2:** price per action for "explain", "topic clusters" and "draft title/meta" (goes in `plans/catalog.go`). Claude will bring the real OpenRouter cost per call first.
 - **Deploy** latest `main`, then compare credits charged with provider cost on 2-3 real Cite Fix pages and one Keywords answer.
 - **USD packs:** confirm $19 (5,000 credits), $59 (15,000 credits) and $12 (5 more websites). After deploy, check the log line "US dollar billing on", then one real international test payment and refund.
 - **Razorpay webhook:** also subscribe to `payment.authorized`, so late UPI approvals are captured instead of refunded.

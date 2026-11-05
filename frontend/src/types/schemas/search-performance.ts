@@ -4,7 +4,7 @@ import {
   searchTextParam,
 } from "@/types/schemas/domain";
 
-/** Date ranges offered by the Search Performance page. A deliberate subset of
+/** Date ranges offered by the Search Growth page. A deliberate subset of
  *  the GSC agent ranges (GSC_DATE_RANGES in searchAnalytics.ts); assignability
  *  to GscDateRange is compiler-checked at the resolveDateRange call site. */
 const SEARCH_PERFORMANCE_RANGES = [
@@ -24,18 +24,29 @@ export const GSC_DEVICES = ["DESKTOP", "MOBILE", "TABLET"] as const;
 export type SearchPerformanceDevice = (typeof GSC_DEVICES)[number];
 export type GscSearchType = (typeof GSC_SEARCH_TYPES)[number];
 
+/** How a page or search text filter matches. The two regular-expression
+ *  operators are Google's own (RE2). */
+export const TEXT_MATCH_OPERATORS = [
+  "contains",
+  "equals",
+  "notContains",
+  "includingRegex",
+  "excludingRegex",
+] as const;
+export type TextMatchOperator = (typeof TEXT_MATCH_OPERATORS)[number];
+
 // Shared report/table filters. Spread into each request schema so the overview
 // and the paginated table calls always accept the exact same filter surface.
 const searchPerformanceFilterShape = {
   pageFilter: z
     .object({
-      operator: z.enum(["contains", "equals"]),
+      operator: z.enum(TEXT_MATCH_OPERATORS),
       expression: z.string().trim().min(1).max(4096),
     })
     .optional(),
   queryFilter: z
     .object({
-      operator: z.enum(["contains", "equals"]),
+      operator: z.enum(TEXT_MATCH_OPERATORS),
       expression: z.string().trim().min(1).max(4096),
     })
     .optional(),
@@ -99,13 +110,22 @@ export const SEARCH_PERFORMANCE_TABS = [
 ] as const;
 export type SearchPerformanceTab = (typeof SEARCH_PERFORMANCE_TABS)[number];
 
-const textMatchParam = z
-  .enum(["contains", "equals"])
-  .optional()
-  .catch(undefined);
+const textMatchParam = z.enum(TEXT_MATCH_OPERATORS).optional().catch(undefined);
+
+/** The Search Growth screens, in the order they are offered. */
+export const SEARCH_GROWTH_VIEWS = [
+  "overview",
+  "fix",
+  "grow",
+  "explore",
+  "indexing",
+  "conversions",
+] as const;
+export type SearchGrowthView = (typeof SEARCH_GROWTH_VIEWS)[number];
 
 /** /p/$projectId/search-performance query params. */
 export const searchPerformanceSearchSchema = z.object({
+  view: z.enum(SEARCH_GROWTH_VIEWS).optional().catch(undefined),
   tab: z.enum(SEARCH_PERFORMANCE_TABS).optional().catch(undefined),
   range: z.enum(SEARCH_PERFORMANCE_RANGES).optional().catch(undefined),
   searchType: z.enum(GSC_SEARCH_TYPES).optional().catch(undefined),

@@ -33,6 +33,7 @@ func MountPerformance(mux *http.ServeMux, d PerformanceDeps) {
 	mux.Handle(base+"report", protect(performanceHandler(d, runPerformanceReport)))
 	mux.Handle(base+"table", protect(performanceHandler(d, runPerformanceTable)))
 	mux.Handle(base+"export", protect(performanceHandler(d, runPerformanceExport)))
+	mux.Handle(base+"insights", protect(performanceHandler(d, runInsights)))
 }
 
 func performanceHandler(d PerformanceDeps, call func(*Service, http.ResponseWriter, *http.Request, string, string) (any, error)) http.Handler {
@@ -132,6 +133,17 @@ func runPerformanceExport(s *Service, w http.ResponseWriter, r *http.Request, or
 	return s.ExportTable(r.Context(), orgID, projectID, input)
 }
 
+func runInsights(s *Service, w http.ResponseWriter, r *http.Request, orgID, projectID string) (any, error) {
+	var input InsightsInput
+	if err := decodePerformance(w, r, &input); err != nil {
+		return nil, err
+	}
+	if err := validatePerformanceInput(&input.PerformanceInput); err != nil {
+		return nil, err
+	}
+	return s.GetInsights(r.Context(), orgID, projectID, input)
+}
+
 func validatePerformanceInput(input *PerformanceInput) error {
 	if input.DateRange != "" && input.DateRange != last7Days && input.DateRange != last28Days && input.DateRange != last3Months && input.DateRange != last6Months && input.DateRange != last12Months && input.DateRange != last16Months {
 		return validationError("dateRange must be a supported Search Console range.")
@@ -158,12 +170,17 @@ func validatePerformanceInput(input *PerformanceInput) error {
 			continue
 		}
 		filter.Expression = strings.TrimSpace(filter.Expression)
-		if filter.Operator != "contains" && filter.Operator != "equals" {
-			return validationError("filter operator must be contains or equals.")
+		switch filter.Operator {
+		case "contains", "equals", "notContains", "includingRegex", "excludingRegex":
+		default:
+			return validationError("filter operator must be contains, equals, notContains, includingRegex or excludingRegex.")
 		}
 		length := len(utf16.Encode([]rune(filter.Expression)))
 		if length == 0 || length > 4096 || len(filter.Expression) > 1024 {
 			return validationError("filter expression must contain 1 to 4096 characters and fit the provider request limit.")
+		}
+		if !validFilter(DimensionFilter{Dimension: "query", Operator: filter.Operator, Expression: filter.Expression}) {
+			return validationError("filter expression is not a valid regular expression.")
 		}
 	}
 	if _, err := resolveDateRange(*input, time.Now().UTC()); err != nil {

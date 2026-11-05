@@ -83,7 +83,7 @@ const projectNavItems = [
   },
   {
     to: "/p/$projectId/search-performance" as const,
-    label: "Search Performance",
+    label: "Search Growth",
     icon: GoogleGlyphMuted,
   },
   {
@@ -255,10 +255,10 @@ export function getProjectNavGroups(projectId: string): NavGroup[] {
     {
       label: "Customers & traffic",
       items: [
-        tabbedItem("Traffic", ChartNoAxesCombined, [
-          item("/p/$projectId/analytics"),
-          item("/p/$projectId/search-performance"),
-        ]),
+        // Two different things, so two rows: the visits Uplumo's own tracker
+        // sees, and what Google Search Console and Analytics report.
+        item("/p/$projectId/analytics"),
+        item("/p/$projectId/search-performance"),
         tabbedItem(
           "AI Visibility",
           Sparkles,

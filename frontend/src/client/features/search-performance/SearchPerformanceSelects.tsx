@@ -175,7 +175,7 @@ export function SearchPerformanceSelects({
     })),
   ];
   return (
-    <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+    <div className="flex flex-1 flex-wrap items-end gap-2">
       <Select
         items={SEARCH_TYPE_OPTIONS}
         value={searchType}

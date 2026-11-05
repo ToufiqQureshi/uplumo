@@ -104,6 +104,68 @@ test("search performance says what fell, by how much, what is urgent, and what G
       },
     });
   });
+  // The same losses, in full, on the Fix screen.
+  await page.route("**/gsc/search-performance/insights", (route) =>
+    route.fulfill({
+      json: {
+        connected: true,
+        range,
+        coverage: {
+          queryPageRows: 3,
+          truncated: false,
+          decayAvailable: true,
+          comparisonAvailable: true,
+          brandTermsUsed: false,
+        },
+        segments: [],
+        actions: [],
+        losingPages: [
+          {
+            ...loss,
+            page: "https://example.com/rooms",
+            clicks: 40,
+            prevClicks: 120,
+            severity: "urgent",
+          },
+        ],
+        queryLosses: [
+          {
+            ...loss,
+            query: "resort in lonavala",
+            clicks: 10,
+            prevClicks: 50,
+            severity: "urgent",
+          },
+          {
+            ...loss,
+            query: "pool villa",
+            clicks: 16,
+            prevClicks: 20,
+            reason: "ctr_fell",
+            severity: "watch",
+          },
+        ],
+        queryGains: [
+          {
+            query: "weekend getaway",
+            clicks: 25,
+            prevClicks: 0,
+            impressions: 400,
+            prevImpressions: 0,
+            position: 4.2,
+            prevPosition: 0,
+            ctr: 0.06,
+            prevCtr: 0,
+          },
+        ],
+        decaying: [],
+        ctrGaps: [],
+        cannibalization: [],
+        totals: { decaying: 0, ctrGaps: 0, cannibalization: 0 },
+      },
+    }),
+  );
+
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/p/e2e-project/search-performance");
 
@@ -112,21 +174,6 @@ test("search performance says what fell, by how much, what is urgent, and what G
     page.getByRole("heading", { name: /Google clicks fell 32% \(500 → 340\)/ }),
   ).toBeVisible();
   await expect(page.getByText("2 urgent drops need a fix now")).toBeVisible();
-
-  // Page losses say how bad.
-  const pages = page.locator("#pages-to-fix");
-  await expect(pages.getByText("−80 clicks (−67%)")).toBeVisible();
-  await expect(pages.getByText("Urgent")).toBeVisible();
-
-  // Lost and won searches, with the editor link carrying the search.
-  const searches = page.locator("#searches-changed");
-  await expect(searches.getByText("“resort in lonavala”")).toBeVisible();
-  await expect(searches.getByText(/−40 clicks \(−80%\)/)).toBeVisible();
-  await expect(searches.getByText("Watch")).toBeVisible();
-  await expect(searches.getByText(/new: 25 clicks/)).toBeVisible();
-  await expect(
-    searches.getByRole("button", { name: "Win it back" }).first(),
-  ).toHaveAttribute("href", /keyword=resort/);
 
   // What Google visitors did, from GA4, without any click.
   const ga4 = page.getByRole("region", {
@@ -140,6 +187,22 @@ test("search performance says what fell, by how much, what is urgent, and what G
     ga4.getByText("3.0 key events per 100 Google visits."),
   ).toBeVisible();
 
+  // Page losses say how bad.
+  await page.getByRole("button", { name: "See what to fix" }).click();
+  const pages = page.locator("#losing-pages");
+  await expect(pages.getByText("−80 clicks (−67%)")).toBeVisible();
+  await expect(pages.getByText("Urgent")).toBeVisible();
+
+  // Lost and won searches, with the editor link carrying the search.
+  const searches = page.locator("#query-changes");
+  await expect(searches.getByText("“resort in lonavala”")).toBeVisible();
+  await expect(searches.getByText(/−40 clicks \(−80%\)/)).toBeVisible();
+  await expect(searches.getByText("Watch")).toBeVisible();
+  await expect(searches.getByText(/new: 25 clicks/)).toBeVisible();
+  await expect(
+    searches.getByRole("button", { name: "Win it back" }).first(),
+  ).toHaveAttribute("href", /keyword=resort/);
+
   // Free Google reads only: nothing paid ran on page load, and GA4 was read once.
   expect(paid).toEqual([]);
   expect(ga4Reads).toBe(1);
@@ -152,7 +215,7 @@ test("phone layout keeps every number readable without sideways scrolling", asyn
   await page.setViewportSize({ width: 360, height: 800 });
   await page.goto("/p/e2e-project/search-performance");
   await expect(
-    page.getByRole("heading", { name: "Search Performance" }).first(),
+    page.getByRole("heading", { name: "Search Growth" }).first(),
   ).toBeVisible();
   const overflow = await page.evaluate(
     () =>

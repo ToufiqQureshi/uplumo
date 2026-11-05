@@ -61,6 +61,71 @@ const report = {
   ga4PageCount: 1,
 };
 
+// What the free Search Console analysis answers for the same site as `report`.
+const insights = {
+  connected: true,
+  range: {
+    ...range,
+    prevStartDate: previousRange.startDate,
+    prevEndDate: previousRange.endDate,
+  },
+  coverage: {
+    queryPageRows: 3,
+    truncated: false,
+    decayAvailable: true,
+    comparisonAvailable: true,
+    brandTermsUsed: false,
+  },
+  segments: [
+    {
+      kind: "all",
+      queries: 3,
+      clicks: 60,
+      impressions: 1000,
+      ctr: 0.06,
+      position: 9,
+    },
+    {
+      kind: "long_tail",
+      queries: 1,
+      clicks: 4,
+      impressions: 120,
+      ctr: 0.033,
+      position: 11,
+    },
+  ],
+  actions: [
+    {
+      kind: "losing_page",
+      subject: "https://example.com/guide",
+      page: "https://example.com/guide",
+      impactClicks: 40,
+      basis: "measured",
+    },
+  ],
+  losingPages: [
+    {
+      page: "https://example.com/guide",
+      clicks: 60,
+      prevClicks: 100,
+      impressions: 1000,
+      prevImpressions: 1100,
+      position: 9,
+      prevPosition: 6,
+      ctr: 0.06,
+      prevCtr: 0.09,
+      reason: "rank_fell",
+      severity: "watch",
+    },
+  ],
+  queryLosses: [],
+  queryGains: [],
+  decaying: [],
+  ctrGaps: [],
+  cannibalization: [],
+  totals: { decaying: 0, ctrGaps: 0, cannibalization: 0 },
+};
+
 export async function installGrowthFixtures(page: Page) {
   const requests: string[] = [];
   const paid: string[] = [];
@@ -122,6 +187,7 @@ export async function installGrowthFixtures(page: Page) {
         languageCode: "en",
         createdAt: now,
       };
+    else if (path.endsWith("/gsc/search-performance/insights")) body = insights;
     else if (path.endsWith("/gsc/search-performance/report"))
       body = {
         connected: true,

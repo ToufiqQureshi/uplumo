@@ -55,7 +55,7 @@ describe("FixProofCard", () => {
     );
     expect(html).not.toContain("0 → 2");
     expect(html).toContain("Not yet");
-    expect(html).toContain("choose your lead actions in Traffic");
+    expect(html).toContain("choose your lead actions in Analytics");
   });
 
   it("is hidden with no fixed pages", () => {
