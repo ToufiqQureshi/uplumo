@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Where}} · Site report</title>
+<style>
+:root{color-scheme:light dark;--accent:{{.AccentCSS}};--bg:#f4f5f2;--surface:#ffffff;--soft:#f8f9f6;--ink:#141a16;--muted:#5d6760;--line:#e3e6e0;--up:#15803d;--up-bg:#dcfce7;--down:#b91c1c;--down-bg:#fee2e2;--flat:#57534e;--flat-bg:#f1f0ee;--warn:#b45309;--warn-bg:#fef3c7;--shadow:0 1px 2px rgb(16 24 20/.05),0 8px 24px -12px rgb(16 24 20/.12)}
+@media (prefers-color-scheme:dark){:root{--bg:#0d110f;--surface:#151a17;--soft:#1b211d;--ink:#eef1ec;--muted:#9aa49d;--line:#2a312c;--up:#4ade80;--up-bg:#14301f;--down:#f87171;--down-bg:#3a1717;--flat:#c4c0bb;--flat-bg:#26231f;--warn:#fbbf24;--warn-bg:#3a2a0b;--shadow:none}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+.hero{background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 16%,var(--surface)) 0%,var(--surface) 60%);border-bottom:1px solid var(--line);padding:40px 0 28px}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;margin:0 0 10px;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.eyebrow i{width:8px;height:8px;border-radius:50%;background:var(--accent)}
+h1{margin:0;font-size:clamp(28px,4.5vw,44px);line-height:1.1;letter-spacing:-.02em;overflow-wrap:anywhere}
+.period{margin:10px 0 0;color:var(--muted)}
+.period b{color:var(--ink);font-weight:600}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-top:28px}
+.tile{display:block;padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:var(--shadow);text-decoration:none;transition:transform .15s,border-color .15s}
+a.tile:hover{transform:translateY(-2px);border-color:var(--accent)}
+.tile .k{font-size:12.5px;color:var(--muted)}
+.tile .v{display:block;margin-top:4px;font-size:26px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.badge{display:inline-flex;align-items:center;gap:2px;margin-top:6px;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.badge.up{color:var(--up);background:var(--up-bg)}.badge.down{color:var(--down);background:var(--down-bg)}.badge.flat{color:var(--flat);background:var(--flat-bg)}
+.toc{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.toc .wrap{display:flex;gap:4px;overflow-x:auto;padding-top:8px;padding-bottom:8px;scrollbar-width:none}
+.toc a{flex:none;padding:6px 12px;border-radius:999px;font-size:13.5px;font-weight:500;color:var(--muted);text-decoration:none}
+.toc a:hover{color:var(--ink);background:var(--soft)}
+main{padding:28px 0 56px}
+section{scroll-margin-top:64px;margin-bottom:24px;padding:24px;border:1px solid var(--line);border-radius:18px;background:var(--surface);box-shadow:var(--shadow)}
+section>header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 16px;margin-bottom:18px}
+h2{margin:0;font-size:21px;letter-spacing:-.01em}
+h3{margin:28px 0 12px;font-size:16px}
+.src{margin:0;font-size:12.5px;color:var(--muted)}
+.lede{margin:0 0 20px;color:var(--muted)}
+.note{margin:0 0 20px;padding:16px 18px;border-left:4px solid var(--accent);border-radius:0 12px 12px 0;background:var(--soft)}
+.note p{margin:0 0 10px;white-space:pre-wrap}.note p:last-child{margin:0}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.card{display:flex;gap:12px;padding:14px;border:1px solid var(--line);border-radius:14px;text-decoration:none;background:var(--soft);transition:border-color .15s}
+.card:hover{border-color:var(--accent)}
+.card .dot{flex:none;display:grid;place-items:center;width:30px;height:30px;border-radius:9px;font-size:14px;font-weight:700}
+.card.up .dot{color:var(--up);background:var(--up-bg)}.card.down .dot{color:var(--down);background:var(--down-bg)}.card.flat .dot{color:var(--flat);background:var(--flat-bg)}
+.card b{display:block;font-size:14.5px}.card span{display:block;margin-top:2px;font-size:13px;color:var(--muted)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:20px}
+.kpi{padding:12px 14px;border-radius:12px;background:var(--soft)}
+.kpi .k{font-size:12.5px;color:var(--muted)}.kpi .v{display:block;margin-top:2px;font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.kpi .p{display:block;font-size:12px;color:var(--muted)}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.tabs>input{position:absolute;opacity:0;pointer-events:none}
+.tabs>label{padding:6px 12px;border:1px solid var(--line);border-radius:999px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;user-select:none}
+.tabs>label:hover{color:var(--ink)}
+.tabs>input:checked+label{color:var(--ink);border-color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,var(--surface))}
+.tabs>input:focus-visible+label{outline:2px solid var(--accent);outline-offset:2px}
+.tabs>.panel{display:none;order:1;flex-basis:100%;margin-top:10px;min-width:0}
+.tabs>label small{margin-left:4px;opacity:.7}
+#sc-c:checked~.p-sc-c,#sc-i:checked~.p-sc-i,
+#sq-q:checked~.p-sq-q,#sq-p:checked~.p-sq-p,#sq-g:checked~.p-sq-g,#sq-l:checked~.p-sq-l,#sq-c:checked~.p-sq-c,
+#rf-a:checked~.p-rf,#rf-t:checked~.p-rf,#rf-u:checked~.p-rf,#rf-d:checked~.p-rf,#rf-n:checked~.p-rf{display:block}
+#rf-t:checked~.p-rf tr.r:not(.t10),#rf-u:checked~.p-rf tr.r:not(.mu),#rf-d:checked~.p-rf tr.r:not(.md),#rf-n:checked~.p-rf tr.r:not(.nr){display:none}
+.chart{display:block;width:100%;height:auto;margin-top:6px}
+.chart .s0{stop-color:var(--accent);stop-opacity:.3}.chart .s1{stop-color:var(--accent);stop-opacity:0}
+.chart .line{fill:none;stroke:var(--accent);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
+.chart .grid{stroke:var(--line);stroke-width:1}
+.chart .axis{fill:var(--muted);font-size:11px}
+.chart .pt rect{fill:transparent}
+.chart .pt circle{fill:var(--surface);stroke:var(--accent);stroke-width:2.5;opacity:0}
+.chart .pt .cursor{stroke:var(--muted);stroke-dasharray:3 3;opacity:0}
+.chart .pt:hover circle,.chart .pt:hover .cursor{opacity:1}
+.table{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{position:sticky;top:0;font-size:12px;font-weight:600;color:var(--muted);background:var(--soft);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+tbody tr:hover td{background:var(--soft)}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+td.key{max-width:420px;overflow-wrap:anywhere}
+td.key a{text-decoration:none}td.key a:hover{text-decoration:underline;color:var(--accent)}
+.chg{font-weight:600;font-size:12.5px;white-space:nowrap}.chg.up{color:var(--up)}.chg.down{color:var(--down)}.chg.flat{color:var(--muted)}
+.empty{padding:16px;color:var(--muted);font-size:13.5px}
+.dist{display:flex;height:14px;overflow:hidden;border-radius:999px;background:var(--soft)}
+.dist i{display:block;height:100%}
+.d1{background:var(--accent)}.d2{background:color-mix(in srgb,var(--accent) 60%,var(--surface))}.d3{background:color-mix(in srgb,var(--accent) 30%,var(--surface))}.d4{background:var(--line)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin:10px 0 20px;font-size:13px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}.legend i{width:10px;height:10px;border-radius:3px}
+.sev{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:20px}
+.sev div{padding:14px;border-radius:12px}
+.sev b{display:block;font-size:24px;font-variant-numeric:tabular-nums}.sev span{font-size:12.5px}
+.sev .c{color:var(--down);background:var(--down-bg)}.sev .w{color:var(--warn);background:var(--warn-bg)}.sev .i{color:var(--flat);background:var(--flat-bg)}
+.rings{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-bottom:8px}
+.rings figure{margin:0;padding:12px;text-align:center;border-radius:12px;background:var(--soft)}
+.rings figcaption{margin-top:4px;font-size:12.5px;color:var(--muted)}
+.ring{width:76px;height:76px}
+.ring .track{fill:none;stroke:var(--line);stroke-width:7}
+.ring .value{fill:none;stroke-width:7;stroke-linecap:round}
+.ring text{font-size:20px;font-weight:700;fill:var(--ink)}
+.ring.good .value{stroke:var(--up)}.ring.fair .value{stroke:var(--warn)}.ring.poor .value{stroke:var(--down)}
+.cwv{display:flex;flex-wrap:wrap;gap:8px 20px;margin:4px 0 0;font-size:13px;color:var(--muted)}.cwv b{color:var(--ink)}
+details{border:1px solid var(--line);border-radius:12px;margin-bottom:8px;background:var(--surface)}
+summary{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";margin-left:auto;font-size:18px;color:var(--muted)}
+details[open] summary::after{content:"–"}
+summary .pill{flex:none;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:600;text-transform:capitalize}
+.pill.critical{color:var(--down);background:var(--down-bg)}.pill.warning{color:var(--warn);background:var(--warn-bg)}.pill.info{color:var(--flat);background:var(--flat-bg)}
+summary .cnt{color:var(--muted);font-size:13px;white-space:nowrap}
+details ul{margin:0;padding:0 14px 12px 34px;font-size:13px}
+details li{margin:4px 0;overflow-wrap:anywhere}
+.more{color:var(--muted);font-size:12.5px;list-style:none;margin-left:-20px}
+.steps p{margin:0 0 12px;white-space:pre-wrap}
+.of{font-size:15px;font-weight:500;color:var(--muted)}
+footer{margin-top:8px;font-size:12.5px;color:var(--muted);text-align:center}
+@media (max-width:640px){.hero{padding:28px 0 20px}section{padding:18px;border-radius:14px}.tile .v{font-size:22px}.sev{grid-template-columns:1fr}}
+@media print{body{background:#fff}.toc{display:none}section{box-shadow:none;break-inside:avoid-page}.tabs>input,.tabs>label{display:none}.tabs>.panel{display:block!important}.tabs>.panel::before{content:attr(data-title);display:block;margin:16px 0 8px;font-weight:600}.p-rf tr.r{display:table-row!important}.p-sc-i{display:none!important}details ul{display:block}a.tile:hover{transform:none}}
+</style>
+</head>
+<body>
+<header class="hero">
+<div class="wrap">
+<p class="eyebrow"><i></i>SEO &amp; site performance report</p>
+<h1>{{.Where}}</h1>
+{{if or .Search .Traffic}}<p class="period"><b>{{date .Period.Start}} – {{date .Period.End}}</b> · {{.Period.Days}} days, compared with {{date .Period.PrevStart}} – {{date .Period.PrevEnd}}</p>{{else}}<p class="period">Prepared <b>{{date .GeneratedAt}}</b></p>{{end}}
+<div class="tiles">
+{{- with .Search}}
+<a class="tile" href="#search"><span class="k">Clicks from Google</span><span class="v">{{compact .Current.Clicks}}</span>{{if .HasPrevious}}{{template "badge" delta .Current.Clicks .Previous.Clicks}}{{end}}</a>
+<a class="tile" href="#search"><span class="k">Impressions</span><span class="v">{{compact .Current.Impressions}}</span>{{if .HasPrevious}}{{template "badge" delta .Current.Impressions .Previous.Impressions}}{{end}}</a>
+<a class="tile" href="#search"><span class="k">Average position</span><span class="v">{{pos .Current.Position}}</span>{{if .HasPrevious}}{{template "badge" posDelta .Current.Position .Previous.Position}}{{end}}</a>
+{{- end}}
+{{- with .Traffic}}
+<a class="tile" href="#traffic"><span class="k">Organic visits</span><span class="v">{{compact (mval .Sessions)}}</span>{{template "badge" mdelta .Sessions}}</a>
+{{- end}}
+{{- with .Rankings}}
+<a class="tile" href="#rankings"><span class="k">Keywords in top 10</span><span class="v">{{.Top10}} <small class="of">/ {{.Total}}</small></span></a>
+{{- end}}
+{{- with .Audit}}
+<a class="tile" href="#audit"><span class="k">Pages with critical issues</span><span class="v">{{inum .Critical}}</span></a>
+{{- end}}
+{{- with .Backlinks}}{{if .ReferringDomains}}
+<a class="tile" href="#backlinks"><span class="k">Linking websites</span><span class="v">{{compact (float (deref64 .ReferringDomains))}}</span></a>
+{{- end}}{{end}}
+</div>
+</div>
+</header>
+
+<nav class="toc" aria-label="Report sections"><div class="wrap">{{range .Sections}}<a href="#{{.ID}}">{{.Label}}</a>{{end}}</div></nav>
+
+<main class="wrap">
+
+<section id="summary">
+<header><h2>Summary</h2></header>
+{{- if .Note}}
+<div class="note">{{range paragraphs .Note}}<p>{{.}}</p>{{end}}</div>
+{{- end}}
+{{- if .Highlights}}
+<div class="cards">
+{{- range .Highlights}}
+<a class="card {{.Tone}}" href="#{{.Anchor}}"><span class="dot">{{if eq .Tone "up"}}↑{{else if eq .Tone "down"}}↓{{else}}•{{end}}</span><span><b>{{.Title}}</b>{{if .Detail}}<span>{{.Detail}}</span>{{end}}</span></a>
+{{- end}}
+</div>
+{{- end}}
+</section>
+
+{{- with .Search}}
+<section id="search">
+<header><h2>Google Search performance</h2><p class="src">Source: Google Search Console · web search</p></header>
+<div class="kpis">
+<div class="kpi"><span class="k">Clicks</span><span class="v">{{num .Current.Clicks}}</span>{{if .HasPrevious}}{{template "badge" delta .Current.Clicks .Previous.Clicks}}<span class="p">was {{num .Previous.Clicks}}</span>{{end}}</div>
+<div class="kpi"><span class="k">Impressions</span><span class="v">{{num .Current.Impressions}}</span>{{if .HasPrevious}}{{template "badge" delta .Current.Impressions .Previous.Impressions}}<span class="p">was {{num .Previous.Impressions}}</span>{{end}}</div>
+<div class="kpi"><span class="k">Click-through rate</span><span class="v">{{rate .Current.CTR}}</span>{{if .HasPrevious}}{{template "badge" ptDelta .Current.CTR .Previous.CTR}}<span class="p">was {{rate .Previous.CTR}}</span>{{end}}</div>
+<div class="kpi"><span class="k">Average position</span><span class="v">{{pos .Current.Position}}</span>{{if .HasPrevious}}{{template "badge" posDelta .Current.Position .Previous.Position}}<span class="p">was {{pos .Previous.Position}}</span>{{end}}</div>
+</div>
+{{- if gt (len .Daily) 1}}
+<div class="tabs">
+<input type="radio" name="sc" id="sc-c" checked><label for="sc-c">Clicks per day</label>
+<input type="radio" name="sc" id="sc-i"><label for="sc-i">Impressions per day</label>
+<div class="panel p-sc-c" data-title="Clicks per day">{{with searchSeries .Daily false}}{{lineChart "clicks" .Values .Dates "clicks"}}{{end}}</div>
+<div class="panel p-sc-i" data-title="Impressions per day">{{with searchSeries .Daily true}}{{lineChart "impr" .Values .Dates "impressions"}}{{end}}</div>
+</div>
+{{- end}}
+
+<h3>What people searched and where they landed</h3>
+<div class="tabs">
+<input type="radio" name="sq" id="sq-q" checked><label for="sq-q">Top searches<small>{{len .TopQueries}}</small></label>
+<input type="radio" name="sq" id="sq-p"><label for="sq-p">Top pages<small>{{len .TopPages}}</small></label>
+{{- if .Gains}}<input type="radio" name="sq" id="sq-g"><label for="sq-g">Rising<small>{{len .Gains}}</small></label>{{end}}
+{{- if .Losses}}<input type="radio" name="sq" id="sq-l"><label for="sq-l">Falling<small>{{len .Losses}}</small></label>{{end}}
+{{- if .Countries}}<input type="radio" name="sq" id="sq-c"><label for="sq-c">Countries<small>{{len .Countries}}</small></label>{{end}}
+<div class="panel p-sq-q" data-title="Top searches">{{template "rows" dict "Rows" .TopQueries "Head" "Search" "Link" false}}</div>
+<div class="panel p-sq-p" data-title="Top pages">{{template "rows" dict "Rows" .TopPages "Head" "Page" "Link" true}}</div>
+{{- if .Gains}}<div class="panel p-sq-g" data-title="Rising searches">{{template "changes" .Gains}}</div>{{end}}
+{{- if .Losses}}<div class="panel p-sq-l" data-title="Falling searches">{{template "changes" .Losses}}</div>{{end}}
+{{- if .Countries}}<div class="panel p-sq-c" data-title="Countries">{{template "rows" dict "Rows" .Countries "Head" "Country" "Link" false}}</div>{{end}}
+</div>
+
+{{- if .Opportunities}}
+<h3 id="opportunities" style="scroll-margin-top:64px">Close to the top: searches worth pushing</h3>
+<p class="lede">These searches already show the site on page one or two. Moving them up a few places brings the most new clicks for the least work.</p>
+<div class="table"><table>
+<thead><tr><th>Search</th><th>Page</th><th class="n">Position</th><th class="n">Impressions</th><th class="n">Clicks</th></tr></thead>
+<tbody>
+{{- range .Opportunities}}
+<tr><td class="key">{{.Query}}</td><td class="key">{{with href .Page}}<a href="{{.}}" target="_blank" rel="noreferrer">{{short (str .)}}</a>{{else}}{{.Page}}{{end}}</td><td class="n">{{pos .Position}}</td><td class="n">{{num .Impressions}}</td><td class="n">{{num .Clicks}}</td></tr>
+{{- end}}
+</tbody></table></div>
+{{- end}}
+</section>
+{{- end}}
+
+{{- with .Traffic}}
+<section id="traffic">
+<header><h2>Organic traffic</h2><p class="src">Source: Google Analytics · Organic Search channel</p></header>
+<div class="kpis">
+{{template "metric" dict "Label" "Visits (sessions)" "M" .Sessions "Kind" "num"}}
+{{template "metric" dict "Label" "Visitors" "M" .Users "Kind" "num"}}
+{{template "metric" dict "Label" "Engaged visits" "M" .EngagedSessions "Kind" "num"}}
+{{template "metric" dict "Label" "Engagement rate" "M" .EngagementRate "Kind" "rate"}}
+{{- if .KeyEvents.Value}}{{if gt (mval .KeyEvents) 0.0}}{{template "metric" dict "Label" "Key events" "M" .KeyEvents "Kind" "num"}}{{end}}{{end}}
+{{- if .Revenue.Value}}{{if gt (mval .Revenue) 0.0}}{{template "metric" dict "Label" (printf "Revenue %s" .Currency) "M" .Revenue "Kind" "num"}}{{end}}{{end}}
+</div>
+{{- if gt (len .Daily) 1}}{{with trafficSeries .Daily}}{{lineChart "sessions" .Values .Dates "organic visits"}}{{end}}{{end}}
+</section>
+{{- end}}
+
+{{- with .Rankings}}
+<section id="rankings">
+<header><h2>Keyword rankings</h2><p class="src">{{.Domain}}{{if .Location}} · {{.Location}}{{end}} · {{.Device}}{{with .CheckedAt}} · checked {{date .}}{{end}}</p></header>
+<div class="dist" role="img" aria-label="{{.Top3}} in top 3, {{sub .Top10 .Top3}} in 4 to 10, {{sub .Top20 .Top10}} in 11 to 20, {{sub .Total .Top20}} lower or not ranking">
+<i class="d1" style="{{width (share .Top3 .Total)}}"></i><i class="d2" style="{{width (share (sub .Top10 .Top3) .Total)}}"></i><i class="d3" style="{{width (share (sub .Top20 .Top10) .Total)}}"></i><i class="d4" style="{{width (share (sub .Total .Top20) .Total)}}"></i>
+</div>
+<div class="legend"><span><i class="d1"></i>Top 3 · {{.Top3}}</span><span><i class="d2"></i>4–10 · {{sub .Top10 .Top3}}</span><span><i class="d3"></i>11–20 · {{sub .Top20 .Top10}}</span><span><i class="d4"></i>Lower or not ranking · {{sub .Total .Top20}}</span></div>
+<div class="tabs">
+<input type="radio" name="rf" id="rf-a" checked><label for="rf-a">All<small>{{.Total}}</small></label>
+<input type="radio" name="rf" id="rf-t"><label for="rf-t">Top 10<small>{{.Top10}}</small></label>
+<input type="radio" name="rf" id="rf-u"><label for="rf-u">Moved up<small>{{.Improved}}</small></label>
+<input type="radio" name="rf" id="rf-d"><label for="rf-d">Moved down<small>{{.Declined}}</small></label>
+<input type="radio" name="rf" id="rf-n"><label for="rf-n">Not ranking<small>{{.NotRanking}}</small></label>
+<div class="panel p-rf" data-title="Tracked keywords">
+<div class="table"><table>
+<thead><tr><th>Keyword</th><th class="n">Position</th><th class="n">Change</th><th class="n">Monthly searches</th><th>Ranking page</th></tr></thead>
+<tbody>
+{{- range rankRows .Rows}}
+<tr class="r {{rankClass .}}"><td class="key">{{.Keyword}}</td><td class="n">{{with .Position}}{{deref .}}{{else}}—{{end}}</td><td class="n">{{with rankMove .}}<span class="chg {{.Tone}}">{{.Text}}</span>{{end}}</td><td class="n">{{with .Volume}}{{inum (deref .)}}{{else}}—{{end}}</td><td class="key">{{with href .URL}}<a href="{{.}}" target="_blank" rel="noreferrer">{{short (str .)}}</a>{{else}}—{{end}}</td></tr>
+{{- end}}
+</tbody></table></div>
+{{- if gt (len .Rows) 200}}<p class="src" style="margin-top:8px">Showing the 200 best-ranked of {{len .Rows}} keywords.</p>{{end}}
+</div>
+</div>
+</section>
+{{- end}}
+
+{{- with .Audit}}
+<section id="audit">
+<header><h2>Site health</h2><p class="src">Source: site audit of {{inum .PagesCrawled}} pages · {{date .CompletedAt}}</p></header>
+<div class="sev">
+<div class="c"><b>{{inum .Critical}}</b><span>pages with critical issues</span></div>
+<div class="w"><b>{{inum .Warning}}</b><span>pages with warnings</span></div>
+<div class="i"><b>{{inum .Info}}</b><span>pages with notices</span></div>
+</div>
+{{- with .Lighthouse}}
+<h3>Speed and quality scores <span class="src" style="font-weight:400">· mobile, average of {{.Pages}} {{if eq .Pages 1}}page{{else}}pages{{end}}</span></h3>
+<div class="rings">
+<figure>{{ring .Performance}}<figcaption>Performance</figcaption></figure>
+<figure>{{ring .Accessibility}}<figcaption>Accessibility</figcaption></figure>
+<figure>{{ring .BestPractices}}<figcaption>Best practices</figcaption></figure>
+<figure>{{ring .SEO}}<figcaption>SEO</figcaption></figure>
+</div>
+<p class="cwv">{{with .LCPMillis}}<span>Largest content shown in <b>{{ms .}}</b></span>{{end}}{{with .CLS}}<span>Layout shift <b>{{cls .}}</b></span>{{end}}{{with .INPMillis}}<span>Response to taps <b>{{inp .}}</b></span>{{end}}</p>
+{{- end}}
+{{- if .Issues}}
+<h3>Issues found</h3>
+{{- range .Issues}}
+<details><summary><span class="pill {{.Severity}}">{{.Severity}}</span><span>{{label .Type}}</span><span class="cnt">{{inum .Pages}} {{if eq .Pages 1}}page{{else}}pages{{end}}</span></summary>
+<ul>{{range .Examples}}<li>{{with href .}}<a href="{{.}}" target="_blank" rel="noreferrer">{{str .}}</a>{{end}}</li>{{end}}{{if gt .Pages (len .Examples)}}<li class="more">and {{inum (sub .Pages (len .Examples))}} more</li>{{end}}</ul>
+</details>
+{{- end}}
+{{- else}}
+<p class="empty">The audit found no issues.</p>
+{{- end}}
+</section>
+{{- end}}
+
+{{- with .Backlinks}}
+<section id="backlinks">
+<header><h2>Backlinks</h2><p class="src">Snapshot of {{date .CapturedAt}}</p></header>
+<div class="kpis">
+{{with .ReferringDomains}}<div class="kpi"><span class="k">Linking websites</span><span class="v">{{num (float (deref64 .))}}</span></div>{{end}}
+{{with .Backlinks}}<div class="kpi"><span class="k">Total backlinks</span><span class="v">{{num (float (deref64 .))}}</span></div>{{end}}
+{{with .NewReferringDomains}}<div class="kpi"><span class="k">New linking websites</span><span class="v" style="color:var(--up)">+{{num (float (deref64 .))}}</span></div>{{end}}
+{{with .LostReferringDomains}}<div class="kpi"><span class="k">Lost linking websites</span><span class="v" style="color:var(--down)">−{{num (float (deref64 .))}}</span></div>{{end}}
+{{with .Rank}}<div class="kpi"><span class="k">Domain rank</span><span class="v">{{num (float (deref64 .))}}</span></div>{{end}}
+</div>
+</section>
+{{- end}}
+
+{{- if .NextSteps}}
+<section id="next">
+<header><h2>Next steps</h2></header>
+<div class="steps">{{range paragraphs .NextSteps}}<p>{{.}}</p>{{end}}</div>
+</section>
+{{- end}}
+
+<footer>Report generated {{date .GeneratedAt}}. Numbers come straight from the connected data sources for the dates shown.</footer>
+</main>
+</body>
+</html>
+{{- define "badge"}}{{if .Text}}<span class="badge {{.Tone}}">{{.Text}}</span>{{end}}{{end}}
+{{- define "metric"}}<div class="kpi"><span class="k">{{.Label}}</span><span class="v">{{if .M.Value}}{{if eq .Kind "rate"}}{{rate (mval .M)}}{{else}}{{num (mval .M)}}{{end}}{{else}}—{{end}}</span>{{template "badge" mdelta .M}}</div>{{end}}
+{{- define "rows"}}{{if .Rows}}<div class="table"><table>
+<thead><tr><th>{{.Head}}</th><th class="n">Clicks</th><th class="n">Impressions</th><th class="n">CTR</th><th class="n">Position</th></tr></thead>
+<tbody>
+{{- $link := .Link}}
+{{- range .Rows}}
+<tr><td class="key">{{if $link}}{{with href .Key}}<a href="{{.}}" target="_blank" rel="noreferrer">{{short (str .)}}</a>{{else}}{{.Key}}{{end}}{{else}}{{.Key}}{{end}}</td><td class="n">{{num .Clicks}}</td><td class="n">{{num .Impressions}}</td><td class="n">{{rate .CTR}}</td><td class="n">{{pos .Position}}</td></tr>
+{{- end}}
+</tbody></table></div>{{else}}<p class="empty">No rows for this period.</p>{{end}}{{end}}
+{{- define "changes"}}<div class="table"><table>
+<thead><tr><th>Search</th><th class="n">Clicks now</th><th class="n">Before</th><th class="n">Change</th><th class="n">Position</th></tr></thead>
+<tbody>
+{{- range .}}
+<tr><td class="key">{{.Key}}</td><td class="n">{{num .Clicks}}</td><td class="n">{{num .PrevClicks}}</td><td class="n">{{$d := delta .Clicks .PrevClicks}}{{if $d.Text}}<span class="chg {{$d.Tone}}">{{$d.Text}}</span>{{else}}<span class="chg up">New</span>{{end}}</td><td class="n">{{pos .Position}}</td></tr>
+{{- end}}
+</tbody></table></div>{{end}}

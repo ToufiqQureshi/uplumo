@@ -207,3 +207,43 @@ export async function deleteReportTemplate({
     { templateId: data.templateId },
   );
 }
+
+export const SITE_REPORT_SECTIONS = [
+  "search",
+  "traffic",
+  "rankings",
+  "audit",
+  "backlinks",
+] as const;
+export type SiteReportSection = (typeof SITE_REPORT_SECTIONS)[number];
+
+const siteReportResultSchema = z.object({
+  reportId: z.string(),
+  title: z.string(),
+  shareToken: z.string().nullable(),
+  included: z.array(z.enum(SITE_REPORT_SECTIONS)),
+  skipped: z.array(
+    z.object({ section: z.enum(SITE_REPORT_SECTIONS), reason: z.string() }),
+  ),
+});
+export type SiteReportResult = z.infer<typeof siteReportResultSchema>;
+
+/** Builds a client report from the project's connected data. 0 credits. */
+export async function generateSiteReport({
+  data,
+}: ReportInput<{
+  title: string;
+  periodDays: 7 | 28 | 90;
+  sections: SiteReportSection[];
+  note: string;
+  nextSteps: string;
+  share: boolean;
+}>) {
+  const { projectId, ...body } = data;
+  return apiRequest(
+    reportPath(projectId, "generate"),
+    siteReportResultSchema,
+    "POST",
+    body,
+  );
+}

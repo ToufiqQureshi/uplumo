@@ -13,6 +13,14 @@ priorities, corrections, and what still waits on him. Read it after
   decision, remove it when he answers.
 - Never write secrets, keys or customer data here.
 
+## 6 Nov 2026: Client site reports (one click, shareable link)
+
+- Owner: "ye to work hi nai karta", wants a Power BI-type A to Z site report the user builds and sends to a client as a clickable link; "user ko value dena ha", "UI ek dum mast".
+- Built: Reports -> "Create client report" (period 7/28/90 days, sections Search, Traffic, Rankings, Site health, Backlinks, client message, next steps, client link). Saved as a normal report, so viewer, PDF and public `/s/` link are reused.
+- 0 paid calls, 0 credits: Google reads (max 10 GSC + 3 GA4) are free; rankings, audit, backlinks read stored rows. Sections without data are skipped with a reason.
+- Taken as default (owner did not answer): simple public link, no password or expiry.
+- Waiting for the owner: merge + deploy; whether to add AI Visibility and own Analytics sections next.
+
 ## 6 Nov 2026: Content Editor fixes in one PR
 
 - Owner: "fix it in one pr samja everything fix the bugs"; the approved paid-test cap remains about 159 credits.

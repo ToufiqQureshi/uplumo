@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
-import { FileText, Trash2 } from "lucide-react";
+import { FileText, Sparkles, Trash2 } from "lucide-react";
+import { Button } from "@/client/components/ui/button";
 import { EmptyState } from "@/client/components/EmptyState";
 import { RowActionsMenu } from "@/client/components/RowActionsMenu";
 import { DropdownMenuItem } from "@/client/components/ui/dropdown-menu";
@@ -21,17 +22,25 @@ export function ReportsList({
   projectId,
   reports,
   onDelete,
+  onCreate,
 }: {
   projectId: string;
   reports: ReportListItem[];
   onDelete: (report: ReportListItem) => void;
+  onCreate: () => void;
 }) {
   if (reports.length === 0) {
     return (
       <EmptyState
         icon={FileText}
         title="No reports yet"
-        description="Write a report yourself or ask your connected AI assistant to save its work here."
+        description="Turn this project's search, traffic, rankings and site health into an interactive report you can send to a client. Uses no credits."
+        action={
+          <Button onClick={onCreate}>
+            <Sparkles data-icon="inline-start" />
+            Create client report
+          </Button>
+        }
       />
     );
   }
