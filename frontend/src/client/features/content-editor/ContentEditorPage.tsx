@@ -320,27 +320,26 @@ export function ContentEditorPage({
   return (
     <FreeSeoEditorProvider onDraftFieldChange={update}>
       <div className="space-y-5">
-        <DraftToolbar
-          draft={draft}
-          saving={saveMutation.isPending}
-          dirty={dirty}
-          saved={Boolean(draftId)}
-          canSave={
-            !editorBusy &&
-            isArticleContentWithinLimit(draft.content) &&
-            Boolean(draft.title.trim() || draft.content.trim())
-          }
-          onPreview={() => setPreviewOpen(true)}
-          onSave={() =>
-            saveMutation.mutate(draft, {
-              onSuccess: () => toast.success("Draft saved"),
-            })
-          }
-          onPublish={() => setTab("publish")}
-        />
-
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-          <section className="min-w-0 space-y-5">
+          <section className="order-2 min-w-0 space-y-5 xl:order-1">
+            <DraftToolbar
+              draft={draft}
+              saving={saveMutation.isPending}
+              dirty={dirty}
+              saved={Boolean(draftId)}
+              canSave={
+                !editorBusy &&
+                isArticleContentWithinLimit(draft.content) &&
+                Boolean(draft.title.trim() || draft.content.trim())
+              }
+              onPreview={() => setPreviewOpen(true)}
+              onSave={() =>
+                saveMutation.mutate(draft, {
+                  onSuccess: () => toast.success("Draft saved"),
+                })
+              }
+              onPublish={() => setTab("publish")}
+            />
             <WriterReminder key={projectId} projectId={projectId} />
             <ArticleComposer
               draft={draft}
@@ -360,6 +359,7 @@ export function ContentEditorPage({
           </section>
 
           <ContentEditorSidePanel
+            className="order-1 xl:order-2"
             projectId={projectId}
             draft={draft}
             draftId={draftId}

@@ -46,6 +46,7 @@ var typicalUSD = []struct {
 	{spend.SiteAudit, ActionJavaScriptRender, "JavaScript-rendered page (up to 20 app shells per audit)", dataforseo.OnPageJavaScriptCostUSD(1), dataforseo.OnPageJavaScriptCostUSD(20)},
 	{spend.CiteFix, ActionGoogleAIOverview, "Google AI Overview citations (per question; up to 10 per refresh)", dataforseo.GoogleAIOverviewCostUSD(10), dataforseo.GoogleAIOverviewBatchCostUSD(10, 10)},
 	{spend.KeywordResearch, "", "keyword search", 0.047, 0},
+	{spend.KeywordResearch, ActionContentBrief, "search brief", ContentBriefMaxUSD, ContentBriefMaxUSD},
 	{spend.DomainResearch, "", "domain report tab", 0.031, 0},
 	// Summary $0.024 + history $0.024 + the first 1,000 table rows $0.06.
 	{spend.Backlinks, "", "backlink report", 0.108, 0},
@@ -65,6 +66,11 @@ const (
 	ActionBrandLookup      = "brand_lookup"
 	ActionJavaScriptRender = "javascript_render"
 	ActionGoogleAIOverview = "google_ai_overview"
+	ActionContentBrief     = "content_brief"
+
+	// The brief quote and server hold share these paid request limits.
+	ContentBriefReadPageLimit = 8
+	ContentBriefMaxUSD        = 0.006 + ContentBriefReadPageLimit*0.00015
 )
 
 // ActionCosts lists the typical cost of every feature that spends credits.

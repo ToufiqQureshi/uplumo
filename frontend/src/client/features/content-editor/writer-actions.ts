@@ -43,7 +43,11 @@ export const writerActions: Array<{
     label: "Fix the top score issue",
     hint: "Select the passage first",
   },
-  { id: "faq", label: "Write FAQ answers", hint: "From the brief's questions" },
+  {
+    id: "faq",
+    label: "Write FAQ answers",
+    hint: "Suggests questions from your article",
+  },
   {
     id: "destuff",
     label: "Remove repeated keyword",

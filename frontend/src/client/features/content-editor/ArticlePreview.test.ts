@@ -36,4 +36,28 @@ describe("ArticlePreview", () => {
   it("never renders a javascript: link", () => {
     expect(html).not.toContain("javascript:");
   });
+
+  it("does not repeat the page title as the first body heading", () => {
+    const preview = renderToStaticMarkup(
+      createElement(ArticlePreview, {
+        title: "Example title",
+        content: "# **Example title**\n\nArticle body.",
+      }),
+    );
+
+    expect(preview).not.toContain("<h1");
+    expect(preview).toContain("Article body.");
+  });
+
+  it("keeps a first heading that differs from the page title", () => {
+    const preview = renderToStaticMarkup(
+      createElement(ArticlePreview, {
+        title: "Example title",
+        content: "# Introduction\n\nArticle body.",
+      }),
+    );
+
+    expect(preview).toContain("<h1");
+    expect(preview).toContain("Introduction");
+  });
 });

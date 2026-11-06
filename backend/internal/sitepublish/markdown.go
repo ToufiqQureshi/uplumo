@@ -3,6 +3,7 @@ package sitepublish
 import (
 	"bytes"
 	"fmt"
+	"strings"
 
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"
@@ -44,6 +45,34 @@ func renderHTML(source string, replace map[string]string) (string, error) {
 		return "", fmt.Errorf("render article: %w", err)
 	}
 	return out.String(), nil
+}
+
+func withoutDuplicateTitleHeading(source, title string) string {
+	if strings.TrimSpace(title) == "" {
+		return source
+	}
+	lines := strings.Split(source, "\n")
+	for index, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "![") {
+			continue
+		}
+		heading, ok := strings.CutPrefix(line, "# ")
+		if !ok {
+			return source
+		}
+		heading = strings.TrimSpace(strings.TrimRight(heading, "#"))
+		heading = strings.NewReplacer("**", "", "__", "", "~~", "", "`", "").Replace(heading)
+		if !strings.EqualFold(strings.Join(strings.Fields(heading), " "), strings.Join(strings.Fields(title), " ")) {
+			return source
+		}
+		end := index + 1
+		for end < len(lines) && strings.TrimSpace(lines[end]) == "" {
+			end++
+		}
+		return strings.Join(append(lines[:index], lines[end:]...), "\n")
+	}
+	return source
 }
 
 func walkImages(document ast.Node, visit func(*ast.Image)) {

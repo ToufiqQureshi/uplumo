@@ -13,6 +13,14 @@ priorities, corrections, and what still waits on him. Read it after
   decision, remove it when he answers.
 - Never write secrets, keys or customer data here.
 
+## 5 Nov 2026: Content Editor live QA
+
+- Owner: “sab kuch paid free ui buttons ... scroll down pe ui bigad jata ha”; approved all paid-button tests with an approximately 159-credit cap.
+- Ran all 10 AI actions once (11 credits total); cached brief was free. One confirmed brief refresh returned Cloudflare 502; customer credits stayed unchanged, provider cost is unknown, and it was not retried.
+- Found and fixed scroll overlap/mobile tool placement, duplicate title H1, FAQ scoring for bold headings, visible word count, experience wording, FAQ action hint, and singular credit toast.
+- Restored the live draft text and original 2026-10-28 review date after UI tests. No post was published or draft deleted.
+- Changes are local and not deployed.
+
 ## Kal ka kaam (4 Nov se)
 
 1. **Analytics leads ko dynamic banao** (owner ne kaha: kuch hard-coded nahi, UI clean).

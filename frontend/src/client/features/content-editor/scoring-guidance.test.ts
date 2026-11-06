@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { scoreContent, type ContentDraftInput } from "./scoring";
+import {
+  scoreContent,
+  type ContentBrief,
+  type ContentDraftInput,
+} from "./scoring";
 
 // Rules that follow Google's guidance; each case is a bug seen live.
 const draft: ContentDraftInput = {
@@ -9,6 +13,13 @@ const draft: ContentDraftInput = {
   metaDescription: "A practical guide to technical SEO.",
   content:
     "Technical SEO makes sites easy to crawl. Read the [Google documentation](https://developers.google.com/search/docs) for details.",
+};
+const emptyBrief: ContentBrief = {
+  collectedAt: "2026-10-01T00:00:00Z",
+  terms: [],
+  subtopics: [],
+  questions: [],
+  competitorTexts: [],
 };
 
 describe("scoring follows Google's guidance", () => {
@@ -77,6 +88,11 @@ describe("scoring follows Google's guidance", () => {
       "## FAQ\n\n### Is teal good for dusky skin?\n\nYes, teal is a deep jewel tone that suits darker skin.",
       5,
     ],
+    [
+      "TipTap bold-marked headings",
+      "## **Frequently Asked Questions**\n\n### **Is teal good for dusky skin?**\n\nYes, teal is a deep jewel tone that suits darker skin.",
+      5,
+    ],
   ])("scores an FAQ with %s", (_name, content, earned) => {
     expect(
       scoreContent("aeo", { ...draft, content }).checks.find(
@@ -86,22 +102,25 @@ describe("scoring follows Google's guidance", () => {
   });
 
   it.each([
-    [
-      "first-hand English",
-      "Last Diwali we tested three teal sarees in daylight.",
-      10,
-    ],
-    [
-      "first-hand Hinglish",
-      "Maine khud teal saree pehna aur sabne poocha.",
-      10,
-    ],
-    ["generic", "Teal sarees are popular for festivals.", 0],
-  ])("rewards %s experience", (_name, content, earned) => {
-    expect(
-      scoreContent("seo", { ...draft, content }).checks.find(
-        (c) => c.id === "experience",
-      )?.earned,
-    ).toBe(earned);
-  });
+    ["SEO without a brief", "seo", undefined],
+    ["SEO with a brief", "seo", emptyBrief],
+    ["AEO without a brief", "aeo", undefined],
+    ["AEO with a brief", "aeo", emptyBrief],
+  ] as const)(
+    "does not score unverifiable first-person claims in %s",
+    (_name, mode, brief) => {
+      const result = scoreContent(
+        mode,
+        {
+          ...draft,
+          content: "I tested three options and noticed a difference.",
+        },
+        brief,
+      );
+
+      expect(result.checks.some((item) => item.id === "experience")).toBe(
+        false,
+      );
+    },
+  );
 });

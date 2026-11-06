@@ -22,11 +22,41 @@ const ARTICLE_COMPONENTS = {
     ) : null,
 };
 
+function withoutDuplicateTitleHeading(content: string, title: string) {
+  if (!title.trim()) return content;
+  const lines = content.split("\n");
+  const index = lines.findIndex((line) => {
+    const value = line.trim();
+    return value !== "" && !value.startsWith("![");
+  });
+  if (index < 0) return content;
+  const heading = lines[index]?.trim().match(/^#\s+(.+?)\s*#*\s*$/u)?.[1];
+  if (
+    !heading ||
+    heading
+      .replace(/(?:\*\*|__|~~|`)/gu, "")
+      .replace(/\s+/gu, " ")
+      .trim()
+      .toLowerCase() !== title.trim().replace(/\s+/gu, " ").toLowerCase()
+  )
+    return content;
+
+  lines.splice(index, 1);
+  while (index < lines.length && !lines[index]?.trim()) lines.splice(index, 1);
+  return lines.join("\n");
+}
+
 /** Renders a draft's Markdown the way a reader will see the article. */
-export function ArticlePreview({ content }: { content: string }) {
+export function ArticlePreview({
+  content,
+  title,
+}: {
+  content: string;
+  title?: string;
+}) {
   return (
     <ReactMarkdown remarkPlugins={[remarkGfm]} components={ARTICLE_COMPONENTS}>
-      {content}
+      {withoutDuplicateTitleHeading(content, title ?? "")}
     </ReactMarkdown>
   );
 }
