@@ -83,8 +83,8 @@ type Definition struct {
 	// PauseAboveSites, when set, is the site count above which paid work
 	// pauses; it is higher than Sites only where Sites was lowered after
 	// customers bought the plan (Pro 10 -> 5, Business 20 -> 10 on 3 Nov
-	// 2026), so those customers keep every site working. New sites still
-	// stop at Sites.
+	// 2026; Pro 5 -> 3 on 6 Nov 2026), so those customers keep every site
+	// working. New sites still stop at Sites.
 	PauseAboveSites int
 	// TrackedKeywords is how many keywords rank tracking may follow across
 	// the whole workspace.
@@ -157,6 +157,10 @@ type Pack struct {
 	Feature Feature `json:"-"`
 }
 
+// SiteAddOnPackID is the one-website add-on every paid plan can buy, as
+// many times as it needs websites.
+const SiteAddOnPackID = "sites_1"
+
 // SiteAddOnDays is how long a site add-on lasts. It counts from the payment,
 // not to the next renewal, so an add-on bought the day before a renewal
 // still gives the month that was paid for.
@@ -165,7 +169,7 @@ const SiteAddOnDays = 30
 var packs = []Pack{
 	{ID: "credits_5000", Name: "5,000 credits", PriceINR: 1499, PriceUSD: 19, Credits: 5000, Feature: CreditPacks},
 	{ID: "credits_15000", Name: "15,000 credits", PriceINR: 3999, PriceUSD: 59, Credits: 15000, Feature: CreditPacks},
-	{ID: "sites_5", Name: "5 more websites", PriceINR: 999, PriceUSD: 12, Sites: 5, Feature: SiteAddOn},
+	{ID: SiteAddOnPackID, Name: "1 more website", PriceINR: 999, PriceUSD: 12, Sites: 1, Feature: SiteAddOn},
 }
 
 // Packs lists every one-time purchase, credit packs first. The caller owns
@@ -196,9 +200,9 @@ func GetPack(id string) (Pack, bool) {
 }
 
 var (
-	basicFeatures    = []Feature{GoogleData, Keywords, RankTracking, FullAudit, Publishing, AIWriting, IndexNow}
+	basicFeatures    = []Feature{GoogleData, Keywords, RankTracking, FullAudit, Publishing, AIWriting, IndexNow, SiteAddOn}
 	proFeatures      = append(slices.Clone(basicFeatures), Backlinks, DomainResearch, AIVisibility, CreditPacks)
-	businessFeatures = append(slices.Clone(proFeatures), WhiteLabel, SiteAddOn)
+	businessFeatures = append(slices.Clone(proFeatures), WhiteLabel)
 )
 
 // sharedHighlights close every paid plan's list.
@@ -230,7 +234,7 @@ var catalog = []Definition{
 		ID: Free, Name: "Free", PriceINR: 0, Sites: 1, Members: 1,
 		Summary: "See who visits your site, and which AI assistants send them.",
 		Highlights: []string{
-			"1 website",
+			websites(1),
 			"Uplumo Analytics with AI traffic detection",
 			"A starter site audit",
 		},
@@ -239,7 +243,8 @@ var catalog = []Definition{
 		ID: Basic, Name: "Basic", PriceINR: 999, PriceUSD: 15, Sites: 1, TrackedKeywords: 100, Members: 1, MonthlyCredits: 4000, MaxSerpDepth: 30, RankSchedule: RankScheduleWeekly,
 		Summary: "For one business website that wants to rank on Google.",
 		Highlights: highlights([]string{
-			"1 website",
+			websites(1),
+			siteAddOnHighlight(INR),
 			"1 team member",
 			"4,000 credits every month",
 			"Rank tracking for 100 keywords, checked weekly",
@@ -247,10 +252,11 @@ var catalog = []Definition{
 		features: basicFeatures,
 	},
 	{
-		ID: Pro, Name: "Pro", PriceINR: 2499, PriceUSD: 39, Sites: 5, PauseAboveSites: 10, TrackedKeywords: 500, Members: 3, MonthlyCredits: 10000, MaxSerpDepth: 40, RankSchedule: RankScheduleWeekly,
+		ID: Pro, Name: "Pro", PriceINR: 2499, PriceUSD: 39, Sites: 3, PauseAboveSites: 10, TrackedKeywords: 500, Members: 3, MonthlyCredits: 10000, MaxSerpDepth: 40, RankSchedule: RankScheduleWeekly,
 		Summary: "For a growing business: beat competitors on Google and in AI answers.",
 		Highlights: highlights([]string{
-			"5 websites",
+			websites(3),
+			siteAddOnHighlight(INR),
 			"3 team members",
 			"10,000 credits every month",
 			creditPackHighlight,
@@ -262,7 +268,7 @@ var catalog = []Definition{
 		ID: Business, Name: "Business", PriceINR: 4999, PriceUSD: 69, Sites: 10, PauseAboveSites: 20, TrackedKeywords: 1000, Members: 5, MonthlyCredits: 15000, MaxSerpDepth: 40, RankSchedule: RankScheduleWeekly,
 		Summary: "For several brands, freelancers and agencies, with reports under your own brand.",
 		Highlights: highlights([]string{
-			"10 websites",
+			websites(10),
 			siteAddOnHighlight(INR),
 			"5 team members",
 			"15,000 credits every month",
@@ -274,15 +280,24 @@ var catalog = []Definition{
 	},
 }
 
-// siteAddOnHighlight states the site add-on's price in currency on the
-// Business card, from the pack itself so the two cannot disagree.
+// websites is a plan card's website line, written from the same number the
+// plan's Sites field holds.
+func websites(n int) string {
+	if n == 1 {
+		return "1 website"
+	}
+	return fmt.Sprintf("%d websites", n)
+}
+
+// siteAddOnHighlight states the site add-on's price in currency on each paid
+// plan card, from the pack itself so the two cannot disagree.
 func siteAddOnHighlight(currency string) string {
-	pack, _ := GetPack("sites_5")
+	pack, _ := GetPack(SiteAddOnPackID)
 	symbol := "₹"
 	if currency == USD {
 		symbol = "$"
 	}
-	return fmt.Sprintf("Add %d more websites for %s%d a month", pack.Sites, symbol, pack.Price(currency))
+	return fmt.Sprintf("Add more websites for %s%d a month each", symbol, pack.Price(currency))
 }
 
 // HighlightsIn is Highlights with every price in currency.

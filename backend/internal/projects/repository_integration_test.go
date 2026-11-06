@@ -188,7 +188,7 @@ func TestPaidPlanCreateAndRestoreEnforceWebsiteAllowance(t *testing.T) {
 	for _, test := range []struct {
 		plan  string
 		sites int
-	}{{plans.Pro, 5}, {plans.Business, 10}} {
+	}{{plans.Pro, 3}, {plans.Business, 10}} {
 		t.Run(test.plan, func(t *testing.T) {
 			ctx := t.Context()
 			pool := projectTestPool(ctx, t)

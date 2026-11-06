@@ -32,8 +32,8 @@ func (f *fixture) chargeOnPlan(plan string, at time.Time) []byte {
 func TestPlanDecidesFeaturesAndLimits(t *testing.T) {
 	ctx := context.Background()
 	all := []plans.Feature{
-		plans.GoogleData, plans.Keywords, plans.RankTracking, plans.FullAudit, plans.Publishing, plans.AIWriting, plans.IndexNow,
-		plans.Backlinks, plans.DomainResearch, plans.AIVisibility, plans.CreditPacks, plans.WhiteLabel, plans.SiteAddOn,
+		plans.GoogleData, plans.Keywords, plans.RankTracking, plans.FullAudit, plans.Publishing, plans.AIWriting, plans.IndexNow, plans.SiteAddOn,
+		plans.Backlinks, plans.DomainResearch, plans.AIVisibility, plans.CreditPacks, plans.WhiteLabel,
 	}
 	for _, test := range []struct {
 		plan                     string
@@ -41,8 +41,8 @@ func TestPlanDecidesFeaturesAndLimits(t *testing.T) {
 		sites, keywords, members int
 	}{
 		{PlanFree, 0, 1, 0, 1},
-		{PlanBasic, 7, 1, 100, 1},
-		{PlanPro, 11, 5, 500, 3},
+		{PlanBasic, 8, 1, 100, 1},
+		{PlanPro, 12, 3, 500, 3},
 		{plans.Business, 13, 10, 1000, 5},
 	} {
 		t.Run(test.plan, func(t *testing.T) {

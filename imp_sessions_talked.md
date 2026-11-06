@@ -13,6 +13,11 @@ priorities, corrections, and what still waits on him. Read it after
   decision, remove it when he answers.
 - Never write secrets, keys or customer data here.
 
+## 6 Nov 2026: Pro gets 3 websites; every extra website is ₹999
+
+- Owner: "pro plan me ab srif 3 sites allowed", "per site ka 999 for every plan", "free plan pe no addon", "bahar ke users ... koi nai chalara uplumo" (USD kept at $12), "bindaas change kar", new PR, then merge #277 and this PR, deploy and test from the UI.
+- Decisions: Pro 5 -> 3 websites. Pack `sites_1` = 1 website for ₹999 / $12 for 30 days, on Basic, Pro and Business; Free cannot buy. The Business 5-site pack is retired; running purchases keep their 30 days. Existing Pro workspaces keep up to 10 sites working (PauseAboveSites); only new sites stop at 3.
+- Paid calls: none; price shown = price charged (all copy reads the pack).
 ## 6 Nov 2026: Client site reports (one click, shareable link)
 
 - Owner: "ye to work hi nai karta", wants a Power BI-type A to Z site report the user builds and sends to a client as a clickable link; "user ko value dena ha", "UI ek dum mast".

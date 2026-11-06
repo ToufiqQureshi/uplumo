@@ -34,14 +34,25 @@ const checkoutSchema = z.object({
 
 type Pack = z.infer<typeof packsSchema>[number];
 
-function lifetime(pack: Pack) {
+export function lifetime(pack: Pack) {
+  if (pack.sites === 1)
+    return "Adds 1 website for 30 days from payment. Buy one for each extra website.";
   return pack.sites > 0
     ? `Adds ${pack.sites} websites for 30 days from payment.`
     : "Used after your monthly credits. Lasts while your plan is active and ends with it.";
 }
 
+/** The card's heading names only what this plan can buy. */
+export function packsHeading(packs: Pack[]) {
+  const credits = packs.some((p) => p.credits > 0);
+  const sites = packs.some((p) => p.sites > 0);
+  if (credits && sites) return "Buy more credits or websites";
+  return sites ? "Add more websites" : "Buy more credits";
+}
+
 /**
- * One-time credit packs (Pro and Business) and the site add-on (Business).
+ * One-time credit packs (Pro and Business) and the per-website add-on
+ * (every paid plan).
  * The server lists only what the workspace's plan may buy. A payment the
  * customer completed is only waited on, never offered again, so one
  * purchase cannot be paid twice.
@@ -112,7 +123,7 @@ export function TopUpsCard({
   if (packs.isError)
     return (
       <p role="alert" className="text-sm">
-        Could not load credit packs.{" "}
+        Could not load packs.{" "}
         <Button variant="ghost" onClick={() => void packs.refetch()}>
           Retry
         </Button>
@@ -122,10 +133,13 @@ export function TopUpsCard({
   const waiting = Boolean(paid) && !granted;
   return (
     <section className="space-y-3 rounded-xl border border-border p-5">
-      <h2 className="text-lg font-semibold">Buy more credits</h2>
+      <h2 className="text-lg font-semibold">{packsHeading(packs.data)}</h2>
       <p className="text-sm text-muted-foreground">
-        One-time payment, not a subscription. Every paid action spends credits
-        at its real cost. Packs are not refundable.
+        One-time payment, not a subscription.
+        {packs.data.some((p) => p.credits > 0)
+          ? " Every paid action spends credits at its real cost."
+          : ""}{" "}
+        Packs are not refundable.
       </p>
       <div className="flex flex-wrap gap-3">
         {packs.data.map((p) => (
@@ -140,7 +154,7 @@ export function TopUpsCard({
               disabled={!canManageBilling || checkout.isPending || waiting}
               onClick={() => checkout.mutate(p.id)}
             >
-              {p.sites > 0 ? "Add websites" : "Buy credits"}
+              {p.sites > 0 ? "Add a website" : "Buy credits"}
             </Button>
           </div>
         ))}

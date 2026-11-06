@@ -565,7 +565,7 @@ func planLimits(plan planCatalog.Definition, currency string) []string {
 	if plan.Allows(planCatalog.SiteAddOn) {
 		for _, pack := range planCatalog.Packs() {
 			if pack.Feature == planCatalog.SiteAddOn {
-				limits = append(limits, fmt.Sprintf("Add %d more websites for %s a month", pack.Sites, formatMoney(pack.Price(currency), currency)))
+				limits = append(limits, fmt.Sprintf("Add more websites for %s a month each", formatMoney(pack.Price(currency), currency)))
 			}
 		}
 	}
@@ -726,7 +726,7 @@ func pricingFAQ(currency string) []QA {
 	basic, _ := planCatalog.Get(planCatalog.Basic)
 	pro, _ := planCatalog.Get(planCatalog.Pro)
 	business, _ := planCatalog.Get(planCatalog.Business)
-	sites, _ := planCatalog.GetPack("sites_5")
+	sites, _ := planCatalog.GetPack(planCatalog.SiteAddOnPackID)
 	return []QA{
 		{"Is the Free plan really free?", "Yes. It costs " + formatMoney(0, currency) +
 			" and needs no card. Paid plans start at " + formatMoney(int64(basic.Price(currency)), currency) + " a month."},
@@ -736,8 +736,8 @@ func pricingFAQ(currency string) []QA {
 		{"Who is Business for?", "Several brands, freelancers and agencies. It includes everything in Pro, plus white-label reports with your own name, logo and colour, " +
 			strconv.Itoa(business.Sites) + " websites, " + strconv.Itoa(business.Members) + " team members and " + formatNumber(business.MonthlyCredits) + " credits a month."},
 		{"How do site limits work?", fmt.Sprintf("Free and Basic include one active website, Pro includes %d and Business %d. "+
-			"On Business you can add %d more websites for %s, valid for %d days from payment. "+
-			"Archiving a site frees a slot; your data stays in the workspace.", pro.Sites, business.Sites, sites.Sites, formatMoney(sites.Price(currency), currency), planCatalog.SiteAddOnDays)},
+			"On any paid plan you can add more websites from Billing for %s a website, each valid for %d days from payment. "+
+			"Archiving a site frees a slot; your data stays in the workspace.", pro.Sites, business.Sites, formatMoney(sites.Price(currency), currency), planCatalog.SiteAddOnDays)},
 		{"What happens when my credits run out?", "Paid data and AI actions stop until you have credits again: wait for the next month's credits, " +
 			"or, on Pro and Business, buy a credit pack from Billing. Pack credits are used after your monthly credits, " +
 			"last while your paid plan is active and expire when the plan ends. Packs are not refundable."},
@@ -775,14 +775,22 @@ func packOffers(currency string) []PackOffer {
 		}
 		detail := "Used after your monthly credits. Lasts while your paid plan is active and expires when it ends."
 		if pack.Sites > 0 {
-			detail = fmt.Sprintf("Raises your website limit by %d for %d days from payment.", pack.Sites, planCatalog.SiteAddOnDays)
+			detail = fmt.Sprintf("Raises your website limit by %d for %d days from payment. Buy one for each extra website.", pack.Sites, planCatalog.SiteAddOnDays)
 		}
 		offers = append(offers, PackOffer{
 			Name: pack.Name, Price: formatMoney(pack.Price(currency), currency), Detail: detail,
-			Who: "On " + strings.Join(who, " and "),
+			Who: "On " + joinNames(who),
 		})
 	}
 	return offers
+}
+
+// joinNames lists plan names as "A", "A and B" or "A, B and C".
+func joinNames(names []string) string {
+	if len(names) < 3 {
+		return strings.Join(names, " and ")
+	}
+	return strings.Join(names[:len(names)-1], ", ") + " and " + names[len(names)-1]
 }
 
 // jsonLD describes the organization and the product, with each plan as an

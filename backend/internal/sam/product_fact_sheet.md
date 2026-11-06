@@ -28,8 +28,9 @@ Uplumo has a Free plan and three paid plans, priced per workspace per month in I
 
 - Free (₹0): 1 website, Uplumo Analytics with AI traffic detection, and a starter site audit.
 - Basic (₹999): 1 website, 4,000 credits a month, keyword research, rank tracking for 100 keywords, Google Search Console and Google Analytics, the full site audit, the AI writing assistant, and publishing articles from the content editor straight to a connected WordPress site.
-- Pro (₹2,499): 5 websites, 10,000 credits a month, rank tracking for 500 keywords, AI Visibility, backlink and competitor research, and 3 team members.
-- Business (₹4,999): 10 websites, 15,000 credits a month, everything in Pro, rank tracking for 1,000 keywords, white-label reports, and 5 team members. 5 more websites cost ₹999 and last 30 days from payment.
+- Pro (₹2,499): 3 websites, 10,000 credits a month, rank tracking for 500 keywords, AI Visibility, backlink and competitor research, and 3 team members.
+- Business (₹4,999): 10 websites, 15,000 credits a month, everything in Pro, rank tracking for 1,000 keywords, white-label reports, and 5 team members.
+- On Basic, Pro and Business, each extra website costs ₹999 and lasts 30 days from payment; buy it from Billing once per extra website. The Free plan cannot add websites.
 
 Credits pay for every paid data lookup and AI action, at its real cost. When credits run out, paid actions stop until next month's credits arrive. On Pro and Business the user can buy a one-time credit pack from Billing: 5,000 credits for ₹1,499 or 15,000 credits for ₹3,999. Pack credits are used after the monthly credits, last while the paid plan is active and expire when it ends. Basic cannot buy packs; it upgrades to Pro instead.
 
