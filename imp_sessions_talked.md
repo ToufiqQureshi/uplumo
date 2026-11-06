@@ -13,6 +13,12 @@ priorities, corrections, and what still waits on him. Read it after
   decision, remove it when he answers.
 - Never write secrets, keys or customer data here.
 
+## 4 Nov 2026: robots.txt open to every bot
+
+- Owner: "muje har jagah visible hona ha, har bot ko allow karo". Many AIs said they cannot read uplumo.com.
+- Done: robots.txt now names Google, Bing, Apple, OpenAI, Anthropic, Perplexity, Mistral, Meta, Amazon, DuckDuckGo, You.com, Common Crawl, AI2 explicitly; `/api/` stays closed.
+- Owner still has to check Cloudflare: AI bot blocking, Bot Fight Mode, Managed robots.txt, WAF challenges. Those block bots before our server sees them.
+
 ## 4 Nov 2026: Analytics + Cite Fix are Claude's responsibility
 
 - Owner: "analytics and cite fix teri zimmedaari ha"; Analytics "ek dum bekkar"; "sab dynamic ho koi bhi cheez hardcoded nai"; wants 3 PRs, then merge, deploy and UI-level testing, fast.
