@@ -337,10 +337,24 @@ func TestRobotsAndSitemap(t *testing.T) {
 	if ct := robots.Header().Get("Content-Type"); ct != "text/plain; charset=utf-8" {
 		t.Errorf("robots Content-Type = %q", ct)
 	}
-	for _, want := range []string{"User-agent: *\n", "Disallow: /api/\n", "Sitemap: https://uplumo.com/sitemap.xml\n"} {
+	for _, want := range []string{"User-agent: *\n", "Allow: /\n", "Disallow: /api/\n", "Sitemap: https://uplumo.com/sitemap.xml\n"} {
 		if !strings.Contains(robots.Body.String(), want) {
 			t.Errorf("robots.txt lacks %q", want)
 		}
+	}
+	// Every named crawler shares the one group, so none is left without the
+	// Allow rule or the /api/ block, and none gets its own Disallow: /.
+	body := robots.Body.String()
+	for _, agent := range []string{"GPTBot", "OAI-SearchBot", "ChatGPT-User", "ClaudeBot", "Claude-SearchBot", "PerplexityBot", "Google-Extended", "Googlebot", "Bingbot", "Applebot-Extended"} {
+		if !strings.Contains(body, "User-agent: "+agent+"\n") {
+			t.Errorf("robots.txt lacks crawler %q", agent)
+		}
+	}
+	if strings.Contains(body, "Disallow: /\n") {
+		t.Error("robots.txt blocks the whole site")
+	}
+	if n := strings.Count(body, "Allow: /\n"); n != 1 {
+		t.Errorf("robots.txt has %d Allow groups, want 1 shared group", n)
 	}
 
 	sitemap := get(s.ServeSitemap, "/sitemap.xml", nil)
