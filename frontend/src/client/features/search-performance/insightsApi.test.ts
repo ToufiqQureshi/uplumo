@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { QueryClient } from "@tanstack/react-query";
 import { ApiError } from "@/client/lib/uplumoApi";
-import { insightsQueryOptions } from "./insightsApi";
+import { insightsQueryOptions, keepForProject } from "./insightsApi";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -112,5 +112,18 @@ describe("search insights query", () => {
     await expect(
       fetchQuery(insightsQueryOptions("p", {}, [])),
     ).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it("keeps old numbers while new ones load, but never from another project", () => {
+    const keep = keepForProject("project-a");
+    const previous = { connected: false } as const;
+    expect(
+      keep(previous, { queryKey: ["searchInsights", "project-a", {}, []] }),
+    ).toBe(previous);
+    expect(
+      keep(previous, { queryKey: ["searchInsights", "project-b", {}, []] }),
+    ).toBeUndefined();
+    expect(keep(undefined, undefined)).toBeUndefined();
+    expect(keep(previous, undefined)).toBeUndefined();
   });
 });

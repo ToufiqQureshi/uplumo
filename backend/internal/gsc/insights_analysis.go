@@ -386,9 +386,16 @@ func findCTRGaps(stats []queryStat, compactTerms []string, rules InsightRules) [
 	return out
 }
 
+// windowCuts says which windows were read only up to the row limit. A page
+// missing from such a window may simply sit below the cut-off, so its clicks
+// there are unknown, not zero.
+type windowCuts struct{ middle, newest bool }
+
 // findDecay lists pages whose clicks fell by at least DecayDrop in each of
 // two consecutive windows. oldest, middle and newest hold single-key page rows.
-func findDecay(oldest, middle, newest []SearchRow, rules InsightRules) []Decay {
+// A page missing from a window that was cut at the row limit is skipped: its
+// traffic there is unknown.
+func findDecay(oldest, middle, newest []SearchRow, rules InsightRules, cut windowCuts) []Decay {
 	clicksByPage := func(rows []SearchRow) map[string]float64 {
 		out := make(map[string]float64, len(rows))
 		for _, row := range rows {
@@ -406,7 +413,11 @@ func findDecay(oldest, middle, newest []SearchRow, rules InsightRules) []Decay {
 			continue
 		}
 		page, a := row.Keys[0], row.Clicks
-		b, c := mid[page], now[page]
+		b, inMiddle := mid[page]
+		c, inNewest := now[page]
+		if !inMiddle && cut.middle || !inNewest && cut.newest {
+			continue
+		}
 		if b > a*keep || c > b*keep {
 			continue
 		}

@@ -35,7 +35,10 @@ type InsightsCoverage struct {
 	DecayAvailable bool `json:"decayAvailable"`
 	// ComparisonAvailable is false when the previous window is out of range.
 	ComparisonAvailable bool `json:"comparisonAvailable"`
-	BrandTermsUsed      bool `json:"brandTermsUsed"`
+	// PageReadsCut is true when a page or search read stopped at its row limit.
+	// A page missing from a cut read is unknown, never counted as lost or new.
+	PageReadsCut   bool `json:"pageReadsCut"`
+	BrandTermsUsed bool `json:"brandTermsUsed"`
 }
 
 // Insights is the free analysis of the site's own Search Console data.
@@ -79,6 +82,28 @@ func validateBrandTerms(terms []string) error {
 	}
 	return nil
 }
+
+// read is one single-key read and whether it stopped at its row limit.
+type read struct {
+	keys map[string]bool
+	cut  bool
+}
+
+func newReads(rows []SearchRow) read {
+	r := read{keys: make(map[string]bool, len(rows)), cut: len(rows) >= insightPageLimit}
+	for _, row := range rows {
+		if len(row.Keys) == 1 {
+			r.keys[row.Keys[0]] = true
+		}
+	}
+	return r
+}
+
+// knows reports whether the read can say something about key: it returned the
+// key, or it was not cut, so a missing key really had no traffic.
+func (r read) knows(key string) bool { return r.keys[key] || !r.cut }
+
+func prevPagesCut(rows [][]SearchRow, at int) bool { return len(rows[at]) >= insightPageLimit }
 
 func capList[T any](items []T, limit int) []T {
 	if len(items) > limit {
@@ -191,17 +216,32 @@ func (s *Service) GetInsights(ctx context.Context, organizationID, projectID str
 	var decaying []Decay
 	if comparison {
 		prevClicks := sumSearchTotals(rows[pagesMiddleAt]).Clicks
-		losing = buildPageChanges(rows[pagesNowAt], rows[pagesMiddleAt], prevClicks, insightListCap)
-		lost, won := buildChanges(rows[queriesNowAt], rows[queriesMiddleAt], prevClicks, insightListCap, insightListCap)
+		nowPages, prevPages := newReads(rows[pagesNowAt]), newReads(rows[pagesMiddleAt])
+		nowQueries, prevQueries := newReads(rows[queriesNowAt]), newReads(rows[queriesMiddleAt])
+		out.Coverage.PageReadsCut = nowPages.cut || prevPages.cut || nowQueries.cut || prevQueries.cut
+		pageLost, _ := buildChanges(rows[pagesNowAt], rows[pagesMiddleAt], prevClicks, len(rows[pagesMiddleAt]), 0)
+		for _, c := range pageLost {
+			if nowPages.knows(c.key) {
+				losing = append(losing, PageChange{Page: c.key, ChangeMetrics: c.ChangeMetrics})
+			}
+		}
+		losing = losing[:min(len(losing), insightListCap)]
+		lost, won := buildChanges(rows[queriesNowAt], rows[queriesMiddleAt], prevClicks, len(rows[queriesMiddleAt]), len(rows[queriesNowAt]))
 		for _, c := range lost {
-			out.QueryLosses = append(out.QueryLosses, QueryChange{Query: c.key, ChangeMetrics: c.ChangeMetrics})
+			if nowQueries.knows(c.key) && len(out.QueryLosses) < insightListCap {
+				out.QueryLosses = append(out.QueryLosses, QueryChange{Query: c.key, ChangeMetrics: c.ChangeMetrics})
+			}
 		}
 		for _, c := range won {
-			out.QueryGains = append(out.QueryGains, QueryChange{Query: c.key, ChangeMetrics: c.ChangeMetrics})
+			// A search missing from a cut previous read is not "new".
+			if prevQueries.knows(c.key) && len(out.QueryGains) < insightListCap {
+				out.QueryGains = append(out.QueryGains, QueryChange{Query: c.key, ChangeMetrics: c.ChangeMetrics})
+			}
 		}
 	}
 	if decay {
-		decaying = findDecay(rows[pagesOldestAt], rows[pagesMiddleAt], rows[pagesNowAt], rules)
+		decaying = findDecay(rows[pagesOldestAt], rows[pagesMiddleAt], rows[pagesNowAt], rules, windowCuts{middle: prevPagesCut(rows, pagesMiddleAt), newest: prevPagesCut(rows, pagesNowAt)})
+		out.Coverage.PageReadsCut = out.Coverage.PageReadsCut || prevPagesCut(rows, pagesOldestAt)
 	}
 	out.Totals = map[string]int{"decaying": len(decaying), "ctrGaps": len(gaps), "cannibalization": len(cannibal)}
 	out.Actions = pickActions(losing, decaying, gaps, cannibal)
