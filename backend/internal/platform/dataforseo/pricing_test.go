@@ -54,9 +54,15 @@ func TestApprovedDataForSEOCostScenarios(t *testing.T) {
 }
 
 func TestEstimateUSDForApprovedBriefCalls(t *testing.T) {
-	serp := EstimateUSD("/v3/serp/google/organic/live/advanced", []byte(`[{"depth":30}]`))
-	parsing := EstimateUSD("/v3/on_page/content_parsing/live", []byte(`[{},{},{},{},{},{},{},{}]`))
-	if math.Abs(serp-0.006) > 1e-9 || math.Abs(parsing-0.0012) > 1e-9 || math.Abs(serp+parsing-0.0072) > 1e-9 {
-		t.Fatalf("brief ceilings SERP=%v parse=%v total=%v, want 0.006, 0.0012, 0.0072", serp, parsing, serp+parsing)
+	serpEstimate := EstimateUSD("/v3/serp/google/organic/live/advanced", []byte(`[{"depth":30}]`))
+	serp := SerpCostUSD(30, false)
+	parsingEstimate := EstimateUSD("/v3/on_page/content_parsing/live", []byte(`[{},{},{},{},{},{},{},{}]`))
+	parsing := ContentParsingCostUSD(8)
+	if math.Abs(serp-serpEstimate) > 1e-9 || math.Abs(parsing-parsingEstimate) > 1e-9 ||
+		math.Abs(serp-0.006) > 1e-9 || math.Abs(parsing-0.0012) > 1e-9 || math.Abs(serp+parsing-0.0072) > 1e-9 {
+		t.Fatalf("brief ceilings SERP=%v/%v parse=%v/%v total=%v, want provider estimates 0.006, 0.0012, 0.0072", serp, serpEstimate, parsing, parsingEstimate, serp+parsing)
+	}
+	if ContentParsingCostUSD(0) != 0 || ContentParsingCostUSD(-1) != 0 {
+		t.Fatal("content parsing cost must be zero when no pages are requested")
 	}
 }

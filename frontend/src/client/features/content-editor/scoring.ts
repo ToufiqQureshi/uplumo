@@ -50,7 +50,6 @@ export function scoreContent(
                 "readability",
                 "alt-text",
                 "search-description",
-                "experience",
               ].includes(c.id),
             ),
           ]

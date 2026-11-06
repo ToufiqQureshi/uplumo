@@ -2,14 +2,14 @@ import { useMutation } from "@tanstack/react-query";
 import { RefreshCw, Search } from "lucide-react";
 import { cn } from "cn";
 import { Button } from "@/client/components/ui/button";
+import { formatCredits } from "@/client/features/billing/credits/format";
+import { useBillingUsage } from "@/client/features/billing/usageApi";
 import { briefMatchesTopic, termUsage } from "./brief-view";
 import { fetchSearchBrief, type SearchBrief } from "./contentEditorApi";
 import { headings, normalizeText } from "./scoring-text";
 import { useEditorSession } from "./editor-session";
 
-// About 9 credits per new brief: one SERP plus up to eight page reads. The
-// server settles the provider-reported successful cost; prices may drift.
-const BRIEF_CREDIT_NOTE = "about 9 credits";
+const BRIEF_COST_ACTION = "content_brief";
 
 const usageTone = {
   under: "border-warning/40 bg-warning/10",
@@ -37,9 +37,32 @@ export function BriefPanel({
 }) {
   const { editor } = useEditorSession();
   const topic = keyword.trim();
+  const billingUsage = useBillingUsage();
+  const briefCost = billingUsage.data?.costs.find(
+    (cost) =>
+      cost.feature === "keyword_research" && cost.action === BRIEF_COST_ACTION,
+  );
+  const maxCredits = briefCost?.maxCredits ?? 0;
+  const chargesCredits =
+    billingUsage.data?.chargesCredits && !billingUsage.data.unlimited;
+  const creditQuoteReady =
+    billingUsage.data !== undefined && (!chargesCredits || maxCredits > 0);
+  const creditQuoteUnavailable =
+    (!billingUsage.data && billingUsage.isError) ||
+    Boolean(chargesCredits && maxCredits === 0);
+  const creditQuote = !billingUsage.data
+    ? billingUsage.isError
+      ? "Credit quote unavailable; brief actions are disabled."
+      : "Loading credit quote…"
+    : !chargesCredits
+      ? "No credits are charged to this workspace."
+      : maxCredits > 0
+        ? `Up to ${formatCredits(maxCredits)} credits for a new brief · ${formatCredits(billingUsage.data.balanceCredits)} left.`
+        : "Credit quote unavailable; brief actions are disabled.";
   const mutation = useMutation({
     mutationFn: (refresh: boolean) =>
       fetchSearchBrief({ data: { projectId, keyword: topic, refresh } }),
+    retry: false,
     onSuccess: onBrief,
     meta: { errorToast: false },
   });
@@ -62,15 +85,24 @@ export function BriefPanel({
             applies.
           </p>
         ) : null}
+        <p
+          role={creditQuoteUnavailable ? "alert" : undefined}
+          className={cn(
+            "text-xs",
+            creditQuoteUnavailable
+              ? "text-destructive"
+              : "text-muted-foreground",
+          )}
+        >
+          {creditQuote}
+        </p>
         <Button
           className="w-full"
-          disabled={!topic || mutation.isPending}
+          disabled={!topic || mutation.isPending || !creditQuoteReady}
           onClick={() => mutation.mutate(false)}
         >
           <Search aria-hidden />
-          {mutation.isPending
-            ? "Reading the top pages…"
-            : `Get search brief (${BRIEF_CREDIT_NOTE})`}
+          {mutation.isPending ? "Reading the top pages…" : "Get search brief"}
         </Button>
         {!topic ? (
           <p className="text-xs text-muted-foreground">
@@ -78,8 +110,8 @@ export function BriefPanel({
           </p>
         ) : (
           <p className="text-xs text-muted-foreground">
-            Free if a brief for this topic was made in the last 30 days. Basic
-            plan and up.
+            A cached brief uses no extra credits. Search briefs require an
+            eligible paid plan.
           </p>
         )}
         {mutation.isError ? (
@@ -102,15 +134,28 @@ export function BriefPanel({
             “{current.keyword}” · {current.competitors.length} top pages ·{" "}
             {new Date(current.fetchedAt).toLocaleDateString()}
           </p>
+          <p
+            role={creditQuoteUnavailable ? "alert" : undefined}
+            className={cn(
+              "mt-1 text-xs",
+              creditQuoteUnavailable
+                ? "text-destructive"
+                : "text-muted-foreground",
+            )}
+          >
+            {creditQuote}
+          </p>
         </div>
         <Button
           variant="outline"
           size="sm"
-          disabled={mutation.isPending}
+          disabled={mutation.isPending || !creditQuoteReady}
           onClick={() => {
             if (
               window.confirm(
-                `Read the top pages again? This uses ${BRIEF_CREDIT_NOTE}.`,
+                chargesCredits
+                  ? `Refresh the brief? It can use up to ${formatCredits(maxCredits)} credits.`
+                  : "Refresh the brief? No credits are charged to this workspace.",
               )
             )
               mutation.mutate(true);

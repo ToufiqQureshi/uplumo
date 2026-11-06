@@ -13,6 +13,14 @@ priorities, corrections, and what still waits on him. Read it after
   decision, remove it when he answers.
 - Never write secrets, keys or customer data here.
 
+## 6 Nov 2026: Content Editor fixes in one PR
+
+- Owner: "fix it in one pr samja everything fix the bugs"; the approved paid-test cap remains about 159 credits.
+- Live QA used 11 customer credits across 10 AI actions. One brief refresh returned Cloudflare 502 with no customer charge; provider-side cost is unknown and it was not retried.
+- The original draft was restored; no post was published or draft deleted.
+- Fixed layout, italic/bold duplicate H1s, visible word count, FAQ scoring, and quote-to-hold alignment from shared DataForSEO rates. Removed unverifiable experience points; no additional paid action was run.
+- PR: https://github.com/ToufiqQureshi/uplumo/pull/274. Changes are not deployed.
+
 ## 5 Nov 2026: Search Growth (GSC + GA4) and AI actions
 
 - Owner: "UI bhohat gandha ha", "paisa gaya to gaya, user se credits cut hote hain, value dena hi padega", "gsc ga4 ka pura data dikhao, sirf 10 nahi, with our valuable analysis", "best golang code". Wants it done in **2 PRs only**, UI clean and easy.

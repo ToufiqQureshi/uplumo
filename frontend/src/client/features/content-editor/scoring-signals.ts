@@ -8,9 +8,8 @@ import {
 } from "./scoring-text";
 import type { ContentDraftInput } from "./scoring";
 
-// Signals from Google's helpful-content and E-E-A-T guidance: freshness,
-// first-hand experience, a written search description, a plain definition
-// and a real FAQ.
+// Signals from helpful-content guidance: freshness, a written search
+// description, a plain definition and a real FAQ.
 
 // freshnessRule: the "Show freshness" check passes only when the draft has
 // a reviewed date less than 12 months old. The source of truth is the
@@ -57,26 +56,6 @@ export function freshWithinTwelveMonths(reviewed: string, now: Date): boolean {
   // Exactly 12 months: fresh until the same calendar day passes.
   return parsed.getUTCDate() >= now.getUTCDate();
 }
-// First-hand experience is what Google's helpful-content guidance asks for
-// most: something the writer saw, tried, measured or was asked.
-const EXPERIENCE = [
-  /\b(?:i|we|my|our)\b[^.!?\n]{0,60}\b(?:tried|tested|wore|used|visited|bought|found|saw|asked|made|cooked|built|measured|compared|noticed|learned|worked|helped|ran|checked)\b/iu,
-  /\b(?:in my|in our|from my|from our)\s+(?:experience|tests?|store|shop|clinic|practice|work)\b/iu,
-  /\b(?:maine|humne|mera|meri|hamare|hamari)\b[^.!?\n]{0,60}\b(?:dekha|kiya|try|pehna|use|test|khareeda|poocha)\b/iu,
-];
-export function experienceCheck(body: string): ScoreCheck {
-  const shown = EXPERIENCE.some((pattern) => pattern.test(body));
-  return check(
-    "experience",
-    "Your own experience",
-    shown
-      ? "The article shares something you saw, tried or measured."
-      : "Add one real example: what you or your customers tried, saw or measured.",
-    10,
-    shown ? 10 : 0,
-  );
-}
-
 export function searchDescriptionCheck(d: ContentDraftInput): ScoreCheck {
   const length = d.metaDescription.trim().length;
   return check(
@@ -120,11 +99,16 @@ export function definesTopic(body: string, topic: string) {
 // The template text the FAQ block inserts; it must not earn FAQ points.
 const FAQ_TEMPLATE = /^question people ask\??$/iu;
 export function realFaq(body: string) {
-  const start = body.search(
+  const normalizedHeadings = body.replace(
+    /^(#{2,6}\s+)(.+)$/gmu,
+    (_line, prefix: string, heading: string) =>
+      prefix + heading.replace(/(?:\*\*|__|~~|`)/gu, ""),
+  );
+  const start = normalizedHeadings.search(
     /^#{2,3}\s+(?:faq|frequently asked questions)\b/imu,
   );
   if (start < 0) return false;
-  const sections = body
+  const sections = normalizedHeadings
     .slice(start)
     .split(/\n(?=#{2,4}\s)/u)
     .slice(1);

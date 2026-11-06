@@ -3,6 +3,8 @@ package sitepublish
 import (
 	"bytes"
 	"fmt"
+	"regexp"
+	"strings"
 
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"
@@ -14,6 +16,10 @@ import (
 // lists, autolinks). Raw HTML in a draft is dropped, not passed through, so
 // an article cannot carry a script onto the customer's site.
 var markdown = goldmark.New(goldmark.WithExtensions(extension.GFM))
+var (
+	italicAsterisk   = regexp.MustCompile(`(^|[^\p{L}\p{N}_])\*(\S(.*?\S)?)\*`)
+	italicUnderscore = regexp.MustCompile(`(^|[^\p{L}\p{N}_])_(\S(.*?\S)?)_`)
+)
 
 // imageURLs lists the distinct image addresses in a Markdown document, in
 // the order they appear.
@@ -44,6 +50,36 @@ func renderHTML(source string, replace map[string]string) (string, error) {
 		return "", fmt.Errorf("render article: %w", err)
 	}
 	return out.String(), nil
+}
+
+func withoutDuplicateTitleHeading(source, title string) string {
+	if strings.TrimSpace(title) == "" {
+		return source
+	}
+	lines := strings.Split(source, "\n")
+	for index, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "![") {
+			continue
+		}
+		heading, ok := strings.CutPrefix(line, "# ")
+		if !ok {
+			return source
+		}
+		heading = strings.TrimSpace(strings.TrimRight(heading, "#"))
+		heading = strings.NewReplacer("**", "", "__", "", "~~", "", "`", "").Replace(heading)
+		heading = italicAsterisk.ReplaceAllString(heading, "$1$2")
+		heading = italicUnderscore.ReplaceAllString(heading, "$1$2")
+		if !strings.EqualFold(strings.Join(strings.Fields(heading), " "), strings.Join(strings.Fields(title), " ")) {
+			return source
+		}
+		end := index + 1
+		for end < len(lines) && strings.TrimSpace(lines[end]) == "" {
+			end++
+		}
+		return strings.Join(append(lines[:index], lines[end:]...), "\n")
+	}
+	return source
 }
 
 func walkImages(document ast.Node, visit func(*ast.Image)) {

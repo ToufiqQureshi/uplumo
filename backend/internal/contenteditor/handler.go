@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -194,7 +195,7 @@ func (h Handler) save(w http.ResponseWriter, r *http.Request) {
 	case errors.Is(err, ErrNotFound):
 		httpx.WriteError(w, http.StatusNotFound, "not_found", "This project or draft is no longer available.")
 	case errors.Is(err, ErrDraftLimit):
-		httpx.WriteError(w, http.StatusConflict, "draft_limit", "This project has reached its 100 saved draft limit. Delete an old draft to make room.")
+		httpx.WriteError(w, http.StatusConflict, "draft_limit", fmt.Sprintf("This project has reached its %d saved draft limit. Delete an old draft to make room.", MaxDraftsPerProject))
 	case errors.As(err, &validationError):
 		httpx.WriteError(w, http.StatusBadRequest, "validation_error", validationError.Error())
 	default:

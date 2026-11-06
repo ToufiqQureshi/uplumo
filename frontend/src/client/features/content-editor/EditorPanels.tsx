@@ -5,6 +5,7 @@ import { Button } from "@/client/components/ui/button";
 import type { ContentDraftSummary } from "./contentEditorApi";
 import type { ContentDraftInput } from "./scoring";
 import {
+  articleWordCount,
   titleForDraft,
   searchPreviewTitle,
   searchPreviewUrl,
@@ -208,7 +209,7 @@ export function DraftToolbar({
   onSave: () => void;
   onPublish: () => void;
 }) {
-  const words = draft.content.trim().match(/[\p{L}\p{N}]+/gu)?.length ?? 0;
+  const words = articleWordCount(draft.content);
   const readMinutes = Math.ceil(words / 200);
   return (
     <div className="sticky top-16 z-10 -mx-1 flex flex-wrap items-center gap-3 rounded-xl border bg-background/95 px-4 py-3 backdrop-blur">

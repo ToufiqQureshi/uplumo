@@ -39,7 +39,7 @@ func TestTypicalCostHintsAreNotBelowWhatALiveClickBilled(t *testing.T) {
 
 // The maximum shown before an AI visibility action is its worst-case hold, so
 // a customer is never charged more than the screen said.
-func TestAIVisibilityMaximumIsTheWorstCaseHold(t *testing.T) {
+func TestPublishedMaximumsMatchTheirWorstCaseHolds(t *testing.T) {
 	want := map[string]int64{
 		ActionBrandLookup:    CreditsForUSD(dataforseo.BrandLookupCeilingUSD(2, true)),
 		ActionPromptExplorer: CreditsForUSD(dataforseo.PromptExplorerCeilingUSD(4, true)),
@@ -64,9 +64,13 @@ func TestAIVisibilityMaximumIsTheWorstCaseHold(t *testing.T) {
 			}
 			continue
 		}
+		if cost.Feature == spend.KeywordResearch && cost.Action == ActionContentBrief {
+			// The dedicated quote test verifies this cost against its provider hold.
+			continue
+		}
 		if cost.Feature != spend.AIVisibility {
 			if cost.MaxCredits != 0 {
-				t.Errorf("%s shows a maximum of %d credits; only AI visibility and Cite Fix set one", cost.Feature, cost.MaxCredits)
+				t.Errorf("%s/%s unexpectedly shows a maximum of %d credits", cost.Feature, cost.Action, cost.MaxCredits)
 			}
 			continue
 		}
@@ -84,6 +88,22 @@ func TestJavaScriptRenderPriceIsFromThePublishedBatchCost(t *testing.T) {
 	if got := ActionMaxCredits(spend.SiteAudit, ActionJavaScriptRender); got != 39 {
 		t.Fatalf("JavaScript rendering max = %d credits, want 39", got)
 	}
+}
+
+func TestSearchBriefQuoteIncludesItsMaximumCustomerCharge(t *testing.T) {
+	want := CreditsForUSD(ContentBriefMaxUSD())
+	for _, cost := range ActionCosts() {
+		if cost.Feature == spend.KeywordResearch && cost.Action == ActionContentBrief {
+			if cost.Credits != want || cost.MaxCredits != want {
+				t.Fatalf("search brief quote = %d/%d credits, want %d for its full SERP and eight page reads", cost.Credits, cost.MaxCredits, want)
+			}
+			if ActionMaxCredits(spend.KeywordResearch, ActionContentBrief) != want {
+				t.Fatalf("search brief maximum = %d credits, want %d", ActionMaxCredits(spend.KeywordResearch, ActionContentBrief), want)
+			}
+			return
+		}
+	}
+	t.Fatalf("missing billing quote for %s/%s", spend.KeywordResearch, ActionContentBrief)
 }
 
 func TestRankTrackingTypicalCostUsesThePublishedTop30QueuedRate(t *testing.T) {

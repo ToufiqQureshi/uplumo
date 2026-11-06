@@ -12,3 +12,9 @@ export const searchPreviewUrl = (domain: string, slug: string) =>
   domain
     ? `https://${domain}/${slug || "your-page"}`
     : "Connect a website to preview its URL";
+
+export const articleWordCount = (content: string) =>
+  content
+    .replace(/!\[[^\]]*\]\([^)]+\)/gu, " ")
+    .replace(/\[([^\]]+)\]\([^)]+\)/gu, "$1")
+    .match(/[\p{L}\p{N}]+/gu)?.length ?? 0;

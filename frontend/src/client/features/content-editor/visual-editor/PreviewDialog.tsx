@@ -71,7 +71,7 @@ export function PreviewDialog({
             </h1>
             {content.trim() ? (
               <div className="leading-7">
-                <ArticlePreview content={content} />
+                <ArticlePreview content={content} title={title} />
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">
