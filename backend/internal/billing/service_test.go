@@ -559,6 +559,8 @@ type fixture struct {
 	// duringCreate runs while the fake Razorpay handles a creation.
 	duringCreate func()
 	planOverride func(*razorpay.Plan)
+	// invoices answers the fake Razorpay's invoice listing, by subscription id.
+	invoices map[string][]razorpay.Invoice
 	// cancels are the cancellations the fake Razorpay received, in order.
 	cancels []cancelCall
 	// payments are the capture and refund requests the fake Razorpay
@@ -619,6 +621,16 @@ func newFixture(ctx context.Context, t *testing.T) *fixture {
 			}
 			if err := json.NewEncoder(w).Encode(got); err != nil {
 				t.Error(err)
+			}
+			return
+		}
+		if r.URL.Path == "/invoices" {
+			items := f.invoices[r.URL.Query().Get("subscription_id")]
+			if r.URL.Query().Get("skip") != "0" {
+				items = nil
+			}
+			if err := json.NewEncoder(w).Encode(map[string]any{"items": items}); err != nil {
+				t.Errorf("encode invoices: %v", err)
 			}
 			return
 		}

@@ -134,3 +134,56 @@ func TestCollectWarnsOnceAboutAnUntrustedProxy(t *testing.T) {
 		t.Errorf("a trusted proxy must not warn:\n%s", logs.String())
 	}
 }
+
+func TestLeadsHandlers(t *testing.T) {
+	ctx := context.Background()
+	f := newFixture(ctx, t)
+	s := f.addSite(ctx, t, "acme.com")
+	logger := slog.New(slog.DiscardHandler)
+	call := func(h http.HandlerFunc, method, project, body string) *httptest.ResponseRecorder {
+		t.Helper()
+		req := httptest.NewRequestWithContext(ctx, method, "/api/v1/projects/"+project+"/analytics/leads", strings.NewReader(body))
+		req.SetPathValue("projectId", project)
+		rec := httptest.NewRecorder()
+		h(rec, req)
+		return rec
+	}
+	save := saveLeadsHandler(logger, f.svc)
+	tests := []struct {
+		name, project, body string
+		wantStatus          int
+		wantCode            string
+	}{
+		{"not JSON", s.project, "names=a", http.StatusBadRequest, "invalid_leads"},
+		{"names missing", s.project, `{}`, http.StatusBadRequest, "invalid_leads"},
+		{"blank name", s.project, `{"names":["  "]}`, http.StatusBadRequest, "invalid_leads"},
+		{"body over the limit", s.project, `{"names":["` + strings.Repeat("a", maxLeadsBody) + `"]}`, http.StatusRequestEntityTooLarge, "payload_too_large"},
+		{"no tracking site", "no-such-project", `{"names":["Sign up"]}`, http.StatusConflict, "no_site"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rec := call(save, http.MethodPost, tt.project, tt.body)
+			var got struct {
+				Error struct {
+					Code string `json:"code"`
+				} `json:"error"`
+			}
+			_ = json.Unmarshal(rec.Body.Bytes(), &got)
+			if rec.Code != tt.wantStatus || got.Error.Code != tt.wantCode {
+				t.Fatalf("status, code = %d, %q; want %d, %q (body %s)", rec.Code, got.Error.Code, tt.wantStatus, tt.wantCode, rec.Body)
+			}
+		})
+	}
+
+	if rec := call(save, http.MethodPost, s.project, `{"names":["Sign up","Book a call"]}`); rec.Code != http.StatusOK {
+		t.Fatalf("save status = %d (body %s)", rec.Code, rec.Body)
+	}
+	rec := call(leadsHandler(logger, f.svc), http.MethodGet, s.project, "")
+	var got leadsBody
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil || rec.Code != http.StatusOK {
+		t.Fatalf("get = %d %s, %v", rec.Code, rec.Body, err)
+	}
+	if strings.Join(got.Names, "|") != "Sign up|Book a call" {
+		t.Errorf("names = %v, want the saved order", got.Names)
+	}
+}

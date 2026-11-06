@@ -5,9 +5,11 @@ import (
 	"context"
 	"crypto/rand"
 	"errors"
+	"fmt"
 	"net/url"
 	"os"
 	"slices"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -632,66 +634,225 @@ func TestSummarizeSessionsCampaignsAndLandingPages(t *testing.T) {
 	}
 }
 
-func TestSummarizeEnquiriesCountVisitorsOnce(t *testing.T) {
+func TestSummarizeCountsOnlyChosenLeads(t *testing.T) {
 	ctx := context.Background()
 	f := newFixture(ctx, t)
 	s := f.addSite(ctx, t, "acme.com")
-	send := func(ts time.Time, name, ip string) {
+	send := func(ts time.Time, path, name, ip string) {
 		t.Helper()
 		f.svc.now = func() time.Time { return ts }
-		h := hit(t, s.key, "https://acme.com/", "", ip, desktopUA)
+		h := hit(t, s.key, "https://acme.com"+path, "", ip, desktopUA)
 		h.EventName = name
 		if err := f.svc.Collect(ctx, h); err != nil {
 			t.Fatalf("Collect(%q) error = %v", name, err)
 		}
 	}
-	send(day, "", "10.0.0.1")
-	// One visitor taps WhatsApp twice and Call once: three enquiry actions,
-	// one enquiring visitor-day.
-	send(day, "whatsapp_click", "10.0.0.1")
-	send(day.Add(time.Minute), "whatsapp_click", "10.0.0.1")
-	send(day.Add(2*time.Minute), "call_click", "10.0.0.1")
-	// Another visitor submits a form.
-	send(day.Add(3*time.Minute), "form_submit", "10.0.0.2")
-	// Not enquiries: a sign-up, a checkout and a link that only contains "book".
-	send(day.Add(4*time.Minute), "signup_click", "10.0.0.3")
-	send(day.Add(5*time.Minute), "subscription_checkout_agency", "10.0.0.3")
-	send(day.Add(6*time.Minute), "facebook_click", "10.0.0.4")
+	send(day, "/", "", "10.0.0.1")
+	send(day, "/pricing", "", "10.0.0.2")
+	send(day, "/pricing", "", "10.0.0.3")
+	// One visitor signs up twice and books a demo: three lead actions, one
+	// lead visitor-day.
+	send(day, "/pricing", "signup_click", "10.0.0.2")
+	send(day.Add(time.Minute), "/pricing", "signup_click", "10.0.0.2")
+	send(day.Add(2*time.Minute), "/pricing", "book_demo", "10.0.0.2")
+	// Not chosen as leads: a WhatsApp tap and a form, which the old name
+	// guessing counted.
+	send(day.Add(3*time.Minute), "/", "whatsapp_click", "10.0.0.1")
+	send(day.Add(4*time.Minute), "/", "form_submit", "10.0.0.1")
 	// Outside the range.
-	send(day.AddDate(0, 0, -1), "call_click", "10.0.0.5")
+	send(day.AddDate(0, 0, -1), "/pricing", "signup_click", "10.0.0.5")
 
+	before, err := f.svc.Summarize(ctx, s.project, day, day)
+	if err != nil {
+		t.Fatalf("Summarize() error = %v", err)
+	}
+	if before.Leads.Configured || before.Leads.Count != 0 || before.Leads.Actions == nil || before.Leads.Pages == nil {
+		t.Fatalf("leads before choosing = %+v; want unconfigured, zero, empty (not nil) lists", before.Leads)
+	}
+
+	if _, err := f.svc.SaveLeadEvents(ctx, s.project, []string{" signup_click ", "book_demo", "signup_click"}); err != nil {
+		t.Fatalf("SaveLeadEvents() error = %v", err)
+	}
 	got, err := f.svc.Summarize(ctx, s.project, day, day)
 	if err != nil {
 		t.Fatalf("Summarize() error = %v", err)
 	}
-	if got.Enquiries.Count != 4 || got.Enquiries.Visitors != 2 {
-		t.Errorf("enquiries = %d actions by %d visitors; want 4 by 2", got.Enquiries.Count, got.Enquiries.Visitors)
+	if !got.Leads.Configured || got.Leads.Count != 3 || got.Leads.Visitors != 1 {
+		t.Errorf("leads = %+v; want configured, 3 actions by 1 visitor", got.Leads)
 	}
-	wantActions := []EventCount{{"whatsapp_click", 2, 1}, {"call_click", 1, 1}, {"form_submit", 1, 1}}
-	if !slices.Equal(got.Enquiries.Actions, wantActions) {
-		t.Errorf("enquiry actions = %+v\nwant %+v", got.Enquiries.Actions, wantActions)
+	wantActions := []EventCount{{"signup_click", 2, 1}, {"book_demo", 1, 1}}
+	if !slices.Equal(got.Leads.Actions, wantActions) {
+		t.Errorf("lead actions = %+v\nwant %+v", got.Leads.Actions, wantActions)
 	}
-	if len(got.Events) != 6 {
+	wantPages := []LeadPage{{"/pricing", 2, 1}, {"/", 1, 0}}
+	if !slices.Equal(got.Leads.Pages, wantPages) {
+		t.Errorf("lead pages = %+v\nwant %+v", got.Leads.Pages, wantPages)
+	}
+	if len(got.Events) != 4 {
 		t.Errorf("events = %+v; every custom event must stay listed", got.Events)
 	}
 }
 
-func TestSummarizeWithoutEnquiriesReturnsEmptyActions(t *testing.T) {
+func TestSummarizeTiesLeadsToSourcesAndAILandings(t *testing.T) {
 	ctx := context.Background()
 	f := newFixture(ctx, t)
 	s := f.addSite(ctx, t, "acme.com")
-	h := hit(t, s.key, "https://acme.com/", "", "10.0.0.1", desktopUA)
-	h.EventName = "signup_click"
-	f.svc.now = func() time.Time { return day }
-	if err := f.svc.Collect(ctx, h); err != nil {
+	send := func(ts time.Time, h Hit) {
+		t.Helper()
+		f.svc.now = func() time.Time { return ts }
+		if err := f.svc.Collect(ctx, h); err != nil {
+			t.Fatalf("Collect(%+v) error = %v", h, err)
+		}
+	}
+	view := func(page, referrer, ip, session string) Hit {
+		h := hit(t, s.key, "https://acme.com"+page, referrer, ip, desktopUA)
+		h.SessionID, h.PageviewID = session, session+"-p"
+		return h
+	}
+	lead := func(page, ip, session, id string) Hit {
+		h := hit(t, s.key, "https://acme.com"+page, "", ip, desktopUA)
+		h.EventName, h.SessionID, h.EventID = "Sign up", session, id
+		return h
+	}
+	send(day, view("/", "https://www.google.com/", "10.0.0.1", "s1"))
+	send(day.Add(time.Minute), lead("/", "10.0.0.1", "s1", "e1"))
+	send(day, view("/guide", "https://chatgpt.com/", "10.0.0.2", "s2"))
+	send(day.Add(time.Minute), lead("/guide", "10.0.0.2", "s2", "e2"))
+	send(day, view("/guide", "https://www.perplexity.ai/", "10.0.0.3", "s3"))
+	send(day, view("/", "", "10.0.0.4", "s4"))
+	// An old snippet sends no session: the lead counts, but no visit owns it.
+	old := hit(t, s.key, "https://acme.com/", "", "10.0.0.5", desktopUA)
+	old.EventName = "Sign up"
+	send(day, old)
+	// The day before: one lead, for the previous-period comparison.
+	send(day.AddDate(0, 0, -1), view("/", "", "10.0.0.6", "s6"))
+	send(day.AddDate(0, 0, -1).Add(time.Minute), lead("/", "10.0.0.6", "s6", "e6"))
+
+	before, err := f.svc.Summarize(ctx, s.project, day, day)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantBefore := []SourceLeads{{"ai", 2, 0}, {"direct", 1, 0}, {"search", 1, 0}}
+	if !slices.Equal(before.SourceLeads, wantBefore) {
+		t.Errorf("source leads before choosing = %+v\nwant %+v (no lead guessed)", before.SourceLeads, wantBefore)
+	}
+
+	if _, err := f.svc.SaveLeadEvents(ctx, s.project, []string{"Sign up"}); err != nil {
 		t.Fatal(err)
 	}
 	got, err := f.svc.Summarize(ctx, s.project, day, day)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Enquiries.Count != 0 || got.Enquiries.Visitors != 0 || got.Enquiries.Actions == nil || len(got.Enquiries.Actions) != 0 {
-		t.Errorf("enquiries = %+v; want zero with an empty (not nil) action list", got.Enquiries)
+	wantSources := []SourceLeads{{"ai", 2, 1}, {"direct", 1, 0}, {"search", 1, 1}}
+	if !slices.Equal(got.SourceLeads, wantSources) {
+		t.Errorf("source leads = %+v\nwant %+v", got.SourceLeads, wantSources)
+	}
+	wantAI := []AILanding{{"chatgpt", "/guide", 1, 1}, {"perplexity", "/guide", 1, 0}}
+	if !slices.Equal(got.AILandings, wantAI) {
+		t.Errorf("AI landings = %+v\nwant %+v", got.AILandings, wantAI)
+	}
+	if got.Leads.Visitors != 3 || got.Leads.PreviousVisitors != 1 {
+		t.Errorf("lead visitors = %d, previous = %d; want 3 (old snippet included) and 1",
+			got.Leads.Visitors, got.Leads.PreviousVisitors)
+	}
+}
+
+func TestSummarizeEmptyListsAreNotNull(t *testing.T) {
+	ctx := context.Background()
+	f := newFixture(ctx, t)
+	s := f.addSite(ctx, t, "acme.com")
+	got, err := f.svc.Summarize(ctx, s.project, day, day)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.SourceLeads == nil || got.AILandings == nil {
+		t.Errorf("source leads = %v, AI landings = %v; want empty lists so the JSON is [] not null", got.SourceLeads, got.AILandings)
+	}
+}
+
+func TestSummarizeComparesWithPreviousPeriod(t *testing.T) {
+	ctx := context.Background()
+	f := newFixture(ctx, t)
+	s := f.addSite(ctx, t, "acme.com")
+	for i, ts := range []time.Time{day, day.AddDate(0, 0, -1), day.AddDate(0, 0, -1), day.AddDate(0, 0, -2)} {
+		f.svc.now = func() time.Time { return ts }
+		if err := f.svc.Collect(ctx, hit(t, s.key, "https://acme.com/", "", fmt.Sprintf("10.0.0.%d", i+1), desktopUA)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	got, err := f.svc.Summarize(ctx, s.project, day, day)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Visitors != 1 || got.PreviousVisitors != 2 {
+		t.Errorf("visitors = %d, previous = %d; want 1 and 2 (the day before only)", got.Visitors, got.PreviousVisitors)
+	}
+}
+
+func TestSaveLeadEvents(t *testing.T) {
+	ctx := context.Background()
+	f := newFixture(ctx, t)
+	s := f.addSite(ctx, t, "acme.com")
+	tooMany := make([]string, maxLeadEvents+1)
+	for i := range tooMany {
+		tooMany[i] = fmt.Sprintf("e%d", i)
+	}
+	invalid := map[string][]string{
+		"empty name": {"signup", "  "},
+		"too long":   {strings.Repeat("a", maxEventName+1)},
+		"control":    {"sign\nup"},
+		"too many":   tooMany,
+	}
+	for name, names := range invalid {
+		if _, err := f.svc.SaveLeadEvents(ctx, s.project, names); !errors.Is(err, ErrInvalidLeads) {
+			t.Errorf("%s: SaveLeadEvents() error = %v, want ErrInvalidLeads", name, err)
+		}
+	}
+	got, err := f.svc.SaveLeadEvents(ctx, s.project, []string{"book_call", "बुकिंग", "book_call"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"book_call", "बुकिंग"}; !slices.Equal(got, want) {
+		t.Errorf("saved = %v, want %v (trimmed, unicode kept, de-duplicated)", got, want)
+	}
+	stored, err := f.svc.LeadEvents(ctx, s.project)
+	if err != nil || !slices.Equal(stored, got) {
+		t.Errorf("LeadEvents() = %v, %v; want %v in saved order", stored, err, got)
+	}
+	// Saving again replaces the set; an empty list clears it.
+	if _, err := f.svc.SaveLeadEvents(ctx, s.project, []string{}); err != nil {
+		t.Fatal(err)
+	}
+	if stored, _ := f.svc.LeadEvents(ctx, s.project); len(stored) != 0 {
+		t.Errorf("after clearing, LeadEvents() = %v; want none", stored)
+	}
+	// A project without a site cannot save leads.
+	if _, err := f.svc.SaveLeadEvents(ctx, "no-such-project", []string{"x"}); !errors.Is(err, ErrNoSite) {
+		t.Errorf("no site: error = %v, want ErrNoSite", err)
+	}
+}
+
+func TestSaveLeadEventsConcurrentSavesKeepOneSet(t *testing.T) {
+	ctx := context.Background()
+	f := newFixture(ctx, t)
+	s := f.addSite(ctx, t, "acme.com")
+	sets := [][]string{{"a", "b"}, {"c"}, {"d", "e", "f"}}
+	var wg sync.WaitGroup
+	for _, set := range sets {
+		wg.Go(func() {
+			if _, err := f.svc.SaveLeadEvents(ctx, s.project, set); err != nil {
+				t.Errorf("SaveLeadEvents(%v) error = %v", set, err)
+			}
+		})
+	}
+	wg.Wait()
+	stored, err := f.svc.LeadEvents(ctx, s.project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.ContainsFunc(sets, func(set []string) bool { return slices.Equal(set, stored) }) {
+		t.Errorf("stored = %v; want exactly one of the saved sets, never a mix", stored)
 	}
 }
 

@@ -134,7 +134,8 @@ func lookupAPIKey(ctx context.Context, db *pgxpool.Pool, hash string) (keyLookup
 	var row keyLookup
 	err := db.QueryRow(ctx, `
 		SELECT id, reference_id, key, coalesce(enabled, true), remaining, refill_amount, expires_at
-		FROM apikey WHERE key = $1 LIMIT 1`, hash,
+		FROM apikey WHERE key = $1
+			AND NOT EXISTS (SELECT 1 FROM go_user_blocks b WHERE b.user_id = apikey.reference_id) LIMIT 1`, hash,
 	).Scan(&row.id, &row.referenceID, &row.key, &row.enabled, &row.remaining, &row.refillAmount, &row.expiresAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return keyLookup{}, false, nil

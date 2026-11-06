@@ -102,7 +102,7 @@ func TestTopUpVerifiedPaymentExactlyOnce(t *testing.T) {
 		t.Fatal("order creation credited the account", balance, err)
 	}
 	event := func(amount int64, currency, status string, captured bool) []byte {
-		return paymentEvent("payment.captured", "pay_topup", order.OrderID, amount, currency, status, captured)
+		return paymentEvent("payment.captured", "pay_topup_"+f.org, order.OrderID, amount, currency, status, captured)
 	}
 	if _, err = f.svc.HandleWebhook(ctx, event(order.Amount, "INR", "captured", true), "forged", "evt"); !errors.Is(err, ErrInvalidSignature) {
 		t.Fatal("unsigned payment accepted")
@@ -132,6 +132,9 @@ func TestTopUpVerifiedPaymentExactlyOnce(t *testing.T) {
 	}
 	if count != 1 || expires.Before(time.Now().AddDate(10, 0, 0)) {
 		t.Fatal("pack credits must last while the plan does", count, expires)
+	}
+	if got := f.ledger(t); len(got) != 1 || got["pay_topup_"+f.org] != (ledgerRow{Kind: "topup", Item: "credits_5000", Currency: "INR", Source: sourceWebhook, Amount: 149900}) {
+		t.Fatalf("revenue ledger = %+v, want the pack payment once", got)
 	}
 }
 

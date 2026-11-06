@@ -29,7 +29,7 @@ import { ThemePreferenceRadio } from "@/client/components/ThemePreferenceMenuIte
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { signOutAndRedirect, useSession } from "@/lib/auth-client";
 import { BILLING_ROUTE } from "@/shared/billing";
-import { staffAccessQueryOptions } from "@/client/features/staff-customers/customersApi";
+import { staffAccessQueryOptions } from "@/client/features/staff-console/customersApi";
 import {
   Sidebar as UiSidebar,
   SidebarContent,

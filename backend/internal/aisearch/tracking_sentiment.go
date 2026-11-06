@@ -129,7 +129,7 @@ func (s *Sentiment) Classify(ctx context.Context, org, project, runID, key strin
 			rows.Close()
 			return out, fmt.Errorf("read answer to classify: %w", err)
 		}
-		if excerpt := brandExcerpt(answer, brand, domain); excerpt != "" {
+		if excerpt := BrandExcerpt(answer, brand, domain); excerpt != "" {
 			mentioned = append(mentioned, sentimentRow{id: id, excerpt: excerpt})
 		} else {
 			absent = append(absent, id)
@@ -218,11 +218,11 @@ func (s *Sentiment) settle(ctx context.Context, hold spend.Hold, providerUSD, cu
 	return nil
 }
 
-// brandExcerpt is the part of an answer around the first mention of the
+// BrandExcerpt is the part of an answer around the first mention of the
 // brand or its domain, or "" when the answer never names it. Only this part is
 // sent to the model: the rest of the answer cannot change the brand's tone and
 // would only cost tokens.
-func brandExcerpt(answer, brand, domain string) string {
+func BrandExcerpt(answer, brand, domain string) string {
 	lower := strings.ToLower(answer)
 	at := -1
 	for _, term := range []string{brand, strings.TrimPrefix(strings.ToLower(domain), "www.")} {

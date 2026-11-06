@@ -1,170 +1,371 @@
-import { ArrowDown } from "lucide-react";
+import { firstBy } from "remeda";
+import type { ReactNode } from "react";
 import { Button } from "@/client/components/ui/button";
 import { formatCount } from "@/client/features/search-performance/SearchPerformanceColumns";
 import type { AnalyticsSummary } from "./analyticsApi";
 import {
   actionLabel,
-  channelRows,
+  aiSourceLabel,
+  channelLabel,
+  countOf,
   displayPath,
   formatShare,
 } from "./presentation";
 import { mergeEvents, trackingProblem } from "./visitSummary";
 
-const SETUP_STEPS = [
-  "Copy the latest tracking code",
-  "Paste it in your site header (WordPress: one click in Settings)",
-  "Open your site once; this page confirms it",
-];
-
 /**
- * The top of Analytics: fix tracking first if it is broken, then who visited,
- * who tried to contact the business, and where they came from.
+ * Broken tracking: page views arrive but no visits are stitched together, so
+ * sources, leads and rates would be wrong. Nothing else is shown until the
+ * site runs the current snippet.
  */
-export function AnalyticsOverview({
+export function TrackingProblemCard({
   summary,
-  range,
   onOpenTracking,
 }: {
   summary: AnalyticsSummary;
-  range: { from: string; to: string };
   onOpenTracking: () => void;
 }) {
-  const problem = trackingProblem(summary);
-  const leadingChannel = channelRows(summary.acquisitionChannels)[0];
-  let leadingPage = summary.topPages[0];
-  for (const page of summary.topPages) {
-    if (!leadingPage || page.pageviews > leadingPage.pageviews)
-      leadingPage = page;
-  }
-  const leads = summary.enquiries;
-  const leadNames = leads.actions.map((row) => actionLabel(row.name));
-  const merged = mergeEvents(summary.events).filter((row) => row.spellings > 1);
-  const aiVisits = summary.aiSources.reduce(
-    (total, source) => total + source.visitors,
-    0,
+  if (!trackingProblem(summary)) return null;
+  return (
+    <section
+      role="status"
+      aria-labelledby="fix-tracking"
+      className="space-y-3 rounded-2xl border border-destructive/40 bg-destructive/5 p-5"
+    >
+      <p className="label-mono text-destructive">Tracking is half working</p>
+      <h2 id="fix-tracking" className="text-lg font-semibold">
+        We see {formatCount(summary.pageviews)} page views but no visits, so
+        sources, leads and rates stay hidden until this is fixed.
+      </h2>
+      <p className="text-sm text-muted-foreground">
+        Your site runs an old tracking code. Replace it with the current one,
+        then open your site once.
+      </p>
+      <Button onClick={onOpenTracking}>Get the current code</Button>
+    </section>
   );
-  // Both counts are visitor-days, and one visitor who taps WhatsApp and Call
-  // counts once, so the rate can never pass 100%.
+}
+
+/** "+25%", "−40%", "new", or null when there is nothing to compare. */
+export function changeLabel(now: number, before: number): string | null {
+  if (before === 0) return now > 0 ? "new" : null;
+  const change = (now - before) / before;
+  if (Math.abs(change) < 0.005) return "no change";
+  return `${change > 0 ? "+" : "−"}${formatShare(Math.abs(change))}`;
+}
+
+/**
+ * The one-line read of the period, only from facts the data supports: the
+ * source that brought the most leads, and the busiest page that converts
+ * worse than the site as a whole.
+ */
+export function leadInsight(summary: AnalyticsSummary): string | null {
+  const { leads, visitors } = summary;
+  if (!leads.configured || visitors === 0) return null;
+  if (leads.visitors === 0) {
+    const page = leads.pages[0];
+    return page
+      ? `No leads yet. ${displayPath(page.path)} gets the most visitors (${formatCount(page.visitors)}); make your lead action easy to find there.`
+      : null;
+  }
+  const parts: string[] = [];
+  const best = firstBy(
+    summary.sourceLeads.filter((row) => row.leadVisitors > 0),
+    [(row) => row.leadVisitors, "desc"],
+  );
+  if (best) parts.push(`Most leads came from ${channelLabel(best.channel)}.`);
+  const siteRate = leads.visitors / visitors;
+  const leaky = leads.pages.find(
+    (page) =>
+      page.visitors >= 2 &&
+      page.visitors / visitors >= 0.2 &&
+      page.leadVisitors / page.visitors < siteRate / 2,
+  );
+  if (leaky)
+    parts.push(
+      `${displayPath(leaky.path)} gets ${formatShare(leaky.visitors / visitors)} of visitors but converts at ${formatShare(leaky.leadVisitors / leaky.visitors)}: start there.`,
+    );
+  return parts.length ? parts.join(" ") : null;
+}
+
+/**
+ * The top of Analytics: leads, visitors and the lead rate against the
+ * previous period, with one plain sentence on where to act.
+ */
+export function AnalyticsOverview({
+  summary,
+  days,
+  onPickLeads,
+}: {
+  summary: AnalyticsSummary;
+  days: number;
+  onPickLeads: () => void;
+}) {
+  const { leads } = summary;
   const rate = summary.visitors ? leads.visitors / summary.visitors : 0;
+  const insight = leadInsight(summary);
+  const merged = mergeEvents(summary.events).filter((row) => row.spellings > 1);
+  const leadNames = leads.actions.map((row) => actionLabel(row.name));
 
   return (
-    <div className="space-y-4">
-      {problem ? (
-        <section
-          role="status"
-          aria-labelledby="fix-tracking"
-          className="space-y-3 rounded-2xl border border-amber-300 bg-amber-50 p-5 text-amber-950 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100"
-        >
-          <p className="label-mono">Fix this first</p>
-          <h2 id="fix-tracking" className="text-lg font-semibold">
-            Your tracking is only half working: {formatCount(summary.pageviews)}{" "}
-            page views but 0 visits recorded. The numbers below cannot be
-            trusted until this is fixed.
-          </h2>
-          <ol className="grid gap-2 md:grid-cols-3">
-            {SETUP_STEPS.map((step, index) => (
-              <li
-                key={step}
-                className="flex gap-3 rounded-lg bg-background p-3 text-sm text-foreground"
-              >
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-foreground text-xs text-background">
-                  {index + 1}
-                </span>
-                {step}
-              </li>
-            ))}
-          </ol>
-          <Button onClick={onOpenTracking}>Fix tracking in 2 minutes</Button>
-        </section>
-      ) : null}
-
-      <section
-        aria-labelledby="visits-verdict"
-        className="space-y-2 rounded-2xl bg-foreground p-6 text-background"
-      >
-        <p className="label-mono text-background/70">
-          {range.from} – {range.to}
-        </p>
-        <h2
-          id="visits-verdict"
-          className="text-xl leading-snug font-semibold md:text-2xl"
-        >
-          {formatCount(summary.visitors)} visitors came.{" "}
-          {leads.visitors > 0
-            ? `${formatCount(leads.visitors)} tried to contact you (${leadNames
-                .slice(0, 2)
-                .join(
-                  ", ",
-                )}${leadNames.length > 2 ? ` +${leadNames.length - 2} more` : ""}).`
-            : "Nobody tapped WhatsApp, call, email or a form yet."}
-          {leadingChannel ? ` Most came from ${leadingChannel.label}.` : ""}
-        </h2>
-        <p className="text-sm text-background/80 md:text-base">
-          {leads.visitors === 0
-            ? "WhatsApp, phone, email links and forms are counted on their own. Make sure the latest tracking code is on your site."
-            : leadingPage
-              ? `Your most viewed page is ${displayPath(leadingPage.path)}. Make sure its WhatsApp or call button is visible without scrolling.`
-              : "Keep your contact buttons visible on every page."}
-          {aiVisits > 0
-            ? ` AI assistants sent ${formatCount(aiVisits)} visitors.`
-            : ""}
-        </p>
-      </section>
-
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Tile
+    <section
+      aria-label="This period"
+      className="space-y-5 rounded-2xl border bg-card p-5 md:p-6"
+    >
+      <div className="grid gap-5 sm:grid-cols-3">
+        {leads.configured ? (
+          <Figure
+            label="Leads"
+            value={formatCount(leads.visitors)}
+            change={changeLabel(leads.visitors, leads.previousVisitors)}
+            days={days}
+            hint="Visitors who did a lead action, once per day"
+          />
+        ) : (
+          <div className="space-y-2">
+            <p className="label-mono text-muted-foreground">Leads</p>
+            <p className="text-sm">
+              Tell us which action is a lead on your site, and this shows how
+              many visitors became one.
+            </p>
+            <Button size="sm" onClick={onPickLeads}>
+              Choose lead actions
+            </Button>
+          </div>
+        )}
+        <Figure
           label="Visitors"
           value={formatCount(summary.visitors)}
+          change={changeLabel(summary.visitors, summary.previousVisitors)}
+          days={days}
           hint="Counted once per day"
         />
-        <Tile
-          label="Enquiries"
-          value={formatCount(leads.count)}
-          hint="WhatsApp, call, email and form taps"
-        />
-        <Tile
-          label="Enquiry rate"
-          value={formatShare(rate)}
-          hint="Visitors who tried to contact you"
-        />
-        <Tile
-          label="From AI assistants"
-          value={formatCount(aiVisits)}
-          hint="ChatGPT, Gemini, Perplexity, Claude"
-        />
+        {leads.configured ? (
+          <Figure
+            label="Became leads"
+            value={formatShare(rate)}
+            hint={`Leads: ${leadNames.join(", ") || "none in this period"}`}
+          />
+        ) : null}
       </div>
-
+      {insight ? (
+        <p className="border-t pt-4 text-sm md:text-base">{insight}</p>
+      ) : null}
       {merged.length > 0 ? (
-        <p className="rounded-lg border p-3 text-sm" role="note">
+        <p className="text-sm text-muted-foreground" role="note">
           We counted {merged.map((row) => `"${row.name}"`).join(", ")} as one
           action: the same button was tagged with different capital letters.
         </p>
       ) : null}
-
-      <a
-        href="#visitor-actions"
-        className="inline-flex items-center gap-2 text-sm font-medium underline underline-offset-4"
-      >
-        See every page, source and action <ArrowDown className="size-4" />
-      </a>
-    </div>
+    </section>
   );
 }
 
-function Tile({
+function Figure({
   label,
   value,
+  change,
+  days,
   hint,
 }: {
   label: string;
   value: string;
+  change?: string | null;
+  days?: number;
   hint: string;
 }) {
   return (
-    <div className="rounded-xl border bg-card p-4">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
+    <div className="space-y-1">
+      <p className="label-mono text-muted-foreground">{label}</p>
+      <p className="font-serif text-5xl leading-none tabular-nums">{value}</p>
+      {change && days ? (
+        <p className="text-sm">
+          <span
+            className={
+              change.startsWith("+") || change === "new"
+                ? "font-medium text-success"
+                : change.startsWith("−")
+                  ? "font-medium text-destructive"
+                  : "text-muted-foreground"
+            }
+          >
+            {change}
+          </span>{" "}
+          <span className="text-muted-foreground">vs previous {days} days</span>
+        </p>
+      ) : null}
+      <p className="text-xs text-muted-foreground">{hint}</p>
     </div>
+  );
+}
+
+/** Each source that sent visitors, with its leads and lead rate. */
+export function LeadSourcesCard({ summary }: { summary: AnalyticsSummary }) {
+  const rows = summary.sourceLeads.filter((row) => row.visitors > 0);
+  if (rows.length === 0) return null;
+  const { configured } = summary.leads;
+  return (
+    <section
+      aria-labelledby="lead-sources"
+      className="rounded-2xl border bg-card p-5"
+    >
+      <h2 id="lead-sources" className="font-serif text-2xl">
+        {configured ? "Sources that bring leads" : "Where visitors come from"}
+      </h2>
+      <table className="mt-3 w-full text-sm">
+        <thead>
+          <tr className="text-left text-xs text-muted-foreground">
+            <th className="py-2 font-normal">Source</th>
+            <th className="py-2 text-right font-normal">Visitors</th>
+            {configured ? (
+              <>
+                <th className="py-2 text-right font-normal">Leads</th>
+                <th className="py-2 text-right font-normal">Lead rate</th>
+              </>
+            ) : null}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.channel} className="border-t">
+              <td className="py-2">{channelLabel(row.channel)}</td>
+              <td className="py-2 text-right tabular-nums">
+                {formatCount(row.visitors)}
+              </td>
+              {configured ? (
+                <>
+                  <td className="py-2 text-right tabular-nums">
+                    {formatCount(row.leadVisitors)}
+                  </td>
+                  <td className="py-2 text-right tabular-nums">
+                    {formatShare(row.leadVisitors / row.visitors)}
+                  </td>
+                </>
+              ) : null}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="mt-3 text-xs text-muted-foreground">
+        A visit belongs to the source of its first page. Old tracking codes send
+        no visits, so their leads are not tied to a source.
+      </p>
+    </section>
+  );
+}
+
+/** The busiest pages and the visitors who became leads on them. */
+export function LeadPagesCard({ summary }: { summary: AnalyticsSummary }) {
+  const { leads } = summary;
+  if (!leads.configured || leads.pages.length === 0) return null;
+  const most = Math.max(...leads.pages.map((page) => page.visitors));
+  return (
+    <section
+      aria-labelledby="lead-pages"
+      className="rounded-2xl border bg-card p-5"
+    >
+      <h2 id="lead-pages" className="font-serif text-2xl">
+        Busy pages and their leads
+      </h2>
+      <ul className="mt-3 space-y-3">
+        {leads.pages.map((page) => (
+          <li key={page.path} className="space-y-1.5">
+            <div className="flex justify-between gap-3 text-sm">
+              <span className="truncate font-mono">
+                {displayPath(page.path)}
+              </span>
+              <span className="shrink-0 text-muted-foreground tabular-nums">
+                {countOf(page.visitors, "visitor", "visitors")} ·{" "}
+                {countOf(page.leadVisitors, "lead", "leads")}
+              </span>
+            </div>
+            <div
+              className="flex h-2 overflow-hidden rounded bg-muted"
+              aria-hidden
+            >
+              <div
+                className="bg-muted-foreground/40"
+                style={{
+                  width: `${((page.visitors - page.leadVisitors) / most) * 100}%`,
+                }}
+              />
+              <div
+                className="bg-primary"
+                style={{ width: `${(page.leadVisitors / most) * 100}%` }}
+              />
+            </div>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-3 text-xs text-muted-foreground">
+        Leads counted on the page where the lead action happened.
+      </p>
+    </section>
+  );
+}
+
+/**
+ * Visitors sent by AI assistants and where they landed. With none, it says
+ * so and points to Cite Fix, which shows why AI answers skip the site.
+ */
+export function AiVisitorsCard({
+  summary,
+  citeFixLink,
+}: {
+  summary: AnalyticsSummary;
+  citeFixLink: ReactNode;
+}) {
+  const total = summary.aiSources.reduce((sum, row) => sum + row.visitors, 0);
+  const configured = summary.leads.configured;
+  const leads = summary.aiLandings.reduce(
+    (sum, row) => sum + row.leadVisitors,
+    0,
+  );
+  return (
+    <section
+      aria-labelledby="ai-visitors"
+      className="space-y-3 rounded-2xl border bg-card p-5"
+    >
+      <h2 id="ai-visitors" className="font-serif text-2xl">
+        Visitors from AI assistants
+      </h2>
+      {total === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          No visitor came from an AI assistant in this period.
+        </p>
+      ) : (
+        <>
+          <p className="font-serif text-5xl leading-none tabular-nums">
+            {formatCount(total)}
+          </p>
+          {configured ? (
+            <p className="text-sm text-muted-foreground">
+              {countOf(leads, "became a lead", "became leads")} in the same
+              visit.
+            </p>
+          ) : null}
+          <ul className="space-y-2 text-sm">
+            {summary.aiLandings.map((row) => (
+              <li
+                key={`${row.source}:${row.path}`}
+                className="flex justify-between gap-3 border-t pt-2"
+              >
+                <span className="min-w-0 truncate">
+                  {aiSourceLabel(row.source)} →{" "}
+                  <span className="font-mono">{displayPath(row.path)}</span>
+                </span>
+                <span className="shrink-0 text-muted-foreground tabular-nums">
+                  {formatCount(row.visitors)}
+                  {configured
+                    ? ` · ${countOf(row.leadVisitors, "lead", "leads")}`
+                    : ""}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      <div className="border-t pt-3">{citeFixLink}</div>
+    </section>
   );
 }

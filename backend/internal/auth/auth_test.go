@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/toufiqqureshi/uplumo/backend/internal/database"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/pgdb"
 )
 
@@ -249,6 +250,9 @@ func openTestDB(ctx context.Context, t *testing.T) *pgxpool.Pool {
 		t.Fatalf("connect: %v", err)
 	}
 	t.Cleanup(pool.Close)
+	if err := database.Migrate(ctx, pool); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
 	schema, err := os.ReadFile("../database/testdata/legacy_schema.sql")
 	if err != nil {
 		t.Fatalf("read legacy schema: %v", err)
@@ -257,4 +261,18 @@ func openTestDB(ctx context.Context, t *testing.T) *pgxpool.Pool {
 		t.Fatalf("create legacy schema: %v", err)
 	}
 	return pool
+}
+
+func TestAuthenticateRefusesABlockedUser(t *testing.T) {
+	ctx := context.Background()
+	f := newFixture(ctx, t)
+	req := httptest.NewRequestWithContext(ctx, http.MethodGet, "/", nil)
+	req.AddCookie(&http.Cookie{Name: sessionCookie, Value: goldenCookie, HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode})
+	if _, err := f.svc.Authenticate(req); err != nil {
+		t.Fatalf("before block: %v", err)
+	}
+	exec(ctx, t, f.pool, `INSERT INTO go_user_blocks (user_id, blocked_by) VALUES ($1, 'staff')`, f.user.ID)
+	if _, err := f.svc.Authenticate(req); !errors.Is(err, ErrUnauthenticated) {
+		t.Fatalf("blocked user's session: err = %v, want ErrUnauthenticated", err)
+	}
 }

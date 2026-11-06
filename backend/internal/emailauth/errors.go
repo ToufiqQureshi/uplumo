@@ -25,6 +25,7 @@ var (
 	errUserExists          = &apiError{http.StatusUnprocessableEntity, "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL", "User already exists. Use another email."}
 	errBadCredentials      = &apiError{http.StatusUnauthorized, "INVALID_EMAIL_OR_PASSWORD", "Invalid email or password"}
 	errEmailNotVerified    = &apiError{http.StatusForbidden, "EMAIL_NOT_VERIFIED", "Email not verified"}
+	errAccountBlocked      = &apiError{http.StatusForbidden, "ACCOUNT_BLOCKED", "This account is blocked. Contact support@uplumo.com."}
 	errInvalidToken        = &apiError{http.StatusBadRequest, "INVALID_TOKEN", "Invalid token"}
 	errVerifyDisabled      = &apiError{http.StatusBadRequest, "VERIFICATION_EMAIL_NOT_ENABLED", "Verification email isn't enabled"}
 	errEmailMismatch       = &apiError{http.StatusBadRequest, "EMAIL_MISMATCH", "Email mismatch"}

@@ -557,7 +557,8 @@ func (h *handler) authenticateOAuthToken(ctx context.Context, r *http.Request, t
 		FROM go_mcp_oauth_access_tokens t
 		JOIN go_mcp_oauth_clients c ON c.id=t.client_id
 		JOIN "user" u ON u.id=t.user_id
-		WHERE t.token=$1 AND t.expires_at > now() AND c.expires_at > now()`, hashOAuthValue(token)).Scan(&userID, &organizationID, &clientID, &scope, &email)
+		WHERE t.token=$1 AND t.expires_at > now() AND c.expires_at > now()
+			AND NOT EXISTS (SELECT 1 FROM go_user_blocks b WHERE b.user_id=t.user_id)`, hashOAuthValue(token)).Scan(&userID, &organizationID, &clientID, &scope, &email)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Auth{}, false, nil
 	}

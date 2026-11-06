@@ -243,3 +243,15 @@ func TestConcurrentFirstSignInsCreateOneWorkspace(t *testing.T) {
 		t.Fatalf("memberships = %d, want exactly one workspace", n)
 	}
 }
+
+func TestSignInRefusesAUserBlockedByStaff(t *testing.T) {
+	e := newAuthEnv(t, envOptions{})
+	e.seedUser("user-1", "ada@example.com", "correct horse battery", true)
+	if _, err := e.pool.Exec(t.Context(), `INSERT INTO go_user_blocks (user_id, blocked_by) VALUES ('user-1', 'staff')`); err != nil {
+		t.Fatal(err)
+	}
+	resp := e.request("POST", "/api/auth/sign-in/email", signInBody("ada@example.com", "correct horse battery"), originHeaders())
+	if resp.StatusCode != http.StatusForbidden || !strings.Contains(string(resp.raw), "ACCOUNT_BLOCKED") || resp.sessionCookie() != nil {
+		t.Fatalf("blocked sign-in = %d %s", resp.StatusCode, resp.raw)
+	}
+}

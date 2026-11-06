@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  countOf,
   aiShareOfVisits,
   actionLabel,
   aiSourceRows,
@@ -106,5 +107,15 @@ describe("displayPath", () => {
     ["/bad%E0%A4", "/bad%E0%A4"],
   ])("%s -> %s", (path, shown) => {
     expect(displayPath(path)).toBe(shown);
+  });
+});
+
+describe("countOf", () => {
+  it.each([
+    [0, "0 leads"],
+    [1, "1 lead"],
+    [2, "2 leads"],
+  ])("%i", (count, want) => {
+    expect(countOf(count, "lead", "leads")).toBe(want);
   });
 });

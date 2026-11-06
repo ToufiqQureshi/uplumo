@@ -215,9 +215,9 @@ export const accountNavGroup: NavGroup = {
 
 /** Shown above Billing only when the server confirms the user is staff. */
 export const staffNavItem: NavItem = {
-  label: "Customers",
+  label: "Staff console",
   icon: Users,
-  link: linkOptions({ to: "/admin/customers" }),
+  link: linkOptions({ to: "/staff" }),
 };
 
 /** One project page's link, label and icon, shared by the nav and shortcuts. */

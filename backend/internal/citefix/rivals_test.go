@@ -2,10 +2,12 @@ package citefix
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
 	"net/url"
+	"slices"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -104,7 +106,7 @@ func testRivalRobots(t *testing.T, robots string) {
 	}
 }
 
-func TestRivalComparisonsUseMatchedBrandLookupPagesCapAtThreeAndCache(t *testing.T) {
+func TestRivalComparisonsCoverEveryQuestionCapAndCache(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	pool := testPool(ctx, t)
@@ -114,7 +116,7 @@ func TestRivalComparisonsUseMatchedBrandLookupPagesCapAtThreeAndCache(t *testing
 		switch r.URL.Path {
 		case "/robots.txt":
 			_, _ = w.Write([]byte("User-agent: *\nAllow: /\n"))
-		case "/proof", "/brand", "/second", "/too-many":
+		case "/proof", "/brand", "/second", "/too-many", "/extra":
 			if r.Method == http.MethodHead {
 				w.Header().Set("Content-Type", "text/html")
 				return
@@ -148,6 +150,13 @@ func TestRivalComparisonsUseMatchedBrandLookupPagesCapAtThreeAndCache(t *testing
 			{Prompt: secondQuestion, Engine: "chatgpt", CitedPages: []CitedPage{{URL: "https://second.example/second", Domain: "second.example"}}},
 		},
 	}
+	// More missed questions, each with one page: with the two above they fill
+	// the first round but one, so the second round adds the first question's
+	// Brand Lookup page and the cap leaves the second question's out.
+	for i := range rivalPageLimit - 3 {
+		host := fmt.Sprintf("extra%d.example", i)
+		proof.Misses = append(proof.Misses, Miss{Prompt: fmt.Sprintf("extra %d", i), Engine: "gemini", CitedPages: []CitedPage{{URL: "https://" + host + "/extra", Domain: host}}})
+	}
 	mentionedDomain := "mentioned.example"
 	mentions := &MentionsSnapshot{Result: aisearch.BrandLookupResult{TopPages: []aisearch.TopPage{
 		{URL: "https://proof.example/proof", Platform: "google", Keywords: []aisearch.PromptExample{{Question: firstQuestion}}},
@@ -161,7 +170,7 @@ func TestRivalComparisonsUseMatchedBrandLookupPagesCapAtThreeAndCache(t *testing
 		t.Fatal(err)
 	}
 	if len(comparisons) != rivalPageLimit || pageGets.Load() != rivalPageLimit {
-		t.Fatalf("comparisons=%d page GETs=%d; want exactly three unique public pages", len(comparisons), pageGets.Load())
+		t.Fatalf("comparisons=%d page GETs=%d; want exactly rivalPageLimit unique public pages", len(comparisons), pageGets.Load())
 	}
 	seen := map[string]RivalComparison{}
 	for _, comparison := range comparisons {
@@ -177,7 +186,7 @@ func TestRivalComparisonsUseMatchedBrandLookupPagesCapAtThreeAndCache(t *testing
 		t.Fatal("the customer's own top page was compared as a rival")
 	}
 	if _, ok := seen["https://mentioned.example/too-many"]; ok {
-		t.Fatal("the comparison exceeded the three-page report cap")
+		t.Fatal("the comparison exceeded the report cap")
 	}
 	if _, ok := seen["https://unmatched.example/unused"]; ok {
 		t.Fatal("an unrelated Brand Lookup question was compared")
@@ -194,7 +203,7 @@ func TestRivalComparisonsUseMatchedBrandLookupPagesCapAtThreeAndCache(t *testing
 		t.Fatal(err)
 	}
 	if pageGets.Load() != rivalPageLimit*2 {
-		t.Fatalf("seven-day refresh page GETs=%d, want exactly three new pages", pageGets.Load())
+		t.Fatalf("seven-day refresh page GETs=%d, want exactly rivalPageLimit new pages", pageGets.Load())
 	}
 
 	otherOrganizationID, otherProjectID := seedProject(ctx, t, pool)
@@ -203,6 +212,11 @@ func TestRivalComparisonsUseMatchedBrandLookupPagesCapAtThreeAndCache(t *testing
 	}
 	if pageGets.Load() != rivalPageLimit*3 {
 		t.Fatalf("another workspace reused the first workspace cache: page GETs=%d", pageGets.Load())
+	}
+	for _, miss := range proof.Misses {
+		if !slices.ContainsFunc(comparisons, func(c RivalComparison) bool { return c.Prompt == miss.Prompt }) {
+			t.Errorf("missed question %q got no comparison; every question comes before a second page", miss.Prompt)
+		}
 	}
 	if !strings.Contains(seen["https://proof.example/proof"].Engine, "perplexity") {
 		t.Fatalf("saved proof source was lost: %+v", seen["https://proof.example/proof"])
@@ -282,5 +296,130 @@ func TestRivalComparisonsRememberFailuresAndNeverWaitPastTheBudget(t *testing.T)
 	}
 	if brokenGets.Load() != 2 {
 		t.Fatalf("broken rival GETs=%d after %v; want one retry", brokenGets.Load(), rivalRetryInterval)
+	}
+}
+
+func TestRivalComparisonsFindListPagesThatSkipTheCustomer(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	pool := testPool(ctx, t)
+	organizationID, projectID := seedProject(ctx, t, pool)
+	var pageGets atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/robots.txt":
+			_, _ = w.Write([]byte("User-agent: *\nAllow: /\n"))
+		case "/top-firms", "/lists-you":
+			if r.Method == http.MethodHead {
+				w.Header().Set("Content-Type", "text/html")
+				return
+			}
+			pageGets.Add(1)
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			own := ""
+			if r.URL.Path == "/lists-you" {
+				own = `<a href="https://www.shop.example/">Shop</a>`
+			}
+			_, _ = w.Write([]byte(`<html><head><title>Top firms</title></head><body><h1>Top firms</h1>
+				<a href="https://www.rival-one.example/">One</a> <a href="https://rival-two.example/x">Two</a>
+				<a href="https://in.social.example/company/one">Profile</a> <a href="https://uncited.example/">Not cited</a>
+				<a href="/about">About</a> ` + own + `</body></html>`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+	target, _ := url.Parse(server.URL)
+	client := &http.Client{
+		Transport:     rivalTestTransport{serverURL: target, base: server.Client().Transport},
+		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
+	}
+	guard := &audit.Guard{Resolver: publicRivalResolver{}, Client: client}
+	now := time.Date(2026, 10, 28, 12, 0, 0, 0, time.UTC)
+	store := Store{DB: pool, Guard: guard, HTTP: client, Now: func() time.Time { return now }}
+	proof := &Proof{
+		Domain: "shop.example",
+		Rivals: []DomainCount{{Domain: "rival-one.example", Count: 2}, {Domain: "social.example", Count: 1}},
+		Misses: []Miss{
+			{Prompt: "best firms", Engine: "perplexity", Cited: []string{"directory.example", "rival-two.example"}, CitedPages: []CitedPage{
+				{URL: "https://directory.example/top-firms", Domain: "directory.example"},
+				{URL: "https://other-list.example/lists-you", Domain: "other-list.example"},
+			}},
+		},
+	}
+	comparisons, err := store.rivalComparisons(ctx, organizationID, projectID, proof, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	byURL := map[string]RivalComparison{}
+	for _, c := range comparisons {
+		byURL[c.Rival.URL] = c
+	}
+	list := byURL["https://directory.example/top-firms"]
+	if want := []string{"in.social.example", "rival-one.example", "rival-two.example"}; !slices.Equal(list.ListsRivals, want) || list.LinksYou {
+		t.Fatalf("list page = %v, links you %v; want %v and false", list.ListsRivals, list.LinksYou, want)
+	}
+	if !byURL["https://other-list.example/lists-you"].LinksYou {
+		t.Fatal("a page linking to the customer's site was not marked")
+	}
+
+	// The cache keeps the links: a second read fetches nothing and agrees.
+	again, err := store.rivalComparisons(ctx, organizationID, projectID, proof, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pageGets.Load() != 2 || len(again) != 2 || !slices.Equal(again[0].ListsRivals, comparisons[0].ListsRivals) {
+		t.Fatalf("cached read: GETs %d, comparisons %+v", pageGets.Load(), again)
+	}
+
+	// A page cached before links were read is fetched once more.
+	if _, err := pool.Exec(ctx, `UPDATE go_citefix_rival_pages SET signals_json = signals_json - 'linksRead' - 'linkedHosts' WHERE project_id = $1`, projectID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.rivalComparisons(ctx, organizationID, projectID, proof, nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	if pageGets.Load() != 4 {
+		t.Fatalf("pages cached without links: GETs %d, want 2 more", pageGets.Load())
+	}
+}
+
+func TestMatchesHost(t *testing.T) {
+	hosts := map[string]bool{"linkedin.com": true, "a.example": true}
+	tests := map[string]bool{
+		"linkedin.com": true, "in.linkedin.com": true, "a.b.linkedin.com": true,
+		"notlinkedin.com": false, "com": false, "": false, "x.a.example": true, "example": false,
+	}
+	for host, want := range tests {
+		if got := matchesHost(host, hosts); got != want {
+			t.Errorf("matchesHost(%q) = %v, want %v", host, got, want)
+		}
+	}
+}
+
+func TestCommonFooterLinksDoNotMakeAListPage(t *testing.T) {
+	rivals := map[string]bool{"linkedin.com": true, "youtube.com": true, "rival-one.example": true, "rival-two.example": true}
+	linked := [][]string{
+		{"in.linkedin.com", "youtube.com"},
+		{"linkedin.com", "youtube.com", "rival-one.example", "rival-two.example"},
+		{"linkedin.com", "youtube.com"},
+		{"youtube.com"},
+	}
+	kept := withoutCommonHosts(rivals, linked)
+	if kept["linkedin.com"] || kept["youtube.com"] || !kept["rival-one.example"] || !kept["rival-two.example"] {
+		t.Fatalf("kept = %v; want footer hosts dropped and firms kept", kept)
+	}
+	social := RivalPage{Domain: "firm.example", LinkedHosts: linked[0]}
+	if listed, _ := listedRivals(social, kept, "shop.example"); len(listed) != 0 {
+		t.Errorf("a page with only social links listed %v", listed)
+	}
+	directory := RivalPage{Domain: "dir.example", LinkedHosts: linked[1]}
+	if listed, _ := listedRivals(directory, kept, "shop.example"); len(listed) != 2 {
+		t.Errorf("the directory listed %v; want the two firms", listed)
+	}
+	// Two directories listing the same firms are not furniture: fewer than
+	// three pages never drop a host.
+	if two := withoutCommonHosts(rivals, [][]string{linked[1], linked[1]}); len(two) != len(rivals) {
+		t.Errorf("with two pages kept %v", two)
 	}
 }

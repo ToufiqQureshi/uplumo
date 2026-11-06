@@ -66,6 +66,7 @@ import (
 	"github.com/toufiqqureshi/uplumo/backend/internal/sam"
 	"github.com/toufiqqureshi/uplumo/backend/internal/site"
 	"github.com/toufiqqureshi/uplumo/backend/internal/sitepublish"
+	"github.com/toufiqqureshi/uplumo/backend/internal/staff"
 	"github.com/toufiqqureshi/uplumo/backend/internal/support"
 	"github.com/toufiqqureshi/uplumo/backend/internal/team"
 )
@@ -361,6 +362,7 @@ func run(logger *slog.Logger) (err error) {
 		return rank + ai, err
 	}
 	reportsSvc := &reports.Service{Store: reports.Repository{DB: db}}
+	customersSvc := &customers.Service{DB: db, StaffEmails: cfg.StaffEmails}
 	supportSvc := &support.Service{DB: db, StaffEmails: cfg.StaffEmails, PublicURL: cfg.BetterAuthURL.String()}
 	if cfg.LoopsAPIKey != "" && cfg.LoopsSupportReportTemplateID != "" {
 		supportSvc.Mailer = email.LoopsClient{APIKey: cfg.LoopsAPIKey}
@@ -475,7 +477,13 @@ func run(logger *slog.Logger) (err error) {
 			Activation:              &activation.Service{Store: activation.Repository{DB: db}},
 			Reports:                 reportsSvc,
 			Support:                 supportSvc,
-			Customers:               &customers.Service{DB: db, StaffEmails: cfg.StaffEmails},
+			Customers:               customersSvc,
+			Staff: &staff.Deps{
+				Staff:   customersSvc,
+				Stats:   staff.Stats{DB: db},
+				Actions: staff.Actions{DB: db, StaffEmails: cfg.StaffEmails},
+				Billing: billingSvc,
+			},
 			PublicURL:               cfg.PublicURL,
 			OpenRouterConfigured:    strings.TrimSpace(cfg.OpenRouterAPIKey) != "",
 			ContentWriterConfigured: strings.TrimSpace(cfg.OpenRouterAPIKey) != "",

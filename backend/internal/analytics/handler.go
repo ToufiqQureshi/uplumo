@@ -46,6 +46,8 @@ func Mount(mux *http.ServeMux, d Deps) {
 	mux.HandleFunc("OPTIONS /collect", collectPreflight)
 	mux.Handle("POST /api/v1/projects/{projectId}/analytics/site", d.WithSession(d.WithProjectAccess(ensureSiteHandler(d.Logger, d.Service))))
 	mux.Handle("GET /api/v1/projects/{projectId}/analytics/summary", d.WithSession(d.WithProjectAccess(summaryHandler(d.Logger, d.Service))))
+	mux.Handle("GET /api/v1/projects/{projectId}/analytics/leads", d.WithSession(d.WithProjectAccess(leadsHandler(d.Logger, d.Service))))
+	mux.Handle("POST /api/v1/projects/{projectId}/analytics/leads", d.WithSession(d.WithProjectAccess(saveLeadsHandler(d.Logger, d.Service))))
 	mux.Handle("GET /api/v1/analytics/{siteId}/countries", d.WithSession(countriesHandler(d.Logger, d.Service)))
 }
 
@@ -288,6 +290,56 @@ func publicOrigin(r *http.Request) string {
 		scheme = proto
 	}
 	return scheme + "://" + r.Host
+}
+
+type leadsBody struct {
+	Names []string `json:"names"`
+}
+
+// maxLeadsBody bounds a lead selection request: 20 names of 64 characters
+// (up to 4 bytes each) plus JSON punctuation.
+const maxLeadsBody = 8 << 10
+
+// leadsHandler returns the event names the project counts as leads.
+func leadsHandler(logger *slog.Logger, svc *Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		names, err := svc.LeadEvents(r.Context(), r.PathValue("projectId"))
+		if err != nil {
+			logger.ErrorContext(r.Context(), "load lead events", "err", err)
+			httpx.WriteError(w, http.StatusInternalServerError, "internal", "Something went wrong. Please try again.")
+			return
+		}
+		httpx.WriteJSON(w, http.StatusOK, leadsBody{Names: names})
+	}
+}
+
+// saveLeadsHandler replaces the event names the project counts as leads. It
+// is idempotent: sending the same list twice stores the same set.
+func saveLeadsHandler(logger *slog.Logger, svc *Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var body leadsBody
+		err := httpx.DecodeJSONLimit(r.Body, maxLeadsBody, &body)
+		if errors.Is(err, httpx.ErrPayloadTooLarge) {
+			httpx.WriteError(w, http.StatusRequestEntityTooLarge, "payload_too_large", "Too many lead actions.")
+			return
+		}
+		if err != nil || body.Names == nil {
+			httpx.WriteError(w, http.StatusBadRequest, "invalid_leads", `Send {"names": [...]}.`)
+			return
+		}
+		names, err := svc.SaveLeadEvents(r.Context(), r.PathValue("projectId"), body.Names)
+		switch {
+		case err == nil:
+			httpx.WriteJSON(w, http.StatusOK, leadsBody{Names: names})
+		case errors.Is(err, ErrInvalidLeads):
+			httpx.WriteError(w, http.StatusBadRequest, "invalid_leads", fmt.Sprintf("Choose at most %d actions, each 1 to %d characters.", maxLeadEvents, maxEventName))
+		case errors.Is(err, ErrNoSite):
+			httpx.WriteError(w, http.StatusConflict, "no_site", "Add the tracking code first.")
+		default:
+			logger.ErrorContext(r.Context(), "save lead events", "err", err)
+			httpx.WriteError(w, http.StatusInternalServerError, "internal", "Something went wrong. Please try again.")
+		}
+	}
 }
 
 // summaryHandler returns the project's traffic summary for a date range.

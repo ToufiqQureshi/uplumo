@@ -3,8 +3,10 @@ import { ApiError } from "@/client/lib/uplumoApi";
 import {
   analyticsCountriesPage,
   analyticsClicksQueryOptions,
+  analyticsLeadsQueryOptions,
   analyticsSummaryQueryOptions,
   rangeForDays,
+  saveAnalyticsLeads,
 } from "./analyticsApi";
 
 describe("rangeForDays", () => {
@@ -98,11 +100,17 @@ const summary = {
   referrers: [{ host: "chatgpt.com", visitors: 3 }],
   devices: [{ device: "mobile", visitors: 3 }],
   events: [{ name: "Signup", count: 4, visitors: 2 }],
-  enquiries: {
-    count: 2,
-    visitors: 1,
-    actions: [{ name: "whatsapp_click", count: 2, visitors: 1 }],
+  previousVisitors: 2,
+  leads: {
+    configured: true,
+    count: 4,
+    visitors: 2,
+    previousVisitors: 1,
+    actions: [{ name: "Signup", count: 4, visitors: 2 }],
+    pages: [{ path: "/", visitors: 3, leadVisitors: 2 }],
   },
+  sourceLeads: [{ channel: "ai", visitors: 3, leadVisitors: 2 }],
+  aiLandings: [{ source: "chatgpt", path: "/", visitors: 3, leadVisitors: 2 }],
   campaigns: [],
   entries: [],
   exits: [],
@@ -154,6 +162,47 @@ describe("analytics summary query", () => {
     );
     await expect(
       analyticsSummaryQueryOptions("p1", range).queryFn(),
+    ).rejects.toBeInstanceOf(ApiError);
+  });
+});
+
+describe("lead actions", () => {
+  it("loads the saved lead actions", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(Response.json({ names: ["Book a call", "बुकिंग"] }));
+    await expect(analyticsLeadsQueryOptions("p1").queryFn()).resolves.toEqual([
+      "Book a call",
+      "बुकिंग",
+    ]);
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "/api/v1/projects/p1/analytics/leads",
+    );
+  });
+
+  it("saves the chosen names and returns what the server kept", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(Response.json({ names: ["Signup"] }));
+    await expect(
+      saveAnalyticsLeads("p1", ["Signup", "Signup"]),
+    ).resolves.toEqual(["Signup"]);
+    const [path, init] = fetchMock.mock.calls[0];
+    expect(path).toBe("/api/v1/projects/p1/analytics/leads");
+    expect(init?.method).toBe("POST");
+    const raw = init?.body;
+    if (typeof raw !== "string")
+      throw new Error("Expected a JSON request body");
+    const body: unknown = JSON.parse(raw);
+    expect(body).toEqual({ names: ["Signup", "Signup"] });
+  });
+
+  it("rejects a malformed answer", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      Response.json({ names: null }),
+    );
+    await expect(
+      analyticsLeadsQueryOptions("p1").queryFn(),
     ).rejects.toBeInstanceOf(ApiError);
   });
 });

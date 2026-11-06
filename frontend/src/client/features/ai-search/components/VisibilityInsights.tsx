@@ -1,10 +1,11 @@
 import { SafeExternalLink } from "@/client/components/SafeExternalLink";
+import { engineLabel } from "../platformLabels";
 import type { VisibilityMetrics } from "../trackingApi";
 
 type Source = VisibilityMetrics["domains"][number];
 
 const date = (value: string) =>
-  new Date(value).toLocaleDateString("en-IN", {
+  new Date(value).toLocaleDateString(undefined, {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -22,6 +23,9 @@ function Sources({
   pages: boolean;
 }) {
   if (!rows.length) return null;
+  // A change needs two complete checks; with none comparable the column
+  // would say the same thing on every row, so it is left out.
+  const comparable = rows.some((row) => row.momentum !== "unavailable");
   return (
     <details>
       <summary className="cursor-pointer font-medium">{label}</summary>
@@ -33,7 +37,7 @@ function Sources({
               <th>First seen</th>
               <th>Last seen</th>
               <th>Average position</th>
-              <th>Change</th>
+              {comparable ? <th>Change</th> : null}
             </tr>
           </thead>
           <tbody>
@@ -53,11 +57,7 @@ function Sources({
                 <td>{date(row.firstSeen)}</td>
                 <td>{date(row.lastSeen)}</td>
                 <td>{rank(row.averageRank)}</td>
-                <td>
-                  {row.momentum === "unavailable"
-                    ? "Not comparable"
-                    : row.momentum}
-                </td>
+                {comparable ? <td>{MOMENTUM[row.momentum]}</td> : null}
               </tr>
             ))}
           </tbody>
@@ -66,6 +66,13 @@ function Sources({
     </details>
   );
 }
+
+const MOMENTUM: Record<Source["momentum"], string> = {
+  up: "Rising",
+  down: "Falling",
+  flat: "Steady",
+  unavailable: "Not comparable",
+};
 
 /** Derived only from saved answers, with no new check or provider call. */
 export function VisibilityInsights({
@@ -98,10 +105,10 @@ export function VisibilityInsights({
           <ul className="mt-2 space-y-2 text-sm">
             {metrics.prompts.map((item) => (
               <li key={`${item.prompt}:${item.engine}`}>
-                {item.prompt} ({item.engine}): latest {rank(item.latestRank)},
-                average {rank(item.averageRank)} across {item.citedAnswers}{" "}
-                cited of {item.answers} answers in the source list. Answer
-                position:{" "}
+                {item.prompt} ({engineLabel(item.engine)}): latest{" "}
+                {rank(item.latestRank)}, average {rank(item.averageRank)} across{" "}
+                {item.citedAnswers} cited of {item.answers} answers in the
+                source list. Answer position:{" "}
                 {item.latestAnswerRank === null
                   ? "unavailable"
                   : rank(item.latestAnswerRank)}

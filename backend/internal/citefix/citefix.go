@@ -132,6 +132,8 @@ type Report struct {
 	Rivals []RivalComparison `json:"rivals"`
 	// SEOIssues are the latest critical and warning issues from Site Audit.
 	SEOIssues []SEOIssue `json:"seoIssues"`
+	// FixProofs follow up the pages the agent fixed, from Analytics.
+	FixProofs []FixProof `json:"fixProofs"`
 	// Topics uses only the audit's bounded stored headings and links.
 	Topics *TopicReport `json:"topics"`
 	// Agent says whether and at what price the paid agent can run; the
@@ -141,7 +143,7 @@ type Report struct {
 
 // emptyReport keeps every list a JSON array, never null.
 func emptyReport(state string) Report {
-	return Report{State: state, Categories: []CategoryScore{}, Fixes: []Fix{}, Pages: []PageScore{}, Rivals: []RivalComparison{}, SEOIssues: []SEOIssue{}}
+	return Report{State: state, Categories: []CategoryScore{}, Fixes: []Fix{}, Pages: []PageScore{}, Rivals: []RivalComparison{}, SEOIssues: []SEOIssue{}, FixProofs: []FixProof{}}
 }
 
 // MentionsSnapshot is the saved AI Visibility Brand Lookup shown in Cite Fix.
