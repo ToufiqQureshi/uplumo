@@ -62,6 +62,34 @@ Before coding anything that touches money, credits, providers, data, UI or
 adds a feature: restate in 3-5 Hinglish lines what you will and will not
 build, with the real-number scenario, and wait for the owner's "haan".
 
+## DataForSEO: required reading and owner report
+
+Before any DataForSEO proposal or implementation, read
+`backend/internal/platform/dataforseo/README.md` and `business-logic.md`
+in full, then the relevant endpoint's complete request/response section in
+`backend/internal/platform/dataforseo/reference.md`. These are mandatory;
+check current official docs when prices or supported parameters may differ.
+
+- Tell the owner which cost-saving technique to try, with current/proposed
+  paid calls, billing units, provider USD per action and monthly workload,
+  customer credit effect, and the customer decision/value preserved.
+- Explicitly report what we do **not request**, filter before billing,
+  receive then drop, retain/use, and show in UI/details/export. Name every
+  reduced depth, row cap, source, geography, language, model or freshness
+  tradeoff. Receiving raw JSON is not proof we store or show all of it.
+- Trace real code/fields and identify the access path for useful purchased
+  evidence. Reuse it before buying more. Local truncation of an already
+  paid response usually saves no provider money. Do not dump every raw
+  field into the UI; make the supported result complete and useful.
+- Preserve the user's promised scope and quality. Distinguish measured
+  savings, estimates and proposals; never promise full value or full data
+  parity without evidence. Include this report in the conversation and PR;
+  report uncovered gaps with code references and prioritize them for him.
+- Use the owner-report template and economics in `business-logic.md`.
+  Quote/charge, spend guards, tenant isolation and no-paid-retry rules still
+  apply. This reading/reporting requirement adds no paid calls or new
+  owner-confirmation step beyond the existing runtime authorization rule.
+
 ## 4. How to write code
 
 - Is it needed? Does it already exist (repo, language built-ins, standard
@@ -143,7 +171,13 @@ Content files that code reads are not docs and stay: `.agents/skills/**`,
 `backend/internal/site/blog/*.md` (the folder must hold a file for
 `//go:embed`), and the licence notice
 `backend/internal/analytics/geo/ATTRIBUTION.md`.
-`frontend/scripts/docs-map.test.ts` enforces this list.
+Provider-specific exception requested by the owner: the dated official
+DataForSEO reference may live only at
+`backend/internal/platform/dataforseo/reference.md`. Its practical guide,
+integration flow and cost/value rules use the existing feature doc names
+next to the provider code. This does not allow other repo-wide audits or
+reference directories. `frontend/scripts/docs-map.test.ts` enforces the list
+and this exact reference path.
 
 ## 8. Working with the owner
 
