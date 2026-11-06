@@ -103,7 +103,7 @@ func TestRepositoryReadsOnlyThisProjectsFinishedData(t *testing.T) {
 	if err != nil || audit == nil {
 		t.Fatalf("audit = %+v, %v", audit, err)
 	}
-	if audit.PagesCrawled != 40 || audit.CompletedAt.Format(time.RFC3339) != "2026-11-01T10:20:00Z" {
+	if audit.PagesCrawled != 40 || audit.CompletedAt.UTC().Format(time.RFC3339) != "2026-11-01T10:20:00Z" {
 		t.Errorf("a running audit must not replace the finished one: %+v", audit)
 	}
 	if audit.Critical != 2 || audit.Warning != 1 || audit.Info != 6 || len(audit.Issues) != 3 {
