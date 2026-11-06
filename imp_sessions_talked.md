@@ -21,6 +21,12 @@ priorities, corrections, and what still waits on him. Read it after
 - PR 2 (not built): AI "explain", "topic clusters", "draft title/meta" with credits shown before the click, cache, refund on failure, plus a before/after tracker.
 - Found, not fixed: `searchVerdict.ts` formats numbers as `en-IN` for every user; the older table is `gsc_connections`, not `go_`-prefixed.
 
+## 4 Nov 2026: robots.txt open to every bot
+
+- Owner: "muje har jagah visible hona ha, har bot ko allow karo". Many AIs said they cannot read uplumo.com.
+- Done: robots.txt now names Google, Bing, Apple, OpenAI, Anthropic, Perplexity, Mistral, Meta, Amazon, DuckDuckGo, You.com, Common Crawl, AI2 explicitly; `/api/` stays closed.
+- Owner still has to check Cloudflare: AI bot blocking, Bot Fight Mode, Managed robots.txt, WAF challenges. Those block bots before our server sees them.
+
 ## 4 Nov 2026: Analytics + Cite Fix are Claude's responsibility
 
 - Owner: "analytics and cite fix teri zimmedaari ha"; Analytics "ek dum bekkar"; "sab dynamic ho koi bhi cheez hardcoded nai"; wants 3 PRs, then merge, deploy and UI-level testing, fast.
