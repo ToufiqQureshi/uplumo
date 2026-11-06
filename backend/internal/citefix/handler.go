@@ -26,6 +26,7 @@ type AgentRunner interface {
 	Offer(ctx context.Context, organizationID string) (AgentOffer, error)
 	Run(ctx context.Context, organizationID, projectID string, input AgentInput) (AgentResult, error)
 	Results(ctx context.Context, organizationID, projectID string) ([]AgentResult, error)
+	DraftPitch(ctx context.Context, organizationID, projectID string, input PitchInput) (Pitch, error)
 }
 
 // Deps wires the routes. Reporter is nil when the database is not
@@ -51,6 +52,7 @@ func Mount(mux *http.ServeMux, deps Deps) {
 	mux.Handle("POST /api/v1/projects/{projectId}/cite-fix/report", protect(h.report))
 	mux.Handle("POST /api/v1/projects/{projectId}/cite-fix/agent/run", protect(h.run))
 	mux.Handle("POST /api/v1/projects/{projectId}/cite-fix/agent/results", protect(h.results))
+	mux.Handle("POST /api/v1/projects/{projectId}/cite-fix/pitch", protect(h.pitch))
 	mux.Handle("POST /api/v1/projects/{projectId}/cite-fix/google-ai-overview/refresh", protect(h.refreshGoogleAIOverview))
 	mux.Handle("POST /api/v1/projects/{projectId}/cite-fix/google-ai-overview/results", protect(h.collectGoogleAIOverview))
 }
@@ -130,6 +132,48 @@ func (h handler) run(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusBadGateway, "agent_failed", "The AI could not finish this page. You were not charged; try again.")
 	default:
 		h.internal(w, r, "run cite fix agent", err)
+	}
+}
+
+// pitch drafts an outreach email for a list page (paid, capped, cached).
+func (h handler) pitch(w http.ResponseWriter, r *http.Request) {
+	if h.Agent == nil {
+		httpx.WriteError(w, http.StatusServiceUnavailable, "cite_fix_agent_unavailable", "AI drafts are not available on this server.")
+		return
+	}
+	var input PitchInput
+	organizationID, ok := h.begin(w, r, &input)
+	if !ok {
+		return
+	}
+	result, err := h.Agent.DraftPitch(r.Context(), organizationID, r.PathValue("projectId"), input)
+	if err == nil {
+		httpx.WriteJSON(w, http.StatusOK, result)
+		return
+	}
+	if validation, ok := errors.AsType[*AgentValidationError](err); ok {
+		httpx.WriteError(w, http.StatusBadRequest, "invalid_request", validation.Message)
+		return
+	}
+	if spend.WriteHTTPError(w, err) {
+		return
+	}
+	switch {
+	case errors.Is(err, ErrAgentUnavailable):
+		httpx.WriteError(w, http.StatusServiceUnavailable, "cite_fix_agent_unavailable", "AI drafts are not available on this server.")
+	case errors.Is(err, ErrAgentPlanRequired):
+		httpx.WriteError(w, http.StatusPaymentRequired, "plan_required", "AI drafts are available on every paid plan.")
+	case errors.Is(err, ErrPitchUnknownPage):
+		httpx.WriteError(w, http.StatusNotFound, "page_not_found", "Drafts are only for the list pages Cite Fix shows. Reload the page and try again.")
+	case errors.Is(err, ErrPitchBusy):
+		httpx.WriteError(w, http.StatusConflict, "pitch_busy", "This draft is already being written. Wait a moment.")
+	case errors.Is(err, ErrAgentRateLimited):
+		httpx.WriteError(w, http.StatusTooManyRequests, "rate_limited", "Too many drafts in the last 10 minutes. Wait a few minutes, then continue.")
+	case errors.Is(err, ErrAgentFailed):
+		h.Logger.ErrorContext(r.Context(), "cite fix pitch failed", "err", err)
+		httpx.WriteError(w, http.StatusBadGateway, "pitch_failed", "The AI could not write this draft. You were not charged; try again.")
+	default:
+		h.internal(w, r, "draft cite fix pitch", err)
 	}
 }
 

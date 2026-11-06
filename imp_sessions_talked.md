@@ -13,13 +13,21 @@ priorities, corrections, and what still waits on him. Read it after
   decision, remove it when he answers.
 - Never write secrets, keys or customer data here.
 
-## 5 Nov 2026: Content Editor live QA
+## 6 Nov 2026: Content Editor fixes in one PR
 
-- Owner: “sab kuch paid free ui buttons ... scroll down pe ui bigad jata ha”; approved all paid-button tests with an approximately 159-credit cap.
-- Ran all 10 AI actions once (11 credits total); cached brief was free. One confirmed brief refresh returned Cloudflare 502; customer credits stayed unchanged, provider cost is unknown, and it was not retried.
-- Found and fixed scroll overlap/mobile tool placement, duplicate title H1, FAQ scoring for bold headings, visible word count, experience wording, FAQ action hint, and singular credit toast.
-- Restored the live draft text and original 2026-10-28 review date after UI tests. No post was published or draft deleted.
+- Owner: "fix it in one pr samja everything fix the bugs"; the approved paid-test cap remains about 159 credits.
+- Live QA used 11 customer credits across 10 AI actions. One brief refresh returned Cloudflare 502 with no customer charge; provider-side cost is unknown and it was not retried.
+- The original draft was restored; no post was published or draft deleted.
+- Fixed layout, preview heading, count/scoring labels, quote-to-hold alignment, and paid quote loading. No additional live paid action was run.
 - Changes are local and not deployed.
+
+## 4 Nov 2026: Analytics + Cite Fix are Claude's responsibility
+
+- Owner: "analytics and cite fix teri zimmedaari ha"; Analytics "ek dum bekkar"; "sab dynamic ho koi bhi cheez hardcoded nai"; wants 3 PRs, then merge, deploy and UI-level testing, fast.
+- Decision: outreach pitch draft costs at most **25 credits** ("haan 25 credits theek hai"). Cite Fix caps now live in `plans/catalog.go`.
+- Built as 3 stacked branches: `feat/analytics-simple` (owner-chosen leads, leads by source/page, AI visitors; also carries the 3-doc cleanup commits), `feat/cite-fix-decisions` (every question covered, list pages, decision-first layout), `feat/cite-fix-proof` (pitch, fix proof, what AI says).
+- Pending: push was blocked by permissions; owner pushes, then merge in order 1 → 2 → 3, deploy, live UI check.
+- Not built yet: AI keyword search volume (DataForSEO) for questions to track.
 
 ## Kal ka kaam (4 Nov se)
 

@@ -15,6 +15,9 @@ const (
 	maxTopicClusters     = 20
 	maxTopicTermsPerPage = 60
 	maxTopicExamples     = 20
+	// minWordTopicPages is how many pages a one-word topic needs: two pages
+	// sharing "core" or "different" share a word, not a subject.
+	minWordTopicPages = 3
 )
 
 // TopicReport describes a bounded sample of the pages from one completed scan.
@@ -192,6 +195,29 @@ func segmentTerms(segments []string, boilerplate, brandWords map[string]bool) []
 	return terms
 }
 
+// foldPlurals merges a term ending in "s" or "es" into the same term without
+// it when the scan also has that form ("small businesses" into "small
+// business"), so one subject is not split by spelling. A form the scan does
+// not have is left alone.
+func foldPlurals(terms map[string][]int) {
+	merges := map[string]string{}
+	for term := range terms {
+		for _, suffix := range []string{"es", "s"} {
+			base, ok := strings.CutSuffix(term, suffix)
+			if _, seen := terms[base]; ok && len([]rune(base)) > 2 && seen {
+				merges[term] = base
+				break
+			}
+		}
+	}
+	for plural, base := range merges {
+		members := append(terms[base], terms[plural]...)
+		slices.Sort(members)
+		terms[base] = slices.Compact(members)
+		delete(terms, plural)
+	}
+}
+
 func allDigits(word string) bool {
 	return strings.IndexFunc(word, func(r rune) bool { return !unicode.IsDigit(r) }) == -1
 }
@@ -257,6 +283,7 @@ func buildTopics(pages []Page, duplicateURLs, shellURLs map[string]struct{}) Top
 			terms[term] = append(terms[term], i)
 		}
 	}
+	foldPlurals(terms)
 	// Terms with the same member pages describe the same cluster. Prefer the
 	// more specific phrase, then a stable lexical tie-breaker.
 	type group struct {
@@ -266,6 +293,14 @@ func buildTopics(pages []Page, duplicateURLs, shellURLs map[string]struct{}) Top
 	groups := map[string]group{}
 	for term, members := range terms {
 		if len(eligible) >= 5 && len(members)*5 > len(eligible)*4 {
+			continue
+		}
+		if !strings.Contains(term, " ") && len(members) < minWordTopicPages {
+			continue
+		}
+		// On a site with several pages, one page is not a topic: "30 day" or
+		// "5xx debug" from a single title would crowd out real clusters.
+		if len(eligible) >= 5 && len(members) < 2 {
 			continue
 		}
 		var key strings.Builder

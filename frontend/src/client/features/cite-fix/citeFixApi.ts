@@ -141,6 +141,15 @@ const reportSchema = z.object({
         }),
       ),
       visibility: visibilityMetricsSchema.nullable().default(null),
+      said: z
+        .array(
+          z.object({
+            prompt: z.string(),
+            engine: z.string(),
+            excerpt: z.string(),
+          }),
+        )
+        .default([]),
     })
     .nullable(),
   mentions: z
@@ -172,6 +181,23 @@ const reportSchema = z.object({
             signals: rivalSignalsSchema,
           })
           .nullable(),
+        listsRivals: z.array(z.string()).default([]),
+        linksYou: z.boolean().default(false),
+      }),
+    )
+    .default([]),
+  fixProofs: z
+    .array(
+      z.object({
+        url: z.string(),
+        fixedAt: z.string(),
+        days: z.number().int().nonnegative(),
+        aiVisitorsAfter: z.number().int().nonnegative(),
+        aiVisitorsBefore: z.number().int().nonnegative(),
+        leadsAfter: z.number().int().nonnegative(),
+        leadsBefore: z.number().int().nonnegative(),
+        leadsTracked: z.boolean(),
+        citedNow: z.boolean(),
       }),
     )
     .default([]),
@@ -190,6 +216,7 @@ const reportSchema = z.object({
     available: z.boolean(),
     planAllowed: z.boolean(),
     quickMaxCredits: z.number().int().positive(),
+    pitchMaxCredits: z.number().int().positive(),
     deepMaxCredits: z.number().int().positive(),
     maxPages: z.number().int().positive(),
     defaultPages: z.number().int().positive(),
@@ -284,4 +311,25 @@ export function runCiteFixAgent(
     "POST",
     input,
   );
+}
+
+const pitchSchema = z.object({
+  url: z.string(),
+  subject: z.string(),
+  body: z.string(),
+  credits: z.number().int().nonnegative(),
+  cached: z.boolean(),
+  createdAt: z.string(),
+});
+export type CiteFixPitch = z.infer<typeof pitchSchema>;
+
+/**
+ * Paid: one outreach draft for a list page, at most agent.pitchMaxCredits. Each
+ * click sends a new key; a failed request is never retried.
+ */
+export function draftCiteFixPitch(
+  projectId: string,
+  input: { url: string; idempotencyKey: string },
+) {
+  return apiRequest(`${base(projectId)}/pitch`, pitchSchema, "POST", input);
 }

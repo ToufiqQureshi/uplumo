@@ -18,18 +18,19 @@ import (
 	"github.com/toufiqqureshi/uplumo/backend/internal/audit"
 	"github.com/toufiqqureshi/uplumo/backend/internal/billing"
 	"github.com/toufiqqureshi/uplumo/backend/internal/gsc"
+	"github.com/toufiqqureshi/uplumo/backend/internal/plans"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/openrouter"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/spend"
 )
 
-// The agent's modes and prices. The credit caps are owner decisions (27 Oct
-// 2026): the most one page can ever cost the customer, shown before the click.
+// The agent's modes and prices. The credit caps live in the plan catalog:
+// the most one page can ever cost the customer, shown before the click.
 const (
 	ModeQuick = "quick"
 	ModeDeep  = "deep"
 
-	QuickMaxCredits int64 = 25
-	DeepMaxCredits  int64 = 60
+	QuickMaxCredits = plans.CiteFixQuickMaxCredits
+	DeepMaxCredits  = plans.CiteFixDeepMaxCredits
 	// MaxAgentPages is how many pages one batch may hold and how many runs a
 	// project may start in agentRateWindow; DefaultAgentPages are preselected.
 	MaxAgentPages     = 20
@@ -101,6 +102,7 @@ type AgentOffer struct {
 	PlanAllowed     bool  `json:"planAllowed"`
 	QuickMaxCredits int64 `json:"quickMaxCredits"`
 	DeepMaxCredits  int64 `json:"deepMaxCredits"`
+	PitchMaxCredits int64 `json:"pitchMaxCredits"`
 	MaxPages        int   `json:"maxPages"`
 	DefaultPages    int   `json:"defaultPages"`
 }
@@ -190,7 +192,7 @@ type Agent struct {
 // Offer describes the agent for a workspace. A nil agent is unavailable.
 func (a *Agent) Offer(ctx context.Context, organizationID string) (AgentOffer, error) {
 	offer := AgentOffer{
-		QuickMaxCredits: QuickMaxCredits, DeepMaxCredits: DeepMaxCredits,
+		QuickMaxCredits: QuickMaxCredits, DeepMaxCredits: DeepMaxCredits, PitchMaxCredits: PitchMaxCredits,
 		MaxPages: MaxAgentPages, DefaultPages: DefaultAgentPages,
 	}
 	if a == nil || a.LLM == nil {

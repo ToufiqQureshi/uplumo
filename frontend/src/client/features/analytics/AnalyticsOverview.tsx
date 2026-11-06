@@ -7,6 +7,7 @@ import {
   actionLabel,
   aiSourceLabel,
   channelLabel,
+  countOf,
   displayPath,
   formatShare,
 } from "./presentation";
@@ -274,8 +275,8 @@ export function LeadPagesCard({ summary }: { summary: AnalyticsSummary }) {
                 {displayPath(page.path)}
               </span>
               <span className="shrink-0 text-muted-foreground tabular-nums">
-                {formatCount(page.visitors)} visitors ·{" "}
-                {formatCount(page.leadVisitors)} leads
+                {countOf(page.visitors, "visitor", "visitors")} ·{" "}
+                {countOf(page.leadVisitors, "lead", "leads")}
               </span>
             </div>
             <div
@@ -339,7 +340,8 @@ export function AiVisitorsCard({
           </p>
           {configured ? (
             <p className="text-sm text-muted-foreground">
-              {formatCount(leads)} became leads in the same visit.
+              {countOf(leads, "became a lead", "became leads")} in the same
+              visit.
             </p>
           ) : null}
           <ul className="space-y-2 text-sm">
@@ -355,7 +357,7 @@ export function AiVisitorsCard({
                 <span className="shrink-0 text-muted-foreground tabular-nums">
                   {formatCount(row.visitors)}
                   {configured
-                    ? ` · ${formatCount(row.leadVisitors)} leads`
+                    ? ` · ${countOf(row.leadVisitors, "lead", "leads")}`
                     : ""}
                 </span>
               </li>

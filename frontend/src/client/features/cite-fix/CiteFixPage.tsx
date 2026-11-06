@@ -1,25 +1,38 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import { cn } from "cn";
 import { EmptyState } from "@/client/components/EmptyState";
 import { PageHeader } from "@/client/components/PageHeader";
 import { QueryError } from "@/client/components/QueryState";
-import { SafeExternalLink } from "@/client/components/SafeExternalLink";
 import { SkeletonCard } from "@/client/components/SkeletonPresets";
 import { Button } from "@/client/components/ui/button";
 import { Progress } from "@/client/components/ui/progress";
-import {
-  citeFixKey,
-  getCiteFixReport,
-  type CiteFix,
-  type CiteFixReport,
-} from "./citeFixApi";
+import { citeFixKey, getCiteFixReport, type CiteFixReport } from "./citeFixApi";
 import { AgentPanel } from "./AgentPanel";
+import { FixRow } from "./FixRow";
 import { AgentResults } from "./AgentResults";
-import { ProofCard } from "./ProofCard";
-import { AIMentionsSection, RivalComparisonsSection } from "./EvidenceSections";
+import { AIMentionsSection } from "./EvidenceSections";
+import { VisibilityInsights } from "../ai-search/components/VisibilityInsights";
+import { engineLabel } from "../ai-search/platformLabels";
+import {
+  buildMatrix,
+  listPages,
+  nextSteps,
+  rivalRanks,
+  signalRivals,
+  type StepKind,
+} from "./citeFixInsights";
+import {
+  CitationMatrix,
+  CiteFixHeadline,
+  LIST_PAGES_ID,
+  ListPagesCard,
+  RivalRanksCard,
+} from "./DecisionSections";
+import { NextStepsCard } from "./NextStepsCard";
+import { SignalsCard } from "./SignalsCard";
+import { FixProofCard, PitchButton, WhatAISaysCard } from "./ProofSections";
 import { GoogleAIOverviewSection, SEOIssuesSection } from "./CitationSections";
 import { scoreBand } from "./scoreBand";
 import { TopicsSection } from "./TopicsSection";
@@ -31,12 +44,6 @@ const toneText = {
   success: "text-success",
   warning: "text-warning",
   destructive: "text-destructive",
-} as const;
-
-const impactStyle = {
-  high: "border-destructive/40 text-destructive",
-  medium: "border-warning/40 text-warning",
-  low: "text-muted-foreground",
 } as const;
 
 export function CiteFixPage({ projectId }: { projectId: string }) {
@@ -88,53 +95,148 @@ export function CiteFixPage({ projectId }: { projectId: string }) {
           onRetry={() => void report.refetch()}
           isRetrying={report.isFetching}
         />
-      ) : report.data.state === "no_scan" ? (
-        <>
-          <EmptyState
-            title="Scan your site first"
-            description="Cite Fix reads the pages a site scan collects. Run a free scan from Site Audit; your score appears here when it finishes."
-            action={
-              report.data.running ? null : scanLink("Scan my site", "default")
-            }
-          />
-          <ProofCard projectId={projectId} proof={report.data.proof} />
-          <RivalComparisonsSection
-            proof={report.data.proof}
-            comparisons={report.data.rivals}
-          />
-        </>
-      ) : report.data.state === "needs_rescan" ? (
-        <>
-          <EmptyState
-            title="Scan your site again"
-            description="Your last scan did not collect the latest citation and topic signals. A new scan is free."
-            action={
-              report.data.running ? null : scanLink("Scan again", "default")
-            }
-          />
-          <ProofCard projectId={projectId} proof={report.data.proof} />
-          <RivalComparisonsSection
-            proof={report.data.proof}
-            comparisons={report.data.rivals}
-          />
-        </>
       ) : (
-        <Ready projectId={projectId} report={report.data} />
+        <Decisions
+          projectId={projectId}
+          report={report.data}
+          scanAction={
+            report.data.running
+              ? null
+              : scanLink(
+                  report.data.state === "no_scan"
+                    ? "Scan my site"
+                    : "Scan again",
+                  "default",
+                )
+          }
+        />
       )}
-      {report.data ? (
-        <>
-          <AIMentionsSection
-            projectId={projectId}
-            mentions={report.data.mentions}
-          />
+    </div>
+  );
+}
+
+const scrollTo = (id: string) =>
+  document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+
+/**
+ * The whole report in decision order: what is happening, what to do, the
+ * evidence behind it, then the site fixes and every saved detail.
+ */
+function Decisions({
+  projectId,
+  report,
+  scanAction,
+}: {
+  projectId: string;
+  report: CiteFixReport;
+  scanAction: React.ReactNode;
+}) {
+  const proof = report.proof && report.proof.answers > 0 ? report.proof : null;
+  const matrix = buildMatrix(proof);
+  const lists = listPages(report.rivals);
+  const steps = nextSteps(report, matrix, lists, engineLabel);
+  const canRunAgent =
+    report.state === "ready" &&
+    report.pages.length > 0 &&
+    report.agent.available;
+  const actionFor = (kind: StepKind) => {
+    switch (kind) {
+      case "scan":
+        return scanAction;
+      case "track":
+        return (
+          <Button
+            variant="outline"
+            nativeButton={false}
+            render={
+              <Link to="/p/$projectId/prompt-tracking" params={{ projectId }} />
+            }
+          >
+            Open AI Visibility
+          </Button>
+        );
+      case "win_back":
+        return canRunAgent ? (
+          <Button onClick={() => scrollTo("cite-fix-pages")}>
+            Write the fixes with AI
+            <span className="font-mono text-xs opacity-70">
+              ≤{report.agent.quickMaxCredits} credits a page
+            </span>
+          </Button>
+        ) : null;
+      case "get_listed":
+        return (
+          <Button variant="outline" onClick={() => scrollTo(LIST_PAGES_ID)}>
+            See the pages
+          </Button>
+        );
+      case "fix":
+        return (
+          <Button variant="outline" onClick={() => scrollTo("cite-fix-fixes")}>
+            See the fix
+          </Button>
+        );
+    }
+  };
+  return (
+    <>
+      {proof ? <CiteFixHeadline proof={proof} matrix={matrix} /> : null}
+      <NextStepsCard steps={steps} actionFor={actionFor} />
+      {matrix ? <CitationMatrix matrix={matrix} /> : null}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {proof ? <RivalRanksCard rivals={rivalRanks(proof)} /> : null}
+        <ListPagesCard
+          pages={lists}
+          renderAction={
+            report.agent.available && report.agent.planAllowed
+              ? (page) => (
+                  <PitchButton
+                    projectId={projectId}
+                    url={page.url}
+                    maxCredits={report.agent.pitchMaxCredits}
+                  />
+                )
+              : undefined
+          }
+        />
+      </div>
+      {proof ? <WhatAISaysCard said={proof.said} /> : null}
+      <FixProofCard proofs={report.fixProofs} />
+      <SignalsCard
+        rivals={signalRivals(report.rivals)}
+        scanAction={scanAction}
+      />
+      {report.state === "ready" ? (
+        <Ready projectId={projectId} report={report} />
+      ) : (
+        <EmptyState
+          title={
+            report.state === "no_scan"
+              ? "Scan your site to get your score and fixes"
+              : "Scan again to get your score and fixes"
+          }
+          description="Cite Fix reads the pages a site scan collects. The scan is free; your score, topics and page fixes appear here when it finishes."
+          action={scanAction}
+        />
+      )}
+      <details className="rounded-2xl border bg-card p-5">
+        <summary className="cursor-pointer font-medium">
+          All citation data: history, mentions, Google AI Overview and SEO
+          issues
+        </summary>
+        <div className="mt-5 flex flex-col gap-6">
+          {proof?.visibility ? (
+            <VisibilityInsights metrics={proof.visibility} />
+          ) : null}
+          <AIMentionsSection projectId={projectId} mentions={report.mentions} />
           <GoogleAIOverviewSection
             projectId={projectId}
-            initial={report.data.googleAiOverview}
+            initial={report.googleAiOverview}
           />
-          <SEOIssuesSection projectId={projectId} report={report.data} />
-        </>
-      ) : null}
-    </div>
+          <SEOIssuesSection projectId={projectId} report={report} />
+        </div>
+      </details>
+    </>
   );
 }
 
@@ -166,11 +268,14 @@ function Ready({
               <p className="font-mono text-xs text-muted-foreground">
                 {report.pagesChecked} of {report.pagesTotal} pages checked ·
                 scanned{" "}
-                {new Date(report.scan.completedAt).toLocaleDateString("en-IN", {
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                })}
+                {new Date(report.scan.completedAt).toLocaleDateString(
+                  undefined,
+                  {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  },
+                )}
               </p>
             ) : null}
           </div>
@@ -195,15 +300,9 @@ function Ready({
         </p>
       </section>
 
-      <ProofCard projectId={projectId} proof={report.proof} />
       {report.topics ? (
         <TopicsSection projectId={projectId} topics={report.topics} />
       ) : null}
-      <RivalComparisonsSection
-        proof={report.proof}
-        comparisons={report.rivals}
-      />
-
       <section aria-labelledby="cite-fix-fixes" className="flex flex-col gap-3">
         <h2 id="cite-fix-fixes" className="font-serif text-2xl">
           What to fix first
@@ -231,83 +330,5 @@ function Ready({
         <AgentPanel projectId={projectId} report={report} />
       ) : null}
     </>
-  );
-}
-
-function FixRow({ fix, position }: { fix: CiteFix; position: number }) {
-  const [open, setOpen] = useState(position === 1);
-  const Chevron = open ? ChevronDown : ChevronRight;
-  return (
-    <li className="flex flex-col gap-3 p-4">
-      <button
-        type="button"
-        className="flex items-start gap-2 text-left"
-        aria-expanded={open}
-        onClick={() => setOpen(!open)}
-      >
-        <Chevron aria-hidden className="mt-0.5 size-4 shrink-0" />
-        <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
-          <span className="font-medium">
-            {position}. {fix.title}
-          </span>
-          <span
-            className={cn(
-              "rounded-full border px-2 py-0.5 text-xs",
-              impactStyle[fix.impact],
-            )}
-          >
-            {fix.impact} impact
-          </span>
-          <span className="font-mono text-xs text-primary">
-            +{fix.gain} points
-          </span>
-          <span className="font-mono text-xs text-muted-foreground">
-            {fix.pagesAffected
-              ? `${fix.pagesAffected} page${fix.pagesAffected === 1 ? "" : "s"}`
-              : "Whole site"}
-          </span>
-        </span>
-      </button>
-      {open ? (
-        <div className="flex flex-col gap-3 pl-6 text-sm">
-          <p>
-            <span className="font-medium">Why it matters: </span>
-            <span className="text-muted-foreground">{fix.why}</span>
-          </p>
-          <p>
-            <span className="font-medium">How to fix: </span>
-            <span className="text-muted-foreground">{fix.how}</span>
-          </p>
-          {fix.pages.length ? (
-            <div className="flex flex-col gap-1">
-              <p className="label-mono text-muted-foreground">
-                {fix.pagesAffected > fix.pages.length
-                  ? `First ${fix.pages.length} of ${fix.pagesAffected} pages`
-                  : "Pages"}
-              </p>
-              <ul className="flex flex-col gap-1">
-                {fix.pages.map((page) => (
-                  <li key={page.url} className="min-w-0">
-                    <SafeExternalLink
-                      url={page.url}
-                      label={page.title || page.url}
-                      className="inline-flex max-w-full items-center gap-1 truncate hover:underline"
-                    />
-                    {page.evidence?.map((item) => (
-                      <p
-                        key={item}
-                        className="break-words text-muted-foreground"
-                      >
-                        {item}
-                      </p>
-                    ))}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-    </li>
   );
 }

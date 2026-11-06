@@ -67,7 +67,7 @@ func TestTopicReportLinkedPillarAndIssues(t *testing.T) {
 func TestTopicReportLimits500PagesAndClusters(t *testing.T) {
 	pages := make([]Page, 0, 501)
 	for i := range 501 {
-		pages = append(pages, topicPage(fmt.Sprintf("https://site.example/%03d", i), fmt.Sprintf("Room service menu %03d", i), 350))
+		pages = append(pages, topicPage(fmt.Sprintf("https://site.example/%03d", i), fmt.Sprintf("Room service menu %03d", i/2), 350))
 	}
 	got := buildTopics(pages, nil, nil)
 	if got.PagesAnalyzed != 500 || !got.Limited || !got.ClustersLimited || len(got.Clusters) != 20 || got.Score == nil {
@@ -182,5 +182,49 @@ func TestTopicURLKeepsTrailingSlashPagesApart(t *testing.T) {
 	}
 	if got := topicURL("https://site.example"); got != "https://site.example/" {
 		t.Fatalf("topicURL(root) = %q", got)
+	}
+}
+
+func TestTopicReportNeedsASubjectNotASharedWord(t *testing.T) {
+	pages := []Page{
+		topicPage("https://site.example/a", "SEO plan for a small business", 600),
+		topicPage("https://site.example/b", "Search Console for small businesses", 600),
+		topicPage("https://site.example/c", "Content brief for small business", 600),
+		topicPage("https://site.example/d", "Core Web Vitals explained", 600),
+		topicPage("https://site.example/e", "Traffic drop after a core update", 600),
+		topicPage("https://site.example/f", "Different search volume in tools", 600),
+		topicPage("https://site.example/g", "Different language page in results", 600),
+	}
+	got := buildTopics(pages, nil, nil)
+	byTopic := map[string]int{}
+	for _, cluster := range got.Clusters {
+		byTopic[cluster.Topic] = cluster.PageCount
+	}
+	if byTopic["small business"] != 3 {
+		t.Errorf("clusters = %v; want \"small business\" with its plural folded in (3 pages)", byTopic)
+	}
+	for _, word := range []string{"core", "different", "small businesses"} {
+		if _, ok := byTopic[word]; ok {
+			t.Errorf("clusters = %v; %q is not a subject", byTopic, word)
+		}
+	}
+}
+
+func TestTopicReportSkipsOnePageTopicsOnALargerSite(t *testing.T) {
+	pages := []Page{
+		topicPage("https://site.example/a", "Small business SEO plan", 600),
+		topicPage("https://site.example/b", "Small business content brief", 600),
+		topicPage("https://site.example/c", "30 day launch for a bakery", 600),
+		topicPage("https://site.example/d", "Debug 5xx errors on a server", 600),
+		topicPage("https://site.example/e", "Pick an aeo tool", 600),
+	}
+	got := buildTopics(pages, nil, nil)
+	for _, cluster := range got.Clusters {
+		if cluster.PageCount < 2 {
+			t.Errorf("cluster %q has %d page; a larger site needs 2", cluster.Topic, cluster.PageCount)
+		}
+	}
+	if len(got.Clusters) == 0 || got.Clusters[0].Topic != "small business" {
+		t.Errorf("clusters = %+v; want the shared subject kept", got.Clusters)
 	}
 }

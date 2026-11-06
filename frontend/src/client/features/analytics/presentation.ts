@@ -149,6 +149,11 @@ const percent = new Intl.NumberFormat(undefined, {
   maximumFractionDigits: 0,
 });
 
+/** "1 lead", "3 leads": a count with the word that fits it. */
+export function countOf(count: number, one: string, many: string): string {
+  return `${new Intl.NumberFormat().format(count)} ${count === 1 ? one : many}`;
+}
+
 /** "42%", or "<1%" for a share that rounds to zero but is not zero. */
 export function formatShare(share: number): string {
   if (share > 0 && share < 0.005) return "<1%";

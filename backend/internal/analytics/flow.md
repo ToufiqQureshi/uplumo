@@ -24,3 +24,8 @@ actions, campaigns, visit sources, visits by source with their leads
 (`sourceLeads`), AI landing pages with their leads (`aiLandings`), sessions,
 landing and exit pages, and the daily new/returning audience. Lead queries
 run only when the owner has chosen lead actions.
+
+The "All numbers" section (chart, click destinations, countries, devices,
+campaigns) mounts only when opened, so its free `clicks` and `countries`
+requests are not sent for a closed section; it stays open across range
+changes.

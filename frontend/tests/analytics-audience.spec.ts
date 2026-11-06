@@ -16,6 +16,8 @@ async function installAnalytics(page: Page, failClicks = false) {
             '<script defer data-site="demo-key" src="https://uplumo.test/t.js"></script>',
         },
       });
+    if (url.pathname.endsWith("/leads"))
+      return route.fulfill({ json: { names: [] } });
     if (url.pathname.endsWith("/summary")) {
       const date = url.searchParams.get("to")!;
       return route.fulfill({
@@ -37,6 +39,17 @@ async function installAnalytics(page: Page, failClicks = false) {
             },
           ],
           topPages: [],
+          previousVisitors: 100,
+          leads: {
+            configured: false,
+            count: 0,
+            visitors: 0,
+            previousVisitors: 0,
+            actions: [],
+            pages: [],
+          },
+          sourceLeads: [],
+          aiLandings: [],
           channels: [],
           aiSources: [],
           referrers: [],
@@ -103,14 +116,19 @@ test("daily audience and destination counts render with scoped paging and option
   const requests = await installAnalytics(page);
   await page.goto("/p/e2e-project/analytics");
   await expect(
-    page.getByRole("heading", { name: "Visitors over time" }),
+    page.getByRole("heading", { name: "What counts as a lead?" }),
   ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Daily new and returning" }),
   ).toBeHidden();
-  await page
-    .getByText("Explore audience, campaigns and page journeys", { exact: true })
-    .click();
+  // A closed "All numbers" section loads none of its reports.
+  expect(
+    requests.filter((url) => /\/(clicks|countries)$/u.test(url.pathname)),
+  ).toEqual([]);
+  await page.getByText("All numbers", { exact: false }).click();
+  await expect(
+    page.getByRole("heading", { name: "Visitors over time" }),
+  ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Daily new and returning" }),
   ).toBeVisible();
@@ -169,6 +187,7 @@ for (const width of [320, 390]) {
     await page.setViewportSize({ width, height: 844 });
     await installAnalytics(page);
     await page.goto("/p/e2e-project/analytics");
+    await page.getByText("All numbers", { exact: false }).click();
     await expect(
       page.getByRole("heading", { name: "Button and link destinations" }),
     ).toBeVisible();
@@ -192,9 +211,7 @@ test("destination errors do not hide the daily audience report", async ({
 }) => {
   await installAnalytics(page, true);
   await page.goto("/p/e2e-project/analytics");
-  await page
-    .getByText("Explore audience, campaigns and page journeys", { exact: true })
-    .click();
+  await page.getByText("All numbers", { exact: false }).click();
   await expect(
     page.getByRole("heading", { name: "Daily new and returning" }),
   ).toBeVisible();

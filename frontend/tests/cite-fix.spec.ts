@@ -85,10 +85,13 @@ test("cite fix asks for a new scan instead of scoring an old one", async ({
     }),
   );
   await page.goto("/p/e2e-project/cite-fix");
-  await expect(page.getByText("Scan your site again")).toBeVisible();
+  await expect(
+    page.getByText("Scan again to get your score and fixes"),
+  ).toBeVisible();
   await expect(page.getByText("/100")).toHaveCount(0);
   await expect(
-    page.getByRole("button", { name: "Scan again" }),
+    // The same free scan link sits on the step, the comparison and here.
+    page.getByRole("button", { name: "Scan again" }).first(),
   ).toHaveAttribute("href", "/p/e2e-project/audit");
   expect(paid).toEqual([]);
 });
@@ -140,6 +143,9 @@ test("Google AI Overview is free to read and buys only after cost confirmation",
   );
 
   await page.goto("/p/e2e-project/cite-fix");
+  // Saved citation data, including the paid AI Overview check, sits in one
+  // section the customer opens; nothing in it is bought on open.
+  await page.getByText("All citation data", { exact: false }).click();
   await expect(
     page.getByRole("heading", { name: "Google AI Overview citations" }),
   ).toBeVisible();
@@ -200,6 +206,7 @@ test("Google AI Overview does not retry a failed confirmed refresh", async ({
   );
 
   await page.goto("/p/e2e-project/cite-fix");
+  await page.getByText("All citation data", { exact: false }).click();
   await page.getByRole("button", { name: "Check citations" }).click();
   await page
     .getByRole("button", { name: "Continue · up to 16 credits" })
@@ -278,25 +285,15 @@ test("rival comparison shows the cited page signals for each missed question", a
     route.fulfill({ json: report }),
   );
   await page.goto("/p/e2e-project/cite-fix");
-  await expect(
-    page.getByRole("heading", { name: "Why they got cited, you didn't" }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("link", { name: "Compare with rival" }),
-  ).toHaveAttribute("href", "#cite-fix-rival-0");
-  await expect(
-    page.getByRole("link", { name: "Rival booking guide" }),
-  ).toHaveAttribute("href", "https://rival.example/guide");
-  const rivalCard = page.locator("#cite-fix-rival-0");
-  await expect(
-    rivalCard.getByText("Evidence from AI Visibility Brand Lookup · google"),
-  ).toBeVisible();
-  await expect(
-    rivalCard.getByRole("heading", { name: "Theirs" }),
-  ).toBeVisible();
-  await expect(rivalCard.getByText("24 words")).toBeVisible();
-  await expect(rivalCard.getByText("3", { exact: true })).toBeVisible();
-  await expect(rivalCard.getByText("840")).toBeVisible();
+  const signals = page.locator("section", {
+    has: page.getByRole("heading", { name: "What their pages have" }),
+  });
+  await expect(signals).toBeVisible();
+  await expect(signals.getByText("rival.example")).toBeVisible();
+  await expect(signals.getByText("24 words")).toBeVisible();
+  await expect(signals.getByText("840")).toBeVisible();
+  await expect(signals.getByText("430")).toBeVisible();
+  await expect(signals.getByText("Your page: Our guide")).toBeVisible();
   expect(paid).toEqual([]);
 });
 
