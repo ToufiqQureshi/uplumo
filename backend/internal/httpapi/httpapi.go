@@ -50,6 +50,7 @@ import (
 	"github.com/toufiqqureshi/uplumo/backend/internal/sam"
 	"github.com/toufiqqureshi/uplumo/backend/internal/site"
 	"github.com/toufiqqureshi/uplumo/backend/internal/sitepublish"
+	"github.com/toufiqqureshi/uplumo/backend/internal/sitereport"
 	"github.com/toufiqqureshi/uplumo/backend/internal/staff"
 	"github.com/toufiqqureshi/uplumo/backend/internal/support"
 	"github.com/toufiqqureshi/uplumo/backend/internal/team"
@@ -177,7 +178,9 @@ type Deps struct {
 	Team          *team.Service
 	CrawlerAccess *crawleraccess.Service
 	// Reports owns project report documents, templates, and sharing.
-	Reports                 *reports.Service
+	Reports *reports.Service
+	// SiteReports builds client reports from the project's connected data.
+	SiteReports             *sitereport.Service
 	PublicURL               *url.URL
 	OpenRouterConfigured    bool
 	ContentWriterConfigured bool
@@ -384,6 +387,9 @@ func NewHandler(d Deps) http.Handler {
 	activation.Mount(mux, activation.Deps{Logger: d.Logger, Service: d.Activation, WithSession: withSession, WithProjectAccess: func(next http.Handler) http.Handler { return requireProjectAccess(d.Logger, d.Auth, next) }})
 	reports.Mount(mux, reports.Deps{Logger: d.Logger, Service: d.Reports, PublicURL: d.PublicURL, WithSession: withSession,
 		View:              reportViewDeps(d),
+		WithProjectAccess: func(next http.Handler) http.Handler { return requireProjectAccess(d.Logger, d.Auth, next) },
+	})
+	sitereport.Mount(mux, sitereport.Deps{Logger: d.Logger, Service: d.SiteReports, WithSession: withSession,
 		WithProjectAccess: func(next http.Handler) http.Handler { return requireProjectAccess(d.Logger, d.Auth, next) },
 	})
 	projects.Mount(mux, projects.Deps{Logger: d.Logger, Service: d.Projects, WithSession: withSession, WithProjectAccess: func(next http.Handler) http.Handler { return requireProjectAccess(d.Logger, d.Auth, next) }})

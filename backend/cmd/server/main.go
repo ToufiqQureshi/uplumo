@@ -66,6 +66,7 @@ import (
 	"github.com/toufiqqureshi/uplumo/backend/internal/sam"
 	"github.com/toufiqqureshi/uplumo/backend/internal/site"
 	"github.com/toufiqqureshi/uplumo/backend/internal/sitepublish"
+	"github.com/toufiqqureshi/uplumo/backend/internal/sitereport"
 	"github.com/toufiqqureshi/uplumo/backend/internal/staff"
 	"github.com/toufiqqureshi/uplumo/backend/internal/support"
 	"github.com/toufiqqureshi/uplumo/backend/internal/team"
@@ -362,6 +363,7 @@ func run(logger *slog.Logger) (err error) {
 		return rank + ai, err
 	}
 	reportsSvc := &reports.Service{Store: reports.Repository{DB: db}}
+	brandingSvc := branding.NewService(db)
 	customersSvc := &customers.Service{DB: db, StaffEmails: cfg.StaffEmails}
 	supportSvc := &support.Service{DB: db, StaffEmails: cfg.StaffEmails, PublicURL: cfg.BetterAuthURL.String()}
 	if cfg.LoopsAPIKey != "" && cfg.LoopsSupportReportTemplateID != "" {
@@ -406,6 +408,10 @@ func run(logger *slog.Logger) (err error) {
 	} else {
 		logger.Warn("SUPABASE_* image storage variables not set; content editor image uploads are unavailable")
 	}
+	siteReports := &sitereport.Service{
+		Store: sitereport.Repository{DB: db}, Search: sitereport.GSC{Service: gscService}, Traffic: sitereport.GA4{Service: ga4Svc},
+		Rankings: sitereport.RankTracking{Service: rankTrackingService}, Reports: reportsSvc, Branding: brandingSvc.Get, Logger: logger,
+	}
 	mcpDeps := &mcp.Deps{
 		Logger: logger, DB: db, Redis: rdb, Auth: authService, Billing: gateSvc,
 		Credits:   credits,
@@ -431,7 +437,7 @@ func run(logger *slog.Logger) (err error) {
 			TrustedProxyCIDRs:       cfg.TrustedProxyCIDRs,
 			Billing:                 gateSvc,
 			BillingRoutes:           billingRoutes,
-			Branding:                branding.NewService(db),
+			Branding:                brandingSvc,
 			OpenAIAppsChallenge:     cfg.OpenAIAppsChallenge,
 			AITracking:              aiTracking,
 			AISentiment:             buildAISentiment(cfg, logger, db, spendGuard.AIMeter(spend.AIVisibility, "openrouter/"+aisearch.SentimentModel), aiTracking.Plans),
@@ -475,6 +481,7 @@ func run(logger *slog.Logger) (err error) {
 			Team:                    &team.Service{Limits: billingRoutes, DB: db, Redis: rdb, LoopsAPIKey: cfg.LoopsAPIKey, InvitationTemplateID: cfg.LoopsInvitationTemplateID, BaseURL: cfg.BetterAuthURL},
 			CrawlerAccess:           crawlerAccessSvc,
 			Activation:              &activation.Service{Store: activation.Repository{DB: db}},
+			SiteReports:             siteReports,
 			Reports:                 reportsSvc,
 			Support:                 supportSvc,
 			Customers:               customersSvc,

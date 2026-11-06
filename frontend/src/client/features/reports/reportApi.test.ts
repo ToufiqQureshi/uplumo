@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/client/lib/uplumoApi";
 import {
   deleteReport,
+  generateSiteReport,
   getReport,
   listReports,
   saveReport,
@@ -188,5 +189,45 @@ describe("reports API", () => {
         }),
       },
     ]);
+  });
+});
+
+describe("generateSiteReport", () => {
+  it("posts the builder choices without the project id in the body", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      Response.json({
+        reportId: "r9",
+        title: "SEO report",
+        shareToken: null,
+        included: ["audit"],
+        skipped: [{ section: "search", reason: "Not connected." }],
+      }),
+    );
+    const out = await generateSiteReport({
+      data: {
+        projectId: "p 1",
+        title: "SEO report",
+        periodDays: 28,
+        sections: ["search", "audit"],
+        note: "",
+        nextSteps: "",
+        share: false,
+      },
+    });
+    expect(out.skipped[0]?.reason).toBe("Not connected.");
+    expect(fetchMock.mock.calls[0]).toMatchObject([
+      "/api/v1/projects/p%201/reports/generate",
+      {
+        body: JSON.stringify({
+          title: "SEO report",
+          periodDays: 28,
+          sections: ["search", "audit"],
+          note: "",
+          nextSteps: "",
+          share: false,
+        }),
+      },
+    ]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
