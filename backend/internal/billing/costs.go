@@ -70,7 +70,9 @@ const (
 )
 
 const (
-	ContentBriefSERPDepth     = 30
+	// ContentBriefSERPDepth is the row count used for a content brief's SERP lookup.
+	ContentBriefSERPDepth = 30
+	// ContentBriefReadPageLimit is the maximum page reads included in a brief.
 	ContentBriefReadPageLimit = 8
 )
 
