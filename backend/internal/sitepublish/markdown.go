@@ -3,6 +3,7 @@ package sitepublish
 import (
 	"bytes"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/yuin/goldmark"
@@ -15,6 +16,10 @@ import (
 // lists, autolinks). Raw HTML in a draft is dropped, not passed through, so
 // an article cannot carry a script onto the customer's site.
 var markdown = goldmark.New(goldmark.WithExtensions(extension.GFM))
+var (
+	italicAsterisk   = regexp.MustCompile(`(^|[^\p{L}\p{N}_])\*(\S(.*?\S)?)\*`)
+	italicUnderscore = regexp.MustCompile(`(^|[^\p{L}\p{N}_])_(\S(.*?\S)?)_`)
+)
 
 // imageURLs lists the distinct image addresses in a Markdown document, in
 // the order they appear.
@@ -63,6 +68,8 @@ func withoutDuplicateTitleHeading(source, title string) string {
 		}
 		heading = strings.TrimSpace(strings.TrimRight(heading, "#"))
 		heading = strings.NewReplacer("**", "", "__", "", "~~", "", "`", "").Replace(heading)
+		heading = italicAsterisk.ReplaceAllString(heading, "$1$2")
+		heading = italicUnderscore.ReplaceAllString(heading, "$1$2")
 		if !strings.EqualFold(strings.Join(strings.Fields(heading), " "), strings.Join(strings.Fields(title), " ")) {
 			return source
 		}

@@ -26,7 +26,7 @@ import (
 // shown before a click matches the provider hold.
 const (
 	briefCacheTTL        = 30 * 24 * time.Hour
-	briefDepth           = 30
+	briefDepth           = billing.ContentBriefSERPDepth
 	briefParses          = billing.ContentBriefReadPageLimit
 	briefParseAttempts   = 16
 	briefMinParsed       = 3
@@ -236,7 +236,7 @@ func (p DataForSEOBriefProvider) Fetch(ctx context.Context, organizationID strin
 	}
 	var brief ContentBrief
 	brief.Keyword, brief.LocationCode, brief.LanguageCode = input.Keyword, input.LocationCode, input.LanguageCode
-	err := p.Client.DoBudgeted(ctx, organizationID, spend.KeywordResearch, billing.ContentBriefMaxUSD, func(request dataforseo.DoBudgetedRequest) error {
+	err := p.Client.DoBudgeted(ctx, organizationID, spend.KeywordResearch, billing.ContentBriefMaxUSD(), func(request dataforseo.DoBudgetedRequest) error {
 		serpBody, err := json.Marshal([]map[string]any{{"keyword": input.Keyword, "location_code": input.LocationCode, "language_code": input.LanguageCode, "depth": briefDepth}})
 		if err != nil {
 			return fmt.Errorf("encode SERP brief request: %w", err)

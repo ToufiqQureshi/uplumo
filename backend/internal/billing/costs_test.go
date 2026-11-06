@@ -65,14 +65,12 @@ func TestPublishedMaximumsMatchTheirWorstCaseHolds(t *testing.T) {
 			continue
 		}
 		if cost.Feature == spend.KeywordResearch && cost.Action == ActionContentBrief {
-			if cost.Credits != CreditsForUSD(0.0072) || cost.MaxCredits != CreditsForUSD(ContentBriefMaxUSD) {
-				t.Errorf("search brief quote = %d/%d credits, want %d for its full SERP and eight page reads", cost.Credits, cost.MaxCredits, CreditsForUSD(0.0072))
-			}
+			// The dedicated quote test verifies this cost against its provider hold.
 			continue
 		}
 		if cost.Feature != spend.AIVisibility {
 			if cost.MaxCredits != 0 {
-				t.Errorf("%s shows a maximum of %d credits; only AI visibility and Cite Fix set one", cost.Feature, cost.MaxCredits)
+				t.Errorf("%s/%s unexpectedly shows a maximum of %d credits", cost.Feature, cost.Action, cost.MaxCredits)
 			}
 			continue
 		}
@@ -93,7 +91,7 @@ func TestJavaScriptRenderPriceIsFromThePublishedBatchCost(t *testing.T) {
 }
 
 func TestSearchBriefQuoteIncludesItsMaximumCustomerCharge(t *testing.T) {
-	want := CreditsForUSD(0.0072)
+	want := CreditsForUSD(ContentBriefMaxUSD())
 	for _, cost := range ActionCosts() {
 		if cost.Feature == spend.KeywordResearch && cost.Action == ActionContentBrief {
 			if cost.Credits != want || cost.MaxCredits != want {

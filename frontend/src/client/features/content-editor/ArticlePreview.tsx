@@ -22,6 +22,9 @@ const ARTICLE_COMPONENTS = {
     ) : null,
 };
 
+const ITALIC_ASTERISK = /(^|[^\p{L}\p{N}_])\*(\S(.*?\S)?)\*/gu;
+const ITALIC_UNDERSCORE = /(^|[^\p{L}\p{N}_])_(\S(.*?\S)?)_/gu;
+
 function withoutDuplicateTitleHeading(content: string, title: string) {
   if (!title.trim()) return content;
   const lines = content.split("\n");
@@ -35,6 +38,8 @@ function withoutDuplicateTitleHeading(content: string, title: string) {
     !heading ||
     heading
       .replace(/(?:\*\*|__|~~|`)/gu, "")
+      .replace(ITALIC_ASTERISK, "$1$2")
+      .replace(ITALIC_UNDERSCORE, "$1$2")
       .replace(/\s+/gu, " ")
       .trim()
       .toLowerCase() !== title.trim().replace(/\s+/gu, " ").toLowerCase()

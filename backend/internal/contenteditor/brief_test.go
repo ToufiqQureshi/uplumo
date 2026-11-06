@@ -192,7 +192,7 @@ func TestDataForSEOBriefProviderParsesEachPageSeparatelyAndBuildsTerms(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	if client.org != "org-9" || client.feature != spend.KeywordResearch || client.ceiling != billing.ContentBriefMaxUSD || client.requestCount != 1+briefParses {
+	if client.org != "org-9" || client.feature != spend.KeywordResearch || client.ceiling != billing.ContentBriefMaxUSD() || client.requestCount != 1+briefParses {
 		t.Fatalf("provider budget = %+v", client)
 	}
 	if len(brief.Competitors) != briefParses || len(brief.Questions) != 1 || brief.Competitors[0].Headings[0] != "Crawl budget basics" {
@@ -244,8 +244,8 @@ func TestDataForSEOBriefProviderReadsPastUnreadableTopResults(t *testing.T) {
 	if want := 1 + briefParseAttempts; client.requestCount != want {
 		t.Fatalf("requests = %d, want %d: never more than %d parses", client.requestCount, want, briefParseAttempts)
 	}
-	if client.ceiling != billing.ContentBriefMaxUSD {
-		t.Fatalf("ceiling = %v, want the quoted %v so the customer never pays for the extra parses", client.ceiling, billing.ContentBriefMaxUSD)
+	if client.ceiling != billing.ContentBriefMaxUSD() {
+		t.Fatalf("ceiling = %v, want the quoted %v so the customer never pays for the extra parses", client.ceiling, billing.ContentBriefMaxUSD())
 	}
 }
 

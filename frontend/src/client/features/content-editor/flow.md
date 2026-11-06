@@ -9,7 +9,7 @@
 ## Paid actions
 
 - Each explicit AI action click sends one `POST /content/assistant/generate` with an idempotency key. The backend spend guard settles the provider cost, capped at 15 credits per action; the response reports credits used for the toast. The suggestion changes the draft only after the writer chooses Insert or Replace.
-- A cached brief is free. A cache miss or confirmed Refresh sends one `POST /content/brief`, which makes one depth-30 DataForSEO SERP call and parses up to 16 candidate pages to find 8 readable pages. The displayed maximum and provider hold use the same billing catalog entry; extra parse attempts are covered by Uplumo. The shared brief cache lasts 30 days.
+- Search briefs require an eligible paid plan; a matching cached brief uses no extra credits. A cache miss or confirmed Refresh sends one `POST /content/brief`, which makes one depth-30 DataForSEO SERP call and parses up to 16 candidate pages to find 8 readable pages. The displayed maximum and provider hold use the same billing catalog entry; extra parse attempts are covered by Uplumo. The shared brief cache lasts 30 days.
 - Neither action is triggered by page load, tab change, focus, or rerender. Failed paid requests are not retried automatically.
 
 ## WordPress

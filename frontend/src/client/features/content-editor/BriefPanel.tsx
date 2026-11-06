@@ -110,8 +110,8 @@ export function BriefPanel({
           </p>
         ) : (
           <p className="text-xs text-muted-foreground">
-            A recent brief for the same topic and market is free. Otherwise,
-            search briefs require an eligible paid plan.
+            A cached brief uses no extra credits. Search briefs require an
+            eligible paid plan.
           </p>
         )}
         {mutation.isError ? (

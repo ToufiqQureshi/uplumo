@@ -18,7 +18,7 @@ priorities, corrections, and what still waits on him. Read it after
 - Owner: "fix it in one pr samja everything fix the bugs"; the approved paid-test cap remains about 159 credits.
 - Live QA used 11 customer credits across 10 AI actions. One brief refresh returned Cloudflare 502 with no customer charge; provider-side cost is unknown and it was not retried.
 - The original draft was restored; no post was published or draft deleted.
-- Fixed layout, preview heading, count/scoring labels, quote-to-hold alignment, and paid quote loading. No additional live paid action was run.
+- Fixed layout, italic/bold duplicate H1s, visible word count, FAQ scoring, and quote-to-hold alignment from shared DataForSEO rates. Removed unverifiable experience points; no additional paid action was run.
 - Changes are local and not deployed.
 
 ## 4 Nov 2026: Analytics + Cite Fix are Claude's responsibility

@@ -70,6 +70,7 @@ describe("BriefPanel credit quote", () => {
 
     expect(html).toContain("Up to 10 credits for a new brief");
     expect(html).toContain("7,420 left");
+    expect(html).toContain("A cached brief uses no extra credits.");
     expect(button).not.toMatch(/\sdisabled(?:\s|=|>)/);
   });
 

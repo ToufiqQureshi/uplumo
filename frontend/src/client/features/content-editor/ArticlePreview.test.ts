@@ -37,11 +37,17 @@ describe("ArticlePreview", () => {
     expect(html).not.toContain("javascript:");
   });
 
-  it("does not repeat the page title as the first body heading", () => {
+  it.each([
+    ["bold", "Example title", "**Example title**"],
+    ["asterisk italic", "Example title", "*Example title*"],
+    ["underscore italic", "Example title", "_Example title_"],
+    ["bold italic", "Example title", "***Example title***"],
+    ["literal underscores", "utm_source guide", "utm_source guide"],
+  ])("does not repeat a matching %s H1", (_name, title, heading) => {
     const preview = renderToStaticMarkup(
       createElement(ArticlePreview, {
-        title: "Example title",
-        content: "# **Example title**\n\nArticle body.",
+        title,
+        content: `# ${heading}\n\nArticle body.`,
       }),
     );
 
