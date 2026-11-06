@@ -234,7 +234,7 @@ func build(publicURL *url.URL, blogFiles fs.FS) (*Site, error) {
 			return nil, err
 		}
 	}
-	s.robots = []byte("User-agent: *\nAllow: /\nDisallow: /api/\n\nSitemap: " + origin + "/sitemap.xml\n")
+	s.robots = robotsTxt(origin)
 	s.sitemap = sitemap(origin, posts)
 	for _, currency := range []string{planCatalog.INR, planCatalog.USD} {
 		data := base
@@ -332,6 +332,30 @@ func (s *Site) ServeBlogPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	servePage(w, r, p, "public, max-age=300, no-transform")
+}
+
+// crawlerAgents are the search and AI crawlers named in robots.txt so that
+// each one sees an explicit Allow. A crawler with its own group ignores the
+// "*" group, so all of them share one group that repeats the /api/ rule.
+var crawlerAgents = []string{
+	"Googlebot", "Google-Extended", "Google-Agent", "Bingbot", "Applebot", "Applebot-Extended",
+	"GPTBot", "OAI-SearchBot", "ChatGPT-User",
+	"ClaudeBot", "Claude-SearchBot", "Claude-User",
+	"PerplexityBot", "Perplexity-User",
+	"MistralAI-Index", "MistralAI-Training", "MistralAI-User",
+	"meta-externalagent", "meta-webindexer", "meta-externalfetcher", "facebookexternalhit",
+	"Amazonbot", "Amzn-SearchBot", "Amzn-User",
+	"DuckAssistBot", "YouBot", "CCBot", "AI2Bot",
+}
+
+// robotsTxt allows every crawler on every public page except the API.
+func robotsTxt(origin string) []byte {
+	var b strings.Builder
+	for _, agent := range crawlerAgents {
+		b.WriteString("User-agent: " + agent + "\n")
+	}
+	b.WriteString("User-agent: *\nAllow: /\nDisallow: /api/\n\nSitemap: " + origin + "/sitemap.xml\n")
+	return []byte(b.String())
 }
 
 // ServeRobots writes robots.txt: everything public may be crawled, the API

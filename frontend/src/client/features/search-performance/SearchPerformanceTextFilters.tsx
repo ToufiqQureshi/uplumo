@@ -11,12 +11,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/client/components/ui/select";
-import type { searchPerformanceInputSchema } from "@/types/schemas/search-performance";
+import {
+  TEXT_MATCH_OPERATORS,
+  type searchPerformanceInputSchema,
+  type TextMatchOperator,
+} from "@/types/schemas/search-performance";
 
-const MATCH_ITEMS = [
+const MATCH_ITEMS: { value: TextMatchOperator; label: string }[] = [
   { value: "contains", label: "Contains" },
+  { value: "notContains", label: "Does not contain" },
   { value: "equals", label: "Exactly matches" },
+  { value: "includingRegex", label: "Matches regex" },
+  { value: "excludingRegex", label: "Does not match regex" },
 ];
+
+const toOperator = (value: unknown): TextMatchOperator =>
+  TEXT_MATCH_OPERATORS.find((operator) => operator === value) ?? "contains";
 
 export type TextFilters = Pick<
   z.infer<typeof searchPerformanceInputSchema>,
@@ -36,10 +46,10 @@ export function SearchPerformanceTextFilters({
 }) {
   const [page, setPage] = useState(value.pageFilter?.expression ?? "");
   const [query, setQuery] = useState(value.queryFilter?.expression ?? "");
-  const [pageOperator, setPageOperator] = useState<"contains" | "equals">(
+  const [pageOperator, setPageOperator] = useState<TextMatchOperator>(
     value.pageFilter?.operator ?? "contains",
   );
-  const [queryOperator, setQueryOperator] = useState<"contains" | "equals">(
+  const [queryOperator, setQueryOperator] = useState<TextMatchOperator>(
     value.queryFilter?.operator ?? "contains",
   );
   const dirtyCount =
@@ -116,7 +126,7 @@ export function SearchPerformanceTextFilters({
               items={MATCH_ITEMS}
               value={pageOperator}
               onValueChange={(operator) =>
-                setPageOperator(operator === "equals" ? "equals" : "contains")
+                setPageOperator(toOperator(operator))
               }
             >
               <SelectTrigger
@@ -153,7 +163,7 @@ export function SearchPerformanceTextFilters({
               items={MATCH_ITEMS}
               value={queryOperator}
               onValueChange={(operator) =>
-                setQueryOperator(operator === "equals" ? "equals" : "contains")
+                setQueryOperator(toOperator(operator))
               }
             >
               <SelectTrigger
@@ -185,7 +195,10 @@ export function SearchPerformanceTextFilters({
       <p className="text-xs text-muted-foreground">
         All filters must match. Contains ignores case and matches text anywhere,
         including a subfolder. Exactly matches compares the full URL or query,
-        including case.
+        including case. Regex uses Google's RE2 syntax, for example{" "}
+        <code className="font-mono">{"^(how|what|why)\\b"}</code> finds
+        questions and <code className="font-mono">/blog/</code> finds one
+        section.
       </p>
       <div className="flex items-center justify-end gap-2 pt-1">
         <Button

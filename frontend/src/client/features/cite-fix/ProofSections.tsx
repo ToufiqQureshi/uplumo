@@ -128,7 +128,7 @@ export function FixProofCard({
       </div>
       {proofs.some((proof) => !proof.leadsTracked) ? (
         <p className="text-xs text-muted-foreground">
-          Leads show once you choose your lead actions in Traffic.
+          Leads show once you choose your lead actions in Analytics.
         </p>
       ) : null}
     </section>

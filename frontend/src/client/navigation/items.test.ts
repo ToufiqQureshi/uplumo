@@ -11,8 +11,8 @@ describe("getProjectNavGroups", () => {
     expect(routes).toHaveLength(18);
   });
 
-  it("shows twelve sidebar rows", () => {
-    expect(items).toHaveLength(12);
+  it("shows thirteen sidebar rows", () => {
+    expect(items).toHaveLength(13);
   });
 
   it("opens a tabbed row on its first tab", () => {

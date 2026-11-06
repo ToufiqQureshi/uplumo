@@ -1,11 +1,8 @@
 import { SearchGrowthPanel } from "./SearchGrowthPanel";
-import { Ga4OrganicCard } from "./Ga4OrganicCard";
-import {
-  PagesToFix,
-  QuickWins,
-  SearchesChanged,
-  SearchVerdict,
-} from "./SearchVerdictCards";
+import { ExploreView } from "./ExploreView";
+import { FixView, GrowView, OverviewView } from "./GrowthViews";
+import { useBrandNames } from "./brandNames";
+import { insightsQueryOptions } from "./insightsApi";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
@@ -20,12 +17,10 @@ import { ExportMenu } from "@/client/components/ExportMenu";
 import { Badge } from "@/client/components/ui/badge";
 import { Button } from "@/client/components/ui/button";
 import { Spinner } from "@/client/components/ui/spinner";
-import { DataTableTabs } from "@/client/components/table/DataTableToolbar";
-import { TabsTrigger } from "@/client/components/ui/tabs";
+import { ViewTabs } from "./ViewTabs";
 import { GoogleConnectionCard } from "@/client/features/integrations/GoogleConnectionCard";
 import { IndexNowCard } from "@/client/features/indexnow/IndexNowCard";
 import { SectionHeader } from "@/client/components/PageHeader";
-import { DimensionSection } from "@/client/features/search-performance/SearchPerformanceDimensionSection";
 import { SearchPerformanceSelects } from "@/client/features/search-performance/SearchPerformanceSelects";
 import { SearchPerformanceLoadingState } from "@/client/features/search-performance/SearchPerformanceLoadingState";
 import {
@@ -40,13 +35,9 @@ import {
   exportContentRefreshQueue,
   exportDimensionRows,
   exportStriking,
-  StrikingDistanceTable,
   type ExportTarget,
 } from "@/client/features/search-performance/SearchPerformanceParts";
-import { TotalsCards } from "@/client/features/search-performance/SearchPerformanceTotals";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
-import { ContentRefreshQueue } from "@/client/features/search-performance/ContentRefreshQueuePanel";
-import { SearchPerformanceTrend } from "@/client/features/search-performance/SearchPerformanceTrend";
 import { SearchPerformanceIndexing } from "@/client/features/search-performance/SearchPerformanceIndexing";
 import { buildContentRefreshQueue } from "@/client/features/search-performance/contentRefreshQueue";
 import {
@@ -55,7 +46,7 @@ import {
 } from "@/client/features/search-performance/searchPerformanceApi";
 import {
   SEARCH_PERFORMANCE_DEFAULT_PAGE_SIZE,
-  SEARCH_PERFORMANCE_TABS,
+  type SearchGrowthView,
   type SearchPerformanceSearch,
   type SearchPerformanceTab,
   type SearchPerformanceTableDimension,
@@ -127,6 +118,8 @@ export function SearchPerformancePage({
   const tab = search.tab ?? "striking";
   const page = search.page ?? 1;
   const pageSize = search.size ?? SEARCH_PERFORMANCE_DEFAULT_PAGE_SIZE;
+  const view = search.view ?? "overview";
+  const brands = useBrandNames(projectId);
 
   const filterInput = {
     ...buildFilterInput(search),
@@ -140,6 +133,16 @@ export function SearchPerformancePage({
     placeholderData: keepPreviousData,
   });
   const report = reportQuery.data;
+  // Only the screens that use the analysis read for it, and the analysis is
+  // kept for five minutes, so moving between screens never re-reads Google.
+  const insightsQuery = useQuery({
+    ...insightsQueryOptions(projectId, filterInput, brands.names),
+    enabled:
+      report?.connected === true &&
+      !reportQuery.isPlaceholderData &&
+      (view === "overview" || view === "fix" || view === "grow"),
+    placeholderData: keepPreviousData,
+  });
   const isTableTab = tab === "queries" || tab === "pages";
   const dimension = tabDimension(tab);
   const tableQuery = useQuery({
@@ -240,14 +243,33 @@ export function SearchPerformancePage({
     />
   );
 
+  const openView = (next: SearchGrowthView) =>
+    onSearchChange({ view: next, page: undefined });
+
+  const showControls =
+    view === "overview" ||
+    view === "fix" ||
+    view === "grow" ||
+    view === "explore";
+
+  const indexNowSection = (
+    <section id="indexnow" className="max-w-2xl space-y-3 pt-4">
+      <SectionHeader
+        title="Request indexing on Bing and other engines (IndexNow)"
+        hint="Works on any website, WordPress or not. Google does not use IndexNow: for Google, use URL Inspection in Search Console."
+      />
+      <IndexNowCard projectId={projectId} />
+    </section>
+  );
+
   return (
     <div className="overflow-auto px-4 py-4 pb-24 md:px-6 md:py-6 md:pb-8">
       <div className="mx-auto max-w-7xl space-y-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold">Search Performance</h1>
+            <h1 className="text-2xl font-semibold">Search Growth</h1>
             <p className="text-sm text-muted-foreground">
-              What changed in Google search, why, and what to fix first.
+              What changed in Google search, why, and what to do next.
             </p>
           </div>
           {report?.connected ? (
@@ -269,44 +291,83 @@ export function SearchPerformancePage({
             {reportError}
           </>
         ) : !report.connected ? (
-          <div className="max-w-2xl">
-            <GoogleConnectionCard provider="gsc" projectId={projectId} />
-          </div>
+          <>
+            <div className="max-w-2xl">
+              <GoogleConnectionCard provider="gsc" projectId={projectId} />
+            </div>
+            {/* IndexNow needs no Search Console connection and works on any
+                website, so it shows whether or not Google is connected. */}
+            {indexNowSection}
+          </>
         ) : (
           <>
             {reportQuery.isError ? reportError : null}
-            {reportQuery.isPlaceholderData ? (
-              <SearchPerformanceLoadingState />
-            ) : (
+            <ViewTabs value={view} onChange={openView} />
+
+            {showControls ? (
               <>
-                <SearchVerdict projectId={projectId} report={report} />
-                <TotalsCards report={report} />
-                <PagesToFix projectId={projectId} report={report} />
-                <SearchesChanged projectId={projectId} report={report} />
-                <QuickWins projectId={projectId} report={report} />
-                <Ga4OrganicCard projectId={projectId} />
+                <div className="flex flex-col gap-2 rounded-xl border bg-card px-3 py-2 sm:flex-row sm:items-start">
+                  <Button
+                    type="button"
+                    variant={showFilters ? "secondary" : "ghost"}
+                    size="sm"
+                    aria-expanded={showFilters}
+                    aria-controls="search-performance-filters"
+                    onClick={() => setShowFilters((current) => !current)}
+                    title="Filter by page or search, including regular expressions"
+                  >
+                    <SlidersHorizontal data-icon="inline-start" />
+                    Filters
+                    {filterCount > 0 ? (
+                      <Badge size="sm">{filterCount}</Badge>
+                    ) : null}
+                  </Button>
+                  {reportQuery.isFetching && !reportQuery.isPending ? (
+                    <Spinner className="size-4 text-muted-foreground" />
+                  ) : null}
+                  <SearchPerformanceSelects
+                    search={search}
+                    countries={report.countries}
+                    reportRange={report.range}
+                    onSearchChange={onSearchChange}
+                  />
+                </div>
+                {showFilters ? (
+                  <div className="overflow-hidden rounded-xl border border-border">
+                    {filtersPanel}
+                  </div>
+                ) : null}
               </>
-            )}
-            {!reportQuery.isPlaceholderData ? (
-              <SearchPerformanceTrend report={report} />
             ) : null}
-            <SearchPerformanceIndexing
-              projectId={projectId}
-              strikingDistance={
-                report?.connected ? report.strikingDistance : []
-              }
-            />
-            <div className="overflow-hidden rounded-xl border border-border bg-card">
-              <DataTableTabs
-                value={tab}
-                onValueChange={(value) => {
-                  const nextTab = SEARCH_PERFORMANCE_TABS.find(
-                    (item) => item === value,
-                  );
-                  if (nextTab)
-                    onSearchChange({ tab: nextTab, page: undefined });
-                }}
-                actions={
+
+            {reportQuery.isPlaceholderData && showControls ? (
+              <SearchPerformanceLoadingState />
+            ) : view === "overview" ? (
+              <OverviewView
+                projectId={projectId}
+                report={report}
+                query={insightsQuery}
+                brandText={brands.text}
+                onSaveBrands={brands.save}
+                onOpen={openView}
+              />
+            ) : view === "fix" ? (
+              <FixView projectId={projectId} query={insightsQuery} />
+            ) : view === "grow" ? (
+              <GrowView
+                projectId={projectId}
+                report={report}
+                query={insightsQuery}
+              />
+            ) : view === "explore" ? (
+              <ExploreView
+                projectId={projectId}
+                report={report}
+                tab={tab}
+                onTabChange={(next) =>
+                  onSearchChange({ tab: next, page: undefined })
+                }
+                exportMenu={
                   <ExportMenu
                     actions={["sheets", "csv"]}
                     onExport={(target) => void handleExport(target)}
@@ -314,102 +375,28 @@ export function SearchPerformancePage({
                     disabled={reportQuery.isPlaceholderData}
                   />
                 }
-              >
-                <TabsTrigger value="striking">
-                  {reportQuery.isPlaceholderData
-                    ? "Striking distance"
-                    : `Striking distance (${report.strikingDistance.length})`}
-                </TabsTrigger>
-                <TabsTrigger value="queries">Queries</TabsTrigger>
-                <TabsTrigger value="pages">Pages</TabsTrigger>
-                <TabsTrigger value="refresh">Refresh queue</TabsTrigger>
-              </DataTableTabs>
-              <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-2">
-                <Button
-                  type="button"
-                  variant={showFilters ? "secondary" : "ghost"}
-                  size="sm"
-                  aria-expanded={showFilters}
-                  aria-controls="search-performance-filters"
-                  onClick={() => setShowFilters((current) => !current)}
-                  title="Toggle table filters"
-                >
-                  <SlidersHorizontal data-icon="inline-start" />
-                  Filters
-                  {filterCount > 0 ? (
-                    <Badge size="sm">{filterCount}</Badge>
-                  ) : null}
-                </Button>
-                {reportQuery.isFetching && !reportQuery.isPending ? (
-                  <Spinner className="size-4 text-muted-foreground" />
-                ) : null}
-                <SearchPerformanceSelects
-                  search={search}
-                  countries={report.countries}
-                  reportRange={report.range}
-                  onSearchChange={onSearchChange}
-                />
-              </div>
-
-              {showFilters ? filtersPanel : null}
-              {reportQuery.isPlaceholderData ? (
-                <div className="p-8 text-sm" role="status">
-                  Loading matching results…
-                </div>
-              ) : tab === "striking" ? (
-                <StrikingDistanceTable
+                tableQuery={tableQuery}
+                page={page}
+                pageSize={pageSize}
+                onPageChange={(nextPage) => onSearchChange({ page: nextPage })}
+                onPageSizeChange={(size) =>
+                  onSearchChange({ page: undefined, size })
+                }
+                isFiltered={filterCount > 0}
+                onClearFilters={resetFilters}
+              />
+            ) : view === "indexing" ? (
+              <>
+                <SearchPerformanceIndexing
                   projectId={projectId}
-                  rows={report.strikingDistance}
-                  page={page}
-                  pageSize={pageSize}
-                  onPageChange={(nextPage) =>
-                    onSearchChange({ page: nextPage })
-                  }
-                  onPageSizeChange={(size) =>
-                    onSearchChange({ page: undefined, size })
-                  }
-                  isFiltered={filterCount > 0}
-                  onClearFilters={resetFilters}
+                  strikingDistance={report.strikingDistance}
                 />
-              ) : tab === "refresh" ? (
-                <div className="p-4">
-                  <ContentRefreshQueue
-                    projectId={projectId}
-                    rows={report.strikingDistance}
-                  />
-                </div>
-              ) : (
-                <DimensionSection
-                  projectId={projectId}
-                  tableQuery={tableQuery}
-                  keyLabel={tab === "queries" ? "Query" : "Page"}
-                  page={page}
-                  pageSize={pageSize}
-                  onPageChange={(nextPage) =>
-                    onSearchChange({ page: nextPage })
-                  }
-                  onPageSizeChange={(size) =>
-                    onSearchChange({ page: undefined, size })
-                  }
-                  isFiltered={filterCount > 0}
-                  onClearFilters={resetFilters}
-                />
-              )}
-            </div>
-            <SearchGrowthPanel key={projectId} projectId={projectId} />
+                {indexNowSection}
+              </>
+            ) : (
+              <SearchGrowthPanel key={projectId} projectId={projectId} />
+            )}
           </>
-        )}
-
-        {/* IndexNow needs no Search Console connection and works on any
-            website, so it shows whether or not Google is connected. */}
-        {reportQuery.isPending ? null : (
-          <section id="indexnow" className="max-w-2xl space-y-3 pt-4">
-            <SectionHeader
-              title="Request indexing on Bing and other engines (IndexNow)"
-              hint="Works on any website, WordPress or not. Google does not use IndexNow: for Google, use URL Inspection in Search Console."
-            />
-            <IndexNowCard projectId={projectId} />
-          </section>
         )}
       </div>
     </div>

@@ -111,6 +111,8 @@ type Service struct {
 	Connections ConnectionReader
 	NewClient   func(userID, accountID string) SearchClient
 	Now         func() time.Time
+	// Rules overrides the free analysis cut-offs; nil uses DefaultInsightRules.
+	Rules *InsightRules
 }
 
 type dateWindow struct {
