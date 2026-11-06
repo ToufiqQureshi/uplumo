@@ -13,6 +13,14 @@ priorities, corrections, and what still waits on him. Read it after
   decision, remove it when he answers.
 - Never write secrets, keys or customer data here.
 
+## 6 Nov 2026: Live check of client reports and the website add-on
+
+- Owner: "abhi chrome open kar and check kar live ki sab sahi se kaam karra ha ya nai".
+- Live OK: pricing (Pro 3 websites, ₹999 add-on on Basic/Pro/Business, none on Free), report builder, report saved with 0 credits, client link opens logged out, bad link 404.
+- Fixed in a new PR: chart axis labels repeated or skipped numbers ("2 2 1 1 0"), GA chart skipped empty days, "was 0" comparison and "rising searches" shown for a site with no previous data.
+- Not a code bug: the workspace white-label brand name is set to a URL, so client links say "Prepared by https://uplumo.com/". Owner should set the brand name in Settings.
+- Waiting for the owner: merge + deploy the fix PR.
+
 ## 6 Nov 2026: Pro gets 3 websites; every extra website is ₹999
 
 - Owner: "pro plan me ab srif 3 sites allowed", "per site ka 999 for every plan", "free plan pe no addon", "bahar ke users ... koi nai chalara uplumo" (USD kept at $12), "bindaas change kar", new PR, then merge #277 and this PR, deploy and test from the UI.

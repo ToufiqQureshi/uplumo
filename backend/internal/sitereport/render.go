@@ -321,7 +321,9 @@ func lineChart(id string, values []float64, dates []string, unit string) templat
 	for _, v := range values {
 		maxV = math.Max(maxV, v)
 	}
-	maxV = niceCeil(maxV)
+	// Four gridlines at a whole, round step: these are counts, so a label
+	// never rounds 2.5 to "3" or prints "2" twice.
+	maxV = 4 * niceStep(maxV/4)
 	x := func(i int) float64 { return left + float64(i)*(w-left-right)/float64(len(values)-1) }
 	y := func(v float64) float64 { return top + (h-top-bottom)*(1-v/maxV) }
 	var b strings.Builder
@@ -368,13 +370,14 @@ func lineChart(id string, values []float64, dates []string, unit string) templat
 	return template.HTML(b.String())
 }
 
-// niceCeil rounds an axis maximum up to 1, 2, 2.5 or 5 times a power of ten.
-func niceCeil(v float64) float64 {
-	if v <= 0 {
+// niceStep rounds a gridline step up to 1, 2 or 5 times a power of ten,
+// and to at least 1.
+func niceStep(v float64) float64 {
+	if v <= 1 {
 		return 1
 	}
 	exp := math.Pow(10, math.Floor(math.Log10(v)))
-	for _, m := range []float64{1, 2, 2.5, 5, 10} {
+	for _, m := range []float64{1, 2, 5} {
 		if v <= m*exp {
 			return m * exp
 		}

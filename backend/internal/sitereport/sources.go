@@ -58,12 +58,18 @@ func (g GSC) Search(ctx context.Context, organizationID, projectID string, p Per
 		return nil, fmt.Errorf("load top queries: %w", err)
 	}
 	out := &Search{
-		Current: perf.Totals, Previous: perf.PrevTotals, HasPrevious: perf.Range.ComparisonAvailable,
+		// A previous period with no impressions is a site that was not in
+		// Search yet: "was 0" there would read as growth from nothing.
+		Current: perf.Totals, Previous: perf.PrevTotals, HasPrevious: perf.Range.ComparisonAvailable && perf.PrevTotals.Impressions > 0,
 		Daily: perf.Daily, TopQueries: topRows(queries), TopPages: topRows(pages),
 		Gains: changes(perf.QueryGains), Losses: changes(perf.QueryLosses),
 		Opportunities: firstN(perf.StrikingDistance, 15), Countries: firstN(perf.Countries, 10),
 	}
-	slices.SortFunc(out.Daily, func(a, b SearchDay) int { return strings.Compare(a.Date, b.Date) })
+	if !out.HasPrevious {
+		// Every search is "rising" against an empty period: say nothing.
+		out.Gains, out.Losses = nil, nil
+	}
+	out.Daily = fillDays(p, out.Daily, func(d SearchDay) string { return d.Date }, func(date string) SearchDay { return SearchDay{Date: date} })
 	return out, nil
 }
 
@@ -87,6 +93,9 @@ func topRows(rows []gsc.SearchRow) []Row {
 func changes(rows []gsc.QueryChange) []Change {
 	out := make([]Change, 0, len(rows))
 	for _, r := range rows {
+		if r.Query == "" {
+			continue
+		}
 		out = append(out, Change{Key: r.Query, Clicks: r.Clicks, PrevClicks: r.PrevClicks, Position: r.Position, PrevPosition: r.PrevPosition})
 	}
 	return firstN(out, 10)
@@ -140,7 +149,7 @@ func (g GA4) Traffic(ctx context.Context, projectID string, p Period) (*Traffic,
 			out.Daily = append(out.Daily, TrafficDay{Date: date, Sessions: sessions})
 		}
 	}
-	slices.SortFunc(out.Daily, func(a, b TrafficDay) int { return strings.Compare(a.Date, b.Date) })
+	out.Daily = fillDays(p, out.Daily, func(d TrafficDay) string { return d.Date }, func(date string) TrafficDay { return TrafficDay{Date: date} })
 	return out, nil
 }
 
@@ -256,4 +265,24 @@ func roundTrip(in any, out any) error {
 		return err
 	}
 	return json.Unmarshal(raw, out)
+}
+
+// fillDays returns one row per day of the period, in date order. Google
+// leaves out days with no data; without them a chart would draw 21 Oct and
+// 30 Oct one step apart.
+func fillDays[T any](p Period, rows []T, date func(T) string, empty func(string) T) []T {
+	byDate := make(map[string]T, len(rows))
+	for _, row := range rows {
+		byDate[date(row)] = row
+	}
+	out := make([]T, 0, p.Days)
+	for d := p.Start; !d.After(p.End); d = d.AddDate(0, 0, 1) {
+		key := d.Format(day)
+		if row, ok := byDate[key]; ok {
+			out = append(out, row)
+		} else {
+			out = append(out, empty(key))
+		}
+	}
+	return out
 }

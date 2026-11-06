@@ -21,12 +21,18 @@ func (f fakeConnections) GetByProjectID(context.Context, string, string) (gsc.Co
 type fakeGoogle struct {
 	mu       sync.Mutex
 	requests []gsc.SearchRequest
+	// emptyBefore answers nothing for ranges that end before this day, like
+	// a site that was not in Search yet.
+	emptyBefore string
 }
 
 func (f *fakeGoogle) QuerySearchAnalytics(_ context.Context, _ string, r gsc.SearchRequest) ([]gsc.SearchRow, error) {
 	f.mu.Lock()
 	f.requests = append(f.requests, r)
 	f.mu.Unlock()
+	if r.EndDate < f.emptyBefore {
+		return nil, nil
+	}
 	switch {
 	case slices.Equal(r.Dimensions, []string{"date"}):
 		return []gsc.SearchRow{{Keys: []string{r.EndDate}, Clicks: 10, Impressions: 100, Position: 8}, {Keys: []string{r.StartDate}, Clicks: 5, Impressions: 50, Position: 9}}, nil
@@ -62,6 +68,11 @@ func TestGSCSourceReadsAtMostTenFreeRequests(t *testing.T) {
 	if len(got.TopQueries) != 2 || got.TopQueries[0].Key != "big" || len(got.TopPages) != 1 {
 		t.Errorf("top rows = %+v %+v", got.TopQueries, got.TopPages)
 	}
+	for _, g := range got.Gains {
+		if g.Key == "" {
+			t.Errorf("a rising search with no text: %+v", got.Gains)
+		}
+	}
 	if len(got.Opportunities) != 1 || got.Opportunities[0].Query != "near" {
 		t.Errorf("opportunities are the striking-distance rows: %+v", got.Opportunities)
 	}
@@ -80,5 +91,46 @@ func TestGSCSourceReportsNotConnected(t *testing.T) {
 	}
 	if got, err := (RankTracking{}).Rankings(t.Context(), "p", "example.com", periodFor(fixedNow, 7)); got != nil || err != nil {
 		t.Fatalf("nil rank tracking = %v, %v", got, err)
+	}
+}
+
+func TestFillDaysDrawsEveryDayOfThePeriod(t *testing.T) {
+	p := periodFor(fixedNow, 7)
+	third := p.Start.AddDate(0, 0, 2).Format(day)
+	got := fillDays(p, []TrafficDay{{Date: p.End.Format(day), Sessions: 3}, {Date: third, Sessions: 1}},
+		func(d TrafficDay) string { return d.Date }, func(date string) TrafficDay { return TrafficDay{Date: date} })
+	if len(got) != 7 || got[0].Date != p.Start.Format(day) || got[6].Date != p.End.Format(day) {
+		t.Fatalf("days = %+v", got)
+	}
+	if got[2].Sessions != 1 || got[6].Sessions != 3 || got[1].Sessions != 0 {
+		t.Errorf("values moved or missing days were not zero: %+v", got)
+	}
+	if empty := fillDays(p, nil, func(d TrafficDay) string { return d.Date }, func(date string) TrafficDay { return TrafficDay{Date: date} }); len(empty) != 7 {
+		t.Errorf("no rows gives %d days", len(empty))
+	}
+}
+
+func TestGSCSourceFillsMissingDays(t *testing.T) {
+	google := &fakeGoogle{}
+	svc := &gsc.Service{Connections: fakeConnections{}, NewClient: func(string, string) gsc.SearchClient { return google }, Now: func() time.Time { return fixedNow }}
+	got, err := GSC{Service: svc}.Search(t.Context(), "o", "p", periodFor(fixedNow, 28))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Daily) != 28 || got.Daily[1].Clicks != 0 || got.Daily[27].Clicks != 10 {
+		t.Errorf("daily = %d rows %+v", len(got.Daily), got.Daily)
+	}
+}
+
+func TestGSCSourceHasNoComparisonWhenThePreviousPeriodIsEmpty(t *testing.T) {
+	p := periodFor(fixedNow, 28)
+	google := &fakeGoogle{emptyBefore: p.Start.Format(day)}
+	svc := &gsc.Service{Connections: fakeConnections{}, NewClient: func(string, string) gsc.SearchClient { return google }, Now: func() time.Time { return fixedNow }}
+	got, err := GSC{Service: svc}.Search(t.Context(), "o", "p", p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.HasPrevious || got.Current.Clicks != 15 || len(got.Gains) != 0 {
+		t.Errorf("a previous period with no data must not show \"was 0\": %+v", got)
 	}
 }

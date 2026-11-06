@@ -9,6 +9,13 @@
 - **Highlights come from numbers.** Each highlight is computed from the
   snapshot (change vs previous period, top-10 count, critical issues, new and
   lost linking sites). There is no generic advice text.
+- **No growth from nothing.** If the previous period has no Search Console
+  impressions (a new site), the report shows no "was 0" comparison and no
+  rising or falling searches: against an empty period every number would
+  look like growth.
+- **Charts show every day.** Google leaves out days with no data; the report
+  fills them with 0 so the gap between two dates is drawn to scale. Axis
+  labels are whole, evenly spaced counts.
 - **One failing source does not fail the click.** A Google error skips that
   section and is logged; the rest of the report is saved.
 - **Double clicks save once.** Concurrent requests with the same title share
