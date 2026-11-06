@@ -6,24 +6,20 @@ import {
   formatPosition,
   type Report,
 } from "./SearchPerformanceColumns";
-import {
-  lossText,
-  PAGE_REASON,
-  SEVERITY,
-  searchVerdict,
-  urgentCount,
-} from "./searchVerdict";
+import { SEVERITY, searchVerdict, urgentCount } from "./searchVerdict";
 
 /**
- * The top of Search Performance: what happened, why, and the pages to fix
+ * The top of Search Growth: what happened, why, and the pages to fix
  * first. Built from the report already loaded; no extra request.
  */
 export function SearchVerdict({
   projectId,
   report,
+  onOpenFix,
 }: {
   projectId: string;
   report: Report;
+  onOpenFix: () => void;
 }) {
   const verdict = searchVerdict(report);
   const urgent = urgentCount(report);
@@ -48,24 +44,9 @@ export function SearchVerdict({
         </p>
       ) : null}
       <div className="flex flex-wrap gap-2 pt-1">
-        {report.pageChanges.length > 0 ? (
-          <Button
-            size="lg"
-            variant="secondary"
-            nativeButton={false}
-            render={<a href="#pages-to-fix" />}
-          >
-            See the pages to fix
-          </Button>
-        ) : null}
-        {report.queryLosses.length > 0 ? (
-          <Button
-            size="lg"
-            variant="secondary"
-            nativeButton={false}
-            render={<a href="#searches-changed" />}
-          >
-            See the searches you lost
+        {report.pageChanges.length > 0 || report.queryLosses.length > 0 ? (
+          <Button size="lg" variant="secondary" onClick={onOpenFix}>
+            See what to fix
           </Button>
         ) : null}
         <Button
@@ -82,7 +63,7 @@ export function SearchVerdict({
   );
 }
 
-const pathOf = (url: string) => {
+export const pathOf = (url: string) => {
   try {
     const parsed = new URL(url);
     return parsed.pathname === "/" ? "/ (home page)" : parsed.pathname;
@@ -91,107 +72,11 @@ const pathOf = (url: string) => {
   }
 };
 
-/** Pages that lost the most clicks, each with why and one next step. */
-export function PagesToFix({
-  projectId,
-  report,
+export function SeverityBadge({
+  severity,
 }: {
-  projectId: string;
-  report: Report;
+  severity: keyof typeof SEVERITY;
 }) {
-  if (report.pageChanges.length === 0) return null;
-  return (
-    <section
-      id="pages-to-fix"
-      aria-labelledby="pages-to-fix-title"
-      className="space-y-3 rounded-xl border bg-card p-5"
-    >
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="pages-to-fix-title" className="text-lg font-semibold">
-          Pages that lost the most clicks
-        </h2>
-        <p className="text-xs text-muted-foreground">
-          From your Search Console data, compared with the previous period
-        </p>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[640px] text-left text-sm">
-          <thead className="text-xs text-muted-foreground">
-            <tr>
-              <th className="py-2 font-medium">Page</th>
-              <th className="py-2 font-medium">Clicks</th>
-              <th className="py-2 font-medium">How bad</th>
-              <th className="py-2 font-medium">Why</th>
-              <th className="py-2 font-medium">Do this</th>
-            </tr>
-          </thead>
-          <tbody>
-            {report.pageChanges.map((change) => {
-              const reason = PAGE_REASON[change.reason];
-              return (
-                <tr key={change.page} className="border-t">
-                  <td className="max-w-xs truncate py-3 pr-3">
-                    <a
-                      href={change.page}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="underline-offset-4 hover:underline"
-                      title={change.page}
-                    >
-                      {pathOf(change.page)}
-                    </a>
-                  </td>
-                  <td className="py-3 pr-3 tabular-nums">
-                    {formatCount(change.prevClicks)} →{" "}
-                    {formatCount(change.clicks)}
-                    <span className="block text-xs text-muted-foreground">
-                      {lossText(change.prevClicks, change.clicks)}
-                    </span>
-                  </td>
-                  <td className="py-3 pr-3">
-                    <SeverityBadge severity={change.severity} />
-                  </td>
-                  <td className="py-3 pr-3">
-                    <span className="rounded-md bg-muted px-2 py-1 text-xs">
-                      {reason.label}
-                      {change.reason === "rank_fell" && change.position > 0
-                        ? ` (${formatPosition(change.prevPosition)} → ${formatPosition(change.position)})`
-                        : ""}
-                    </span>
-                  </td>
-                  <td className="py-3">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      nativeButton={false}
-                      render={
-                        change.reason === "fewer_searches" ? (
-                          <Link
-                            to="/p/$projectId/keywords"
-                            params={{ projectId }}
-                          />
-                        ) : (
-                          <Link
-                            to="/p/$projectId/content-editor"
-                            params={{ projectId }}
-                          />
-                        )
-                      }
-                    >
-                      {reason.action}
-                    </Button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  );
-}
-
-function SeverityBadge({ severity }: { severity: keyof typeof SEVERITY }) {
   const level = SEVERITY[severity];
   return (
     <span
@@ -199,101 +84,6 @@ function SeverityBadge({ severity }: { severity: keyof typeof SEVERITY }) {
     >
       {level.label}
     </span>
-  );
-}
-
-/**
- * Searches that lost and won the most clicks: what people stopped finding you
- * for, how much, why, and the page edit that targets it.
- */
-export function SearchesChanged({
-  projectId,
-  report,
-}: {
-  projectId: string;
-  report: Report;
-}) {
-  const { queryLosses, queryGains } = report;
-  if (queryLosses.length === 0 && queryGains.length === 0) return null;
-  return (
-    <section
-      id="searches-changed"
-      aria-labelledby="searches-changed-title"
-      className="space-y-4 rounded-xl border bg-card p-5"
-    >
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="searches-changed-title" className="text-lg font-semibold">
-          Searches you lost and won
-        </h2>
-        <p className="text-xs text-muted-foreground">
-          Named searches only: Google hides rare ones, which are still in your
-          totals
-        </p>
-      </div>
-      {queryLosses.length > 0 ? (
-        <ul className="divide-y">
-          {queryLosses.map((row) => {
-            const reason = PAGE_REASON[row.reason];
-            return (
-              <li
-                key={row.query}
-                className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3"
-              >
-                <div className="min-w-0 flex-1 basis-56">
-                  <p className="font-medium break-words">
-                    &ldquo;{row.query}&rdquo;
-                  </p>
-                  <p className="text-xs text-muted-foreground tabular-nums">
-                    {formatCount(row.prevClicks)} → {formatCount(row.clicks)}{" "}
-                    clicks · {lossText(row.prevClicks, row.clicks)} · rank{" "}
-                    {formatPosition(row.prevPosition)} →{" "}
-                    {row.position > 0 ? formatPosition(row.position) : "gone"}
-                  </p>
-                </div>
-                <SeverityBadge severity={row.severity} />
-                <span className="rounded-md bg-muted px-2 py-1 text-xs">
-                  {reason.label}
-                </span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  nativeButton={false}
-                  render={
-                    <Link
-                      to="/p/$projectId/content-editor"
-                      params={{ projectId }}
-                      search={{ keyword: row.query.slice(0, 200) }}
-                    />
-                  }
-                >
-                  Win it back
-                </Button>
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
-      {queryGains.length > 0 ? (
-        <div className="space-y-2">
-          <h3 className="text-sm font-medium">Growing searches</h3>
-          <ul className="grid gap-2 md:grid-cols-3">
-            {queryGains.map((row) => (
-              <li key={row.query} className="rounded-lg border p-3 text-sm">
-                <p className="font-medium break-words">
-                  &ldquo;{row.query}&rdquo;
-                </p>
-                <p className="text-xs text-muted-foreground tabular-nums">
-                  {row.prevClicks > 0
-                    ? `${formatCount(row.prevClicks)} → ${formatCount(row.clicks)} clicks`
-                    : `new: ${formatCount(row.clicks)} clicks`}{" "}
-                  · rank {formatPosition(row.position)}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-    </section>
   );
 }
 

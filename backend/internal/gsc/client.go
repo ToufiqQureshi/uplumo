@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
@@ -125,6 +126,11 @@ func validFilter(filter DimensionFilter) bool {
 	switch filter.Operator {
 	case "equals", "notEquals", "contains", "notContains":
 		return true
+	case "includingRegex", "excludingRegex":
+		// Google uses RE2, as Go's regexp does. A pattern that does not compile
+		// would be rejected by Google, so it is never sent.
+		_, err := regexp.Compile(filter.Expression)
+		return err == nil
 	default:
 		return false
 	}

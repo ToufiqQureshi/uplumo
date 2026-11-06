@@ -7,7 +7,7 @@ test("search growth stays explicit and carries evidence through save, analyst an
   const { requests, paid, chatModes, growthInputs } =
     await installGrowthFixtures(page);
   await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto("/p/e2e-project/search-performance");
+  await page.goto("/p/e2e-project/search-performance?view=conversions");
   const analyze = page.getByRole("button", { name: "Find opportunities" });
   await expect(analyze).toBeVisible();
   expect(requests.filter((p) => p.endsWith("/ga4/growth/report"))).toHaveLength(
@@ -128,7 +128,7 @@ test("search growth stays explicit and carries evidence through save, analyst an
   ).toBeVisible();
   await expect(page.getByText("Related queries: booking guide")).toBeVisible();
   expect(paid).toEqual([]);
-  await page.goto("/p/e2e-project/search-performance");
+  await page.goto("/p/e2e-project/search-performance?view=conversions");
   await page.getByRole("button", { name: "Find opportunities" }).click();
   await page
     .getByRole("button", { name: "Create AI improvement brief" })
@@ -154,7 +154,7 @@ for (const width of [320, 390]) {
   }, testInfo) => {
     const { paid, requests } = await installGrowthFixtures(page);
     await page.setViewportSize({ width, height: 844 });
-    await page.goto("/p/e2e-project/search-performance");
+    await page.goto("/p/e2e-project/search-performance?view=conversions");
     await page.getByRole("button", { name: "Find opportunities" }).click();
     await page
       .getByText("Investigate tracking, devices and AI citations", {
