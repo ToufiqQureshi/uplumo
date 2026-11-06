@@ -254,10 +254,7 @@ export function SearchPerformancePage({
 
   const indexNowSection = (
     <section id="indexnow" className="max-w-2xl space-y-3 pt-4">
-      <SectionHeader
-        title="Request indexing on Bing and other engines (IndexNow)"
-        hint="Works on any website, WordPress or not. Google does not use IndexNow: for Google, use URL Inspection in Search Console."
-      />
+      <SectionHeader title="Request indexing on Bing and other engines (IndexNow)" />
       <IndexNowCard projectId={projectId} />
     </section>
   );
@@ -352,7 +349,11 @@ export function SearchPerformancePage({
                 onOpen={openView}
               />
             ) : view === "fix" ? (
-              <FixView projectId={projectId} query={insightsQuery} />
+              <FixView
+                projectId={projectId}
+                report={report}
+                query={insightsQuery}
+              />
             ) : view === "grow" ? (
               <GrowView
                 projectId={projectId}

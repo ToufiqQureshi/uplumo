@@ -1,6 +1,6 @@
 import { QueryError } from "@/client/components/QueryState";
 import { Monitor, Plus, Save, Send, Trash2, X } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Button } from "@/client/components/ui/button";
 import type { ContentDraftSummary } from "./contentEditorApi";
 import type { ContentDraftInput } from "./scoring";
@@ -211,8 +211,26 @@ export function DraftToolbar({
 }) {
   const words = articleWordCount(draft.content);
   const readMinutes = Math.ceil(words / 200);
+  const ref = useRef<HTMLDivElement>(null);
+  // The formatting toolbar sticks just below this bar, whose height changes
+  // when its buttons wrap on narrow screens.
+  useLayoutEffect(() => {
+    const bar = ref.current;
+    const host = bar?.parentElement;
+    if (!bar || !host) return;
+    const observer = new ResizeObserver(() =>
+      host.style.setProperty("--draft-toolbar-h", `${bar.offsetHeight}px`),
+    );
+    observer.observe(bar);
+    return () => observer.disconnect();
+  }, []);
   return (
-    <div className="sticky top-16 z-10 -mx-1 flex flex-wrap items-center gap-3 rounded-xl border bg-background/95 px-4 py-3 backdrop-blur">
+    // Negative top cancels the page's scroll padding, so the bar sits flush
+    // under the header and no content shows above it.
+    <div
+      ref={ref}
+      className="sticky -top-4 z-20 -mx-1 flex flex-wrap items-center gap-3 rounded-xl border bg-background px-4 py-3 md:-top-6"
+    >
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{titleForDraft(draft)}</p>
         <p className="text-xs text-muted-foreground">

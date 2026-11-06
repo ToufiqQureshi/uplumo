@@ -105,10 +105,7 @@ export function staticSeo(
     check(
       "sources-internal",
       "Sources and internal links",
-      outside +
-        " link(s) to other sites, " +
-        inside +
-        " to your own pages. Images do not count.",
+      `${outside} ${outside === 1 ? "link" : "links"} to other sites, ${inside} to your own pages. Images do not count.`,
       8,
       Math.min(8, (outside ? 5 : 0) + (inside ? 3 : 0)),
     ),

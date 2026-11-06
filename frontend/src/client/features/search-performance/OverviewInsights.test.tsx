@@ -99,6 +99,34 @@ describe("SegmentsCard", () => {
     expect(html).toContain("Only the first 10,000");
   });
 
+  it("shows a dash, not zero, for a segment with no searches", () => {
+    const html = renderToStaticMarkup(
+      <SegmentsCard
+        insights={{
+          ...base,
+          coverage: { ...base.coverage, brandTermsUsed: true },
+          segments: [
+            ...base.segments,
+            {
+              kind: "branded",
+              queries: 0,
+              clicks: 0,
+              impressions: 0,
+              ctr: 0,
+              position: 0,
+            },
+          ],
+        }}
+        brandText="acme"
+        onSaveBrands={vi.fn()}
+      />,
+    );
+    const branded = html.slice(html.indexOf(">Branded</td>"));
+    const row = branded.slice(0, branded.indexOf("</tr>"));
+    expect(row).not.toContain("0.0");
+    expect(row).toContain("—");
+  });
+
   it("is hidden when no search was read", () => {
     const empty = {
       ...base,

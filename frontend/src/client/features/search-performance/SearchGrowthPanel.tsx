@@ -116,8 +116,9 @@ export function SearchGrowthPanel({ projectId }: { projectId: string }) {
         ) : null}
         {!report && !analysis.isError ? (
           <p className="text-sm text-muted-foreground">
-            Connect GSC and GA4, then find opportunities. We will show evidence
-            and possible explanations, with one next action per finding.
+            Press Find opportunities to compare your Search Console and GA4
+            data. We will show evidence and possible explanations, with one next
+            action per finding.
           </p>
         ) : null}
         {report ? (
