@@ -13,6 +13,15 @@ priorities, corrections, and what still waits on him. Read it after
   decision, remove it when he answers.
 - Never write secrets, keys or customer data here.
 
+## 6 Nov 2026: DataForSEO reading, cost savings and full customer value
+
+- Owner: "ek pr bana", make the DataForSEO research mandatory in `CLAUDE.md`; tell the owner which technique saves provider cost while preserving user value, and what raw data we drop/show. Think from Uplumo's business/finance perspective.
+- Authorized scope: one documentation/rules PR; import the provider guide/reference next to its code, with one exact reference-file exception to the docs map. No runtime pricing, credits, schedules or paid calls changed.
+- Required: read guide + cost/value rules + exact endpoint contract; report baseline/proposed calls/USD/credits and freshness/coverage tradeoffs, plus fetched -> stored -> used -> shown/exported -> dropped data evidence.
+- Code review confirms partial data use: rank parser keeps 20 organic competitors (hover 5); agent presents up to 20 picks; Ads ideas are locally truncated; Domain Overview drops paid/lower-position blocks. Backlinks CSV exposes more than the main table, but not all raw fields.
+- No full production parity claim or deployed saving; 0 real paid calls. Follow-up priorities/evidence are in provider `business-logic.md`.
+- PR: https://github.com/ToufiqQureshi/uplumo/pull/280. Frontend checks + 791 tests pass; backend checks unavailable locally (Go toolchain missing). Not merged/deployed.
+
 ## 6 Nov 2026: Live check of client reports and the website add-on
 
 - Owner: "abhi chrome open kar and check kar live ki sab sahi se kaam karra ha ya nai".

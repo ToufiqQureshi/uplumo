@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 // CLAUDE.md section 7: the repository keeps three general docs, feature docs
 // with four fixed names next to the code, and content files that code reads.
+// The owner also permits one exact DataForSEO reference snapshot path.
 // Any other Markdown file is a stray doc.
 const repoRoot = resolve(import.meta.dirname, "../..");
 const skipDirs = new Set(["node_modules", ".git", "dist", "testdata"]);
@@ -13,6 +14,8 @@ const generalDocs = new Set([
   "imp_sessions_talked.md",
   "docs/DEPLOY.md",
 ]);
+const providerReference = "backend/internal/platform/dataforseo/reference.md";
+
 const content = [
   /^\.agents\/skills\//,
   /^backend\/internal\/sam\/skills\/[^/]+\.md$/,
@@ -42,6 +45,7 @@ describe("documentation map", () => {
     const stray = markdownFiles(repoRoot).filter(
       (path) =>
         !generalDocs.has(path) &&
+        path !== providerReference &&
         !featureDoc.test(path) &&
         !content.some((pattern) => pattern.test(path)),
     );
