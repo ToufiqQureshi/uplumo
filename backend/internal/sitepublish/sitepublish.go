@@ -226,6 +226,7 @@ func (s *Service) Publish(ctx context.Context, projectID, draftID, status string
 		previous = Publication{}
 	}
 
+	draft.Content = withoutDuplicateTitleHeading(draft.Content, draft.Title)
 	media, replace, featured, err := s.copyImages(ctx, creds, connection.SiteURL, draft.Content, previous.Media)
 	if err != nil {
 		return Publication{}, PublicationSchema{}, err

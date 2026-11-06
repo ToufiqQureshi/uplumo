@@ -16,28 +16,20 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/toufiqqureshi/uplumo/backend/internal/billing"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/dataforseo"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/market"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/spend"
 )
 
-// Brief limits. The preflight estimate uses DataForSEO's list prices:
-// a depth-30 live SERP ($0.002 per 10 results = $0.006) plus eight content
-// parses ($0.00015 each = $0.0012). About 9.2 credits; the customer is
-// charged the successful task cost reported by the provider, never above the
-// ceiling.
-//
-// Shop and marketplace pages often parse to no text, so up to
-// briefParseAttempts results are tried to find briefParses readable pages.
-// The extra parses (at most $0.0012) are paid by Uplumo: the customer's
-// charge stays capped at the quoted ceiling.
+// The billing catalog owns the charged page limit and ceiling so the quote
+// shown before a click matches the provider hold.
 const (
 	briefCacheTTL        = 30 * 24 * time.Hour
-	briefDepth           = 30
-	briefParses          = 8
+	briefDepth           = billing.ContentBriefSERPDepth
+	briefParses          = billing.ContentBriefReadPageLimit
 	briefParseAttempts   = 16
 	briefMinParsed       = 3
-	briefCeiling         = 0.006 + briefParses*0.00015
 	briefMaxQuestions    = 100
 	briefMaxHeadings     = 100
 	briefMaxHeadingRunes = 1_000
@@ -244,7 +236,7 @@ func (p DataForSEOBriefProvider) Fetch(ctx context.Context, organizationID strin
 	}
 	var brief ContentBrief
 	brief.Keyword, brief.LocationCode, brief.LanguageCode = input.Keyword, input.LocationCode, input.LanguageCode
-	err := p.Client.DoBudgeted(ctx, organizationID, spend.KeywordResearch, briefCeiling, func(request dataforseo.DoBudgetedRequest) error {
+	err := p.Client.DoBudgeted(ctx, organizationID, spend.KeywordResearch, billing.ContentBriefMaxUSD(), func(request dataforseo.DoBudgetedRequest) error {
 		serpBody, err := json.Marshal([]map[string]any{{"keyword": input.Keyword, "location_code": input.LocationCode, "language_code": input.LanguageCode, "depth": briefDepth}})
 		if err != nil {
 			return fmt.Errorf("encode SERP brief request: %w", err)

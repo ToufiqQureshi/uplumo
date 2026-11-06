@@ -233,7 +233,7 @@ Updated in 2026.`;
       (total, item) => total + item.weight,
       0,
     );
-    expect(activeWeight).toBe(110);
+    expect(activeWeight).toBe(100);
     expect(result.score).toBe(
       Math.round(
         (result.checks.reduce((total, item) => total + item.earned, 0) * 100) /
@@ -252,11 +252,10 @@ Updated in 2026.`;
       "sources",
       "faq",
       "entities",
-      "experience",
       "author",
       "freshness",
     ]);
-    expect(result.checks.reduce((sum, c) => sum + c.weight, 0)).toBe(100);
+    expect(result.checks.reduce((sum, c) => sum + c.weight, 0)).toBe(90);
     expect(
       result.checks.find((c) => c.id === "question-coverage")?.earned,
     ).toBe(20);

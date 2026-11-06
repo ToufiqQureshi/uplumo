@@ -98,6 +98,15 @@ func SerpCostUSD(depth int, queued bool) float64 {
 	return serpCeiling(path, map[string]any{"depth": float64(depth)})
 }
 
+// ContentParsingCostUSD returns the published cost of parsing the requested
+// number of pages.
+func ContentParsingCostUSD(pages int) float64 {
+	if pages <= 0 {
+		return 0
+	}
+	return math.Round(float64(pages)*contentParsePageUSD*1e6) / 1e6
+}
+
 // GoogleAIOverviewCostUSD returns the cheapest queued Google SERP price with
 // asynchronous AI Overview references enabled.
 func GoogleAIOverviewCostUSD(depth int) float64 {

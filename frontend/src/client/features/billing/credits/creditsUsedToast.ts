@@ -10,9 +10,12 @@ import { queryClient } from "@/client/tanstack-db/queryClient";
  */
 export function showCreditsUsed() {
   return onCreditsUsed((credits) => {
-    toast(`${formatCredits(credits)} credits used`, {
-      description: "Charged at the real cost of the data you asked for.",
-    });
+    toast(
+      `${formatCredits(credits)} ${credits === 1 ? "credit" : "credits"} used`,
+      {
+        description: "Charged at the real cost of the data you asked for.",
+      },
+    );
     void queryClient.invalidateQueries({ queryKey: billingUsageQueryKey });
   });
 }

@@ -201,6 +201,46 @@ func TestPublishCopiesImagesOnceAndUpdatesTheSamePost(t *testing.T) {
 	}
 }
 
+func TestPublishDoesNotRepeatTheTitleAsTheLeadingBodyHeading(t *testing.T) {
+	for _, test := range []struct {
+		name        string
+		title       string
+		content     string
+		wantHeading bool
+	}{
+		{name: "matching bold title", title: "Example title", content: "# **Example title**\n\nArticle body."},
+		{name: "matching asterisk italic title", title: "Example title", content: "# *Example title*\n\nArticle body."},
+		{name: "matching underscore italic title", title: "Example title", content: "# _Example title_\n\nArticle body."},
+		{name: "matching bold italic title", title: "Example title", content: "# ***Example title***\n\nArticle body."},
+		{name: "literal underscores", title: "utm_source guide", content: "# utm_source guide\n\nArticle body."},
+		{name: "different heading", title: "Example title", content: "# Introduction\n\nArticle body.", wantHeading: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			wp := newFakeWordPress(t)
+			drafts := memoryDrafts{"d": {
+				ID: "d", ProjectID: "p", Title: test.title, Content: test.content,
+			}}
+			service, _ := newTestService(t, wp, drafts)
+			connect(t, service, wp, "p")
+
+			if _, _, err := service.Publish(t.Context(), "p", "d", StatusDraft, SchemaOptions{}); err != nil {
+				t.Fatalf("Publish: %v", err)
+			}
+			posts, _, _ := wp.snapshot()
+			post := posts[101]
+			if post.Title != test.title {
+				t.Fatalf("post title = %q, want %q", post.Title, test.title)
+			}
+			if got := strings.Contains(post.Content, "<h1"); got != test.wantHeading {
+				t.Errorf("body contains an H1 = %t, want %t: %s", got, test.wantHeading, post.Content)
+			}
+			if !strings.Contains(post.Content, "Article body.") {
+				t.Errorf("article body was lost: %s", post.Content)
+			}
+		})
+	}
+}
+
 func TestPublishRecreatesAPostDeletedOnTheSite(t *testing.T) {
 	wp := newFakeWordPress(t)
 	drafts := memoryDrafts{"d": {ID: "d", ProjectID: "p", Title: "T", Content: "Body"}}

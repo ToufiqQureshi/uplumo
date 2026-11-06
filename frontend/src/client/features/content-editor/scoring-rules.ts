@@ -16,7 +16,6 @@ import {
 import type { ContentBrief, ContentDraftInput } from "./scoring";
 import {
   definesTopic,
-  experienceCheck,
   freshnessCheck,
   realFaq,
   searchDescriptionCheck,
@@ -132,7 +131,6 @@ export function staticSeo(
       images.length ? (5 * alt) / images.length : 0,
     ),
     searchDescriptionCheck(d),
-    experienceCheck(body),
   ];
 }
 function isInternalLink(url: string, siteDomain?: string) {
@@ -340,7 +338,6 @@ export function aeo(
       5,
       entities >= 2 ? 5 : entities === 1 ? 2 : 0,
     ),
-    experienceCheck(body),
     check(
       "author",
       "Show who wrote it",
