@@ -390,7 +390,7 @@ func TestPricingPageShowsWhatThePlanCatalogEnforces(t *testing.T) {
 	s.ServePricing(rec, httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/pricing", nil))
 	body := rec.Body.String()
 	for _, want := range []string{
-		"<th scope=\"row\">Websites</th><td>1</td><td>1</td><td>5</td><td>10</td>",
+		"<th scope=\"row\">Websites</th><td>1</td><td>1</td><td>3</td><td>10</td>",
 		"<th scope=\"row\">Team members</th><td>1</td><td>1</td><td>3</td><td>5</td>",
 		"<th scope=\"row\">Monthly credits</th><td>0</td><td>4,000</td><td>10,000</td><td>15,000</td>",
 		"<th scope=\"row\">SAM SEO assistant</th><td>—</td><td>Included</td><td>Included</td><td>Included</td>",
@@ -400,11 +400,11 @@ func TestPricingPageShowsWhatThePlanCatalogEnforces(t *testing.T) {
 		"<th scope=\"row\">AI Visibility</th><td>—</td><td>—</td><td>Included</td><td>Included</td>",
 		"<th scope=\"row\">White-label reports</th><td>—</td><td>—</td><td>—</td><td>Included</td>",
 		"<th scope=\"row\">Buy extra credits</th><td>—</td><td>—</td><td>Included</td><td>Included</td>",
-		"<th scope=\"row\">Add more websites</th><td>—</td><td>—</td><td>—</td><td>Included</td>",
+		"<th scope=\"row\">Add more websites</th><td>—</td><td>Included</td><td>Included</td><td>Included</td>",
 		"<th scope=\"row\">Monthly price</th><td>Free</td><td>₹999</td><td>₹2,499</td><td>₹4,999</td>",
 		"<th scope=\"row\">5,000 credits</th><td>₹1,499</td><td>On Pro and Business</td>",
 		"<th scope=\"row\">15,000 credits</th><td>₹3,999</td><td>On Pro and Business</td>",
-		"<th scope=\"row\">5 more websites</th><td>₹999</td><td>On Business</td>",
+		"<th scope=\"row\">1 more website</th><td>₹999</td><td>On Basic, Pro and Business</td>",
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("pricing page lacks the row %s", want)
@@ -415,8 +415,8 @@ func TestPricingPageShowsWhatThePlanCatalogEnforces(t *testing.T) {
 		want []string
 	}{
 		{"Basic", []string{"4,000 credits / month", "1 website", "1 team member", "100 tracked keywords, checked weekly", "Rank checks cover the top 30 results", "Uplumo Analytics with AI traffic detection", "SAM SEO assistant", "Keyword research and SERP analysis", "Publish articles to WordPress"}},
-		{"Pro", []string{"10,000 credits / month", "5 websites", "3 team members", "500 tracked keywords, checked weekly", "Rank checks cover the top 40 results", "Publish articles to WordPress", "Backlink research", "AI Visibility"}},
-		{"Business", []string{"15,000 credits / month", "10 websites", "5 team members", "1,000 tracked keywords, checked weekly", "AI Visibility", "Backlink research", "White-label reports", "Add 5 more websites for ₹999 a month"}},
+		{"Pro", []string{"10,000 credits / month", "3 websites", "Add more websites for ₹999 a month each", "3 team members", "500 tracked keywords, checked weekly", "Rank checks cover the top 40 results", "Publish articles to WordPress", "Backlink research", "AI Visibility"}},
+		{"Business", []string{"15,000 credits / month", "10 websites", "5 team members", "1,000 tracked keywords, checked weekly", "AI Visibility", "Backlink research", "White-label reports", "Add more websites for ₹999 a month each"}},
 	} {
 		start := strings.Index(body, `<h3 id="plan-`+tc.plan+`">`)
 		if start < 0 {
@@ -496,14 +496,14 @@ func TestPricesFollowTheVisitorsCountry(t *testing.T) {
 		"<th scope=\"row\">Monthly price</th><td>Free</td><td>$15</td><td>$39</td><td>$69</td>",
 		"<th scope=\"row\">5,000 credits</th><td>$19</td>",
 		"<th scope=\"row\">15,000 credits</th><td>$59</td>",
-		"<th scope=\"row\">5 more websites</th><td>$12</td>",
-		"Add 5 more websites for $12 a month",
+		"<th scope=\"row\">1 more website</th><td>$12</td>",
+		"Add more websites for $12 a month each",
 		"in US dollars. In India, plans are priced and billed in Indian rupees",
 		`"priceCurrency":"USD"`,
 	}
 	inr := []string{
 		"<th scope=\"row\">Monthly price</th><td>Free</td><td>₹999</td><td>₹2,499</td><td>₹4,999</td>",
-		"Add 5 more websites for ₹999 a month",
+		"Add more websites for ₹999 a month each",
 		"in Indian rupees. Outside India, plans are priced and billed in US dollars",
 		`"priceCurrency":"INR"`,
 	}
