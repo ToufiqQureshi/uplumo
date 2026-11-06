@@ -90,7 +90,7 @@ export function EditorToolbar({
     <div
       role="toolbar"
       aria-label="Article formatting"
-      className="sticky top-0 z-10 flex flex-wrap items-center gap-1 rounded-t-lg border-b bg-background px-2 py-1.5"
+      className="sticky top-[calc(var(--draft-toolbar-h,1rem)-1rem)] z-10 flex flex-wrap items-center gap-1 rounded-t-lg border-b bg-background px-2 py-1.5 md:top-[calc(var(--draft-toolbar-h,1.5rem)-1.5rem)]"
     >
       <DropdownMenu>
         <DropdownMenuTrigger

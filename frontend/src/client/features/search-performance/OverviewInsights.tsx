@@ -173,10 +173,10 @@ export function SegmentsCard({
               {formatCount(segment.impressions)}
             </td>
             <td className="py-2 pr-3 text-right tabular-nums">
-              {formatCtr(segment.ctr)}
+              {segment.impressions > 0 ? formatCtr(segment.ctr) : "—"}
             </td>
             <td className="py-2 pr-3 text-right tabular-nums">
-              {formatPosition(segment.position)}
+              {segment.impressions > 0 ? formatPosition(segment.position) : "—"}
             </td>
           </tr>
         ))}

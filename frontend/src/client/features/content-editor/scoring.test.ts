@@ -283,6 +283,20 @@ Updated in 2026.`;
         ?.earned,
     ).toBe(8);
     expect(
+      internalPath.checks.find((item) => item.id === "sources-internal")
+        ?.detail,
+    ).toMatch(/^\d+ links? to other sites, 1 to your own pages/);
+    expect(
+      scoreContent(
+        "seo",
+        {
+          ...draft,
+          content: draft.content + "\n\n[Source](https://example.org/a)",
+        },
+        brief,
+      ).checks.find((item) => item.id === "sources-internal")?.detail,
+    ).not.toContain("(s)");
+    expect(
       ownHost.checks.find((item) => item.id === "sources-internal")?.earned,
     ).toBe(8);
     expect(

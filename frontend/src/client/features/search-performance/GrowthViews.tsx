@@ -100,9 +100,11 @@ export function OverviewView({
 
 export function FixView({
   projectId,
+  report,
   query,
 }: {
   projectId: string;
+  report: Report;
   query: InsightsQuery;
 }) {
   return (
@@ -125,8 +127,10 @@ export function FixView({
         if (nothingLost) {
           return (
             <Note>
-              No page or search lost clicks against the previous period. Check
-              Grow for ways to win more.
+              {report.prevTotals.clicks > 0
+                ? "No page or search lost clicks against the previous period."
+                : "Google sent no clicks in the earlier period, so there is nothing to compare yet."}{" "}
+              Check Grow for ways to win more.
             </Note>
           );
         }
