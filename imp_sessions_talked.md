@@ -19,7 +19,7 @@ priorities, corrections, and what still waits on him. Read it after
 - Live QA used 11 customer credits across 10 AI actions. One brief refresh returned Cloudflare 502 with no customer charge; provider-side cost is unknown and it was not retried.
 - The original draft was restored; no post was published or draft deleted.
 - Fixed layout, italic/bold duplicate H1s, visible word count, FAQ scoring, and quote-to-hold alignment from shared DataForSEO rates. Removed unverifiable experience points; no additional paid action was run.
-- Changes are local and not deployed.
+- PR: https://github.com/ToufiqQureshi/uplumo/pull/274. Changes are not deployed.
 
 ## 4 Nov 2026: Analytics + Cite Fix are Claude's responsibility
 
