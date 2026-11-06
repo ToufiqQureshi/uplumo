@@ -132,7 +132,9 @@ function getSearchInsights(
 }
 
 /** Free Search Console reads only. They are kept for five minutes, so moving
- *  between screens does not read Google again. */
+ *  between screens does not read Google again. While new numbers load, the
+ *  old ones stay (dimmed) only for the same project: another project's actions
+ *  and pages must never show under this one. */
 export function insightsQueryOptions(
   projectId: string,
   filters: FilterInput,
@@ -142,5 +144,15 @@ export function insightsQueryOptions(
     queryKey: ["searchInsights", projectId, filters, brandTerms],
     queryFn: () => getSearchInsights(projectId, filters, brandTerms),
     staleTime: 5 * 60_000,
+    placeholderData: keepForProject(projectId),
   });
+}
+
+/** Old numbers may stand in while new ones load only if they are this
+ *  project's: the project is the second part of the query key. */
+export function keepForProject(projectId: string) {
+  return <T>(
+    previous: T | undefined,
+    previousQuery: { queryKey: readonly unknown[] } | undefined,
+  ) => (previousQuery?.queryKey[1] === projectId ? previous : undefined);
 }

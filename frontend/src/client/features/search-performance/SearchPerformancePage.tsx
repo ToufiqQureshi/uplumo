@@ -141,7 +141,6 @@ export function SearchPerformancePage({
       report?.connected === true &&
       !reportQuery.isPlaceholderData &&
       (view === "overview" || view === "fix" || view === "grow"),
-    placeholderData: keepPreviousData,
   });
   const isTableTab = tab === "queries" || tab === "pages";
   const dimension = tabDimension(tab);

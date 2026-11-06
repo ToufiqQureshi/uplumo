@@ -211,7 +211,7 @@ func TestFindDecay(t *testing.T) {
 	oldest := []SearchRow{one("/falling", 100, 1000), one("/steady", 100, 1000), one("/gone", 50, 500), one("/small", 5, 50), one("/recovered", 100, 1000), one("", 99, 1)}
 	middle := []SearchRow{one("/falling", 70, 900), one("/steady", 95, 900), one("/gone", 20, 200), one("/small", 1, 10), one("/recovered", 50, 500)}
 	newest := []SearchRow{one("/falling", 40, 800), one("/steady", 90, 900), one("/recovered", 90, 900)}
-	got := findDecay(oldest, middle, newest, rules)
+	got := findDecay(oldest, middle, newest, rules, windowCuts{})
 	pages := []string{}
 	for _, d := range got {
 		pages = append(pages, d.Page)
@@ -223,7 +223,7 @@ func TestFindDecay(t *testing.T) {
 	if got[0].LostClicks != 60 || got[0].Clicks != [3]float64{100, 70, 40} || got[1].LostClicks != 50 {
 		t.Fatalf("got = %+v", got)
 	}
-	if len(findDecay(nil, nil, nil, rules)) != 0 {
+	if len(findDecay(nil, nil, nil, rules, windowCuts{})) != 0 {
 		t.Fatal("no rows, no decay")
 	}
 }
@@ -487,6 +487,83 @@ func TestInsightsInputDecoding(t *testing.T) {
 	for _, body := range []string{`{"brandTerms":null}`, `{"brandTerm":["x"]}`, `{"brandTerms":"acme"}`} {
 		if err := decode(body); err == nil {
 			t.Errorf("%s must be rejected", body)
+		}
+	}
+}
+
+func TestAPageMissingFromACutReadIsUnknownNotZero(t *testing.T) {
+	rules := DefaultInsightRules()
+	oldest := []SearchRow{one("/steady", 100, 1000)}
+	// /steady is missing from the newer windows only because they were read up
+	// to their row limit; it never lost anything.
+	if got := findDecay(oldest, nil, nil, rules, windowCuts{middle: true, newest: true}); len(got) != 0 {
+		t.Fatalf("decay = %+v; an unseen page must not be reported as lost", got)
+	}
+	if got := findDecay(oldest, nil, nil, rules, windowCuts{middle: true}); len(got) != 0 {
+		t.Fatalf("decay = %+v; one cut window is enough to make it unknown", got)
+	}
+	// Read in full, the same absence is real: no clicks at all.
+	if got := findDecay(oldest, nil, nil, rules, windowCuts{}); len(got) != 1 || got[0].LostClicks != 100 {
+		t.Fatalf("decay = %+v; a page missing from a full read lost every click", got)
+	}
+}
+
+func TestInsightsNeverCallACutReadsAbsenceALossOrANewSearch(t *testing.T) {
+	// Every page and search read comes back full (at the row limit), and the
+	// pages and searches that matter are in the oldest and previous windows
+	// only. Nothing here is a real loss, gain or decay.
+	filler := func(prefix string) []SearchRow {
+		rows := make([]SearchRow, 0, insightPageLimit)
+		for i := range insightPageLimit {
+			rows = append(rows, one(fmt.Sprintf("%s-%d", prefix, i), 1, 10))
+		}
+		return rows
+	}
+	stub := &insightsStub{rows: func(r SearchRequest) []SearchRow {
+		switch strings.Join(r.Dimensions, ",") {
+		case "query,page":
+			return []SearchRow{qp("red shoes", "/a", 5, 100, 4)}
+		case "page":
+			rows := filler("page")
+			switch r.StartDate {
+			case "2026-02-28", "2026-03-29": // oldest and previous: /steady is there
+				return append([]SearchRow{one("/steady", 100, 1000)}, rows[:insightPageLimit-1]...)
+			}
+			return rows // current: cut, /steady is below the cut-off
+		case "query":
+			rows := filler("q")
+			if r.StartDate == "2026-04-27" { // current has a search the previous read cut off
+				return append([]SearchRow{one("steady search", 50, 500)}, rows[:insightPageLimit-1]...)
+			}
+			return rows
+		}
+		return nil
+	}}
+	got, err := insightsService(stub).GetInsights(context.Background(), "o", "p", InsightsInput{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !got.Coverage.PageReadsCut {
+		t.Fatal("coverage must say a read stopped at its row limit")
+	}
+	for _, c := range got.LosingPages {
+		if c.Page == "/steady" {
+			t.Fatalf("/steady reported as lost: %+v", c)
+		}
+	}
+	for _, d := range got.Decaying {
+		if d.Page == "/steady" {
+			t.Fatalf("/steady reported as decaying: %+v", d)
+		}
+	}
+	for _, c := range got.QueryGains {
+		if c.Query == "steady search" {
+			t.Fatalf("a search missing from a cut previous read reported as new: %+v", c)
+		}
+	}
+	for _, a := range got.Actions {
+		if a.Subject == "/steady" {
+			t.Fatalf("/steady became a top action: %+v", a)
 		}
 	}
 }
