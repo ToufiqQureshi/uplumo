@@ -13,6 +13,14 @@ priorities, corrections, and what still waits on him. Read it after
   decision, remove it when he answers.
 - Never write secrets, keys or customer data here.
 
+## 8 Nov 2026: restore the ChatGPT traffic guide at its original URL
+
+- Owner supplied GSC data and approved the revised GA4 traffic guide.
+- Retain chatgpt-traffic-google-analytics; title: How to Track ChatGPT Traffic in Google Analytics 4 (GA4).
+- Owner explicitly requested a direct main push and production deployment.
+- Keep original publication date 15 October and mark the revision 8 November.
+- Update publication tests to allow this one restored URL; all other retired URLs remain removed.
+
 ## 8 Nov 2026: two approved problem-solving blogs
 
 - Owner requested two human-sounding articles grounded in current frontend/backend capabilities.

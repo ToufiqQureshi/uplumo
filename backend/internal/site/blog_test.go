@@ -147,7 +147,7 @@ func TestBlogCoverValidation(t *testing.T) {
 
 func TestPublishedBlogContent(t *testing.T) {
 	s := newSite(t, &url.URL{Scheme: "https", Host: "uplumo.com"})
-	slugs := []string{"why-website-not-ranking-google", "chatgpt-recommends-competitors-not-my-business"}
+	slugs := []string{"why-website-not-ranking-google", "chatgpt-recommends-competitors-not-my-business", "chatgpt-traffic-google-analytics"}
 	if len(s.posts) != len(slugs) {
 		t.Fatalf("published %d articles, want %d approved posts", len(s.posts), len(slugs))
 	}
@@ -163,6 +163,10 @@ func TestPublishedBlogContent(t *testing.T) {
 		if !strings.Contains(sitemap, "<loc>https://uplumo.com/blog/"+slug+"</loc><lastmod>2026-11-08</lastmod>") {
 			t.Errorf("sitemap lacks dated post %s", slug)
 		}
+		published := "2026-11-08"
+		if slug == "chatgpt-traffic-google-analytics" {
+			published = "2026-10-15"
+		}
 		res := getPost(s, slug)
 		body := res.Body.String()
 		if res.Code != http.StatusOK || strings.Count(body, "<h1>") != 1 {
@@ -170,7 +174,7 @@ func TestPublishedBlogContent(t *testing.T) {
 		}
 		for _, want := range []string{
 			`<link rel="canonical" href="https://uplumo.com/blog/` + slug + `">`,
-			`"@type":"BlogPosting"`, `"datePublished":"2026-11-08"`,
+			`"@type":"BlogPosting"`, `"datePublished":"` + published + `"`,
 			`href="https://uplumo.com/pricing"`,
 		} {
 			if !strings.Contains(body, want) {
@@ -204,7 +208,6 @@ func TestEmptyBlogStillReturnsNotFound(t *testing.T) {
 func TestRetiredBlogContentRemainsRemoved(t *testing.T) {
 	s := newSite(t, &url.URL{Scheme: "https", Host: "uplumo.com"})
 	for _, slug := range strings.Fields(`
-chatgpt-traffic-google-analytics
 choose-the-best-seo-aeo-tool
 core-web-vitals-explained
 daily-keyword-rank-fluctuations-how-to-report
