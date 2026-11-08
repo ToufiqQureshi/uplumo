@@ -13,6 +13,13 @@ priorities, corrections, and what still waits on him. Read it after
   decision, remove it when he answers.
 - Never write secrets, keys or customer data here.
 
+## 8 Nov 2026: Uplumo careers page
+
+- Owner requested a job posting page with Go Developer, AI Agent Developer and Programmatic SEO Developer openings.
+- Add `/careers`, shared footer discovery, role descriptions and email Apply links using the existing public support address.
+- Salary, location, employment terms and hiring timelines were not provided; no specific commitments are published.
+- Zero paid calls or credits; application emails are composed and sent by applicants.
+
 ## 8 Nov 2026: restore the ChatGPT traffic guide at its original URL
 
 - Owner supplied GSC data and approved the revised GA4 traffic guide.

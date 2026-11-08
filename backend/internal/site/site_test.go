@@ -574,3 +574,37 @@ func TestFormatMoney(t *testing.T) {
 		}
 	}
 }
+
+func TestCareersApplications(t *testing.T) {
+	s := newSite(t, &url.URL{Scheme: "https", Host: "uplumo.com"})
+	rec := get(s.ServeInfo, "/careers", nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("careers status = %d", rec.Code)
+	}
+	body := rec.Body.String()
+	if got := strings.Count(body, `<article class="card"`); got != 3 {
+		t.Errorf("job count = %d, want 3", got)
+	}
+	for _, role := range []string{"Go Developer", "AI Agent Developer", "Programmatic SEO Developer"} {
+		t.Run(role, func(t *testing.T) {
+			pattern := regexp.MustCompile(`href="(mailto:[^"]*)">Apply for ` + regexp.QuoteMeta(role) + `</a>`)
+			match := pattern.FindStringSubmatch(body)
+			if match == nil {
+				t.Fatal("missing role-specific apply link")
+			}
+			u, err := url.Parse(match[1])
+			if err != nil {
+				t.Fatal(err)
+			}
+			if u.Opaque != SupportEmail || u.Query().Get("subject") != "Application: "+role {
+				t.Errorf("incorrect application destination or subject: %s", match[1])
+			}
+		})
+	}
+	if !strings.Contains(get(s.ServeLanding, "/", nil).Body.String(), `href="/careers"`) {
+		t.Error("homepage lacks careers link")
+	}
+	if !strings.Contains(get(s.ServeSitemap, "/sitemap.xml", nil).Body.String(), "<loc>https://uplumo.com/careers</loc>") {
+		t.Error("careers is missing from sitemap")
+	}
+}

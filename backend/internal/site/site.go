@@ -305,7 +305,7 @@ func InfoPaths() []string {
 	return paths
 }
 
-// ServeInfo writes the about, contact or legal page at the request's path.
+// ServeInfo writes a public information page at the request's path.
 func (s *Site) ServeInfo(w http.ResponseWriter, r *http.Request) {
 	p, ok := s.info[r.URL.Path]
 	if !ok {
@@ -528,6 +528,8 @@ var infoPages = []struct {
 		"Uplumo is an SEO and AI search tool built in India for business owners and agencies who want one clear next step."},
 	{"/contact", "contact.html", "Contact Uplumo",
 		"Get help with your Uplumo account, billing or data. Write to us and a person replies."},
+	{"/careers", "careers.html", "Careers at Uplumo | We're hiring",
+		"Join Uplumo as a Go Developer, AI Agent Developer or Programmatic SEO Developer. Explore the roles and apply with your work."},
 	{"/terms", "terms.html", "Terms of Service | Uplumo",
 		"The rules for using Uplumo: your account, plans and billing, acceptable use and our responsibilities."},
 	{"/privacy", "privacy.html", "Privacy Policy | Uplumo",

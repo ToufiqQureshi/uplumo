@@ -1,0 +1,68 @@
+{{template "head" .}}
+{{template "nav" .}}
+<main id="main">
+<div class="wrap narrow doc">
+<p class="eyebrow">Careers at Uplumo · 3 open roles</p>
+<h1>Build what helps<br>businesses <em>get found.</em></h1>
+<p class="lead">We're hiring developers to work on SEO, AI visibility and the tools that turn website data into useful next steps.</p>
+<p class="note"><a class="btn btn-md" href="#open-roles">Explore open roles ↓</a></p>
+<div class="prose">
+<h2>Work on problems that matter</h2>
+<p>Make complex search data easier to understand. Build reliable tools, keep API costs under control and help website owners decide what to improve next. Bring curiosity, clear thinking and examples of work you're proud of.</p>
+<h2 id="open-roles">Find your role</h2>
+<p>Explore the three openings below. Compensation, location and employment arrangements will be discussed during the application process.</p>
+</div>
+<div class="row" style="margin-top:2rem">
+<article class="card" id="golang-developer" aria-labelledby="golang-title">
+<p class="eyebrow">01 / Backend engineering</p>
+<h2 id="golang-title" style="font-size:2.25rem">Go Developer</h2>
+<p>Build the backend behind Uplumo's SEO and AI search tools, with reliable APIs and predictable costs.</p>
+<details>
+<summary>Responsibilities &amp; skills</summary>
+<div class="prose" style="margin-top:1rem">
+<h3>What you'll build</h3>
+<ul><li>Go APIs, background jobs and third-party integrations.</li><li>PostgreSQL queries, Redis caching and request deduplication.</li><li>Reliable error handling, tests and safeguards against duplicate API charges.</li></ul>
+<h3>What you'll bring</h3>
+<ul><li>Practical experience with Go, HTTP APIs and SQL.</li><li>An understanding of concurrency, timeouts and secure backend development.</li><li>The ability to debug existing code and explain your decisions clearly.</li></ul>
+</div>
+</details>
+<a class="btn btn-md" style="margin-top:auto" href="mailto:{{.Support}}?subject=Application%3A%20Go%20Developer">Apply for Go Developer</a>
+</article>
+<article class="card" id="ai-agent-developer" aria-labelledby="ai-agent-title">
+<p class="eyebrow">02 / AI engineering</p>
+<h2 id="ai-agent-title" style="font-size:2.25rem">AI Agent Developer</h2>
+<p>Build agents that use tools and website data to help people investigate search problems and take useful action.</p>
+<details>
+<summary>Responsibilities &amp; skills</summary>
+<div class="prose" style="margin-top:1rem">
+<h3>What you'll build</h3>
+<ul><li>Tool-calling workflows with structured outputs and clear user controls.</li><li>Connections between AI models, product APIs and relevant website context.</li><li>Evaluations for answer quality, failure handling, latency and cost.</li></ul>
+<h3>What you'll bring</h3>
+<ul><li>Experience integrating LLM APIs and building agent workflows.</li><li>Strong programming skills and an understanding of retrieval and tool calling.</li><li>A practical approach to prompt injection, permissions and testing AI output.</li></ul>
+</div>
+</details>
+<a class="btn btn-md" style="margin-top:auto" href="mailto:{{.Support}}?subject=Application%3A%20AI%20Agent%20Developer">Apply for AI Agent Developer</a>
+</article>
+<article class="card" id="programmatic-seo-developer" aria-labelledby="seo-title">
+<p class="eyebrow">03 / Search engineering</p>
+<h2 id="seo-title" style="font-size:2.25rem">Programmatic SEO Developer</h2>
+<p>Build systems for useful, data-driven pages that people can discover, navigate and learn from.</p>
+<details>
+<summary>Responsibilities &amp; skills</summary>
+<div class="prose" style="margin-top:1rem">
+<h3>What you'll build</h3>
+<ul><li>Page templates and publishing workflows backed by relevant data.</li><li>Internal linking, metadata, sitemaps and structured data where appropriate.</li><li>Quality checks for duplicate or thin pages and measurement through Search Console.</li></ul>
+<h3>What you'll bring</h3>
+<ul><li>Development experience with HTML, CSS, JavaScript and data processing.</li><li>An understanding of crawling, indexing, canonical URLs and technical SEO.</li><li>Examples of SEO automation or template-based pages you've built or improved.</li></ul>
+</div>
+</details>
+<a class="btn btn-md" style="margin-top:auto" href="mailto:{{.Support}}?subject=Application%3A%20Programmatic%20SEO%20Developer">Apply for Programmatic SEO Developer</a>
+</article>
+</div>
+<section class="prose" aria-labelledby="apply-heading">
+<h2 id="apply-heading">Show us what you've built</h2>
+<p>Use the Apply button for your role to open an email to <a href="mailto:{{.Support}}">{{.Support}}</a>. Include your resume or profile, GitHub or portfolio links, availability and a short note about a relevant project and your contribution.</p>
+<p>If an email app doesn't open, send your application directly to the address above with the role name in the subject.</p>
+</section>
+</div>
+{{template "footer" .}}
