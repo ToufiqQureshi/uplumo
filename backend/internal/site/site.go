@@ -197,7 +197,7 @@ func build(publicURL *url.URL, blogFiles fs.FS) (*Site, error) {
 	blog := base
 	blog.Path = "/blog"
 	blog.Title = "Uplumo blog: SEO and AI search guides"
-	blog.Description = "Plain-language guides to ranking on Google and showing up in AI answers, for business owners and agencies in India."
+	blog.Description = "Plain-language guides to ranking on Google and showing up in AI answers, for business owners and agencies."
 	blog.Canonical = origin + "/blog"
 	blog.Posts = posts
 	blog.JSONLD = jsonLD(origin, blog.Description, plans, planCatalog.INR)

@@ -371,6 +371,9 @@ func TestRobotsAndSitemap(t *testing.T) {
 		got[u.Loc] = true
 	}
 	want := append([]string{"/", "/pricing"}, InfoPaths()...)
+	if len(s.posts) > 0 {
+		want = append(want, "/blog")
+	}
 	for slug := range s.posts {
 		want = append(want, "/blog/"+slug)
 	}

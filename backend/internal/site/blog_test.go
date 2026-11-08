@@ -145,22 +145,64 @@ func TestBlogCoverValidation(t *testing.T) {
 	}
 }
 
-func TestNoPublishedBlogContent(t *testing.T) {
+func TestPublishedBlogContent(t *testing.T) {
 	s := newSite(t, &url.URL{Scheme: "https", Host: "uplumo.com"})
-	if len(s.posts) != 0 {
-		t.Fatalf("owner removed all blogs, but %d articles are published", len(s.posts))
+	slugs := []string{"why-website-not-ranking-google", "chatgpt-recommends-competitors-not-my-business"}
+	if len(s.posts) != len(slugs) {
+		t.Fatalf("published %d articles, want %d approved posts", len(s.posts), len(slugs))
+	}
+	index := get(s.ServeBlog, "/blog", nil)
+	if index.Code != http.StatusOK {
+		t.Fatalf("blog index status = %d, want 200", index.Code)
+	}
+	sitemap := get(s.ServeSitemap, "/sitemap.xml", nil).Body.String()
+	for _, slug := range slugs {
+		if !strings.Contains(index.Body.String(), "/blog/"+slug) {
+			t.Errorf("blog index lacks %s", slug)
+		}
+		if !strings.Contains(sitemap, "<loc>https://uplumo.com/blog/"+slug+"</loc><lastmod>2026-11-08</lastmod>") {
+			t.Errorf("sitemap lacks dated post %s", slug)
+		}
+		res := getPost(s, slug)
+		body := res.Body.String()
+		if res.Code != http.StatusOK || strings.Count(body, "<h1>") != 1 {
+			t.Errorf("%s: status %d or duplicate heading", slug, res.Code)
+		}
+		for _, want := range []string{
+			`<link rel="canonical" href="https://uplumo.com/blog/` + slug + `">`,
+			`"@type":"BlogPosting"`, `"datePublished":"2026-11-08"`,
+			`href="https://uplumo.com/pricing"`,
+		} {
+			if !strings.Contains(body, want) {
+				t.Errorf("%s lacks %s", slug, want)
+			}
+		}
+		if strings.Contains(body, "meta_description:") || strings.Contains(body, "\n---") {
+			t.Errorf("%s leaked editorial metadata", slug)
+		}
+	}
+	for _, serve := range []http.HandlerFunc{s.ServeLanding, s.ServePricing} {
+		if !strings.Contains(get(serve, "/", nil).Body.String(), `href="/blog"`) {
+			t.Error("public navigation lacks the approved blog")
+		}
+	}
+}
+
+func TestEmptyBlogStillReturnsNotFound(t *testing.T) {
+	s, err := build(&url.URL{Scheme: "https", Host: "uplumo.com"}, fstest.MapFS{})
+	if err != nil {
+		t.Fatal(err)
 	}
 	if res := get(s.ServeBlog, "/blog", nil); res.Code != http.StatusNotFound {
 		t.Errorf("empty blog index status = %d, want 404", res.Code)
 	}
 	if strings.Contains(get(s.ServeSitemap, "/sitemap.xml", nil).Body.String(), "/blog") {
-		t.Error("removed blog index or article remains in sitemap")
+		t.Error("empty blog remains in sitemap")
 	}
-	for _, serve := range []http.HandlerFunc{s.ServeLanding, s.ServePricing} {
-		if strings.Contains(get(serve, "/", nil).Body.String(), `href="/blog`) {
-			t.Error("public navigation links to removed blog content")
-		}
-	}
+}
+
+func TestRetiredBlogContentRemainsRemoved(t *testing.T) {
+	s := newSite(t, &url.URL{Scheme: "https", Host: "uplumo.com"})
 	for _, slug := range strings.Fields(`
 chatgpt-traffic-google-analytics
 choose-the-best-seo-aeo-tool

@@ -13,6 +13,14 @@ priorities, corrections, and what still waits on him. Read it after
   decision, remove it when he answers.
 - Never write secrets, keys or customer data here.
 
+## 8 Nov 2026: two approved problem-solving blogs
+
+- Owner requested two human-sounding articles grounded in current frontend/backend capabilities.
+- Blog 1 adds Problem → Check → Fix for zero impressions, impressions without clicks and clicks without leads.
+- Owner explicitly requested merging both approved drafts into main; production deployment was not requested in this turn.
+- Publish only these two new slugs; keep the retired article collection removed.
+- Adapt draft metadata to the existing renderer, retain one H1 per article and include both URLs in the sitemap.
+
 ## 6 Nov 2026: Live check of client reports and the website add-on
 
 - Owner: "abhi chrome open kar and check kar live ki sab sahi se kaam karra ha ya nai".
