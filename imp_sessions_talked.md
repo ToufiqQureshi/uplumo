@@ -13,6 +13,11 @@ priorities, corrections, and what still waits on him. Read it after
   decision, remove it when he answers.
 - Never write secrets, keys or customer data here.
 
+## 9 Nov 2026: one SEO, AEO and GEO comparison blog
+
+- Owner requested one long-form Uplumo article in one PR, with the reference article’s scannable structure and explanatory visuals.
+- Proposed slug: `best-seo-aeo-geo-tools`. Covers Google indexing, AI crawler access, intent-led content, rankings, lead tracking and local SEO.
+
 ## 9 Nov 2026: Razorpay payment failed, make failure handling industry-ready
 
 - Owner paid ₹4,999 (Business) on 8 Nov by UPI; it failed. Razorpay says `payment_timed_out` at `payment_authentication`, error source customer, no bank RRN (most likely no debit). Not an Uplumo bug.

@@ -147,25 +147,27 @@ func TestBlogCoverValidation(t *testing.T) {
 
 func TestPublishedBlogContent(t *testing.T) {
 	s := newSite(t, &url.URL{Scheme: "https", Host: "uplumo.com"})
-	slugs := []string{"why-website-not-ranking-google", "chatgpt-recommends-competitors-not-my-business", "chatgpt-traffic-google-analytics"}
-	if len(s.posts) != len(slugs) {
-		t.Fatalf("published %d articles, want %d approved posts", len(s.posts), len(slugs))
+	posts := []struct{ slug, published, updated string }{
+		{"best-seo-aeo-geo-tools", "2026-11-09", "2026-11-09"},
+		{"why-website-not-ranking-google", "2026-11-08", "2026-11-08"},
+		{"chatgpt-recommends-competitors-not-my-business", "2026-11-08", "2026-11-08"},
+		{"chatgpt-traffic-google-analytics", "2026-10-15", "2026-11-08"},
+	}
+	if len(s.posts) != len(posts) {
+		t.Fatalf("published %d articles, want %d approved posts", len(s.posts), len(posts))
 	}
 	index := get(s.ServeBlog, "/blog", nil)
 	if index.Code != http.StatusOK {
 		t.Fatalf("blog index status = %d, want 200", index.Code)
 	}
 	sitemap := get(s.ServeSitemap, "/sitemap.xml", nil).Body.String()
-	for _, slug := range slugs {
+	for _, post := range posts {
+		slug := post.slug
 		if !strings.Contains(index.Body.String(), "/blog/"+slug) {
 			t.Errorf("blog index lacks %s", slug)
 		}
-		if !strings.Contains(sitemap, "<loc>https://uplumo.com/blog/"+slug+"</loc><lastmod>2026-11-08</lastmod>") {
+		if !strings.Contains(sitemap, "<loc>https://uplumo.com/blog/"+slug+"</loc><lastmod>"+post.updated+"</lastmod>") {
 			t.Errorf("sitemap lacks dated post %s", slug)
-		}
-		published := "2026-11-08"
-		if slug == "chatgpt-traffic-google-analytics" {
-			published = "2026-10-15"
 		}
 		res := getPost(s, slug)
 		body := res.Body.String()
@@ -174,7 +176,7 @@ func TestPublishedBlogContent(t *testing.T) {
 		}
 		for _, want := range []string{
 			`<link rel="canonical" href="https://uplumo.com/blog/` + slug + `">`,
-			`"@type":"BlogPosting"`, `"datePublished":"` + published + `"`,
+			`"@type":"BlogPosting"`, `"datePublished":"` + post.published + `"`,
 			`href="https://uplumo.com/pricing"`,
 		} {
 			if !strings.Contains(body, want) {
@@ -188,6 +190,33 @@ func TestPublishedBlogContent(t *testing.T) {
 	for _, serve := range []http.HandlerFunc{s.ServeLanding, s.ServePricing} {
 		if !strings.Contains(get(serve, "/", nil).Body.String(), `href="/blog"`) {
 			t.Error("public navigation lacks the approved blog")
+		}
+	}
+}
+
+func TestSEOGuideNavigationAndImages(t *testing.T) {
+	s := newSite(t, &url.URL{Scheme: "https", Host: "uplumo.com"})
+	body := getPost(s, "best-seo-aeo-geo-tools").Body.String()
+	for _, id := range strings.Fields(`choose-the-right-tool get-your-pages-indexed-on-google
+give-ai-search-crawlers-access write-content-for-search-intent check-your-ai-visibility
+track-rankings-and-leads improve-your-local-seo your-first-30-days frequently-asked-questions`) {
+		if !strings.Contains(body, `href="#`+id+`"`) || !strings.Contains(body, `id="`+id+`"`) {
+			t.Errorf("guide lacks a table-of-contents link or heading for %q", id)
+		}
+	}
+	for _, file := range []string{
+		"blog/best-seo-aeo-geo-tools-cover.webp",
+		"blog/best-seo-aeo-geo-tools-google-indexing.webp",
+		"blog/best-seo-aeo-geo-tools-content-brief.webp",
+		"blog/best-seo-aeo-geo-tools-lead-tracking.webp",
+		"product/prompt-explorer.webp",
+	} {
+		path := AssetsPrefix + file
+		if !strings.Contains(body, `src="`+path+`"`) {
+			t.Errorf("guide lacks image %q", path)
+		}
+		if res := get(s.ServeAsset, path, nil); res.Code != http.StatusOK {
+			t.Errorf("image %q returned %d, want 200", path, res.Code)
 		}
 	}
 }
@@ -277,7 +306,19 @@ write-search-titles-and-meta-descriptions
 		})
 	}
 	for file := range s.versions {
-		if strings.HasPrefix(file, "blog/") {
+		if !strings.HasPrefix(file, "blog/") {
+			continue
+		}
+		used := false
+		for _, post := range s.posts {
+			body := string(post.body)
+			if strings.Contains(body, `src="`+AssetsPrefix+file+`"`) ||
+				strings.Contains(body, AssetsPrefix+file+`?v=`+s.versions[file]) {
+				used = true
+				break
+			}
+		}
+		if !used {
 			t.Errorf("unused blog asset %q remains embedded", file)
 		}
 	}
