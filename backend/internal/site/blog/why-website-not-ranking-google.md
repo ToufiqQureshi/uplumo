@@ -2,18 +2,28 @@
 title: "Website Not Ranking on Google? Diagnose Impressions, Clicks and Leads"
 description: "Zero impressions, no clicks or no leads? Find the right checks and fixes for your website, with a practical Uplumo workflow to measure progress."
 date: 2026-11-08
+updated: 2026-11-10
 author: Uplumo team
+image: /site/blog/why-website-not-ranking-google-cover.webp
 ---
 
-You have a website. You have added your services, written a few articles and made sure everything looks good on mobile. Yet when you search for the thing you sell, other businesses appear first.
+![Editorial illustration following a Google search result from discovery to click and enquiry](/site/blog/why-website-not-ranking-google-cover.webp)
 
-It is frustrating, especially when nobody can explain what you should change.
+Your family rooms page gets impressions on Google, but nobody clicks. Your booking page gets traffic, but nobody enquires. Both can feel like a ranking problem. Each points to a different fix.
 
-The useful starting point is to find where the problem begins. A page that Google has not indexed needs a different fix from a page ranking on the second page. And a page attracting the wrong visitors needs a different content strategy altogether.
+**Start by finding where the journey breaks: impressions, clicks or leads.** Check one page that matters to your business, then use Search Console and analytics to decide whether to fix access, improve the search result or repair the enquiry path.
 
-This guide walks through those checks and shows where Uplumo can help you move from a list of numbers to a practical decision.
+## In this guide
 
-## First, work out what “not ranking” means
+- [Find the break between impressions, clicks and leads](#find-where-search-performance-breaks)
+- [Check indexing and canonical URLs](#check-if-google-can-index-the-page)
+- [Match the page to what the customer wants](#match-the-page-to-search-intent)
+- [Improve content with verifiable details](#give-buyers-the-details-they-need)
+- [Review competing pages and find useful gaps](#review-competing-pages)
+- [Measure one change against a baseline](#measure-one-change)
+- [Frequently asked questions](#frequently-asked-questions)
+
+## Find where search performance breaks
 
 Choose one important page and the customer search you want it to appear for. Avoid investigating your entire website at once.
 
@@ -27,13 +37,17 @@ Use this **Problem → Check → Fix** framework to choose your next step:
 | Impressions but no clicks | Queries, position, search intent and the visible result | Improve the page's relevance and title; address a mismatch in page type |
 | Clicks but no leads | Tracking, landing-page experience, offer and enquiry path | Repair measurement or remove the specific obstacle to enquiring |
 
+![Decision cards showing what to check for zero impressions, no clicks or no leads](/site/blog/google-ranking-diagnosis.webp)
+
+*Use the first weak stage to choose the next check.*
+
 ### Problem: 0 impressions — is the page missing, or just not being seen?
 
 **Check:** In Search Console, filter to the exact page. Confirm the property, date range, country and search type before interpreting a zero. Check URL Inspection separately: zero impressions do not automatically mean a page is not indexed.
 
 If the URL is indexed, review whether it targets something customers search for and whether Google selected a different canonical. A new page or a very narrow topic may have little visibility even without a technical error.
 
-**Fix:** Resolve a confirmed indexing problem first, using section 1 below. If the page is indexed and accessible, use sections 2 and 3 to review its purpose and usefulness. Do not repeatedly submit an unchanged page and expect that to solve relevance or demand.
+**Fix:** Resolve a confirmed indexing problem first. If the page is accessible and indexed, review its search intent and the information it gives a buyer. Do not repeatedly submit an unchanged page and expect that to solve relevance or demand.
 
 **Where Uplumo helps:** Site Audit surfaces technical findings; Keyword Research helps investigate relevant searches and available demand estimates. Together, they help you distinguish a technical repair from a content decision.
 
@@ -57,9 +71,9 @@ Confirm that the action is tracked, too. An empty lead report can mean no enquir
 
 **Where Uplumo helps:** Uplumo Analytics lets you select the recorded events your business counts as leads. Connected GA4 can add landing-page outcomes where available. These help you evaluate whether a page attracts useful visitors, without pretending that each Search Console query can be tied to an individual sale.
 
-You can carry out these checks in Google's tools directly. [Uplumo brings research, page improvement and measurement into one workspace](https://uplumo.com/), so you can use the finding to choose your next task.
+For the full workflow across Google and AI, see our [SEO, AEO and GEO guide](/blog/best-seo-aeo-geo-tools).
 
-## 1. Check whether Google can index the page
+## Check if Google can index the page
 
 Open URL Inspection in Search Console and inspect the exact address. Check whether it is indexed, which canonical URL Google selected and whether a crawl or indexing issue is reported. Use the live test when you need to check the page's current accessibility.
 
@@ -69,7 +83,7 @@ On the website itself, look for an accidental noindex directive, an error respon
 
 An audit identifies something to investigate; Search Console tells you what Google reports about that URL. Use both before deciding what to fix.
 
-## 2. Check whether you built the right kind of page
+## Match the page to search intent
 
 A page can be accessible and still be the wrong answer for a search.
 
@@ -81,7 +95,7 @@ Search your target phrase and inspect the organic results. Are they product page
 
 The decision you want is specific: “This needs to be a pricing page,” or “This article should help a buyer compare options.” Adding every related phrase to the existing page will not resolve a mismatch in purpose.
 
-## 3. Improve the page with information a customer actually needs
+## Give buyers the details they need
 
 Read your page as someone who has never heard of your business. Could they make a decision without calling you for basic details?
 
@@ -97,7 +111,7 @@ Treat the editor's scores as a review checklist. They are not Google's score for
 
 Give the AI assistant a bounded task: “Make this cancellation explanation clearer without changing the policy.” Review the result against your actual policy before using it.
 
-## 4. Learn from competitors without copying them
+## Review competing pages
 
 Choose two or three businesses that appear for the searches you care about. Look at the pages they rank with, the topics they cover and the evidence they provide.
 
@@ -107,7 +121,7 @@ Ask what a customer can learn there that they cannot learn on your website.
 
 Use the findings to choose a useful action. Perhaps you need a detailed comparison, a missing service page or a resource that an industry publication would genuinely want to reference. A competitor's keyword or backlink count alone is not a content plan.
 
-## 5. Pick one change you can evaluate
+## Measure one change
 
 It is tempting to rewrite ten pages, change every title and publish another batch of articles. That makes it difficult to understand what helped.
 
@@ -120,6 +134,10 @@ Instead, create a small work record:
 | Change | Add scope, exclusions and a real project example |
 | Date | The day the update goes live |
 | Measures | Relevant queries, clicks and qualified enquiries |
+
+![Measurement notes showing the page, problem, change and outcome to record](/site/blog/google-ranking-change-log.webp)
+
+*Keep a small change log so you can compare like-for-like periods after an edit.*
 
 Use Uplumo's Rank Tracking to follow selected keyword positions with a consistent location and device setup. Review Search Growth alongside it, and use Analytics or connected GA4 to check the outcomes you have configured.
 
@@ -141,7 +159,7 @@ Choose one service, product or room page that matters to your business. Decide w
 
 When you need connected Google data, keyword research or scheduled ranking checks, [compare Uplumo's plans](https://uplumo.com/pricing). Those tools depend on plan access, and paid research and AI actions use credits. You can start with the basics and add the workflow your diagnosis calls for.
 
-## Questions business owners often ask
+## Frequently asked questions
 
 ### Should I publish more blogs if my website is not ranking?
 

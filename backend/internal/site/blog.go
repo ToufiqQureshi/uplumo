@@ -66,8 +66,8 @@ func loadPosts(fsys fs.FS) ([]Post, error) {
 	}
 	posts := make([]Post, 0, len(files))
 	for _, file := range files {
-		// README.md explains how to write a post; it is not one.
-		if file == "README.md" {
+		// Editorial files share the blog directory with articles.
+		if file == "README.md" || file == "blog_style.md" {
 			continue
 		}
 		source, err := fs.ReadFile(fsys, file)

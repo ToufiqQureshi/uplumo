@@ -13,6 +13,11 @@ priorities, corrections, and what still waits on him. Read it after
   decision, remove it when he answers.
 - Never write secrets, keys or customer data here.
 
+## 10 Nov 2026: format the existing blogs consistently
+
+- Owner asked to refresh all three existing guides with the SEOWriting.ai reference’s structure and explanatory visuals, in [PR #291](https://github.com/ToufiqQureshi/uplumo/pull/291).
+- Preserve the published URLs and add `blog_style.md` for future writing sessions.
+
 ## 9 Nov 2026: four search and AI guides in PR #291
 
 - Owner requested one long-form Uplumo article in one PR, with the reference article’s scannable structure and explanatory visuals.

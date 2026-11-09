@@ -75,6 +75,7 @@ func TestParsePost(t *testing.T) {
 func TestBlogPages(t *testing.T) {
 	files := fstest.MapFS{
 		"README.md":      {Data: []byte("# How to write posts")},
+		"blog_style.md":  {Data: []byte("# Visual style for posts")},
 		"older.md":       {Data: []byte(front(goodTitle, goodDescription, "date: 2026-10-01") + "Old post.")},
 		"what-is-aeo.md": {Data: []byte(front(goodTitle, goodDescription, goodDate, "updated: 2026-10-22", "author: Asha Rao") + "Answer first.")},
 		"hidden.md":      {Data: []byte(front(goodTitle, goodDescription, goodDate, "draft: true") + "Not yet.")},
@@ -100,7 +101,7 @@ func TestBlogPages(t *testing.T) {
 			t.Errorf("post page lacks %s", want)
 		}
 	}
-	for _, slug := range []string{"hidden", "README", "nope"} {
+	for _, slug := range []string{"hidden", "README", "blog_style", "nope"} {
 		if code := getPost(s, slug).Code; code != http.StatusNotFound {
 			t.Errorf("/blog/%s: status %d, want 404", slug, code)
 		}
@@ -153,9 +154,9 @@ func TestPublishedBlogContent(t *testing.T) {
 		{"best-seo-aeo-geo-tools", "2026-11-09", "2026-11-09"},
 		{"how-to-get-website-cited-by-ai", "2026-11-09", "2026-11-09"},
 		{"how-to-track-competitors-in-ai-search", "2026-11-09", "2026-11-09"},
-		{"why-website-not-ranking-google", "2026-11-08", "2026-11-08"},
-		{"chatgpt-recommends-competitors-not-my-business", "2026-11-08", "2026-11-08"},
-		{"chatgpt-traffic-google-analytics", "2026-10-15", "2026-11-08"},
+		{"why-website-not-ranking-google", "2026-11-08", "2026-11-10"},
+		{"chatgpt-recommends-competitors-not-my-business", "2026-11-08", "2026-11-10"},
+		{"chatgpt-traffic-google-analytics", "2026-10-15", "2026-11-10"},
 	}
 	if len(s.posts) != len(posts) {
 		t.Fatalf("published %d articles, want %d approved posts", len(s.posts), len(posts))
@@ -210,6 +211,9 @@ func TestGuideNavigationAndImages(t *testing.T) {
 		{"best-answer-engine-optimisation-tools", 4, 3},
 		{"how-to-get-website-cited-by-ai", 5, 3},
 		{"how-to-track-competitors-in-ai-search", 5, 4},
+		{"why-website-not-ranking-google", 7, 3},
+		{"chatgpt-recommends-competitors-not-my-business", 7, 3},
+		{"chatgpt-traffic-google-analytics", 9, 3},
 	}
 	for _, guide := range guides {
 		t.Run(guide.slug, func(t *testing.T) {

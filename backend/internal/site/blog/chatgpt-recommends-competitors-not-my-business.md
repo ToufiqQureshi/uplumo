@@ -2,20 +2,28 @@
 title: "Why Does ChatGPT Recommend My Competitors but Not My Business?"
 description: "Find out what to check when ChatGPT names your competitors. Compare AI answers, review cited sources and use Uplumo to plan and measure improvements."
 date: 2026-11-08
+updated: 2026-11-10
 author: Uplumo team
+image: /site/blog/chatgpt-recommends-competitors-not-my-business-cover.webp
 ---
 
-You ask ChatGPT to recommend a business like yours. It lists three companies. You recognise all of them, and none is yours.
+![Editorial illustration of competitor answer cards and a linked source under inspection](/site/blog/chatgpt-recommends-competitors-not-my-business-cover.webp)
 
-Your first thought might be that you need more backlinks, a new schema plugin or another ten blog posts. Before spending time on any of those, save the answer and look at the evidence.
+You ask ChatGPT to recommend a business like yours. It lists three competitors, and your company never appears. Save that answer before you change your website. A cited directory, a competitor’s own page and an answer with no web sources each tell you something different.
 
-Which question did you ask? Was web search used? Did the answer link to the competitors' own websites, a directory or an independent comparison?
+**Start with the same buyer question, open the cited pages and compare the facts each source provides.** Then fix the page or listing you can verify and run the question again under comparable settings.
 
-Those details give you a starting point. A single missing mention cannot tell you why your business was left out, but a repeatable check can show where to investigate and what to improve.
+## In this guide
 
-Here is a practical workflow using Uplumo's AI Visibility, Cite Fix and Content Editor.
+- [Separate mentions, citations and visits](#separate-mentions-citations-and-visits)
+- [Test questions a buyer would ask](#test-real-buying-questions)
+- [Inspect the cited competitor pages](#inspect-the-sources-behind-recommendations)
+- [Check whether crawlers can read your page](#check-crawler-access)
+- [Improve the page buyers need](#improve-the-page-buyers-need)
+- [Measure answers, traffic and outcomes separately](#measure-changes-in-answers-and-traffic)
+- [Frequently asked questions](#frequently-asked-questions)
 
-## Start by separating three different results
+## Separate mentions citations and visits
 
 Being named in an AI answer, receiving a website citation and getting a customer are separate outcomes.
 
@@ -31,7 +39,7 @@ Uplumo's **AI Visibility Tracker** records mentions and website citations separa
 
 These are samples and observed events. They do not reveal every private conversation people have with an AI assistant, and missing referral information can leave visits unattributed.
 
-## 1. Test questions a customer would actually ask
+## Test real buying questions
 
 Searching only for your business name tells you little about discovery. Someone who already knows your name has already found you.
 
@@ -45,9 +53,13 @@ For software, include the buyer's use case, team size or budget where relevant. 
 
 In **Prompt Explorer**, you can compare supported AI answers for a question. Use the **AI Visibility Tracker** for the questions you want to follow regularly, choosing the relevant market and available settings.
 
+![Uplumo Prompt Explorer showing example responses and the separate sources beneath them](/site/product/prompt-explorer.webp)
+
+*Prompt Explorer with demo data. Compare the linked sources and the wording of each answer.*
+
 Keep the wording and setup consistent when comparing runs. Record the engine and date, and repeat checks over time. An API-based result can differ from the answer someone receives in a consumer chat app.
 
-## 2. Open the sources behind the competitor mentions
+## Inspect the sources behind recommendations
 
 Read the linked pages instead of stopping at the list of names.
 
@@ -67,7 +79,7 @@ Use **Brand Lookup** to research available brand or domain citation data, and sa
 
 If a relevant independent source has inaccurate information about your business, request a factual correction. If you are missing from a legitimate directory, check its submission policy. Avoid buying mentions just to influence AI answers.
 
-## 3. Check that search systems can read your website
+## Check crawler access
 
 Useful information needs to be accessible before it can support an answer.
 
@@ -79,13 +91,17 @@ For Google's AI Overviews and AI Mode, [Google's guidance](https://developers.go
 
 In Uplumo, run **Site Audit**, then open **Cite Fix**. Its report uses the latest completed scan to show page checks and fixes covering areas such as access, identity, sources and answer clarity.
 
-The score is Uplumo's checklist score. Use the individual evidence to decide whether a finding matters for the page. A missing date, short page or absent schema is a review prompt, not proof that an assistant rejected your business.
+For a deeper walkthrough of edge responses and cited URLs, see the [website citation checklist](/blog/how-to-get-website-cited-by-ai). The score is Uplumo's checklist score. Use the individual evidence to decide whether a finding matters for the page. A missing date, short page or absent schema is a review prompt, not proof that an assistant rejected your business.
 
-## 4. Improve the page that should answer the question
+## Improve the page buyers need
 
 Choose one missed customer question and identify the page that should answer it. You may already have the right page; it might simply lack the details a buyer needs.
 
 For example, “We offer memorable family experiences” leaves important questions open. A useful replacement might explain which activities are available, who can use them, any age limits and what costs extra. Use only details that are true for your business.
+
+![Before-and-after content example replacing a generic resort claim with details about indoor activities and access](/site/blog/chatgpt-competitor-answer-gap.webp)
+
+*Illustrative example. Add real eligibility, times and conditions so buyers can verify the answer.*
 
 For a software product, show how the workflow works, where its limits are and what the user needs to set it up. A real screenshot or worked example can explain more than another paragraph of claims.
 
@@ -93,7 +109,7 @@ For a software product, show how the workflow works, where its limits are and wh
 
 Paid research and AI actions may use credits. Review the in-app cost before running them, and verify any generated claims before publication.
 
-## 5. Measure the change without confusing visibility with sales
+## Measure changes in answers and traffic
 
 Save the original answer and record the URL, edit date and change you made. Revisit the same questions using comparable settings.
 
@@ -105,7 +121,7 @@ Review three things separately:
 
 If you appear more often but receive no visits, review whether the citations are clickable and which pages they point to. If visits arrive without enquiries, inspect the landing page and offer. If results vary, keep collecting comparable observations before claiming progress.
 
-A before-and-after change is useful evidence for further investigation. It does not establish that your edit alone caused a citation or sale.
+A before-and-after change gives you evidence to investigate. For ongoing monitoring, use a [fixed competitor prompt panel](/blog/how-to-track-competitors-in-ai-search) and keep site edits in your measurement notes.
 
 ## Your first useful action
 
@@ -115,7 +131,7 @@ Pick five buying questions, save the answers and inspect their cited sources. Th
 
 You will have a repeatable way to answer the question that matters: where are we missing, what can we improve, and is the work bringing useful visitors?
 
-## Questions you might still have
+## Frequently asked questions
 
 ### Can a tool guarantee that ChatGPT recommends my business?
 
