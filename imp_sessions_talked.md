@@ -17,7 +17,8 @@ priorities, corrections, and what still waits on him. Read it after
 
 - Owner: "valueble and rankable content hi hona chahiye jisse uplumo ko users miley". Asked for an SEO pass on PR #291 using DataForSEO keyword data.
 - Done on top of #291: `best-seo-aeo-geo-tools` -> `seo-vs-aeo-vs-geo` (pillar; "aeo vs seo" 1.9k, "what is aeo" 5.4k US/mo) and `best-answer-engine-optimisation-tools` -> `best-aeo-tools` (British "optimisation" has no volume). Retitled citation + competitor guides; every guide links to the pillar.
-- Waiting for the owner: named author with bio (E-E-A-T), FAQ/Breadcrumb schema in the template, verified competitor prices in the AEO tools table, more tools (Otterly, AthenaHQ, Scrunch) for "best" intent, and whether India-only examples (Lonavala) stay in global posts.
+- Owner decided: blog author is "James" (all posts); add FAQPage + BreadcrumbList schema to posts (done, PR #292).
+- Waiting for the owner: is James a real person (bio/photo/profile link needed for E-E-A-T, never invent credentials); verified competitor prices + more tools (Otterly, AthenaHQ, Scrunch) in the AEO tools table; whether India-only examples (Lonavala) stay in global posts.
 
 ## 10 Nov 2026: format the existing blogs consistently
 

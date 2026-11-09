@@ -2,6 +2,7 @@ package site
 
 import (
 	"context"
+	"encoding/json"
 	"encoding/xml"
 	"net/http"
 	"net/http/httptest"
@@ -128,6 +129,76 @@ func TestBlogPages(t *testing.T) {
 	}
 }
 
+func TestPostStructuredData(t *testing.T) {
+	faq := "Intro.\n\n## Frequently asked questions\n\n" +
+		"### Is AEO replacing SEO?\n\nNo. Read [the guide](/blog/x) and **measure** `both`.\n\nSecond paragraph.\n\n" +
+		"### Ünïcode “quotes”?\n\nYes – they stay.\n\n## Next steps\n\n### Not a FAQ\n\nIgnored."
+	files := fstest.MapFS{
+		"with-faq.md": {Data: []byte(front(goodTitle, goodDescription, goodDate) + faq)},
+		"no-faq.md":   {Data: []byte(front(goodTitle, goodDescription, goodDate) + "### Looks like a question?\n\nBut no FAQ section.")},
+	}
+	s, err := build(&url.URL{Scheme: "https", Host: "uplumo.com"}, files)
+	if err != nil {
+		t.Fatal(err)
+	}
+	type node struct {
+		Type       string `json:"@type"`
+		MainEntity []struct {
+			Name           string `json:"name"`
+			AcceptedAnswer struct {
+				Text string `json:"text"`
+			} `json:"acceptedAnswer"`
+		} `json:"mainEntity"`
+		ItemListElement []struct {
+			Position int    `json:"position"`
+			Name     string `json:"name"`
+			Item     string `json:"item"`
+		} `json:"itemListElement"`
+	}
+	nodes := func(slug string) map[string]node {
+		body := getPost(s, slug).Body.String()
+		m := regexp.MustCompile(`(?s)<script type="application/ld\+json">(.*?)</script>`).FindStringSubmatch(body)
+		if m == nil {
+			t.Fatalf("%s has no JSON-LD", slug)
+		}
+		var list []node
+		if err := json.Unmarshal([]byte(m[1]), &list); err != nil {
+			t.Fatalf("%s JSON-LD is not a list: %v", slug, err)
+		}
+		byType := map[string]node{}
+		for _, n := range list {
+			byType[n.Type] = n
+		}
+		return byType
+	}
+
+	with := nodes("with-faq")
+	if _, ok := with["BlogPosting"]; !ok {
+		t.Error("BlogPosting is missing")
+	}
+	crumbs := with["BreadcrumbList"].ItemListElement
+	if len(crumbs) != 3 || crumbs[1].Item != "https://uplumo.com/blog" || crumbs[2].Item != "https://uplumo.com/blog/with-faq" || crumbs[2].Position != 3 {
+		t.Errorf("breadcrumbs = %+v", crumbs)
+	}
+	got := with["FAQPage"].MainEntity
+	if len(got) != 2 {
+		t.Fatalf("FAQ has %d questions, want the 2 under the FAQ heading", len(got))
+	}
+	if got[0].Name != "Is AEO replacing SEO?" || got[0].AcceptedAnswer.Text != "No. Read the guide and measure both. Second paragraph." {
+		t.Errorf("first FAQ = %+v", got[0])
+	}
+	if got[1].Name != "Ünïcode “quotes”?" || got[1].AcceptedAnswer.Text != "Yes – they stay." {
+		t.Errorf("unicode FAQ = %+v", got[1])
+	}
+	without := nodes("no-faq")
+	if _, ok := without["FAQPage"]; ok {
+		t.Error("a post without a FAQ section must not claim FAQPage")
+	}
+	if _, ok := without["BreadcrumbList"]; !ok {
+		t.Error("every post needs breadcrumbs")
+	}
+}
+
 func TestABrokenPostStopsTheSite(t *testing.T) {
 	files := fstest.MapFS{"bad.md": {Data: []byte(front("title: x") + "Hi")}}
 	if _, err := build(&url.URL{Scheme: "https", Host: "uplumo.com"}, files); err == nil || !strings.Contains(err.Error(), "bad.md") {
@@ -209,8 +280,8 @@ func TestGuideNavigationAndImages(t *testing.T) {
 	}{
 		{"seo-vs-aeo-vs-geo", 10, 5},
 		{"best-aeo-tools", 6, 3},
-		{"how-to-get-website-cited-by-ai", 6, 3},
-		{"how-to-track-competitors-in-ai-search", 5, 4},
+		{"how-to-get-website-cited-by-ai", 7, 3},
+		{"how-to-track-competitors-in-ai-search", 6, 4},
 		{"why-website-not-ranking-google", 7, 3},
 		{"chatgpt-recommends-competitors-not-my-business", 7, 3},
 		{"chatgpt-traffic-google-analytics", 9, 3},

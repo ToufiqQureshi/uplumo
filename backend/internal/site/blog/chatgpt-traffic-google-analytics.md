@@ -3,7 +3,7 @@ title: "How to Track ChatGPT Traffic in Google Analytics 4 (GA4)"
 description: "Find ChatGPT traffic in GA4, check AI referrals and landing pages, troubleshoot missing visits, and measure leads with a practical tracking workflow."
 date: 2026-10-15
 updated: 2026-11-10
-author: Uplumo team
+author: James
 image: /site/blog/chatgpt-traffic-google-analytics-cover.webp
 ---
 

@@ -3,7 +3,7 @@ title: "Website Not Ranking on Google? Diagnose Impressions, Clicks and Leads"
 description: "Zero impressions, no clicks or no leads? Find the right checks and fixes for your website, with a practical Uplumo workflow to measure progress."
 date: 2026-11-08
 updated: 2026-11-10
-author: Uplumo team
+author: James
 image: /site/blog/why-website-not-ranking-google-cover.webp
 ---
 

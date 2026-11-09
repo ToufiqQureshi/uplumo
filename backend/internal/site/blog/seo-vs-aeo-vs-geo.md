@@ -2,7 +2,7 @@
 title: "SEO vs AEO vs GEO: What's the Difference and How to Do All Three"
 description: "SEO wins Google rankings, AEO wins direct answers and GEO wins AI citations. See how they differ, how to measure each and a 30-day plan for your website."
 date: 2026-11-09
-author: Uplumo team
+author: James
 image: /site/blog/best-seo-aeo-geo-tools-cover.webp
 ---
 

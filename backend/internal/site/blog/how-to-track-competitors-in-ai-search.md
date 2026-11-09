@@ -2,7 +2,7 @@
 title: "How to Track Competitors in ChatGPT and AI Search"
 description: "Track competitors in ChatGPT, Claude, Gemini and other AI answers. Compare mentions, citations and search demand with a repeatable measurement workflow."
 date: 2026-11-09
-author: Uplumo team
+author: James
 image: /site/blog/ai-competitor-tracking-cover.webp
 ---
 
@@ -19,6 +19,7 @@ You ask ChatGPT for the best booking software for an independent hotel. A compet
 - [Measure answers with a fixed panel](#measure-answers-with-a-fixed-panel)
 - [Find the sources driving competitor visibility](#find-the-sources-driving-competitor-visibility)
 - [Build a weekly tracking routine](#build-a-weekly-tracking-routine)
+- [Frequently asked questions](#frequently-asked-questions)
 
 ## Choose the competitors and questions
 
@@ -115,6 +116,8 @@ For each meaningful gap, log the question ID, engine, rival, cited domain, exact
 
 In Uplumo, pair **Rank Tracking** and **Keyword Research** with the saved AI panel. Use Google Search Console to understand discovery for your own site, and Uplumo Analytics or GA4 for identifiable visits and configured outcomes. The result should be a short list of decisions, such as “publish the payment compatibility table for P04” or “check why the comparison page gets referrals but no completed demos.”
 
+## Frequently asked questions
+
 ### Can I check a competitor’s exact ChatGPT search volume?
 
 Tools may provide estimates, coverage counts or other demand signals. Read each methodology and state the scope. You can measure how often the competitor appears in a defined panel and use market-specific Google keyword estimates as a separate clue about topic demand.
@@ -126,5 +129,9 @@ A category prompt can surface useful rivals. Build a panel of multiple buyer que
 ### Which AI competitor metrics should I report to clients?
 
 Start with panel size, checks that completed, mention rate, owned-domain citation rate and the leading cited pages. Add Google ranking changes and identifiable leads where relevant, with a date range and market. Show one example answer that supports each decision.
+
+## Next steps
+
+Start with 12 buyer questions and two competitors this week, then run the same panel again next week and compare.
 
 [Compare AEO tools for competitor tracking](/blog/best-aeo-tools) · [See Uplumo plans](https://uplumo.com/pricing)

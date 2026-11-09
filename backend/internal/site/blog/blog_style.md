@@ -8,7 +8,7 @@ Use [SEOWriting.ai’s keyword placement guide](https://seowriting.ai/blog/where
 2. Add **In this guide** for a long article. Link directly to the major H2 sections. Use short H2 and H3 headings, brief paragraphs and numbered instructions where order matters.
 3. Show the work. Use an exact menu path, before-and-after example, troubleshooting table or worked calculation. Label illustrative examples. When numbers come from different systems, state the source, scope and denominator.
 4. Bring in Uplumo at the relevant step. Explain what the feature does, what evidence the reader can see and what decision comes next. Verify plan access, data coverage and cadence in the product and current pricing before publishing.
-5. End with a clear first action. Add FAQs for questions that still need answering. Link to relevant published Uplumo guides and cite official sources near platform-specific claims.
+5. End with a clear first action. Put FAQs under one `## Frequently asked questions` heading, one `###` question each, and close that section with another `##` heading before any closing call to action. The renderer turns that section into FAQPage structured data, so anything left under the last question becomes part of its answer. Link to relevant published Uplumo guides and cite official sources near platform-specific claims.
 
 ## Use visuals where they teach something
 

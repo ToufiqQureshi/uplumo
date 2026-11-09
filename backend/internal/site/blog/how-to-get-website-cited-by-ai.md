@@ -2,7 +2,7 @@
 title: "How to Get Cited by ChatGPT and AI Search: 2027 Checklist"
 description: "How to get your website cited by ChatGPT, Claude, Perplexity and Google AI: check crawler access, publish facts worth citing and verify the links."
 date: 2026-11-09
-author: Uplumo team
+author: James
 image: /site/blog/ai-citation-2027-cover.webp
 ---
 
@@ -30,6 +30,7 @@ Your page says that guests can cancel up to 48 hours before arrival. A ChatGPT a
 - [Build a page worth citing](#build-a-page-worth-citing)
 - [Diagnose what the answer shows](#diagnose-what-the-answer-shows)
 - [Verify progress after a change](#verify-progress-after-a-change)
+- [Frequently asked questions](#frequently-asked-questions)
 
 ## Check who can fetch the page
 
@@ -117,6 +118,8 @@ A useful investigation starts with a precise observation. For example, “Claude
 
 [Bing Webmaster Tools AI Performance](https://blogs.bing.com/webmaster/2026/2/Introducing-AI-Performance-in-Bing-Webmaster-Tools-Public-Preview/) · [Bing Topics Portfolio beta](https://blogs.bing.com/webmaster/2026/10/introducing-topics-portfolio-beta-in-ai-performance/)
 
+## Frequently asked questions
+
 ### Can I submit a normal webpage directly to ChatGPT or Claude for a citation?
 
 Follow the search crawler’s published access instructions and make the preferred URL easy to discover. For Google, an eligible priority URL can be inspected in Search Console and submitted for indexing. A request helps Google discover the page. The platform decides when to fetch it, whether to index it and which answers may link to it.
@@ -128,6 +131,8 @@ Use your own crawl, indexing and answer history as a baseline. Verify access imm
 ### Do I need to let training bots crawl my site?
 
 Choose a training policy separately from search access. OpenAI and Anthropic document distinct agents for these roles. Check each provider’s guidance and apply the policy your business intends to use.
+
+## Next steps
 
 Citation is one part of AI search visibility. For how it fits with rankings and answer boxes, read [SEO vs AEO vs GEO](/blog/seo-vs-aeo-vs-geo). To see whether citations turn into visits, [track ChatGPT traffic in GA4](/blog/chatgpt-traffic-google-analytics).
 

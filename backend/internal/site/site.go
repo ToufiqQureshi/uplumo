@@ -218,7 +218,7 @@ func build(publicURL *url.URL, blogFiles fs.FS) (*Site, error) {
 			}
 			data.OGImage = origin + image
 		}
-		data.JSONLD = blogPostingJSONLD(origin, post, data.OGImage)
+		data.JSONLD = postJSONLD(origin, post, data.OGImage)
 		if s.posts[post.Slug], err = render(tmpl, "post.html", data); err != nil {
 			return nil, err
 		}

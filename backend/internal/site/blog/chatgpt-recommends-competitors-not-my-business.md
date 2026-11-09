@@ -3,7 +3,7 @@ title: "Why Does ChatGPT Recommend My Competitors but Not My Business?"
 description: "Find out what to check when ChatGPT names your competitors. Compare AI answers, review cited sources and use Uplumo to plan and measure improvements."
 date: 2026-11-08
 updated: 2026-11-10
-author: Uplumo team
+author: James
 image: /site/blog/chatgpt-recommends-competitors-not-my-business-cover.webp
 ---
 
