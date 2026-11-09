@@ -35,6 +35,10 @@ export type KeywordResearchRow = {
   secondaryIntents?: string[];
   /** Result types Google shows for the keyword (ai_overview, local_pack...). */
   serpFeatures?: string[];
+  /** The keyword whose Google volume this close variant shares. */
+  coreKeyword?: string | null;
+  /** Average domain rank (0-1000) of the page-one results. */
+  topPagesDomainRank?: number | null;
 };
 
 export type SavedKeywordRow = {
