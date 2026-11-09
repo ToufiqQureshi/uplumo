@@ -125,7 +125,7 @@ A before-and-after change gives you evidence to investigate. For ongoing monitor
 
 ## Your first useful action
 
-Pick five buying questions, save the answers and inspect their cited sources. Then improve one relevant page using evidence you can stand behind.
+Pick five buying questions, save the answers and inspect their cited sources. Then improve one relevant page using evidence you can stand behind. If you are new to the terms, start with [SEO vs AEO vs GEO](/blog/seo-vs-aeo-vs-geo). If you are choosing software for this work, compare the [best AEO tools](/blog/best-aeo-tools).
 
 [Use Uplumo](https://uplumo.com/) to connect that process: monitor selected questions in AI Visibility, investigate page issues in Site Audit and Cite Fix, improve the content, and review the resulting visits in Analytics. See [current feature access and plans](https://uplumo.com/pricing) before choosing a subscription.
 

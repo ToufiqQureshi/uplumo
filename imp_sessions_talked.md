@@ -13,6 +13,12 @@ priorities, corrections, and what still waits on him. Read it after
   decision, remove it when he answers.
 - Never write secrets, keys or customer data here.
 
+## 9 Nov 2026: blog content must rank on Google and in AI answers
+
+- Owner: "valueble and rankable content hi hona chahiye jisse uplumo ko users miley". Asked for an SEO pass on PR #291 using DataForSEO keyword data.
+- Done on top of #291: `best-seo-aeo-geo-tools` -> `seo-vs-aeo-vs-geo` (pillar; "aeo vs seo" 1.9k, "what is aeo" 5.4k US/mo) and `best-answer-engine-optimisation-tools` -> `best-aeo-tools` (British "optimisation" has no volume). Retitled citation + competitor guides; every guide links to the pillar.
+- Waiting for the owner: named author with bio (E-E-A-T), FAQ/Breadcrumb schema in the template, verified competitor prices in the AEO tools table, more tools (Otterly, AthenaHQ, Scrunch) for "best" intent, and whether India-only examples (Lonavala) stay in global posts.
+
 ## 10 Nov 2026: format the existing blogs consistently
 
 - Owner asked to refresh all three existing guides with the SEOWriting.ai reference’s structure and explanatory visuals, in [PR #291](https://github.com/ToufiqQureshi/uplumo/pull/291).

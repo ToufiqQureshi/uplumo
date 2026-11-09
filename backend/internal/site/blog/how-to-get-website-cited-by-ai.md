@@ -1,6 +1,6 @@
 ---
-title: "How to Get Your Website Cited by AI in 2027"
-description: "Check crawler access, verify what bots can fetch, publish facts worth citing and measure links to your site from ChatGPT, Claude, Perplexity and Google."
+title: "How to Get Cited by ChatGPT and AI Search: 2027 Checklist"
+description: "How to get your website cited by ChatGPT, Claude, Perplexity and Google AI: check crawler access, publish facts worth citing and verify the links."
 date: 2026-11-09
 author: Uplumo team
 image: /site/blog/ai-citation-2027-cover.webp
@@ -12,10 +12,19 @@ Your page says that guests can cancel up to 48 hours before arrival. A ChatGPT a
 
 **To improve your chances of an AI citation, make the preferred page publicly accessible to the relevant search crawler, publish an answer it can verify, and check the exact link in repeated answers.** Crawler access makes discovery possible. Each platform decides what it retrieves and cites.
 
+### The 5-step checklist
+
+1. **Allow the search crawlers.** Let `OAI-SearchBot`, `Claude-SearchBot`, `PerplexityBot` and Googlebot fetch the page, at your CDN as well as in `robots.txt`.
+2. **Serve real text.** Make sure the public URL returns the answer as HTML text, not a challenge page, login wall or empty JavaScript shell.
+3. **Put the answer first.** State the fact in one direct sentence near a descriptive heading, with its scope, exceptions and date.
+4. **Back it with evidence.** Add first-party proof such as a policy, test, dataset or screenshot that competing pages do not have.
+5. **Check the exact citation.** Re-run the same questions and record which URL each answer links to, then measure the visits it sends.
+
 *This 2027 guide uses platform documentation verified on 9 November 2026.*
 
 ## In this guide
 
+- [The 5-step checklist](#the-5-step-checklist)
 - [Check who can fetch the page](#check-who-can-fetch-the-page)
 - [Inspect the response bots receive](#inspect-the-response-bots-receive)
 - [Build a page worth citing](#build-a-page-worth-citing)
@@ -95,6 +104,8 @@ Use a descriptive heading, a direct sentence and a comparison table where reader
 | AI cites the right page but repeats a wrong number | Compare the answer with the cited passage and other cited pages. | Clarify the number, units, effective date and exceptions. Recheck the answer and its sources. |
 | Your domain is cited but Analytics shows little AI traffic | Confirm that the link is visible, check landing-page attribution and test event setup. | Track identifiable referrals and outcomes. Keep unattributed visits separate. |
 
+If the answer names a competitor instead of you, work through [why ChatGPT recommends competitors](/blog/chatgpt-recommends-competitors-not-my-business) before rewriting your page.
+
 A useful investigation starts with a precise observation. For example, “Claude cited the old PDF in two web-enabled answers for this prompt” gives you a URL and an issue to verify. “Our site is invisible to AI” gives you little to test.
 
 ## Verify progress after a change
@@ -118,4 +129,6 @@ Use your own crawl, indexing and answer history as a baseline. Verify access imm
 
 Choose a training policy separately from search access. OpenAI and Anthropic document distinct agents for these roles. Check each provider’s guidance and apply the policy your business intends to use.
 
-Start with the page that holds your most valuable answer. Then [track the competitors appearing for the same questions](/blog/how-to-track-competitors-in-ai-search) or [compare AEO tools for your workflow](/blog/best-answer-engine-optimisation-tools). [See Uplumo plans](https://uplumo.com/pricing)
+Citation is one part of AI search visibility. For how it fits with rankings and answer boxes, read [SEO vs AEO vs GEO](/blog/seo-vs-aeo-vs-geo). To see whether citations turn into visits, [track ChatGPT traffic in GA4](/blog/chatgpt-traffic-google-analytics).
+
+Start with the page that holds your most valuable answer. Then [track the competitors appearing for the same questions](/blog/how-to-track-competitors-in-ai-search) or [compare AEO tools for your workflow](/blog/best-aeo-tools). [See Uplumo plans](https://uplumo.com/pricing)

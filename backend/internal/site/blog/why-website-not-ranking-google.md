@@ -71,7 +71,7 @@ Confirm that the action is tracked, too. An empty lead report can mean no enquir
 
 **Where Uplumo helps:** Uplumo Analytics lets you select the recorded events your business counts as leads. Connected GA4 can add landing-page outcomes where available. These help you evaluate whether a page attracts useful visitors, without pretending that each Search Console query can be tied to an individual sale.
 
-For the full workflow across Google and AI, see our [SEO, AEO and GEO guide](/blog/best-seo-aeo-geo-tools).
+For the full workflow across Google and AI, see our [SEO vs AEO vs GEO guide](/blog/seo-vs-aeo-vs-geo).
 
 ## Check if Google can index the page
 

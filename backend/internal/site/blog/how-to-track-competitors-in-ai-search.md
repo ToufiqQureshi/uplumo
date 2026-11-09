@@ -1,5 +1,5 @@
 ---
-title: "How to Check Competitor Rankings in AI Search"
+title: "How to Track Competitors in ChatGPT and AI Search"
 description: "Track competitors in ChatGPT, Claude, Gemini and other AI answers. Compare mentions, citations and search demand with a repeatable measurement workflow."
 date: 2026-11-09
 author: Uplumo team
@@ -31,10 +31,10 @@ Create a short list of questions from sales calls, reviews, support, Search Cons
 | P01 | Discovery | What software helps an independent hotel take more direct bookings? |
 | P02 | Comparison | Compare hotel booking engines that support deposits and promo codes. |
 | P03 | Purchase | Which hotel booking engines fit a 30-room property that takes payments on its website? |
-| P04 | Local or market fit | Which booking systems suit independent hotels in India that need UPI payments? |
+| P04 | Local or market fit | Which booking systems suit independent hotels in [country] that need [local payment method]? |
 | P05 | Brand accuracy | Does [brand] support deposits on direct bookings? Link to the official documentation. |
 
-Start with 12 to 20 questions. Keep branded checks in a separate group, since mentioning a competitor by name in the prompt changes the task. Write down what counts as an alias for each brand and which domains count as first-party sources. Manually review ambiguous names, like a product name shared with a common word or an acquired company.
+Fill the brackets with your real market, such as a country and the payment method its guests use. Start with 12 to 20 questions. Keep branded checks in a separate group, since mentioning a competitor by name in the prompt changes the task. Write down what counts as an alias for each brand and which domains count as first-party sources. Manually review ambiguous names, like a product name shared with a common word or an acquired company.
 
 ## Separate keyword volume from AI demand
 
@@ -52,7 +52,7 @@ The prompt “Which Lonavala resorts have indoor activities when it rains?” ca
 
 *Keep provider estimates and first-party observations labelled. A sampled mention rate measures the panel you ran.*
 
-To build the Google side of the benchmark in Uplumo, open **Keyword Research**, choose your target market and look up the parent keyword. Save the estimated monthly volume and the related terms worth exploring. Add the primary keyword to **Rank Tracking**, then keep the location and device consistent. For results with a competitor snapshot, inspect the sites shown above your result. Use a SERP check to record a specific rival’s URL and position, including cases where your own site is absent.
+To build the Google side of the benchmark in Uplumo, open **Keyword Research**, choose your target market and look up the parent keyword. Save the estimated monthly volume and the related terms worth exploring. Add the primary keyword to **Rank Tracking**, then keep the location and device consistent. For results with a competitor snapshot, inspect the sites shown above your result. Use a SERP check to record a specific rival’s URL and position, including cases where your own site is absent. If it is missing for most of your keywords, work through [why a website is not ranking on Google](/blog/why-website-not-ranking-google) first.
 
 Avoid adding overlapping volumes for near-identical keywords and calling the result the total size of a market. When a provider shows missing data, record it as unavailable. Prioritise questions using search demand, buyer relevance and your ability to answer with proof. A low-volume question about an important deal blocker can deserve a place on your panel.
 
@@ -103,7 +103,7 @@ A rival can appear often because directories describe it clearly, because its ow
 
 For each meaningful gap, log the question ID, engine, rival, cited domain, exact URL, the claim it supports and the page you can improve. Keep both the original cited URL and a normalised domain or preferred URL for grouping. Store meaningful query parameters where they distinguish content. This lets you see whether one rival page, several pages or a third-party source accounts for the gap.
 
-[Read the website citation checklist](/blog/how-to-get-website-cited-by-ai) · [Investigate why ChatGPT recommends a competitor](/blog/chatgpt-recommends-competitors-not-my-business)
+[Read the website citation checklist](/blog/how-to-get-website-cited-by-ai) · [SEO vs AEO vs GEO explained](/blog/seo-vs-aeo-vs-geo) · [Investigate why ChatGPT recommends a competitor](/blog/chatgpt-recommends-competitors-not-my-business)
 
 ## Build a weekly tracking routine
 
@@ -127,4 +127,4 @@ A category prompt can surface useful rivals. Build a panel of multiple buyer que
 
 Start with panel size, checks that completed, mention rate, owned-domain citation rate and the leading cited pages. Add Google ranking changes and identifiable leads where relevant, with a date range and market. Show one example answer that supports each decision.
 
-[Compare AEO tools for competitor tracking](/blog/best-answer-engine-optimisation-tools) · [See Uplumo plans](https://uplumo.com/pricing)
+[Compare AEO tools for competitor tracking](/blog/best-aeo-tools) · [See Uplumo plans](https://uplumo.com/pricing)

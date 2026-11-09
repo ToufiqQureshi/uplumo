@@ -150,8 +150,8 @@ func TestBlogCoverValidation(t *testing.T) {
 func TestPublishedBlogContent(t *testing.T) {
 	s := newSite(t, &url.URL{Scheme: "https", Host: "uplumo.com"})
 	posts := []struct{ slug, published, updated string }{
-		{"best-answer-engine-optimisation-tools", "2026-11-09", "2026-11-09"},
-		{"best-seo-aeo-geo-tools", "2026-11-09", "2026-11-09"},
+		{"best-aeo-tools", "2026-11-09", "2026-11-09"},
+		{"seo-vs-aeo-vs-geo", "2026-11-09", "2026-11-09"},
 		{"how-to-get-website-cited-by-ai", "2026-11-09", "2026-11-09"},
 		{"how-to-track-competitors-in-ai-search", "2026-11-09", "2026-11-09"},
 		{"why-website-not-ranking-google", "2026-11-08", "2026-11-10"},
@@ -207,9 +207,9 @@ func TestGuideNavigationAndImages(t *testing.T) {
 		slug          string
 		links, images int
 	}{
-		{"best-seo-aeo-geo-tools", 9, 5},
-		{"best-answer-engine-optimisation-tools", 4, 3},
-		{"how-to-get-website-cited-by-ai", 5, 3},
+		{"seo-vs-aeo-vs-geo", 10, 5},
+		{"best-aeo-tools", 6, 3},
+		{"how-to-get-website-cited-by-ai", 6, 3},
 		{"how-to-track-competitors-in-ai-search", 5, 4},
 		{"why-website-not-ranking-google", 7, 3},
 		{"chatgpt-recommends-competitors-not-my-business", 7, 3},

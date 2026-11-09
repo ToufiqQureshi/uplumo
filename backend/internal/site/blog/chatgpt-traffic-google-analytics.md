@@ -182,7 +182,7 @@ For a useful competitive review:
 
 Uplumo's AI Visibility tools support sampled answer and citation research. That can help investigate who appears alongside your brand. It does not grant access to a competitor's visitor data.
 
-Our guide to [why ChatGPT recommends competitors](https://uplumo.com/blog/chatgpt-recommends-competitors-not-my-business) explains how to turn those observations into a page-improvement plan.
+Our guide to [why ChatGPT recommends competitors](https://uplumo.com/blog/chatgpt-recommends-competitors-not-my-business) explains how to turn those observations into a page-improvement plan. To measure competitors with a repeatable prompt panel, see [how to track competitors in AI search](/blog/how-to-track-competitors-in-ai-search).
 
 ## Do you need to connect Google Analytics to ChatGPT?
 
@@ -209,7 +209,7 @@ When you need to investigate sampled mentions and citations, use AI Visibility o
 
 ## Start with one report and one useful action
 
-Check your ChatGPT sources, choose the landing page with the clearest business relevance, and verify the action you want visitors to take.
+Check your ChatGPT sources, choose the landing page with the clearest business relevance, and verify the action you want visitors to take. If ChatGPT rarely links to you at all, start with the [AI citation checklist](/blog/how-to-get-website-cited-by-ai).
 
 If you want a separate view of recognised AI referrals, [create your free Uplumo account](https://uplumo.com/sign-up), install Analytics and select your lead events. Start with the visits you can actually measure. Use that evidence to decide which page deserves your attention next.
 
