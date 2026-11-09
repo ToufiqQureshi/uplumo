@@ -1,5 +1,6 @@
 import { Monitor, Smartphone } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/client/components/ui/button";
 import {
   Dialog,
@@ -9,20 +10,28 @@ import {
 } from "@/client/components/ui/dialog";
 import { cn } from "cn";
 import { ArticlePreview } from "../ArticlePreview";
+import { articleDocument, PlainArticle } from "../article-export";
+import { useBlogTheme } from "../ExportCards";
 
 /** The article as a reader will see it, on a desktop or a phone width. */
 export function PreviewDialog({
+  projectId,
   open,
   onOpenChange,
   title,
   content,
 }: {
+  projectId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
   content: string;
 }) {
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
+  const [look, setLook] = useState<"theme" | "uplumo">("theme");
+  const css = useBlogTheme(projectId, open).data?.css ?? "";
+  const themed = css !== "" && look === "theme";
+  const width = device === "mobile" ? "max-w-[390px]" : "max-w-3xl";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -32,10 +41,39 @@ export function PreviewDialog({
           <DialogDescription className="sr-only">
             How the article will read once published.
           </DialogDescription>
+          {css ? (
+            <div
+              role="group"
+              aria-label="Preview style"
+              className="ml-auto flex gap-1 rounded-lg border p-0.5"
+            >
+              <Button
+                type="button"
+                size="sm"
+                variant={themed ? "secondary" : "ghost"}
+                aria-pressed={themed}
+                onClick={() => setLook("theme")}
+              >
+                My blog theme
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={themed ? "ghost" : "secondary"}
+                aria-pressed={!themed}
+                onClick={() => setLook("uplumo")}
+              >
+                Uplumo
+              </Button>
+            </div>
+          ) : null}
           <div
             role="group"
             aria-label="Screen size"
-            className="ml-auto flex gap-1 rounded-lg border p-0.5"
+            className={cn(
+              "flex gap-1 rounded-lg border p-0.5",
+              !css && "ml-auto",
+            )}
           >
             <Button
               type="button"
@@ -60,27 +98,88 @@ export function PreviewDialog({
           </div>
         </div>
         <div className="flex flex-1 justify-center overflow-auto bg-muted/50 p-4">
-          <article
-            className={cn(
-              "h-fit w-full rounded-lg border bg-background px-6 py-8 shadow-sm",
-              device === "mobile" ? "max-w-[390px]" : "max-w-3xl md:px-12",
-            )}
-          >
-            <h1 className="mb-4 font-serif text-4xl leading-tight">
-              {title.trim() || "Untitled article"}
-            </h1>
-            {content.trim() ? (
-              <div className="leading-7">
-                <ArticlePreview content={content} title={title} />
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Start writing to see the preview.
-              </p>
-            )}
-          </article>
+          {themed ? (
+            <ThemedArticle
+              css={css}
+              title={title}
+              content={content}
+              className={width}
+            />
+          ) : (
+            <article
+              className={cn(
+                "h-fit w-full rounded-lg border bg-background px-6 py-8 shadow-sm",
+                width,
+                device === "desktop" && "md:px-12",
+              )}
+            >
+              <h1 className="mb-4 font-serif text-4xl leading-tight">
+                {title.trim() || "Untitled article"}
+              </h1>
+              {content.trim() ? (
+                <div className="leading-7">
+                  <ArticlePreview content={content} title={title} />
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Start writing to see the preview.
+                </p>
+              )}
+            </article>
+          )}
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/**
+ * The article inside the user's own blog CSS. The frame is sandboxed without
+ * scripts, so the CSS styles only this frame and never the app; React renders
+ * the same plain markup the .html export uses into it.
+ */
+function ThemedArticle({
+  css,
+  title,
+  content,
+  className,
+}: {
+  css: string;
+  title: string;
+  content: string;
+  className: string;
+}) {
+  const [mount, setMount] = useState<Element | null>(null);
+  const srcDoc = useMemo(
+    () => articleDocument({ title: "", description: "", body: "", css }),
+    [css],
+  );
+  return (
+    <>
+      <iframe
+        title="Article in your blog theme"
+        sandbox="allow-same-origin"
+        srcDoc={srcDoc}
+        onLoad={(event) =>
+          setMount(
+            event.currentTarget.contentDocument?.querySelector("article") ??
+              null,
+          )
+        }
+        className={cn(
+          "h-full w-full rounded-lg border bg-white shadow-sm",
+          className,
+        )}
+      />
+      {mount
+        ? createPortal(
+            <>
+              <h1>{title.trim() || "Untitled article"}</h1>
+              <PlainArticle content={content} title={title} />
+            </>,
+            mount,
+          )
+        : null}
+    </>
   );
 }

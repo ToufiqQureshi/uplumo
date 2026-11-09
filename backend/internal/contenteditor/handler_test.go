@@ -19,6 +19,7 @@ type memoryStore struct {
 	saveInput     Input
 	deleteProject string
 	deleteID      string
+	themes        map[string]string
 }
 
 type fakeWriterService struct {
@@ -67,6 +68,69 @@ func (s *memoryStore) Save(_ context.Context, projectID string, input Input) (Dr
 func (s *memoryStore) Delete(_ context.Context, projectID, id string) error {
 	s.deleteProject, s.deleteID = projectID, id
 	return nil
+}
+
+func (s *memoryStore) GetTheme(_ context.Context, projectID string) (Theme, error) {
+	return Theme{CSS: s.themes[projectID]}, nil
+}
+func (s *memoryStore) SaveTheme(_ context.Context, projectID, css string) (Theme, error) {
+	if s.themes == nil {
+		s.themes = map[string]string{}
+	}
+	s.themes[projectID] = css
+	return Theme{CSS: css}, nil
+}
+
+func TestThemeHandlerValidatesCSSAndKeepsItPerProject(t *testing.T) {
+	store := &memoryStore{}
+	identity := func(next http.Handler) http.Handler { return next }
+	mux := http.NewServeMux()
+	Mount(mux, store, nil, nil, nil, identity, identity)
+	request := func(path, body string) *httptest.ResponseRecorder {
+		recorder := httptest.NewRecorder()
+		mux.ServeHTTP(recorder, httptest.NewRequestWithContext(context.Background(), http.MethodPost, path, strings.NewReader(body)))
+		return recorder
+	}
+	body := func(css string) string {
+		encoded, err := json.Marshal(map[string]string{"css": css})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(encoded)
+	}
+	tests := []struct {
+		name, body string
+		status     int
+		saved      string
+	}{
+		{"missing css", `{}`, http.StatusBadRequest, ""},
+		{"unknown field", `{"css":"h1{}","html":"x"}`, http.StatusBadRequest, ""},
+		{"closes the style tag", body("h1{color:red}</style><script>alert(1)</script>"), http.StatusBadRequest, ""},
+		{"over 100 KB", body("/*" + strings.Repeat("x", MaxThemeCSS) + "*/"), http.StatusBadRequest, ""},
+		{"unicode and spaces trimmed", body("  h1::before{content:\"✓ नमस्ते\"}\n"), http.StatusOK, `h1::before{content:"✓ नमस्ते"}`},
+		{"exactly 100 KB", body(strings.Repeat("a", MaxThemeCSS)), http.StatusOK, strings.Repeat("a", MaxThemeCSS)},
+		{"empty removes", body("   "), http.StatusOK, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store.themes = map[string]string{"p1": "old"}
+			got := request("/api/v1/projects/p1/content/theme/save", tt.body)
+			want := tt.saved
+			if tt.status != http.StatusOK {
+				want = "old"
+			}
+			if got.Code != tt.status || store.themes["p1"] != want {
+				t.Fatalf("status = %d %s; saved = %.40q, want %d %.40q", got.Code, got.Body, store.themes["p1"], tt.status, want)
+			}
+		})
+	}
+	store.themes = map[string]string{"p1": "h1{color:red}", "p2": "h1{color:blue}"}
+	if got := request("/api/v1/projects/p2/content/theme/get", `{}`); got.Code != http.StatusOK || !strings.Contains(got.Body.String(), "blue") {
+		t.Fatalf("get p2 = %d %s", got.Code, got.Body)
+	}
+	if got := request("/api/v1/projects/p2/content/theme/get", `{"css":""}`); got.Code != http.StatusBadRequest {
+		t.Fatalf("get with a field = %d, want 400", got.Code)
+	}
 }
 
 func TestHandlerValidatesBodiesAndKeepsOperationsProjectScoped(t *testing.T) {
