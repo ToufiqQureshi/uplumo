@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useConfirm } from "@/client/components/ConfirmDialog";
 import { Button } from "@/client/components/ui/button";
 import { Input } from "@/client/components/ui/input";
 import { Textarea } from "@/client/components/ui/textarea";
@@ -46,6 +47,7 @@ export function AuthorProfiles({ projectId }: { projectId: string }) {
           : "Could not save this author profile.",
       ),
   });
+  const confirm = useConfirm();
   const remove = useMutation({
     mutationFn: (authorId: string) => deleteContentAuthor(projectId, authorId),
     onSuccess: () => {
@@ -173,12 +175,17 @@ export function AuthorProfiles({ projectId }: { projectId: string }) {
           })
         }
         onDelete={(author) => {
-          if (window.confirm(`Delete the profile of "${author.name}"?`)) {
-            remove.mutate(author.id);
-          }
+          confirm.ask({
+            title: `Delete the profile of "${author.name}"?`,
+            body: "This cannot be undone.",
+            confirmLabel: "Delete profile",
+            destructive: true,
+            onConfirm: () => remove.mutate(author.id),
+          });
         }}
         deletePending={remove.isPending}
       />
+      {confirm.dialog}
     </div>
   );
 }

@@ -1,9 +1,4 @@
-import {
-  type QueryClient,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { sortBy } from "remeda";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -29,7 +24,9 @@ import {
   DraftToolbar,
   WriterReminder,
 } from "./EditorPanels";
-import { useLinkedDraft } from "./useLinkedDraft";
+import { askToDiscard, useLinkedDraft } from "./useLinkedDraft";
+import { refreshSchemaPreview } from "./FreeSeoPublishCards";
+import { useConfirm } from "@/client/components/ConfirmDialog";
 import { ArticleComposer } from "./ArticleComposer";
 import { FreeSeoEditorProvider } from "./FreeSeoEditorContext";
 import {
@@ -70,18 +67,6 @@ const blankDraftForKeyword = (keyword?: string): ContentDraftInput => ({
   ...blankDraft,
   targetKeyword: keyword ?? "",
 });
-
-// Structured data is built from the saved draft, so each save makes the
-// preview (and the .html export that uses it) out of date.
-function refreshSchemaPreview(
-  queryClient: QueryClient,
-  projectId: string,
-  draftId: string,
-) {
-  void queryClient.invalidateQueries({
-    queryKey: ["schemaPreview", projectId, draftId],
-  });
-}
 
 export function ContentEditorPage({
   projectId,
@@ -283,7 +268,8 @@ export function ContentEditorPage({
         error instanceof Error ? error.message : "Could not open this draft.",
       ),
   });
-  const linkedDraft = useLinkedDraft({
+  const confirm = useConfirm();
+  const { query: linkedDraft, leaveDialog } = useLinkedDraft({
     projectId,
     selectedDraftId,
     currentDraftId: draftId,
@@ -294,25 +280,17 @@ export function ContentEditorPage({
     openMutation.isPending || deleteMutation.isPending || imageUploadBusy;
   const editorBusy = saveMutation.isPending || writingLocked;
 
-  const startNewDraft = () => {
-    if (
-      dirty &&
-      !window.confirm("Discard your unsaved changes and start a new draft?")
-    )
-      return;
-    restoreDraft();
-    setInitialized(true);
-    onDraftIdChange(undefined);
-  };
-
+  const unlessDirty = (title: string, action: () => void) =>
+    askToDiscard(confirm.ask, dirty, title, action);
+  const startNewDraft = () =>
+    unlessDirty("Start a new draft?", () => {
+      restoreDraft();
+      setInitialized(true);
+      onDraftIdChange(undefined);
+    });
   const selectDraft = (saved: ContentDraftSummary) => {
-    if (saved.id === draftId) return;
-    if (
-      dirty &&
-      !window.confirm("Discard your unsaved changes and open this draft?")
-    )
-      return;
-    openMutation.mutate(saved.id);
+    if (saved.id !== draftId)
+      unlessDirty("Open this draft?", () => openMutation.mutate(saved.id));
   };
 
   const update = (field: keyof ContentDraftInput, value: string) => {
@@ -337,6 +315,8 @@ export function ContentEditorPage({
 
   return (
     <FreeSeoEditorProvider onDraftFieldChange={update}>
+      {confirm.dialog}
+      {leaveDialog}
       <div className="space-y-5">
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
           <section className="order-2 min-w-0 space-y-5 xl:order-1">
@@ -401,13 +381,13 @@ export function ContentEditorPage({
                 saved.id === draftId && dirty
                   ? " Your unsaved edits will also be discarded."
                   : "";
-              if (
-                window.confirm(
-                  `Delete "${saved.title || "Untitled draft"}"? This cannot be undone.${unsaved}`,
-                )
-              ) {
-                deleteMutation.mutate(saved.id);
-              }
+              confirm.ask({
+                title: `Delete "${saved.title || "Untitled draft"}"?`,
+                body: `This cannot be undone.${unsaved}`,
+                confirmLabel: "Delete draft",
+                destructive: true,
+                onConfirm: () => deleteMutation.mutate(saved.id),
+              });
             }}
           />
         </div>

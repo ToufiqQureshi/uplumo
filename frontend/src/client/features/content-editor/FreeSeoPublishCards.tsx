@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { type QueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -131,6 +131,18 @@ const schemaPreviewSchema = z.object({
   byline: z.string(),
   skipped: z.string(),
 });
+
+// Structured data is built from the saved draft, so each save makes the
+// preview (and the .html export that uses it) out of date.
+export function refreshSchemaPreview(
+  queryClient: QueryClient,
+  projectId: string,
+  draftId: string,
+) {
+  void queryClient.invalidateQueries({
+    queryKey: ["schemaPreview", projectId, draftId],
+  });
+}
 
 // The JSON-LD of the last saved draft; the Structured data card and the
 // export share one request through the query key.

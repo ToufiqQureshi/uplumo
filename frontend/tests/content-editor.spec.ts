@@ -188,14 +188,16 @@ test("unsaved editor navigation can be cancelled without losing writing", async 
   const requests: string[] = [];
   await openEditor(page, requests);
   await page.getByLabel(/Article title/).fill("Keep this unsaved writing");
-  page.once("dialog", (dialog) => dialog.dismiss());
   await page.getByRole("link", { name: "Dashboard", exact: true }).click();
+  const leave = page.getByRole("alertdialog", { name: "Leave this draft?" });
+  await leave.getByRole("button", { name: "Cancel" }).click();
+  await expect(leave).toHaveCount(0);
   await expect(page).toHaveURL(/\/content-editor$/u);
   await expect(page.getByLabel(/Article title/)).toHaveValue(
     "Keep this unsaved writing",
   );
-  page.once("dialog", (dialog) => dialog.accept());
   await page.getByRole("link", { name: "Dashboard", exact: true }).click();
+  await leave.getByRole("button", { name: "Discard changes" }).click();
   await expect(page).toHaveURL(/\/p\/e2e-project$/u);
   expect(requests.filter((path) => paidEndpoints.test(path))).toEqual([]);
 });

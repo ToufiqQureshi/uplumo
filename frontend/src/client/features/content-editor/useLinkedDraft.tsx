@@ -2,6 +2,10 @@ import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useBlocker } from "@tanstack/react-router";
 import {
+  ConfirmDialog,
+  type useConfirm,
+} from "@/client/components/ConfirmDialog";
+import {
   contentEditorQueryKeys,
   getContentDraft,
   type ContentDraft,
@@ -37,17 +41,47 @@ export function useLinkedDraft({
     previous.current = selectedDraftId;
     if (!selectedDraftId) onRestore();
   }, [selectedDraftId, onRestore]);
-  useBlocker({
+  // Leaving with unsaved edits waits for the in-app dialog; closing the tab
+  // still gets the browser's own prompt (enableBeforeUnload).
+  const blocker = useBlocker({
     disabled: !dirty,
     enableBeforeUnload: dirty,
+    withResolver: true,
     shouldBlockFn: ({ current, next }) => {
       const nextDraft = "draft" in next.search ? next.search.draft : undefined;
-      if (current.pathname === next.pathname && nextDraft === currentDraftId)
-        return false;
-      return !window.confirm(
-        "Discard your unsaved changes and leave this draft?",
+      return !(
+        current.pathname === next.pathname && nextDraft === currentDraftId
       );
     },
   });
-  return query;
+  const leaveDialog =
+    blocker.status === "blocked" ? (
+      <ConfirmDialog
+        title="Leave this draft?"
+        confirmLabel="Discard changes"
+        destructive
+        onClose={blocker.reset}
+        onConfirm={blocker.proceed}
+      >
+        Your unsaved changes will be lost.
+      </ConfirmDialog>
+    ) : null;
+  return { query, leaveDialog };
+}
+
+/** Runs `action` at once, or after the writer agrees to drop unsaved edits. */
+export function askToDiscard(
+  ask: ReturnType<typeof useConfirm>["ask"],
+  dirty: boolean,
+  title: string,
+  action: () => void,
+) {
+  if (!dirty) return action();
+  ask({
+    title,
+    body: "Your unsaved changes will be lost.",
+    confirmLabel: "Discard changes",
+    destructive: true,
+    onConfirm: action,
+  });
 }
