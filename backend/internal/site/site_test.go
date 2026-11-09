@@ -427,6 +427,51 @@ func TestRobotsAndSitemap(t *testing.T) {
 			t.Errorf("sitemap lacks %s", path)
 		}
 	}
+
+	// The signed-in app is kept out, and no rule may catch a sitemap page.
+	for _, rule := range []string{"Disallow: /p/\n", "Disallow: /settings\n", "Disallow: /billing\n", "Disallow: /ai$\n"} {
+		if !strings.Contains(body, rule) {
+			t.Errorf("robots.txt lacks %q", rule)
+		}
+	}
+	for _, path := range want {
+		for _, line := range strings.Split(body, "\n") {
+			rule, ok := strings.CutPrefix(line, "Disallow: ")
+			exact, isExact := strings.CutSuffix(rule, "$")
+			if ok && ((isExact && path == exact) || (!isExact && strings.HasPrefix(path, rule))) {
+				t.Errorf("robots.txt rule %q blocks public page %s", line, path)
+			}
+		}
+	}
+
+	// Every post lists its cover, which must be served, and the blog index
+	// carries the newest post date.
+	var images struct {
+		URLs []struct {
+			Loc     string `xml:"loc"`
+			LastMod string `xml:"lastmod"`
+			Image   string `xml:"image>loc"`
+		} `xml:"url"`
+	}
+	if err := xml.Unmarshal(sitemap.Body.Bytes(), &images); err != nil {
+		t.Fatal(err)
+	}
+	newest := ""
+	for _, u := range images.URLs {
+		if !strings.HasPrefix(u.Loc, "https://uplumo.com/blog/") {
+			continue
+		}
+		newest = max(newest, u.LastMod)
+		path := strings.TrimPrefix(u.Image, "https://uplumo.com")
+		if u.Image == "" || get(s.ServeAsset, path, nil).Code != http.StatusOK {
+			t.Errorf("%s image %q is missing or not served", u.Loc, u.Image)
+		}
+	}
+	for _, u := range images.URLs {
+		if u.Loc == "https://uplumo.com/blog" && u.LastMod != newest {
+			t.Errorf("blog index lastmod = %q, want newest post %q", u.LastMod, newest)
+		}
+	}
 }
 
 func TestPricingPageShowsWhatThePlanCatalogEnforces(t *testing.T) {

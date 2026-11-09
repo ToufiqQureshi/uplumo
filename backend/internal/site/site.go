@@ -358,13 +358,27 @@ var crawlerAgents = []string{
 	"DuckAssistBot", "YouBot", "CCBot", "AI2Bot",
 }
 
-// robotsTxt allows every crawler on every public page except the API.
+// privatePaths are the signed-in app's routes and one-time auth links. They
+// show nothing to a crawler but the app shell, so crawl budget goes to the
+// public pages instead. "$" ends a rule at the exact path.
+var privatePaths = []string{
+	"/api/", "/p/", "/projects", "/settings", "/billing", "/ai$", "/support",
+	"/onboarding", "/subscribe", "/oauth-consent", "/staff", "/accept-invitation",
+	"/verify-email", "/reset-password", "/forgot-password", "/auth-error",
+}
+
+// robotsTxt allows every crawler on every public page and keeps all of them
+// out of the API and the signed-in app.
 func robotsTxt(origin string) []byte {
 	var b strings.Builder
 	for _, agent := range crawlerAgents {
 		b.WriteString("User-agent: " + agent + "\n")
 	}
-	b.WriteString("User-agent: *\nAllow: /\nDisallow: /api/\n\nSitemap: " + origin + "/sitemap.xml\n")
+	b.WriteString("User-agent: *\nAllow: /\n")
+	for _, path := range privatePaths {
+		b.WriteString("Disallow: " + path + "\n")
+	}
+	b.WriteString("\nSitemap: " + origin + "/sitemap.xml\n")
 	return []byte(b.String())
 }
 
@@ -388,11 +402,12 @@ func serveText(w http.ResponseWriter, contentType string, body []byte) {
 }
 
 // sitemap lists every public page: the landing page, pricing, the info pages,
-// the blog and each post with the date it last changed.
+// the blog (dated by its newest change) and each post with the date it last
+// changed and its cover image.
 func sitemap(origin string, posts []Post) []byte {
 	var b strings.Builder
-	b.WriteString(xml.Header + `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">` + "\n")
-	write := func(path, lastmod string) {
+	b.WriteString(xml.Header + `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">` + "\n")
+	write := func(path, lastmod, image string) {
 		b.WriteString("<url><loc>")
 		// Paths are constants or validated slugs; escaping keeps the file
 		// valid if one ever carries a special character.
@@ -401,16 +416,27 @@ func sitemap(origin string, posts []Post) []byte {
 		if lastmod != "" {
 			b.WriteString("<lastmod>" + lastmod + "</lastmod>")
 		}
+		if image != "" {
+			b.WriteString("<image:image><image:loc>")
+			_ = xml.EscapeText(&b, []byte(origin+image))
+			b.WriteString("</image:loc></image:image>")
+		}
 		b.WriteString("</url>\n")
 	}
 	for _, path := range append([]string{"/", "/pricing"}, InfoPaths()...) {
-		write(path, "")
+		write(path, "", "")
 	}
 	if len(posts) > 0 {
-		write("/blog", "")
+		newest := posts[0].Updated
+		for _, post := range posts {
+			if post.Updated.After(newest) {
+				newest = post.Updated
+			}
+		}
+		write("/blog", newest.Format(time.DateOnly), "")
 	}
 	for _, post := range posts {
-		write("/blog/"+post.Slug, post.Updated.Format(time.DateOnly))
+		write("/blog/"+post.Slug, post.Updated.Format(time.DateOnly), post.Image)
 	}
 	b.WriteString("</urlset>\n")
 	return []byte(b.String())
