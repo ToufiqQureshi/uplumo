@@ -13,6 +13,27 @@ priorities, corrections, and what still waits on him. Read it after
   decision, remove it when he answers.
 - Never write secrets, keys or customer data here.
 
+## 9 Nov 2026: blog content must rank on Google and in AI answers
+
+- Owner: "valueble and rankable content hi hona chahiye jisse uplumo ko users miley". Asked for an SEO pass on PR #291 using DataForSEO keyword data.
+- Done on top of #291: `best-seo-aeo-geo-tools` -> `seo-vs-aeo-vs-geo` (pillar; "aeo vs seo" 1.9k, "what is aeo" 5.4k US/mo) and `best-answer-engine-optimisation-tools` -> `best-aeo-tools` (British "optimisation" has no volume). Retitled citation + competitor guides; every guide links to the pillar.
+- Owner rule: every Uplumo price shown anywhere must be in both USD and INR, never INR only. Blog posts link to /pricing and never hard-code an Uplumo price (catalog.go is the only source).
+- Owner decided: blog author is "James", a pen name: never invent a bio or credentials. FAQPage + BreadcrumbList schema on posts. Schema on shared pages (blog index, info pages) in USD only.
+- Owner: "Abe what the fuck is lonaval? Global audience ke liye ha" -> no single-country examples in any post; Lonavala/monsoon/UPI removed.
+- Owner approved all recommendations and said "no more talks only work"; every new blog must follow `blog_style.md` (keyword data, structure, links, prices, visuals, schema, tests).
+- Done in PR #292: 13-tool AEO comparison with verified prices; new posts what-is-aeo, best-semrush-alternatives, profound-alternatives, peec-ai-alternatives, how-to-rank-in-chatgpt; "Related guides" block with `related:` front matter.
+
+## 10 Nov 2026: format the existing blogs consistently
+
+- Owner asked to refresh all three existing guides with the SEOWriting.ai reference’s structure and explanatory visuals, in [PR #291](https://github.com/ToufiqQureshi/uplumo/pull/291).
+- Preserve the published URLs and add `blog_style.md` for future writing sessions.
+
+## 9 Nov 2026: four search and AI guides in PR #291
+
+- Owner requested one long-form Uplumo article in one PR, with the reference article’s scannable structure and explanatory visuals.
+- Proposed slug: `best-seo-aeo-geo-tools`. Covers Google indexing, AI crawler access, intent-led content, rankings, lead tracking and local SEO.
+- Owner then asked for three more guides in the [same PR](https://github.com/ToufiqQureshi/uplumo/pull/291): a 2027 AEO tool comparison, an AI citation troubleshooting guide and a competitor tracking workflow with search demand and rank tracking.
+
 ## 9 Nov 2026: Razorpay payment failed, make failure handling industry-ready
 
 - Owner paid ₹4,999 (Business) on 8 Nov by UPI; it failed. Razorpay says `payment_timed_out` at `payment_authentication`, error source customer, no bank RRN (most likely no debit). Not an Uplumo bug.
