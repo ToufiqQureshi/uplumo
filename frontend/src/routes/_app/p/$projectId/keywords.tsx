@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { KeywordAgentPage } from "@/client/features/keywords/agent/KeywordAgentPage";
+import { KeywordResearchPage } from "@/client/features/keywords/research/KeywordResearchPage";
 import { normalizeLegacyKeywordSearch } from "@/client/features/keywords/keywordSearchParams";
 import { keywordsSearchSchema } from "@/types/schemas/keywords";
 
@@ -25,6 +25,9 @@ function KeywordResearchPageRoute() {
   const { projectId } = Route.useParams();
   const { q } = Route.useSearch();
   return (
-    <KeywordAgentPage projectId={projectId} initialPrompt={q || undefined} />
+    <KeywordResearchPage
+      projectId={projectId}
+      initialKeyword={q || undefined}
+    />
   );
 }
