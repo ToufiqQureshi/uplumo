@@ -22,7 +22,13 @@
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.content = light ? "#fafcf9" : "#07090a";
     const control = document.getElementById("site-theme");
-    if (control) control.value = value;
+    if (control) {
+      control.setAttribute(
+        "aria-label",
+        light ? "Switch to dark theme" : "Switch to light theme",
+      );
+    }
+    return light;
   }
   // Runs before CSS to avoid a wrong-theme flash; CSP permits self-hosted JS.
   apply();
@@ -35,12 +41,12 @@
   });
   document.addEventListener("DOMContentLoaded", () => {
     const control = document.getElementById("site-theme");
-    control.disabled = false;
-    control.addEventListener("change", () => {
-      const value = control.value;
+    control.hidden = false;
+    // One click flips what is on screen; "system" stays until the first click.
+    control.addEventListener("click", () => {
+      const value = apply() ? "dark" : "light";
       try {
-        if (value === "system") window.localStorage.removeItem(key);
-        else window.localStorage.setItem(key, value);
+        window.localStorage.setItem(key, value);
         unsaved = null;
       } catch {
         unsaved = value;

@@ -116,7 +116,7 @@ func TestPagesCarryTheirMetadata(t *testing.T) {
 				`<meta property="og:image" content="https://uplumo.com/site/social-card.png?v=` + s.versions["social-card.png"] + `">`,
 				`<meta name="twitter:card" content="summary_large_image">`,
 				`href="/sign-up"`,
-				`aria-label="Color theme"`,
+				`<button class="theme-toggle" id="site-theme" type="button"`,
 				`src="/site/theme.js?v=` + s.versions["theme.js"] + `"`,
 				"₹999",
 				"₹2,499",
