@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"regexp"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -148,7 +149,10 @@ func TestBlogCoverValidation(t *testing.T) {
 func TestPublishedBlogContent(t *testing.T) {
 	s := newSite(t, &url.URL{Scheme: "https", Host: "uplumo.com"})
 	posts := []struct{ slug, published, updated string }{
+		{"best-answer-engine-optimisation-tools", "2026-11-09", "2026-11-09"},
 		{"best-seo-aeo-geo-tools", "2026-11-09", "2026-11-09"},
+		{"how-to-get-website-cited-by-ai", "2026-11-09", "2026-11-09"},
+		{"how-to-track-competitors-in-ai-search", "2026-11-09", "2026-11-09"},
 		{"why-website-not-ranking-google", "2026-11-08", "2026-11-08"},
 		{"chatgpt-recommends-competitors-not-my-business", "2026-11-08", "2026-11-08"},
 		{"chatgpt-traffic-google-analytics", "2026-10-15", "2026-11-08"},
@@ -194,30 +198,45 @@ func TestPublishedBlogContent(t *testing.T) {
 	}
 }
 
-func TestSEOGuideNavigationAndImages(t *testing.T) {
+func TestGuideNavigationAndImages(t *testing.T) {
 	s := newSite(t, &url.URL{Scheme: "https", Host: "uplumo.com"})
-	body := getPost(s, "best-seo-aeo-geo-tools").Body.String()
-	for _, id := range strings.Fields(`choose-the-right-tool get-your-pages-indexed-on-google
-give-ai-search-crawlers-access write-content-for-search-intent check-your-ai-visibility
-track-rankings-and-leads improve-your-local-seo your-first-30-days frequently-asked-questions`) {
-		if !strings.Contains(body, `href="#`+id+`"`) || !strings.Contains(body, `id="`+id+`"`) {
-			t.Errorf("guide lacks a table-of-contents link or heading for %q", id)
-		}
+	anchor := regexp.MustCompile(`href="#([^"]+)"`)
+	image := regexp.MustCompile(`<img src="(/site/[^"]+)" alt="[^"]+"`)
+	guides := []struct {
+		slug          string
+		links, images int
+	}{
+		{"best-seo-aeo-geo-tools", 9, 5},
+		{"best-answer-engine-optimisation-tools", 4, 3},
+		{"how-to-get-website-cited-by-ai", 5, 3},
+		{"how-to-track-competitors-in-ai-search", 5, 4},
 	}
-	for _, file := range []string{
-		"blog/best-seo-aeo-geo-tools-cover.webp",
-		"blog/best-seo-aeo-geo-tools-google-indexing.webp",
-		"blog/best-seo-aeo-geo-tools-content-brief.webp",
-		"blog/best-seo-aeo-geo-tools-lead-tracking.webp",
-		"product/prompt-explorer.webp",
-	} {
-		path := AssetsPrefix + file
-		if !strings.Contains(body, `src="`+path+`"`) {
-			t.Errorf("guide lacks image %q", path)
-		}
-		if res := get(s.ServeAsset, path, nil); res.Code != http.StatusOK {
-			t.Errorf("image %q returned %d, want 200", path, res.Code)
-		}
+	for _, guide := range guides {
+		t.Run(guide.slug, func(t *testing.T) {
+			body := getPost(s, guide.slug).Body.String()
+			_, prose, ok := strings.Cut(body, `<div class="prose">`)
+			if !ok {
+				t.Fatal("guide body is missing")
+			}
+			links := anchor.FindAllStringSubmatch(prose, -1)
+			if len(links) != guide.links {
+				t.Errorf("guide has %d section links, want %d", len(links), guide.links)
+			}
+			for _, link := range links {
+				if !strings.Contains(prose, `id="`+link[1]+`"`) {
+					t.Errorf("guide lacks a heading for section link %q", link[1])
+				}
+			}
+			images := image.FindAllStringSubmatch(prose, -1)
+			if len(images) != guide.images {
+				t.Errorf("guide has %d images with alt text, want %d", len(images), guide.images)
+			}
+			for _, match := range images {
+				if res := get(s.ServeAsset, match[1], nil); res.Code != http.StatusOK {
+					t.Errorf("image %q returned %d, want 200", match[1], res.Code)
+				}
+			}
+		})
 	}
 }
 

@@ -13,10 +13,11 @@ priorities, corrections, and what still waits on him. Read it after
   decision, remove it when he answers.
 - Never write secrets, keys or customer data here.
 
-## 9 Nov 2026: one SEO, AEO and GEO comparison blog
+## 9 Nov 2026: four search and AI guides in PR #291
 
 - Owner requested one long-form Uplumo article in one PR, with the reference article’s scannable structure and explanatory visuals.
 - Proposed slug: `best-seo-aeo-geo-tools`. Covers Google indexing, AI crawler access, intent-led content, rankings, lead tracking and local SEO.
+- Owner then asked for three more guides in the [same PR](https://github.com/ToufiqQureshi/uplumo/pull/291): a 2027 AEO tool comparison, an AI citation troubleshooting guide and a competitor tracking workflow with search demand and rank tracking.
 
 ## 9 Nov 2026: Razorpay payment failed, make failure handling industry-ready
 

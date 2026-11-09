@@ -289,6 +289,11 @@ func TestPagesHaveNoDeadLinks(t *testing.T) {
 		"www.w3.org":            true,
 		"www.semrush.com":       true,
 		"ahrefs.com":            true,
+		"help.ahrefs.com":       true,
+		"peec.ai":               true,
+		"docs.tryprofound.com":  true,
+		"docs.perplexity.ai":    true,
+		"blogs.bing.com":        true,
 		"ubersuggest.com":       true,
 	}
 	// The privacy policy must point at Google's own policy and at the page
