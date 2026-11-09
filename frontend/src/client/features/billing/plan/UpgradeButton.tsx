@@ -13,7 +13,7 @@ import {
   waitForPaidPlan,
   type Currency,
 } from "./planApi";
-import { openRazorpayCheckout } from "./razorpay";
+import { openRazorpayCheckout, paymentFailedMessage } from "./razorpay";
 
 /**
  * Pays for a plan through Razorpay at the price shown, in the currency shown.
@@ -33,14 +33,14 @@ export function UpgradeButton({
   const [activating, setActivating] = useState(false);
   const upgrade = useMutation({
     mutationFn: async () => {
-      const paid = await openRazorpayCheckout(
+      const outcome = await openRazorpayCheckout(
         await createCheckout(plan, currency),
         name,
       );
-      if (!paid) return null;
+      if (outcome.status !== "paid") return outcome;
       setActivating(true);
       try {
-        return await waitForPaidPlan();
+        return { status: "paid" as const, billing: await waitForPaidPlan() };
       } finally {
         setActivating(false);
       }
@@ -60,8 +60,16 @@ export function UpgradeButton({
         });
       }
     },
-    onSuccess: async (status) => {
-      if (!status) return;
+    onSuccess: async (outcome) => {
+      if (outcome.status !== "paid") {
+        // A timed-out payment the bank confirms later turns the plan on
+        // through the webhook; show it without a reload.
+        await queryClient.invalidateQueries({
+          queryKey: billingStatusQueryOptions.queryKey,
+        });
+        return;
+      }
+      const status = outcome.billing;
       if (status.plan === "free") {
         toast.success(
           `Payment received. Uplumo ${name} turns on within a few minutes.`,
@@ -88,6 +96,14 @@ export function UpgradeButton({
             ? "Opening checkout…"
             : `Choose ${name} · ${formatPrice(price, currency)}/month`}
       </Button>
+      {upgrade.data?.status === "failed" ? (
+        <ErrorState
+          title="Payment didn't go through"
+          message={paymentFailedMessage(upgrade.data.reason, `Uplumo ${name}`)}
+          onRetry={() => upgrade.mutate()}
+          isRetrying={upgrade.isPending}
+        />
+      ) : null}
       {upgrade.isError ? (
         <ErrorState
           variant="inline"

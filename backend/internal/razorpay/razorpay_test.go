@@ -230,3 +230,36 @@ func TestSubscriptionNote(t *testing.T) {
 		})
 	}
 }
+
+func TestListPaymentsSendsWindowAndPages(t *testing.T) {
+	from, to := time.Unix(1764547200, 0), time.Unix(1767139200, 0)
+	var skips []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, secret, ok := r.BasicAuth()
+		q := r.URL.Query()
+		if r.Method != http.MethodGet || r.URL.Path != "/v1/payments" || !ok || id != "rzp_test_key" || secret != "key-secret" ||
+			q.Get("from") != "1764547200" || q.Get("to") != "1767139200" || q.Get("count") != "100" {
+			t.Errorf("request = %s %s?%s", r.Method, r.URL.Path, r.URL.RawQuery)
+		}
+		skips = append(skips, q.Get("skip"))
+		items := make([]PaymentAttempt, 100)
+		if q.Get("skip") == "100" {
+			items = []PaymentAttempt{{ID: "pay_last", Status: "failed", Method: "upi", Email: "a@example.test",
+				ErrorReason: "payment_timed_out", ErrorDescription: "Timed out", CreatedAt: 1764547300}}
+		}
+		if err := json.NewEncoder(w).Encode(map[string]any{"entity": "collection", "items": items}); err != nil {
+			t.Error(err)
+		}
+	}))
+	defer srv.Close()
+
+	got, truncated, err := NewClient(srv.URL+"/v1", "rzp_test_key", "key-secret").ListPayments(context.Background(), from, to)
+	if err != nil {
+		t.Fatal(err)
+	}
+	last := got[len(got)-1]
+	if len(got) != 101 || truncated || strings.Join(skips, ",") != "0,100" ||
+		last.ID != "pay_last" || last.ErrorReason != "payment_timed_out" || last.ErrorDescription != "Timed out" || last.Email != "a@example.test" {
+		t.Fatalf("got %d payments, truncated %v, skips %v, last %+v", len(got), truncated, skips, last)
+	}
+}

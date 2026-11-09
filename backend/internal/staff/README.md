@@ -14,4 +14,4 @@ This is an internal developer/AI-agent guide. Read [flow.md](flow.md) and [busin
 
 ## API
 
-GET overview, subscriptions, marketing, finance, actions. POST users/block {userId, reason}, users/unblock {userId}, users/delete {userId, confirmEmail}, payments/sync.
+GET overview, subscriptions, marketing, finance, actions. POST users/block {userId, reason}, users/unblock {userId}, users/delete {userId, confirmEmail}, payments/sync. GET payments/failed (live Razorpay read, last 30 days).

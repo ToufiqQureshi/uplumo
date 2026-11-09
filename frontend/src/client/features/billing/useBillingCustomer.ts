@@ -3,18 +3,12 @@ import {
   getBillingCredits,
   type BillingCredits,
 } from "@/client/features/billing/billingApi";
-import {
-  billingStatusQueryOptions,
-  createCheckout,
-} from "@/client/features/billing/plan/planApi";
-import { openRazorpayCheckout } from "@/client/features/billing/plan/razorpay";
 import { SUPPORT_EMAIL } from "@/client/lib/support";
 import {
   AUTUMN_MANAGED_ACCESS_FEATURE_ID,
   AUTUMN_PAID_PLAN_FEATURE_ID,
   AUTUMN_SEO_DATA_BALANCE_FEATURE_ID,
   AUTUMN_SEO_DATA_TOPUP_BALANCE_FEATURE_ID,
-  AUTUMN_SEO_DATA_TOP_UP_PLAN_ID,
 } from "@/shared/billing";
 
 /** The plan and credit shape the billing screens read. */
@@ -58,17 +52,9 @@ function toCustomer(credits: BillingCredits): BillingCustomer {
   };
 }
 
-// Autumn-era callers also pass checkout options Razorpay has no use for.
-type AttachOptions = { planId: string; successUrl?: string } & Record<
-  string,
-  unknown
->;
-
 /**
  * The signed-in organization's plan and credits from the Go billing API, in
- * the shape the billing screens already read. `attach` opens Razorpay
- * Checkout for the Pro subscription and resolves once the payment window
- * hands control back; the success URL then polls until the webhook lands.
+ * the shape the billing screens already read.
  */
 export function useBillingCustomer({
   enabled = true,
@@ -81,23 +67,6 @@ export function useBillingCustomer({
   });
   const data = query.data ? toCustomer(query.data) : undefined;
 
-  async function attach({ planId, successUrl }: AttachOptions) {
-    if (query.data && !query.data.paymentsConfigured) {
-      throw new Error(
-        "Online payments are temporarily unavailable. Contact support.",
-      );
-    }
-    if (planId === AUTUMN_SEO_DATA_TOP_UP_PLAN_ID) {
-      throw new Error("Credit top-ups are not available yet.");
-    }
-    // Read the currency fresh: the server bills where the request comes from.
-    const { checkoutCurrency } = await billingStatusQueryOptions.queryFn();
-    const checkout = await createCheckout("pro", checkoutCurrency);
-    const paid = await openRazorpayCheckout(checkout);
-    if (!paid) throw new Error("The payment window was closed before paying.");
-    if (successUrl) window.location.assign(successUrl);
-  }
-
   return {
     data,
     isLoading: query.isLoading,
@@ -108,7 +77,6 @@ export function useBillingCustomer({
     check: ({ featureId }: { featureId: string }) => ({
       allowed: featureId === AUTUMN_MANAGED_ACCESS_FEATURE_ID,
     }),
-    attach,
     // Razorpay has no hosted customer portal; changes go through support.
     openCustomerPortal: (_options?: { returnUrl?: string }) => {
       window.location.assign(`mailto:${SUPPORT_EMAIL}?subject=Billing`);

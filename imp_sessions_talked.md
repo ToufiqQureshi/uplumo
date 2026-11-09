@@ -13,6 +13,13 @@ priorities, corrections, and what still waits on him. Read it after
   decision, remove it when he answers.
 - Never write secrets, keys or customer data here.
 
+## 9 Nov 2026: Razorpay payment failed, make failure handling industry-ready
+
+- Owner paid ₹4,999 (Business) on 8 Nov by UPI; it failed. Razorpay says `payment_timed_out` at `payment_authentication`, error source customer, no bank RRN (most likely no debit). Not an Uplumo bug.
+- Owner: "indsutry ready kar kuch miss mat karna". Built in one PR: the customer now sees Razorpay's reason + "don't pay again" + **Try again** for plan and top-up checkouts; the staff Finance tab lists failed payments of the last 30 days (live Razorpay read) with "paid later".
+- Also fixed: the extra-website checkout said "Additional usage credits"; the unused Autumn-era `attach` (hard-coded Pro) was removed.
+- Waiting for the owner: merge + deploy; decide on an automatic recovery email for customers whose payment failed (needs his copy approval and consent wording).
+
 ## 8 Nov 2026: restore the ChatGPT traffic guide at its original URL
 
 - Owner supplied GSC data and approved the revised GA4 traffic guide.

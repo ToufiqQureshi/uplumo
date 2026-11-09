@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
+	"time"
 )
 
 // Payment is the part of a Razorpay payment billing reads.
@@ -19,6 +21,54 @@ type Payment struct {
 	Currency string `json:"currency"`
 	Status   string `json:"status"`
 	Captured bool   `json:"captured"`
+}
+
+// PaymentAttempt is one payment attempt as Razorpay lists it, failed ones
+// included, for the staff console.
+type PaymentAttempt struct {
+	ID               string `json:"id"`
+	OrderID          string `json:"order_id"`
+	Amount           int64  `json:"amount"`
+	Currency         string `json:"currency"`
+	Status           string `json:"status"`
+	Method           string `json:"method"`
+	Email            string `json:"email"`
+	ErrorReason      string `json:"error_reason"`
+	ErrorDescription string `json:"error_description"`
+	CreatedAt        int64  `json:"created_at"`
+}
+
+// maxPaymentPages bounds one listing at 1,000 payments.
+const maxPaymentPages = 10
+
+// ListPayments reads every payment attempt created in [from, to), newest
+// first. truncated is true when there were more than the 1,000 it reads.
+// It only reads; Razorpay does not charge for API calls.
+func (c *Client) ListPayments(ctx context.Context, from, to time.Time) (payments []PaymentAttempt, truncated bool, err error) {
+	for page := range maxPaymentPages {
+		q := url.Values{
+			"from":  {strconv.FormatInt(from.Unix(), 10)},
+			"to":    {strconv.FormatInt(to.Unix(), 10)},
+			"count": {"100"},
+			"skip":  {strconv.Itoa(page * 100)},
+		}
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/payments?"+q.Encode(), nil)
+		if err != nil {
+			return nil, false, fmt.Errorf("build payments request: %w", err)
+		}
+		req.SetBasicAuth(c.keyID, c.keySecret)
+		var res struct {
+			Items []PaymentAttempt `json:"items"`
+		}
+		if err := c.do(req, &res); err != nil {
+			return nil, false, fmt.Errorf("list payments: %w", err)
+		}
+		payments = append(payments, res.Items...)
+		if len(res.Items) < 100 {
+			return payments, false, nil
+		}
+	}
+	return payments, true, nil
 }
 
 // CapturePayment captures an authorized payment for exactly amount subunits
