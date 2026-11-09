@@ -620,7 +620,7 @@ func (s *Service) HandleWebhook(ctx context.Context, body []byte, signature, eve
 		return s.applyTopUpPayment(ctx, body)
 	case "payment.authorized":
 		return s.captureTopUpPayment(ctx, body)
-	case "payment.refunded":
+	case "refund.processed":
 		return s.applyRefund(ctx, event)
 	}
 	if !slices.Contains(handledEvents, event.Event) {

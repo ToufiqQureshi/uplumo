@@ -121,7 +121,7 @@ func (d Deps) sync(w http.ResponseWriter, r *http.Request, actor auth.User) {
 		d.fail(w, r, err)
 		return
 	}
-	if err := d.Actions.LogSync(r.Context(), actor.ID, fmt.Sprintf("%d subscriptions, %d added, %d failed", result.Subscriptions, result.Added, result.Failed)); err != nil {
+	if err := d.Actions.LogSync(r.Context(), actor.ID, fmt.Sprintf("%d subscriptions, %d added, %d failed, %d refunds updated", result.Subscriptions, result.Added, result.Failed, result.RefundsUpdated)); err != nil {
 		d.fail(w, r, err)
 		return
 	}

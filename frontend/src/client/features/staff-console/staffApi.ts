@@ -152,6 +152,7 @@ export function syncPayments() {
       subscriptions: z.number(),
       added: z.number(),
       failed: z.number(),
+      refundsUpdated: z.number(),
     }),
     "POST",
     {},
