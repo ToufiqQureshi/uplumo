@@ -38,37 +38,57 @@ type PaymentAttempt struct {
 	CreatedAt        int64  `json:"created_at"`
 }
 
-// maxPaymentPages bounds one listing at 1,000 payments.
-const maxPaymentPages = 10
+// maxListPages bounds one listing at 1,000 items.
+const maxListPages = 10
 
-// ListPayments reads every payment attempt created in [from, to), newest
-// first. truncated is true when there were more than the 1,000 it reads.
-// It only reads; Razorpay does not charge for API calls.
-func (c *Client) ListPayments(ctx context.Context, from, to time.Time) (payments []PaymentAttempt, truncated bool, err error) {
-	for page := range maxPaymentPages {
-		q := url.Values{
-			"from":  {strconv.FormatInt(from.Unix(), 10)},
-			"to":    {strconv.FormatInt(to.Unix(), 10)},
-			"count": {"100"},
-			"skip":  {strconv.Itoa(page * 100)},
-		}
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/payments?"+q.Encode(), nil)
+// listAll reads every item of a Razorpay collection at path, 100 per page,
+// up to maxListPages. truncated is true when there were more.
+func listAll[T any](ctx context.Context, c *Client, path string, q url.Values) (items []T, truncated bool, err error) {
+	for page := range maxListPages {
+		q.Set("count", "100")
+		q.Set("skip", strconv.Itoa(page*100))
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+path+"?"+q.Encode(), nil)
 		if err != nil {
-			return nil, false, fmt.Errorf("build payments request: %w", err)
+			return nil, false, fmt.Errorf("build %s request: %w", path, err)
 		}
 		req.SetBasicAuth(c.keyID, c.keySecret)
 		var res struct {
-			Items []PaymentAttempt `json:"items"`
+			Items []T `json:"items"`
 		}
 		if err := c.do(req, &res); err != nil {
-			return nil, false, fmt.Errorf("list payments: %w", err)
+			return nil, false, fmt.Errorf("list %s: %w", path, err)
 		}
-		payments = append(payments, res.Items...)
+		items = append(items, res.Items...)
 		if len(res.Items) < 100 {
-			return payments, false, nil
+			return items, false, nil
 		}
 	}
-	return payments, true, nil
+	return items, true, nil
+}
+
+// window is Razorpay's from/to filter, in Unix seconds.
+func window(from, to time.Time) url.Values {
+	return url.Values{"from": {strconv.FormatInt(from.Unix(), 10)}, "to": {strconv.FormatInt(to.Unix(), 10)}}
+}
+
+// ListPayments reads every payment attempt created in [from, to), newest
+// first, up to 1,000. It only reads; Razorpay does not charge for API calls.
+func (c *Client) ListPayments(ctx context.Context, from, to time.Time) ([]PaymentAttempt, bool, error) {
+	return listAll[PaymentAttempt](ctx, c, "/payments", window(from, to))
+}
+
+// Refund is one refund of a payment. Amount is in the currency's subunits.
+type Refund struct {
+	ID        string `json:"id"`
+	PaymentID string `json:"payment_id"`
+	Amount    int64  `json:"amount"`
+	Status    string `json:"status"`
+}
+
+// ListRefunds reads every refund created in [from, to), up to 1,000. It only
+// reads.
+func (c *Client) ListRefunds(ctx context.Context, from, to time.Time) ([]Refund, bool, error) {
+	return listAll[Refund](ctx, c, "/refunds", window(from, to))
 }
 
 // CapturePayment captures an authorized payment for exactly amount subunits

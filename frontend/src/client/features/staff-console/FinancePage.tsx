@@ -41,10 +41,10 @@ function SyncButton() {
       </Button>
       <p className="text-sm text-muted-foreground" role="status">
         {sync.isSuccess
-          ? `Checked ${sync.data.subscriptions} subscriptions, added ${sync.data.added} payments${sync.data.failed ? `, ${sync.data.failed} failed` : ""}.`
+          ? `Checked ${sync.data.subscriptions} subscriptions, added ${sync.data.added} payments, updated ${sync.data.refundsUpdated} refunds${sync.data.failed ? `, ${sync.data.failed} failed` : ""}.`
           : sync.isError
             ? getStandardErrorMessage(sync.error)
-            : "Imports subscription payments made before the ledger existed. Safe to run again."}
+            : "Imports subscription payments and refunds the ledger missed. Safe to run again."}
       </p>
     </div>
   );
