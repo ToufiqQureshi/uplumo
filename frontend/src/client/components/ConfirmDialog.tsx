@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -58,4 +58,39 @@ export function ConfirmDialog({
       </AlertDialogContent>
     </AlertDialog>
   );
+}
+
+type ConfirmRequest = {
+  title: string;
+  body: ReactNode;
+  confirmLabel: string;
+  destructive?: boolean;
+  onConfirm: () => void;
+};
+
+/**
+ * The in-app replacement for window.confirm: call `ask(...)` instead of
+ * running the action and render `dialog` anywhere on the page. The action
+ * runs only after Confirm; the dialog closes first.
+ */
+export function useConfirm(): {
+  ask: (request: ConfirmRequest) => void;
+  dialog: ReactNode;
+} {
+  const [request, setRequest] = useState<ConfirmRequest | null>(null);
+  const dialog = request ? (
+    <ConfirmDialog
+      title={request.title}
+      confirmLabel={request.confirmLabel}
+      destructive={request.destructive}
+      onClose={() => setRequest(null)}
+      onConfirm={() => {
+        setRequest(null);
+        request.onConfirm();
+      }}
+    >
+      {request.body}
+    </ConfirmDialog>
+  ) : null;
+  return { ask: setRequest, dialog };
 }
