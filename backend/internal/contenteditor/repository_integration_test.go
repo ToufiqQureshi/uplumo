@@ -180,3 +180,58 @@ func contentTestPool(ctx context.Context, t *testing.T) *pgxpool.Pool {
 	}
 	return pool
 }
+
+func TestRepositoryBlogThemeIsProjectScopedAndRemovable(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	pool := contentTestPool(ctx, t)
+	suffix := strings.ReplaceAll(time.Now().UTC().Format("20060102150405.000000000"), ".", "")
+	organizationID := "theme-test-org-" + suffix
+	projectID, otherID := "theme-test-project-"+suffix, "theme-test-other-"+suffix
+	if _, err := pool.Exec(ctx, `INSERT INTO organization (id, name, slug, created_at) VALUES ($1, 'Theme test', $1, now())`, organizationID); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cleanupCancel()
+		if _, err := pool.Exec(cleanupCtx, `DELETE FROM organization WHERE id=$1`, organizationID); err != nil {
+			t.Errorf("clean up theme fixture: %v", err)
+		}
+	})
+	for _, id := range []string{projectID, otherID} {
+		if _, err := pool.Exec(ctx, `INSERT INTO projects (id, organization_id, name) VALUES ($1, $2, $1)`, id, organizationID); err != nil {
+			t.Fatal(err)
+		}
+	}
+	repo := Repository{DB: pool}
+	if theme, err := repo.GetTheme(ctx, projectID); err != nil || theme.CSS != "" || theme.UpdatedAt != nil {
+		t.Fatalf("theme before save = %+v, %v; want empty", theme, err)
+	}
+	first, err := repo.SaveTheme(ctx, projectID, " h1{color:#7a2e0e} ")
+	if err != nil || first.CSS != "h1{color:#7a2e0e}" || first.UpdatedAt == nil {
+		t.Fatalf("first save = %+v, %v", first, err)
+	}
+	if _, err := repo.SaveTheme(ctx, projectID, "h1{color:blue}"); err != nil {
+		t.Fatalf("second save: %v", err)
+	}
+	if theme, err := repo.GetTheme(ctx, projectID); err != nil || theme.CSS != "h1{color:blue}" {
+		t.Fatalf("theme after update = %+v, %v", theme, err)
+	}
+	if theme, err := repo.GetTheme(ctx, otherID); err != nil || theme.CSS != "" {
+		t.Fatalf("other project sees %+v, %v; want empty", theme, err)
+	}
+	var validation *ValidationError
+	if _, err := repo.SaveTheme(ctx, projectID, "</style>"); !errors.As(err, &validation) {
+		t.Fatalf("save with a tag error = %v, want ValidationError", err)
+	}
+	if _, err := pool.Exec(ctx, `UPDATE go_content_blog_themes SET css=$2 WHERE project_id=$1`, projectID, strings.Repeat("a", MaxThemeCSS+1)); err == nil {
+		t.Fatal("database accepted a theme over 100 KB")
+	}
+	if theme, err := repo.SaveTheme(ctx, projectID, ""); err != nil || theme.CSS != "" {
+		t.Fatalf("remove = %+v, %v", theme, err)
+	}
+	var rows int
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM go_content_blog_themes WHERE project_id=$1`, projectID).Scan(&rows); err != nil || rows != 0 {
+		t.Fatalf("rows after remove = %d, %v; want 0", rows, err)
+	}
+}

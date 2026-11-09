@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  type QueryClient,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { sortBy } from "remeda";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -65,6 +70,18 @@ const blankDraftForKeyword = (keyword?: string): ContentDraftInput => ({
   ...blankDraft,
   targetKeyword: keyword ?? "",
 });
+
+// Structured data is built from the saved draft, so each save makes the
+// preview (and the .html export that uses it) out of date.
+function refreshSchemaPreview(
+  queryClient: QueryClient,
+  projectId: string,
+  draftId: string,
+) {
+  void queryClient.invalidateQueries({
+    queryKey: ["schemaPreview", projectId, draftId],
+  });
+}
 
 export function ContentEditorPage({
   projectId,
@@ -157,6 +174,7 @@ export function ContentEditorPage({
         contentEditorQueryKeys.draft(projectId, saved.id),
         saved,
       );
+      refreshSchemaPreview(queryClient, projectId, saved.id);
       const draftListKey = contentEditorQueryKeys.drafts(projectId);
       const currentDrafts =
         queryClient.getQueryData<ContentDraftSummary[]>(draftListKey);

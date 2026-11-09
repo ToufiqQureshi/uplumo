@@ -25,7 +25,7 @@ const ARTICLE_COMPONENTS = {
 const ITALIC_ASTERISK = /(^|[^\p{L}\p{N}_])\*(\S(.*?\S)?)\*/gu;
 const ITALIC_UNDERSCORE = /(^|[^\p{L}\p{N}_])_(\S(.*?\S)?)_/gu;
 
-function withoutDuplicateTitleHeading(content: string, title: string) {
+export function withoutDuplicateTitleHeading(content: string, title: string) {
   if (!title.trim()) return content;
   const lines = content.split("\n");
   const index = lines.findIndex((line) => {

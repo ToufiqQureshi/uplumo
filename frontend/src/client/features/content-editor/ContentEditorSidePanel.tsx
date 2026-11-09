@@ -193,6 +193,7 @@ export function ContentEditorSidePanel({
             draftId={draftId}
             draft={draft}
             editorBusy={editorBusy}
+            hasUnsavedChanges={dirty}
             publishToSite={(schema) => (
               <PublishToSite
                 projectId={projectId}
