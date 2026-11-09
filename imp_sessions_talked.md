@@ -18,8 +18,10 @@ priorities, corrections, and what still waits on him. Read it after
 - Owner: "valueble and rankable content hi hona chahiye jisse uplumo ko users miley". Asked for an SEO pass on PR #291 using DataForSEO keyword data.
 - Done on top of #291: `best-seo-aeo-geo-tools` -> `seo-vs-aeo-vs-geo` (pillar; "aeo vs seo" 1.9k, "what is aeo" 5.4k US/mo) and `best-answer-engine-optimisation-tools` -> `best-aeo-tools` (British "optimisation" has no volume). Retitled citation + competitor guides; every guide links to the pillar.
 - Owner rule: every Uplumo price shown anywhere must be in both USD and INR, never INR only. Blog posts link to /pricing and never hard-code an Uplumo price (catalog.go is the only source).
-- Owner decided: blog author is "James" (all posts); add FAQPage + BreadcrumbList schema to posts (done, PR #292).
-- Waiting for the owner: is James a real person (bio/photo/profile link needed for E-E-A-T, never invent credentials); verified competitor prices + more tools (Otterly, AthenaHQ, Scrunch) in the AEO tools table; whether India-only examples (Lonavala) stay in global posts.
+- Owner decided: blog author is "James", a pen name: never invent a bio or credentials. FAQPage + BreadcrumbList schema on posts. Schema on shared pages (blog index, info pages) in USD only.
+- Owner: "Abe what the fuck is lonaval? Global audience ke liye ha" -> no single-country examples in any post; Lonavala/monsoon/UPI removed.
+- Owner approved all recommendations and said "no more talks only work"; every new blog must follow `blog_style.md` (keyword data, structure, links, prices, visuals, schema, tests).
+- Done in PR #292: 13-tool AEO comparison with verified prices; new posts what-is-aeo, best-semrush-alternatives, profound-alternatives, peec-ai-alternatives, how-to-rank-in-chatgpt; "Related guides" block with `related:` front matter.
 
 ## 10 Nov 2026: format the existing blogs consistently
 

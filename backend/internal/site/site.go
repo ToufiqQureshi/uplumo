@@ -111,6 +111,8 @@ type page struct {
 	// Posts is the blog index; Post is the post on a post page.
 	Posts []Post
 	Post  *Post
+	// Related is the further reading under a post.
+	Related []Post
 }
 
 // Site serves the pre-rendered pages and the static assets.
@@ -200,12 +202,20 @@ func build(publicURL *url.URL, blogFiles fs.FS) (*Site, error) {
 	blog.Description = "Plain-language guides to ranking on Google and showing up in AI answers, for business owners and agencies."
 	blog.Canonical = origin + "/blog"
 	blog.Posts = posts
-	blog.JSONLD = jsonLD(origin, blog.Description, plans, planCatalog.INR)
+	// Pages served to everyone describe plans in US dollars; the landing and
+	// pricing pages carry each visitor's own currency.
+	usdPlans := plansFor(planCatalog.USD)
+	blog.JSONLD = jsonLD(origin, blog.Description, usdPlans, planCatalog.USD)
 	if s.blog, err = render(tmpl, "blog.html", blog); err != nil {
+		return nil, err
+	}
+	related, err := relatedPosts(posts)
+	if err != nil {
 		return nil, err
 	}
 	for _, post := range posts {
 		data := base
+		data.Related = related[post.Slug]
 		data.Path = "/blog/" + post.Slug
 		data.Title = post.Title + " | Uplumo"
 		data.Description = post.Description
@@ -229,7 +239,7 @@ func build(publicURL *url.URL, blogFiles fs.FS) (*Site, error) {
 		data.Title = p.title
 		data.Description = p.description
 		data.Canonical = origin + p.path
-		data.JSONLD = jsonLD(origin, p.description, plans, planCatalog.INR)
+		data.JSONLD = jsonLD(origin, p.description, usdPlans, planCatalog.USD)
 		if s.info[p.path], err = render(tmpl, p.file, data); err != nil {
 			return nil, err
 		}

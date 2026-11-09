@@ -5,6 +5,7 @@ date: 2026-10-15
 updated: 2026-11-10
 author: James
 image: /site/blog/chatgpt-traffic-google-analytics-cover.webp
+related: how-to-rank-in-chatgpt, how-to-track-competitors-in-ai-search, seo-vs-aeo-vs-geo
 ---
 
 ![Editorial illustration of an identifiable ChatGPT referral reaching website analytics and completing an event](/site/blog/chatgpt-traffic-google-analytics-cover.webp)

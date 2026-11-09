@@ -5,6 +5,7 @@ date: 2026-11-08
 updated: 2026-11-10
 author: James
 image: /site/blog/why-website-not-ranking-google-cover.webp
+related: seo-vs-aeo-vs-geo, best-semrush-alternatives, what-is-aeo
 ---
 
 ![Editorial illustration following a Google search result from discovery to click and enquiry](/site/blog/why-website-not-ranking-google-cover.webp)
@@ -27,7 +28,7 @@ Your family rooms page gets impressions on Google, but nobody clicks. Your booki
 
 Choose one important page and the customer search you want it to appear for. Avoid investigating your entire website at once.
 
-For example, a hotel might choose its family rooms page and the search “family resort in Lonavala with pool.” A software company might choose a product page and “appointment software for small salons.” These are illustrative examples, not claims about their search volumes.
+For example, a hotel might choose its family rooms page and the search “family resort in [town] with pool.” A software company might choose a product page and “appointment software for small salons.” These are illustrative examples, not claims about their search volumes.
 
 Use this **Problem → Check → Fix** framework to choose your next step:
 
@@ -57,7 +58,7 @@ If the URL is indexed, review whether it targets something customers search for 
 
 Look at the actual results for the important queries. Compare your title, the displayed snippet, competing page types and any prominent search features. Avoid blaming AI Overviews from the click count alone.
 
-**Fix:** If the page matches the search but the title is vague, make it specific. A title such as “Family Rooms in Lonavala | [Hotel Name]” is clearer than “Rooms,” provided it describes the page accurately. Google may choose its own title or snippet. If a pricing query leads to a general article, fix the page mismatch before polishing the description.
+**Fix:** If the page matches the search but the title is vague, make it specific. A title such as “Family Rooms in [Town] | [Hotel Name]” is clearer than “Rooms,” provided it describes the page accurately. Google may choose its own title or snippet. If a pricing query leads to a general article, fix the page mismatch before polishing the description.
 
 **Where Uplumo helps:** Connect Search Console to **Search Growth** to investigate query performance, CTR gaps and improvement candidates. Use Rank Tracking for consistent keyword checks. The next action depends on whether the issue is low visibility, weak relevance or an unhelpful search listing.
 

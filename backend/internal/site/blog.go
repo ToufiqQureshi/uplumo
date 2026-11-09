@@ -50,6 +50,9 @@ type Post struct {
 	Body        template.HTML
 	// ReadMinutes is the reading time at 200 words a minute, at least 1.
 	ReadMinutes int
+	// Related holds up to maxRelated slugs from the "related" front matter,
+	// shown as further reading under the post.
+	Related []string
 	// FAQ holds the questions under the post's "Frequently asked questions"
 	// heading, in plain text, for FAQPage structured data.
 	FAQ []QA
@@ -60,6 +63,7 @@ const (
 	maxTitleRunes       = 70
 	minDescriptionRunes = 50
 	maxDescriptionRunes = 160
+	maxRelated          = 3
 )
 
 // loadPosts reads every post in fsys, newest first, skipping drafts.
@@ -138,6 +142,21 @@ func parsePost(slug string, source []byte) (Post, bool, error) {
 	if n := utf8.RuneCountInString(post.Description); n < minDescriptionRunes || n > maxDescriptionRunes {
 		return Post{}, false, fmt.Errorf("description is %d characters; it must be %d to %d", n, minDescriptionRunes, maxDescriptionRunes)
 	}
+	for related := range strings.SplitSeq(fields["related"], ",") {
+		related = strings.TrimSpace(related)
+		switch {
+		case related == "":
+			continue
+		case !slugPattern.MatchString(related) || related == slug:
+			return Post{}, false, fmt.Errorf("related %q must be another post's slug", related)
+		case slices.Contains(post.Related, related):
+			return Post{}, false, fmt.Errorf("related %q is listed twice", related)
+		}
+		post.Related = append(post.Related, related)
+	}
+	if len(post.Related) > maxRelated {
+		return Post{}, false, fmt.Errorf("related lists %d posts; keep it to %d", len(post.Related), maxRelated)
+	}
 	var err error
 	if post.Published, err = time.Parse(time.DateOnly, fields["date"]); err != nil {
 		return Post{}, false, fmt.Errorf("date must be YYYY-MM-DD: %w", err)
@@ -161,6 +180,35 @@ func parsePost(slug string, source []byte) (Post, bool, error) {
 		return Post{}, false, fmt.Errorf("faq: %w", err)
 	}
 	return post, fields["draft"] == "true", nil
+}
+
+// relatedPosts resolves each post's related slugs against the published
+// posts. A post without a list gets the newest other posts, so every post
+// links onward. An unknown slug stops the build, like any broken post.
+func relatedPosts(posts []Post) (map[string][]Post, error) {
+	bySlug := make(map[string]Post, len(posts))
+	for _, post := range posts {
+		bySlug[post.Slug] = post
+	}
+	related := make(map[string][]Post, len(posts))
+	for _, post := range posts {
+		for _, slug := range post.Related {
+			other, ok := bySlug[slug]
+			if !ok {
+				return nil, fmt.Errorf("blog post %s: related %q is not a published post", post.Slug, slug)
+			}
+			related[post.Slug] = append(related[post.Slug], other)
+		}
+		for _, other := range posts {
+			if len(post.Related) > 0 || len(related[post.Slug]) == maxRelated {
+				break
+			}
+			if other.Slug != post.Slug {
+				related[post.Slug] = append(related[post.Slug], other)
+			}
+		}
+	}
+	return related, nil
 }
 
 // faqHeading marks the section whose H3 headings are questions.

@@ -9,8 +9,11 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
+
+	planCatalog "github.com/toufiqqureshi/uplumo/backend/internal/plans"
 )
 
 func newSite(t *testing.T, publicURL *url.URL) *Site {
@@ -155,6 +158,28 @@ func TestPagesCarryTheirMetadata(t *testing.T) {
 	}
 }
 
+// Pages served to every visitor carry no visible prices, so their plan
+// offers are in US dollars, the global currency, never rupees alone.
+func TestSharedPagesDescribePlansInDollars(t *testing.T) {
+	s := newSite(t, &url.URL{Scheme: "https", Host: "uplumo.com"})
+	pages := map[string]*httptest.ResponseRecorder{"/blog": get(s.ServeBlog, "/blog", nil)}
+	for _, path := range InfoPaths() {
+		pages[path] = get(s.ServeInfo, path, nil)
+	}
+	want := plansFor(planCatalog.USD)
+	for path, rec := range pages {
+		offers := parseJSONLD(t, rec.Body.String()).Graph[1].Offers
+		if len(offers) != len(want) {
+			t.Fatalf("%s has %d offers, want %d", path, len(offers), len(want))
+		}
+		for i, o := range offers {
+			if o.Currency != "USD" || o.Price != strconv.Itoa(want[i].Amount) {
+				t.Errorf("%s offer %d = %+v, want %d USD from the plan catalog", path, i, o, want[i].Amount)
+			}
+		}
+	}
+}
+
 // The public URL comes from configuration, but it reaches HTML attributes
 // and a script block, so it must not be able to break out of either.
 func TestPagesEscapeThePublicURL(t *testing.T) {
@@ -295,6 +320,16 @@ func TestPagesHaveNoDeadLinks(t *testing.T) {
 		"docs.perplexity.ai":    true,
 		"blogs.bing.com":        true,
 		"ubersuggest.com":       true,
+		"otterly.ai":            true,
+		"athenahq.ai":           true,
+		"scrunch.com":           true,
+		"higoodie.com":          true,
+		"rankscale.ai":          true,
+		"seranking.com":         true,
+		"www.airops.com":        true,
+		"www.hubspot.com":       true,
+		"www.tryprofound.com":   true,
+		"moz.com":               true,
 	}
 	// The privacy policy must point at Google's own policy and at the page
 	// where a user removes our access. Any other outside link is a mistake.

@@ -10,5 +10,14 @@
 {{.Post.Body}}
 <p><a href="/pricing">Choose the Uplumo plan for your workflow</a>. Free includes Uplumo Analytics and a starter audit; research, rank tracking and AI features need an eligible paid plan and available credits.</p>
 </div>
+{{if .Related}}<aside class="related" aria-labelledby="related-guides">
+<h2 id="related-guides">Related guides</h2>
+<ul class="posts">
+{{range .Related}}<li><a href="/blog/{{.Slug}}">
+<h3>{{.Title}}</h3>
+<p>{{.Description}}</p>
+</a></li>
+{{end}}</ul>
+</aside>{{end}}
 </article>
 {{template "footer" .}}

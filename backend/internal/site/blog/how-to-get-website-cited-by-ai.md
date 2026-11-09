@@ -4,6 +4,7 @@ description: "How to get your website cited by ChatGPT, Claude, Perplexity and G
 date: 2026-11-09
 author: James
 image: /site/blog/ai-citation-2027-cover.webp
+related: how-to-rank-in-chatgpt, what-is-aeo, how-to-track-competitors-in-ai-search
 ---
 
 ![Editorial illustration of a highlighted website fact connected to an AI answer and its source link](/site/blog/ai-citation-2027-cover.webp)
