@@ -4,6 +4,7 @@ import {
   Brain,
   ChartNoAxesCombined,
   ListChecks,
+  MapPin,
   Lightbulb,
   Smile,
   Target,
@@ -75,6 +76,12 @@ const projectNavItems = [
     label: "SAM assistant",
     icon: MessagesSquare,
     badge: "Beta",
+  },
+  {
+    to: "/p/$projectId/local-visibility" as const,
+    label: "Local Visibility",
+    icon: MapPin,
+    badge: "Soon",
   },
   {
     to: "/p/$projectId/analytics" as const,
@@ -269,6 +276,7 @@ export function getProjectNavGroups(projectId: string): NavGroup[] {
           ],
           "New",
         ),
+        item("/p/$projectId/local-visibility"),
       ],
     },
     {
