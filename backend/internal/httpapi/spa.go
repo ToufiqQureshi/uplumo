@@ -56,7 +56,11 @@ func spaHandler(dir string) http.Handler {
 // setIndexHeaders keeps the entry document fresh and unframeable: the app
 // ships no other security headers, so a third-party page could otherwise
 // frame it and trick a signed-in member into a one-click action.
+//
+// The shell has no public content of its own, and it answers every unknown
+// path, so search engines must not index it.
 func setIndexHeaders(w http.ResponseWriter) {
 	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("X-Robots-Tag", "noindex")
 	w.Header().Set("Content-Security-Policy", "frame-ancestors 'self'")
 }
