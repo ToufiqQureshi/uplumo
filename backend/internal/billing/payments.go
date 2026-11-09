@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
@@ -127,4 +128,74 @@ func (s *Service) SyncSubscriptionPayments(ctx context.Context) (SyncResult, err
 		}
 	}
 	return result, nil
+}
+
+// failedPaymentsWindow is how far back the staff console lists failed payments.
+const failedPaymentsWindow = 30 * 24 * time.Hour
+
+// FailedPayment is one payment attempt that did not go through.
+type FailedPayment struct {
+	ID       string    `json:"id"`
+	Email    string    `json:"email"`
+	Method   string    `json:"method"`
+	Amount   int64     `json:"amount"`
+	Currency string    `json:"currency"`
+	Reason   string    `json:"reason"`
+	Code     string    `json:"code"`
+	At       time.Time `json:"at"`
+	// PaidLater is true when the same order, or the same email, has a
+	// captured payment after this attempt: the customer is not lost.
+	PaidLater bool `json:"paidLater"`
+}
+
+// FailedPayments lists failed payments of the last 30 days, newest first.
+type FailedPayments struct {
+	Since     time.Time       `json:"since"`
+	Payments  []FailedPayment `json:"payments"`
+	Truncated bool            `json:"truncated"`
+}
+
+// ListFailedPayments reads failed payment attempts from Razorpay so the owner
+// can follow up with customers who tried to pay and could not. It only reads.
+func (s *Service) ListFailedPayments(ctx context.Context, now time.Time) (FailedPayments, error) {
+	if !s.PaymentsConfigured() {
+		return FailedPayments{}, ErrPaymentUnavailable
+	}
+	since := now.Add(-failedPaymentsWindow)
+	all, truncated, err := s.razorpay.ListPayments(ctx, since, now)
+	if err != nil {
+		return FailedPayments{}, fmt.Errorf("list failed payments: %w: %w", ErrPaymentProvider, err)
+	}
+	out := FailedPayments{Since: since, Payments: []FailedPayment{}, Truncated: truncated}
+	for _, p := range all {
+		if p.Status != "failed" {
+			continue
+		}
+		out.Payments = append(out.Payments, FailedPayment{
+			ID:        p.ID,
+			Email:     p.Email,
+			Method:    p.Method,
+			Amount:    p.Amount,
+			Currency:  p.Currency,
+			Reason:    p.ErrorDescription,
+			Code:      p.ErrorReason,
+			At:        time.Unix(p.CreatedAt, 0).UTC(),
+			PaidLater: paidLater(p, all),
+		})
+	}
+	return out, nil
+}
+
+// paidLater reports whether failed has a captured payment after it on the
+// same order or from the same email.
+func paidLater(failed razorpay.PaymentAttempt, all []razorpay.PaymentAttempt) bool {
+	for _, p := range all {
+		if p.Status != "captured" && p.Status != "refunded" || p.CreatedAt < failed.CreatedAt {
+			continue
+		}
+		if (failed.OrderID != "" && p.OrderID == failed.OrderID) || (failed.Email != "" && strings.EqualFold(p.Email, failed.Email)) {
+			return true
+		}
+	}
+	return false
 }

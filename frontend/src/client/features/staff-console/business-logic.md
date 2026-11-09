@@ -6,3 +6,4 @@
 - **Destructive actions need a dialog; delete needs the typed email.** _Why:_ deletion cannot be undone. Block explains that a paid plan keeps running.
 - **Charts are minimal.** One single-series bar chart (signups per day) with tooltip; everything else is numbers, tables and share bars. _Why:_ the owner reads totals, not trends, and tables export cleanly.
 - Customer list search is client-side; move to server paging when users pass a few thousand.
+- **Failed payments are listed, with "paid later".** A failed attempt counts as recovered when the same order or email has a captured payment after it. _Why:_ the owner follows up only with customers who tried to pay and still have not.
