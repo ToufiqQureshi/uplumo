@@ -64,6 +64,9 @@ const (
 	CreditPacks Feature = "credit_packs"
 	// SiteAddOn is buying more websites than the plan includes.
 	SiteAddOn Feature = "site_add_on"
+	// LocalVisibility is the Google Business Profile checks (owner, 9 Nov
+	// 2026: Pro and above).
+	LocalVisibility Feature = "local_visibility"
 )
 
 // Definition is one plan. A limit of zero means the plan has none of that
@@ -201,7 +204,7 @@ func GetPack(id string) (Pack, bool) {
 
 var (
 	basicFeatures    = []Feature{GoogleData, Keywords, RankTracking, FullAudit, Publishing, AIWriting, IndexNow, SiteAddOn}
-	proFeatures      = append(slices.Clone(basicFeatures), Backlinks, DomainResearch, AIVisibility, CreditPacks)
+	proFeatures      = append(slices.Clone(basicFeatures), Backlinks, DomainResearch, AIVisibility, LocalVisibility, CreditPacks)
 	businessFeatures = append(slices.Clone(proFeatures), WhiteLabel)
 )
 
@@ -221,6 +224,7 @@ var researchHighlights = []string{
 	"AI Visibility across ChatGPT, Perplexity, Gemini, AI Overviews and Claude",
 	"Backlink research",
 	"Competitor and domain research",
+	"Local Visibility: your Google Business Profile against the top 3 on Maps",
 }
 
 const creditPackHighlight = "Buy extra credits any time; they last while your plan is active"

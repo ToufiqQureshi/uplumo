@@ -81,7 +81,7 @@ const projectNavItems = [
     to: "/p/$projectId/local-visibility" as const,
     label: "Local Visibility",
     icon: MapPin,
-    badge: "Soon",
+    badge: "New",
   },
   {
     to: "/p/$projectId/analytics" as const,

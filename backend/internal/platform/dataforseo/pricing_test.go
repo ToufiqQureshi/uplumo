@@ -34,6 +34,14 @@ func TestEstimateUSDIsTheMostARequestCanCost(t *testing.T) {
 		{"lighthouse", "/v3/on_page/lighthouse/live/json", `[{}]`, 0.005},
 		{"unknown endpoint is held high", "/v3/content_analysis/search/live", `[{}]`, 1},
 		{"unknown business endpoint is held high", "/v3/business_data/unknown/live", `[{}]`, 1},
+		{"queued maps priority, top 20", "/v3/serp/google/maps/task_post", `[{"keyword":"dentist","depth":20,"priority":2}]`, 0.0012},
+		{"queued maps standard, 101 results is two blocks", "/v3/serp/google/maps/task_post", `[{"keyword":"dentist","depth":101}]`, 0.0012},
+		{"live maps search", "/v3/serp/google/maps/live/advanced", `[{"keyword":"smile dental pune","depth":20}]`, 0.002},
+		{"business info priority", "/v3/business_data/google/my_business_info/task_post", `[{"keyword":"cid:1","priority":2}]`, 0.003},
+		{"business info live", "/v3/business_data/google/my_business_info/live", `[{"keyword":"cid:1"}]`, 0.0054},
+		{"business updates priority, 10 posts", "/v3/business_data/google/my_business_updates/task_post", `[{"keyword":"cid:1","depth":10,"priority":2}]`, 0.0045},
+		{"reviews priority, 100 reviews", "/v3/business_data/google/reviews/task_post", `[{"cid":"1","depth":100,"priority":2}]`, 0.015},
+		{"reviews standard, default 10", "/v3/business_data/google/reviews/task_post", `[{"cid":"1"}]`, 0.00075},
 		{"body that is not a task list is one task", "/v3/on_page/lighthouse/live/json", `{"url":"x"}`, 0.005},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
