@@ -4,7 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { NotFound } from "@/client/components/NotFound";
 import { PageLoading } from "@/client/components/Spinner";
+import { Button } from "@/client/components/ui/button";
 import { useHostedAuthRouteGuard } from "@/client/features/auth/useHostedAuthRouteGuard";
+import { ApiError } from "@/client/lib/uplumoApi";
 import { staffAccessQueryOptions } from "./customersApi";
 
 const tabs = [
@@ -19,10 +21,7 @@ const tabs = [
   { label: "Activity", link: linkOptions({ to: "/staff/activity" }) },
 ];
 
-/**
- * The staff console's own shell: no product navigation. Anyone the server
- * does not confirm as staff sees the ordinary not-found page.
- */
+/** Staff-only shell with its own navigation and content viewport. */
 export function StaffLayout({ children }: { children: ReactNode }) {
   const authGate = useHostedAuthRouteGuard();
   const access = useQuery({
@@ -32,12 +31,34 @@ export function StaffLayout({ children }: { children: ReactNode }) {
   if (!authGate.canRenderAuthenticatedContent || access.isPending) {
     return <PageLoading />;
   }
+  if (access.isError) {
+    if (
+      access.error instanceof ApiError &&
+      [401, 403, 404].includes(access.error.status)
+    ) {
+      return <NotFound />;
+    }
+    return (
+      <div className="mx-auto max-w-md space-y-3 px-4 py-6">
+        <p role="alert" className="text-sm text-destructive">
+          Could not load Staff Console. Please try again.
+        </p>
+        <Button
+          variant="outline"
+          disabled={access.isFetching}
+          onClick={() => void access.refetch()}
+        >
+          Try again
+        </Button>
+      </div>
+    );
+  }
   if (!access.data?.staff) {
     return <NotFound />;
   }
   return (
-    <div className="min-h-dvh bg-background">
-      <header className="border-b border-border">
+    <div className="flex h-dvh min-h-0 flex-col bg-background">
+      <header className="shrink-0 border-b border-border">
         <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 md:px-6">
           <span className="font-semibold">Uplumo Staff</span>
           <nav
@@ -66,8 +87,14 @@ export function StaffLayout({ children }: { children: ReactNode }) {
           </Link>
         </div>
       </header>
-      <main className="mx-auto max-w-[1600px] px-4 py-6 md:px-6">
-        {children}
+      <main
+        aria-label="Staff console content"
+        tabIndex={0}
+        className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+      >
+        <div className="mx-auto max-w-[1600px] px-4 py-6 md:px-6">
+          {children}
+        </div>
       </main>
     </div>
   );

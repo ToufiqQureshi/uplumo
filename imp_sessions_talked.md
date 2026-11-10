@@ -13,6 +13,12 @@ priorities, corrections, and what still waits on him. Read it after
   decision, remove it when he answers.
 - Never write secrets, keys or customer data here.
 
+## 11 Nov 2026: Staff Console scrolling
+
+- Owner reported that Staff Console did not scroll and asked to check it closely.
+- Give its content a viewport-sized scroll area and keep its navigation visible. Distinguish a temporary access failure from an access denial. Zero paid calls.
+- Browser regression coverage checks a long customer list on mobile and desktop, horizontal table scrolling, and access retry. [PR #302](https://github.com/ToufiqQureshi/uplumo/pull/302).
+
 ## 11 Nov 2026: self-service account deletion and Bugs & Feedback
 
 - A Hacker News user asked where to delete their account. Owner asked for a one-click deletion confirmation and the Bugs & Feedback relabel in one PR.
@@ -116,91 +122,7 @@ priorities, corrections, and what still waits on him. Read it after
 ## 4 Nov 2026: Analytics + Cite Fix are Claude's responsibility
 
 - Owner: "analytics and cite fix teri zimmedaari ha"; Analytics "ek dum bekkar"; "sab dynamic ho koi bhi cheez hardcoded nai"; wants 3 PRs, then merge, deploy and UI-level testing, fast.
-- Decision: outreach pitch draft costs at most **25 credits** ("haan 25 credits theek hai"). Cite Fix caps now live in `plans/catalog.go`.
-- Built as 3 stacked branches: `feat/analytics-simple` (owner-chosen leads, leads by source/page, AI visitors; also carries the 3-doc cleanup commits), `feat/cite-fix-decisions` (every question covered, list pages, decision-first layout), `feat/cite-fix-proof` (pitch, fix proof, what AI says).
-- Pending: push was blocked by permissions; owner pushes, then merge in order 1 → 2 → 3, deploy, live UI check.
-- Not built yet: AI keyword search volume (DataForSEO) for questions to track.
-
-## Kal ka kaam (4 Nov se)
-
-1. **Analytics leads ko dynamic banao** (owner ne kaha: kuch hard-coded nahi, UI clean).
-   - Bug: `frontend/src/client/features/analytics/AnalyticsOverview.tsx:99-123` har site ko "Nobody tapped WhatsApp, call..." dikhata hai, chahe button ho ya na ho. `backend/internal/analytics/enquiry.go` event ke naam se lead guess karta hai (word list).
-   - Plan: tracker sab raw record kare; user kisi bhi element pe `data-uplumo-event="signup"` ya JS `uplumo("signup")` lagaye; user khud chune kaunsa event uska lead hai (nayi table, per project); UI sirf wahi dikhaye jo site pe hai; `enquiry.go` ki word list aur saara hard-coded copy hatao. 0 paid calls. Code se pehle owner ki "haan".
-2. **Phir "Fix → Proof" ka plan** (sirf plan, code nahi): Cite Fix → AI ne cite kiya → AI se visitor usi page pe aaya → lead aayi. Link "likely" hai, pakka nahi; UI mein waise hi likhna.
-   - Kyu: market research (3 Nov) mein AI visibility tracking sasti aur bhari hui hai (Otterly $29, Peec $95, Profound $99+). Sabse badi complaint "batata hai, fix nahi karta". Hamara apna analytics tracker hamein proof dikhane deta hai, jo competitors ke paas nahi.
-3. **Rejected, dobara mat lana:** TimesFM / "Real drop or normal?" alerts (Growth Monitor se overlap; TimesFM 3.0 weights non-commercial).
-
-## Waiting for the owner
-
-- **AI credits for PR 2:** price per action for "explain", "topic clusters" and "draft title/meta" (goes in `plans/catalog.go`). Claude will bring the real OpenRouter cost per call first.
-- **Deploy** latest `main`, then compare credits charged with provider cost on 2-3 real Cite Fix pages and one Keywords answer.
-- **USD packs:** confirm $19 (5,000 credits), $59 (15,000 credits) and $12 (5 more websites). After deploy, check the log line "US dollar billing on", then one real international test payment and refund.
-- **Razorpay webhook:** also subscribe to `payment.authorized`, so late UPI approvals are captured instead of refunded.
-- **Keywords agent limits:** confirm 3 research seeds + 2 SERP checks per reply and the 1,200-credit answer limit; decide whether SAM chat summaries count inside it.
-- **AI tracker default schedule:** weekly instead of daily cuts recurring DataForSEO spend ~86%. Choose.
-- **Local SEO / Google Reviews / AI Mode engine:** bring back or drop.
-- **Google OAuth data-access verification:** scope justification + demo video, then submit.
-- **Railway GitHub auto-deploy** is broken ("Could not load branches"): reconnect GitHub in Railway, or keep deploying with `railway up` (`docs/DEPLOY.md`).
-
----
-
-## 3 Nov 2026: only three docs, flag hard-coding everywhere
-
-- Owner: "ye hardcoded sabse ghatiya kaam tha"; "kuch hardcoded nai chahiye"; analytics UI must be clean, not messy.
-- Found on his own site: Analytics said nobody tapped WhatsApp although uplumo.com has no WhatsApp button. Cause: hard-coded copy in `AnalyticsOverview.tsx` and name-guessing in `analytics/enquiry.go`. For him WhatsApp is not the lead; the user must choose what a lead is and tag any element.
-- Decision: the repo keeps only `CLAUDE.md`, `imp_sessions_talked.md` and `docs/DEPLOY.md`; all other docs deleted. Feature docs (`README.md`, `flow.md`, `how-it-works.md`, `business-logic.md`) are created one feature at a time when that feature is worked on. `CLAUDE.md` made short, with a rule to flag hard-coding, business loss, bugs and unnecessary lines on every file touched.
-
-## 3 Nov 2026: global platform, not only India
-
-- Owner: "muje global platform banana ha not only india samja docs me daal de".
-- Owner wants something valuable and different: "kuch valueble dena ha jo kaam ka ho, not other competitors jaise ek or site".
-- Claude proposed "Real drop or normal?" alerts (TimesFM-style expected range + why + fix). Owner rejected it: "I don't [like] this idea"; it mostly overlaps the existing Growth Monitor (`ga4/growth_monitor.go`), Next Actions and SAM brief. TimesFM 3.0 is ruled out anyway (non-commercial weights). Owner asked for market research before choosing what to build.
-
-## 3 Nov 2026: dollar prices for customers outside India
-
-- Owner: "bro muje internation payment gatewy chahiye"; "outside india wale users ko dollar me dikhey".
-- Chose real USD billing (not INR shown as approximate $), prices $15 / $39 / $69, on Razorpay International (already enabled on the live account; the second Razorpay account in his login is not the live one).
-- Owner: "production grade ho ... ek pr me sab code ... double payment, network timeout ... nai hone chahiye". Wants short Hinglish replies.
-- Pack prices ($19 / $59 / $12) were Claude's proposal; see DECISIONS.md.
-
-## 2 Nov 2026: DFS bill, "pura paisa deke adhey cheezey dikha re"
-
-- Owner: cache-only fixes won't solve it; the two problems are unnecessary paid calls and paying for full DFS data but showing half. Wants every claim verified on uplumo.com and with real (paid if needed) tests, then fixed.
-- Owner authorised small paid DataForSEO tests for this audit (~$0.13 spent).
-- Findings: AI tracker Claude = ~76% of recurring spend (#254); Domain overview dropped paid fields (#255); Backlinks "Hide lost" re-bought rows (#256).
-- DFS MCP/Playground calls bypass `go_dataforseo_usage`, so dashboard spend > ledger spend.
-
-## 30 Oct 2026: remove all blogs
-
-- Owner explicitly requested: delete every blog, superseding the earlier content expansion.
-- Remove all published articles and blog-only visuals, old redirects, navigation and sitemap entries. Shared product assets remain.
-- Former article URLs must not serve content or redirect to deleted guides.
-
-## 29 Oct 2026: replace generic blog volume with useful product evidence
-
-- Owner explicitly authorised removal of the 29 generic posts; improve the retained guides and keep product information accurate.
-- At least three relevant explanatory images per maintained article; show features so readers can understand the output.
-- Cover all main features and make the buying case from actual workflows. No personal name, fabricated results or unsupported “best”/ranking guarantees.
-- Preserve retired URLs with relevant redirects and maintain canonical internal links.
-
-## 29 Oct 2026: public pages, trust and anonymous experience
-
-- Owner authorised one PR improving existing public and legal pages, with detailed feature content verified against code; prioritise a fast delivery.
-- Explicit: do not publish his personal name. May mention 3 years of SEO/AEO experience and full-stack AI engineering experience.
-- Improve buyer understanding without inventing customers, testimonials, legal identity, guaranteed rankings or universal AI coverage. Existing pricing and payment policy remain unchanged.
-
-## 29 Oct 2026: credits exactly as shown, merge and deploy (Claude)
-
-- Owner: "bhai proper credit cut hone chahiye and proper sab kuch acche se hona chahiye samja": a customer must never pay more than the credits shown before the action.
-- Order given: "pehle #246, phir #245 ... merge kar"; then "sab kaam sab pr ke kaam docs me update kardena ... then once done deploy it". Merged #246 and #245 after Strix reviews came back clean (Strix found under-booked local seeds and `site:` queries on #245; fixed first).
-- Deploy waits on the owner: this cloud session has no Railway access.
-
-## 28 Oct 2026: Keywords agent (Claude)
-
-- Vision: "har ek feature ke liye master AI agent" that understands intent, shows tables/charts/recommendations, says what to do with keywords ("ranking possible hai, guarantee nahi"). Doesn't like SAM as a generic chat; wants feature-specific agents. Approved a Design-canvas mockup first.
-- Asked for Genkit and the DataForSEO MCP: Claude advised against both (SAM loop exists; MCP bypasses the spend guard). Owner accepted, but insisted "raw DFS output compare kar": found zero-volume rows, other-language rows and unmerged variants; fixed.
-- Decisions: "Free plan ko kuch mat de"; remove the old research UI and make the page like the mockup; "ek PR me sab". Claude chose 3 seeds + 2 SERP per reply and actual-cost AI billing as defaults.
-- Short on tokens; asked for careful, not-repeated work and no long background tasks.
+- Decision: outreach pitch draft costs at most **25 credits** ("haan 25 credits theek hai"). Cite Fix caps now live in `plans/catalog.go…2196 tokens truncated… no long background tasks.
 
 ## 28 Oct 2026: Cite Fix PR 3 (owner direction)
 
