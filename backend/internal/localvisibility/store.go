@@ -143,10 +143,13 @@ func (s Store) LatestDone(ctx context.Context, projectID, kind string, before ti
 		WHERE project_id=$1 AND kind=$2 AND status='done' AND created_at < $3 ORDER BY created_at DESC LIMIT 1`, projectID, kind, before))
 }
 
-// Cached returns a finished run of the same input newer than since.
+// Cached returns a finished run of the same input newer than since. A run
+// that came back with parts missing is not reused, so asking again buys
+// them instead of showing the gap for a day.
 func (s Store) Cached(ctx context.Context, projectID, kind, inputHash string, since time.Time) (*Run, error) {
 	return scanRun(s.DB.QueryRow(ctx, `SELECT `+runColumns+` FROM go_local_runs
 		WHERE project_id=$1 AND kind=$2 AND input_hash=$3 AND status='done' AND created_at > $4
+		AND COALESCE(jsonb_array_length(result->'missing'), 0) = 0
 		ORDER BY created_at DESC LIMIT 1`, projectID, kind, inputHash, since))
 }
 

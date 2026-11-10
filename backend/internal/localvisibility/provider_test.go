@@ -11,7 +11,7 @@ import (
 // and the 1.28 credit markup. A change to a task body changes these.
 func TestPriceListMatchesTheTasksEachActionPosts(t *testing.T) {
 	got := PriceList()
-	want := Prices{Find: 3, Check: 40, Grid3: 14, Grid5: 39, Reviews: 58, WatchPerCompetitor: 10, Reply: 1}
+	want := Prices{Find: 3, Check: 40, Grid3: 14, Grid5: 39, Reviews: 61, WatchPerCompetitor: 10, Reply: 1}
 	if got != want {
 		t.Fatalf("PriceList() = %+v, want %+v", got, want)
 	}

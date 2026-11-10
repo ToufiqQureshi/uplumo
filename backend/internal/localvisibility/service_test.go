@@ -188,7 +188,7 @@ func newFixture(t *testing.T) fixture {
 		meter: &fakeMeter{}, org: "org-" + rand.Text(), project: "project-" + rand.Text()}
 	f.llm = &fakeLLM{text: func(req openrouter.Request) string {
 		if req.JSONObject {
-			return `{"themes":[{"name":"Waiting time","mentions":[{"id":"you:0","sentiment":"negative"},{"id":"r0:0","sentiment":"negative"}]}]}`
+			return `{"themes":[{"name":"Waiting time","neg":["y0","a0"]}]}`
 		}
 		return "Hi Rohan, sorry about the wait."
 	}}
@@ -418,5 +418,33 @@ func TestWatchNeedsACheckAndSnapshotsWhenTurnedOn(t *testing.T) {
 		if w.ProjectID == f.project {
 			t.Fatal("a watch turned on now is due a week later, not today")
 		}
+	}
+}
+
+func TestARunWithMissingPartsIsNotServedFromCache(t *testing.T) {
+	f := newFixture(t)
+	ctx := t.Context()
+	f.llm.text = func(openrouter.Request) string { return `{"themes":[` } // cut off
+	check, _ := f.svc.Start(ctx, f.org, f.project, StartRequest{Kind: KindCheck})
+	if err := f.svc.Process(ctx, check.ID); err != nil {
+		t.Fatal(err)
+	}
+	run, err := f.svc.Start(ctx, f.org, f.project, StartRequest{Kind: KindReviews})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := f.svc.Process(ctx, run.ID); err != nil {
+		t.Fatal(err)
+	}
+	run, _ = f.svc.RunStatus(ctx, f.project, run.ID)
+	if missing := decodeResult[ReviewsResult](t, run).Missing; len(missing) != 1 || missing[0] != "review themes" {
+		t.Fatalf("missing = %v, want the themes", missing)
+	}
+	if settled := f.meter.guard.Settled(); len(settled) != 1 || settled[0] != 0 {
+		t.Fatalf("AI charges = %v, want the cut-off answer free", settled)
+	}
+	again, err := f.svc.Start(ctx, f.org, f.project, StartRequest{Kind: KindReviews})
+	if err != nil || again.Cached || again.ID == run.ID {
+		t.Fatalf("second reviews run = %+v err = %v, want a fresh run", again, err)
 	}
 }

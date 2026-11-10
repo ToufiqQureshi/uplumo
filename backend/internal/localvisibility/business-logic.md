@@ -9,7 +9,8 @@
   job or a second worker collects instead of buying again. No paid call is
   retried automatically; `task_get` is free.
 - **24-hour cache** per project and input (business, search term, grid size,
-  competitors). A cached answer says nothing was charged.
+  competitors). A cached answer says nothing was charged. A run that came
+  back with parts missing is not reused, so a second click buys them.
 - **Priority queue, not live**: about a minute's wait for roughly half the live
   price. Only the business search is live (the customer waits for the list).
 - **Charged = what DataForSEO billed**, never above the quote on the button:
