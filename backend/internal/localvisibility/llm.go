@@ -27,6 +27,11 @@ type Meter interface {
 // max_price so no provider bills above what the hold assumed.
 const model = "deepseek/deepseek-v4.1-flash"
 
+// noReasoning turns the model's thinking off. Reasoning tokens count against
+// MaxTokens: on 170 reviews the model spent all 4,000 on thinking and wrote
+// nothing (live, 10 Nov 2026). Grouping reviews needs no long reasoning.
+const noReasoning = "none"
+
 var price = openrouter.MaxPrice{Prompt: 0.30, Completion: 1.20}
 
 // Size limits that make the most a call can cost a fixed number, shown on
@@ -151,11 +156,12 @@ func (s *Service) themes(ctx context.Context, run *Run, sets []reviewSet) (map[s
 		return map[string][]Theme{}, nil
 	}
 	req := openrouter.Request{
-		Model:      model,
-		Messages:   []openrouter.Message{{Role: "system", Content: themesSystem}, {Role: "user", Content: b.String()}},
-		MaxTokens:  themesMaxTokens,
-		JSONObject: true,
-		Provider:   providerPreferences(),
+		Model:           model,
+		Messages:        []openrouter.Message{{Role: "system", Content: themesSystem}, {Role: "user", Content: b.String()}},
+		MaxTokens:       themesMaxTokens,
+		ReasoningEffort: noReasoning,
+		JSONObject:      true,
+		Provider:        providerPreferences(),
 	}
 	var out map[string][]Theme
 	err := s.call(ctx, run.OrganizationID, "local-themes:"+run.ID, req, themesCeilingUSD, func(text string) error {
@@ -259,10 +265,11 @@ func (s *Service) DraftReply(ctx context.Context, org, projectID, reviewID strin
 		prompt += "\nWrite a different reply from any earlier one."
 	}
 	req := openrouter.Request{
-		Model:     model,
-		Messages:  []openrouter.Message{{Role: "system", Content: replySystem}, {Role: "user", Content: prompt}},
-		MaxTokens: replyMaxTokens,
-		Provider:  providerPreferences(),
+		Model:           model,
+		Messages:        []openrouter.Message{{Role: "system", Content: replySystem}, {Role: "user", Content: prompt}},
+		MaxTokens:       replyMaxTokens,
+		ReasoningEffort: noReasoning,
+		Provider:        providerPreferences(),
 	}
 	var reply string
 	key := "local-reply:" + projectID + ":" + reviewID + ":" + idempotencyKey
