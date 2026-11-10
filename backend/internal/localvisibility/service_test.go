@@ -216,13 +216,11 @@ func seed(t *testing.T, db *pgxpool.Pool, org, project string) {
 			t.Error(err)
 		}
 	})
-	for _, q := range []string{
-		`INSERT INTO organization(id,name,slug,created_at) VALUES($1,'Local',$1,now())`,
-		`INSERT INTO projects(id,organization_id,name) VALUES($2,$1,'Local')`,
-	} {
-		if _, err := db.Exec(t.Context(), q, org, project); err != nil {
-			t.Fatal(err)
-		}
+	if _, err := db.Exec(t.Context(), `INSERT INTO organization(id,name,slug,created_at) VALUES($1,'Local',$1,now())`, org); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(t.Context(), `INSERT INTO projects(id,organization_id,name) VALUES($1,$2,'Local')`, project, org); err != nil {
+		t.Fatal(err)
 	}
 }
 
