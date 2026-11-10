@@ -116,6 +116,8 @@ const researchRowSchema = z.object({
   wordsCount: z.number().nullable().optional(),
   secondaryIntents: z.array(z.string()).optional(),
   serpFeatures: z.array(z.string()).optional(),
+  coreKeyword: z.string().nullable().optional(),
+  topPagesDomainRank: z.number().nullable().optional(),
 });
 
 const researchResultSchema = z.object({

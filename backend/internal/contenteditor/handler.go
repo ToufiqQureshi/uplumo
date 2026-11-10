@@ -24,6 +24,8 @@ type Store interface {
 	Get(context.Context, string, string) (Draft, error)
 	Save(context.Context, string, Input) (Draft, error)
 	Delete(context.Context, string, string) error
+	GetTheme(context.Context, string) (Theme, error)
+	SaveTheme(context.Context, string, string) (Theme, error)
 }
 
 // Handler serves content editor requests.
@@ -45,6 +47,8 @@ func Mount(mux *http.ServeMux, store Store, writer WriterService, images ImageSt
 	mux.Handle("POST /api/v1/projects/{projectId}/content/drafts/save", protect(http.HandlerFunc(handler.save)))
 	mux.Handle("POST /api/v1/projects/{projectId}/content/drafts/{draftId}/delete", protect(http.HandlerFunc(handler.delete)))
 	mux.Handle("POST /api/v1/projects/{projectId}/content/assistant/generate", protect(http.HandlerFunc(handler.generate)))
+	mux.Handle("POST /api/v1/projects/{projectId}/content/theme/get", protect(http.HandlerFunc(handler.getTheme)))
+	mux.Handle("POST /api/v1/projects/{projectId}/content/theme/save", protect(http.HandlerFunc(handler.saveTheme)))
 }
 
 func (h Handler) uploadImage(w http.ResponseWriter, r *http.Request) {

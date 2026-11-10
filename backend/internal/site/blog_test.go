@@ -2,10 +2,13 @@ package site
 
 import (
 	"context"
+	"encoding/json"
 	"encoding/xml"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"regexp"
+	"slices"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -74,6 +77,7 @@ func TestParsePost(t *testing.T) {
 func TestBlogPages(t *testing.T) {
 	files := fstest.MapFS{
 		"README.md":      {Data: []byte("# How to write posts")},
+		"blog_style.md":  {Data: []byte("# Visual style for posts")},
 		"older.md":       {Data: []byte(front(goodTitle, goodDescription, "date: 2026-10-01") + "Old post.")},
 		"what-is-aeo.md": {Data: []byte(front(goodTitle, goodDescription, goodDate, "updated: 2026-10-22", "author: Asha Rao") + "Answer first.")},
 		"hidden.md":      {Data: []byte(front(goodTitle, goodDescription, goodDate, "draft: true") + "Not yet.")},
@@ -99,7 +103,7 @@ func TestBlogPages(t *testing.T) {
 			t.Errorf("post page lacks %s", want)
 		}
 	}
-	for _, slug := range []string{"hidden", "README", "nope"} {
+	for _, slug := range []string{"hidden", "README", "blog_style", "nope"} {
 		if code := getPost(s, slug).Code; code != http.StatusNotFound {
 			t.Errorf("/blog/%s: status %d, want 404", slug, code)
 		}
@@ -126,6 +130,119 @@ func TestBlogPages(t *testing.T) {
 	}
 }
 
+func TestPostStructuredData(t *testing.T) {
+	faq := "Intro.\n\n## Frequently asked questions\n\n" +
+		"### Is AEO replacing SEO?\n\nNo. Read [the guide](/blog/x) and **measure** `both`.\n\nSecond paragraph.\n\n" +
+		"### Ünïcode “quotes”?\n\nYes – they stay.\n\n## Next steps\n\n### Not a FAQ\n\nIgnored."
+	files := fstest.MapFS{
+		"with-faq.md": {Data: []byte(front(goodTitle, goodDescription, goodDate) + faq)},
+		"no-faq.md":   {Data: []byte(front(goodTitle, goodDescription, goodDate) + "### Looks like a question?\n\nBut no FAQ section.")},
+	}
+	s, err := build(&url.URL{Scheme: "https", Host: "uplumo.com"}, files)
+	if err != nil {
+		t.Fatal(err)
+	}
+	type node struct {
+		Type       string `json:"@type"`
+		MainEntity []struct {
+			Name           string `json:"name"`
+			AcceptedAnswer struct {
+				Text string `json:"text"`
+			} `json:"acceptedAnswer"`
+		} `json:"mainEntity"`
+		ItemListElement []struct {
+			Position int    `json:"position"`
+			Name     string `json:"name"`
+			Item     string `json:"item"`
+		} `json:"itemListElement"`
+	}
+	nodes := func(slug string) map[string]node {
+		body := getPost(s, slug).Body.String()
+		m := regexp.MustCompile(`(?s)<script type="application/ld\+json">(.*?)</script>`).FindStringSubmatch(body)
+		if m == nil {
+			t.Fatalf("%s has no JSON-LD", slug)
+		}
+		var list []node
+		if err := json.Unmarshal([]byte(m[1]), &list); err != nil {
+			t.Fatalf("%s JSON-LD is not a list: %v", slug, err)
+		}
+		byType := map[string]node{}
+		for _, n := range list {
+			byType[n.Type] = n
+		}
+		return byType
+	}
+
+	with := nodes("with-faq")
+	if _, ok := with["BlogPosting"]; !ok {
+		t.Error("BlogPosting is missing")
+	}
+	crumbs := with["BreadcrumbList"].ItemListElement
+	if len(crumbs) != 3 || crumbs[1].Item != "https://uplumo.com/blog" || crumbs[2].Item != "https://uplumo.com/blog/with-faq" || crumbs[2].Position != 3 {
+		t.Errorf("breadcrumbs = %+v", crumbs)
+	}
+	got := with["FAQPage"].MainEntity
+	if len(got) != 2 {
+		t.Fatalf("FAQ has %d questions, want the 2 under the FAQ heading", len(got))
+	}
+	if got[0].Name != "Is AEO replacing SEO?" || got[0].AcceptedAnswer.Text != "No. Read the guide and measure both. Second paragraph." {
+		t.Errorf("first FAQ = %+v", got[0])
+	}
+	if got[1].Name != "Ünïcode “quotes”?" || got[1].AcceptedAnswer.Text != "Yes – they stay." {
+		t.Errorf("unicode FAQ = %+v", got[1])
+	}
+	without := nodes("no-faq")
+	if _, ok := without["FAQPage"]; ok {
+		t.Error("a post without a FAQ section must not claim FAQPage")
+	}
+	if _, ok := without["BreadcrumbList"]; !ok {
+		t.Error("every post needs breadcrumbs")
+	}
+}
+
+func TestRelatedGuides(t *testing.T) {
+	post := func(extra ...string) *fstest.MapFile {
+		return &fstest.MapFile{Data: []byte(front(append([]string{goodTitle, goodDescription, goodDate}, extra...)...) + "Body.")}
+	}
+	s, err := build(&url.URL{Scheme: "https", Host: "uplumo.com"}, fstest.MapFS{
+		"pillar.md":  post("related: guide-b, guide-a"),
+		"guide-a.md": post("date: 2026-10-01"),
+		"guide-b.md": post("date: 2026-09-01"),
+		"guide-c.md": post("date: 2026-08-01"),
+		"guide-d.md": post("date: 2026-07-01"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	related := func(slug string) []string {
+		_, aside, _ := strings.Cut(getPost(s, slug).Body.String(), `<aside class="related"`)
+		var slugs []string
+		for _, m := range regexp.MustCompile(`href="/blog/([a-z0-9-]+)"`).FindAllStringSubmatch(aside, -1) {
+			slugs = append(slugs, m[1])
+		}
+		return slugs
+	}
+	if got := related("pillar"); !slices.Equal(got, []string{"guide-b", "guide-a"}) {
+		t.Errorf("declared related = %v, want the listed order", got)
+	}
+	if got := related("guide-d"); !slices.Equal(got, []string{"pillar", "guide-a", "guide-b"}) {
+		t.Errorf("default related = %v, want the 3 newest other posts", got)
+	}
+
+	for name, extra := range map[string]string{
+		"unknown slug": "related: missing-post",
+		"itself":       "related: self",
+		"twice":        "related: guide-a, guide-a",
+		"too many":     "related: guide-a, guide-b, guide-c, guide-d",
+		"not a slug":   "related: Guide A",
+	} {
+		files := fstest.MapFS{"self.md": post(extra), "guide-a.md": post(), "guide-b.md": post(), "guide-c.md": post(), "guide-d.md": post()}
+		if _, err := build(&url.URL{Scheme: "https", Host: "uplumo.com"}, files); err == nil {
+			t.Errorf("%s: build accepted %q", name, extra)
+		}
+	}
+}
+
 func TestABrokenPostStopsTheSite(t *testing.T) {
 	files := fstest.MapFS{"bad.md": {Data: []byte(front("title: x") + "Hi")}}
 	if _, err := build(&url.URL{Scheme: "https", Host: "uplumo.com"}, files); err == nil || !strings.Contains(err.Error(), "bad.md") {
@@ -147,25 +264,35 @@ func TestBlogCoverValidation(t *testing.T) {
 
 func TestPublishedBlogContent(t *testing.T) {
 	s := newSite(t, &url.URL{Scheme: "https", Host: "uplumo.com"})
-	slugs := []string{"why-website-not-ranking-google", "chatgpt-recommends-competitors-not-my-business", "chatgpt-traffic-google-analytics"}
-	if len(s.posts) != len(slugs) {
-		t.Fatalf("published %d articles, want %d approved posts", len(s.posts), len(slugs))
+	posts := []struct{ slug, published, updated string }{
+		{"best-aeo-tools", "2026-11-09", "2026-11-09"},
+		{"best-semrush-alternatives", "2026-11-09", "2026-11-09"},
+		{"how-to-rank-in-chatgpt", "2026-11-09", "2026-11-09"},
+		{"peec-ai-alternatives", "2026-11-09", "2026-11-09"},
+		{"profound-alternatives", "2026-11-09", "2026-11-09"},
+		{"what-is-aeo", "2026-11-09", "2026-11-09"},
+		{"seo-vs-aeo-vs-geo", "2026-11-09", "2026-11-09"},
+		{"how-to-get-website-cited-by-ai", "2026-11-09", "2026-11-09"},
+		{"how-to-track-competitors-in-ai-search", "2026-11-09", "2026-11-09"},
+		{"why-website-not-ranking-google", "2026-11-08", "2026-11-10"},
+		{"chatgpt-recommends-competitors-not-my-business", "2026-11-08", "2026-11-10"},
+		{"chatgpt-traffic-google-analytics", "2026-10-15", "2026-11-10"},
+	}
+	if len(s.posts) != len(posts) {
+		t.Fatalf("published %d articles, want %d approved posts", len(s.posts), len(posts))
 	}
 	index := get(s.ServeBlog, "/blog", nil)
 	if index.Code != http.StatusOK {
 		t.Fatalf("blog index status = %d, want 200", index.Code)
 	}
 	sitemap := get(s.ServeSitemap, "/sitemap.xml", nil).Body.String()
-	for _, slug := range slugs {
+	for _, post := range posts {
+		slug := post.slug
 		if !strings.Contains(index.Body.String(), "/blog/"+slug) {
 			t.Errorf("blog index lacks %s", slug)
 		}
-		if !strings.Contains(sitemap, "<loc>https://uplumo.com/blog/"+slug+"</loc><lastmod>2026-11-08</lastmod>") {
+		if !strings.Contains(sitemap, "<loc>https://uplumo.com/blog/"+slug+"</loc><lastmod>"+post.updated+"</lastmod>") {
 			t.Errorf("sitemap lacks dated post %s", slug)
-		}
-		published := "2026-11-08"
-		if slug == "chatgpt-traffic-google-analytics" {
-			published = "2026-10-15"
 		}
 		res := getPost(s, slug)
 		body := res.Body.String()
@@ -174,7 +301,7 @@ func TestPublishedBlogContent(t *testing.T) {
 		}
 		for _, want := range []string{
 			`<link rel="canonical" href="https://uplumo.com/blog/` + slug + `">`,
-			`"@type":"BlogPosting"`, `"datePublished":"` + published + `"`,
+			`"@type":"BlogPosting"`, `"datePublished":"` + post.published + `"`,
 			`href="https://uplumo.com/pricing"`,
 		} {
 			if !strings.Contains(body, want) {
@@ -189,6 +316,56 @@ func TestPublishedBlogContent(t *testing.T) {
 		if !strings.Contains(get(serve, "/", nil).Body.String(), `href="/blog"`) {
 			t.Error("public navigation lacks the approved blog")
 		}
+	}
+}
+
+func TestGuideNavigationAndImages(t *testing.T) {
+	s := newSite(t, &url.URL{Scheme: "https", Host: "uplumo.com"})
+	anchor := regexp.MustCompile(`href="#([^"]+)"`)
+	image := regexp.MustCompile(`<img src="(/site/[^"]+)" alt="[^"]+"`)
+	guides := []struct {
+		slug          string
+		links, images int
+	}{
+		{"seo-vs-aeo-vs-geo", 10, 5},
+		{"best-aeo-tools", 7, 4},
+		{"best-semrush-alternatives", 5, 4},
+		{"how-to-rank-in-chatgpt", 5, 3},
+		{"peec-ai-alternatives", 5, 4},
+		{"profound-alternatives", 5, 3},
+		{"what-is-aeo", 6, 3},
+		{"how-to-get-website-cited-by-ai", 7, 3},
+		{"how-to-track-competitors-in-ai-search", 6, 4},
+		{"why-website-not-ranking-google", 7, 3},
+		{"chatgpt-recommends-competitors-not-my-business", 7, 3},
+		{"chatgpt-traffic-google-analytics", 9, 3},
+	}
+	for _, guide := range guides {
+		t.Run(guide.slug, func(t *testing.T) {
+			body := getPost(s, guide.slug).Body.String()
+			_, prose, ok := strings.Cut(body, `<div class="prose">`)
+			if !ok {
+				t.Fatal("guide body is missing")
+			}
+			links := anchor.FindAllStringSubmatch(prose, -1)
+			if len(links) != guide.links {
+				t.Errorf("guide has %d section links, want %d", len(links), guide.links)
+			}
+			for _, link := range links {
+				if !strings.Contains(prose, `id="`+link[1]+`"`) {
+					t.Errorf("guide lacks a heading for section link %q", link[1])
+				}
+			}
+			images := image.FindAllStringSubmatch(prose, -1)
+			if len(images) != guide.images {
+				t.Errorf("guide has %d images with alt text, want %d", len(images), guide.images)
+			}
+			for _, match := range images {
+				if res := get(s.ServeAsset, match[1], nil); res.Code != http.StatusOK {
+					t.Errorf("image %q returned %d, want 200", match[1], res.Code)
+				}
+			}
+		})
 	}
 }
 
@@ -277,7 +454,19 @@ write-search-titles-and-meta-descriptions
 		})
 	}
 	for file := range s.versions {
-		if strings.HasPrefix(file, "blog/") {
+		if !strings.HasPrefix(file, "blog/") {
+			continue
+		}
+		used := false
+		for _, post := range s.posts {
+			body := string(post.body)
+			if strings.Contains(body, `src="`+AssetsPrefix+file+`"`) ||
+				strings.Contains(body, AssetsPrefix+file+`?v=`+s.versions[file]) {
+				used = true
+				break
+			}
+		}
+		if !used {
 			t.Errorf("unused blog asset %q remains embedded", file)
 		}
 	}

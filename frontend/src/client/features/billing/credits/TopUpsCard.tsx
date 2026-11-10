@@ -8,7 +8,8 @@ import {
   formatPrice,
   priceIn,
 } from "../plan/planApi";
-import { openTopUpCheckout } from "../plan/razorpay";
+import { ErrorState } from "@/client/components/ErrorState";
+import { openTopUpCheckout, paymentFailedMessage } from "../plan/razorpay";
 
 const packsSchema = z.array(
   z.object({
@@ -85,8 +86,11 @@ export function TopUpsCard({
         "POST",
         { packId, currency },
       );
+      const pack = packs.data?.find((p) => p.id === packId);
       // A closed window leaves the order unpaid; the next click reuses it.
-      if (await openTopUpCheckout(order)) setPaid(order.id);
+      const outcome = await openTopUpCheckout(order, pack?.name ?? "Uplumo");
+      if (outcome.status === "paid") setPaid(order.id);
+      return { ...outcome, packId, packName: pack?.name ?? "Your purchase" };
     },
     retry: false,
     onError: (error) => {
@@ -131,6 +135,7 @@ export function TopUpsCard({
     );
   if (!packs.data?.length || !currency) return null;
   const waiting = Boolean(paid) && !granted;
+  const failed = checkout.data?.status === "failed" ? checkout.data : null;
   return (
     <section className="space-y-3 rounded-xl border border-border p-5">
       <h2 className="text-lg font-semibold">{packsHeading(packs.data)}</h2>
@@ -161,6 +166,13 @@ export function TopUpsCard({
       </div>
       {!canManageBilling ? (
         <p className="text-sm">Ask a workspace owner or admin to purchase.</p>
+      ) : null}
+      {failed ? (
+        <ErrorState
+          title="Payment didn't go through"
+          message={paymentFailedMessage(failed.reason, failed.packName)}
+          onRetry={() => checkout.mutate(failed.packId)}
+        />
       ) : null}
       {checkout.error ? (
         <p role="alert" className="text-sm text-destructive">

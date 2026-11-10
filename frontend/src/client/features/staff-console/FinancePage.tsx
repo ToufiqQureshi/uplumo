@@ -14,6 +14,8 @@ import {
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { QueryView, Section } from "./StaffParts";
 import {
+  dateTimeFormat,
+  failedPaymentsQueryOptions,
   financeQueryOptions,
   formatMoney,
   formatUSD,
@@ -39,12 +41,78 @@ function SyncButton() {
       </Button>
       <p className="text-sm text-muted-foreground" role="status">
         {sync.isSuccess
-          ? `Checked ${sync.data.subscriptions} subscriptions, added ${sync.data.added} payments${sync.data.failed ? `, ${sync.data.failed} failed` : ""}.`
+          ? `Checked ${sync.data.subscriptions} subscriptions, added ${sync.data.added} payments, updated ${sync.data.refundsUpdated} refunds${sync.data.failed ? `, ${sync.data.failed} failed` : ""}.`
           : sync.isError
             ? getStandardErrorMessage(sync.error)
-            : "Imports subscription payments made before the ledger existed. Safe to run again."}
+            : "Imports subscription payments and refunds the ledger missed. Safe to run again."}
       </p>
     </div>
+  );
+}
+
+/**
+ * Payment attempts that failed in the last 30 days, so the owner can reach
+ * customers who tried to pay and could not.
+ */
+function FailedPayments() {
+  const failed = useQuery(failedPaymentsQueryOptions());
+  return (
+    <Section
+      title="Failed payments, last 30 days"
+      description="Read live from Razorpay. A customer who later paid on the same order or email is marked; the rest may need a follow-up."
+    >
+      <QueryView query={failed}>
+        {(f) => (
+          <TableCard>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>When</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                  <TableHead>Method</TableHead>
+                  <TableHead>Why</TableHead>
+                  <TableHead>Paid later</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {f.payments.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-muted-foreground">
+                      No failed payments in the last 30 days.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  f.payments.map((p) => (
+                    <TableRow key={p.id}>
+                      <TableCell className="whitespace-nowrap">
+                        {dateTimeFormat.format(new Date(p.at))}
+                      </TableCell>
+                      <TableCell>{p.email || "—"}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatMoney(p.amount, p.currency)}
+                      </TableCell>
+                      <TableCell className="uppercase">
+                        {p.method || "—"}
+                      </TableCell>
+                      <TableCell className="max-w-sm">
+                        {p.reason || p.code || "—"}
+                      </TableCell>
+                      <TableCell>{p.paidLater ? "Yes" : "No"}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableCard>
+        )}
+      </QueryView>
+      {failed.data?.truncated ? (
+        <p className="text-sm text-muted-foreground">
+          Showing failures among the latest 1,000 payments only.
+        </p>
+      ) : null}
+    </Section>
   );
 }
 
@@ -53,6 +121,7 @@ export function FinancePage() {
   return (
     <div className="space-y-8">
       <SyncButton />
+      <FailedPayments />
       <QueryView query={finance}>
         {(f) => {
           const costByMonth = new Map(

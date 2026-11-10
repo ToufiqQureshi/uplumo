@@ -107,6 +107,30 @@ export const actionsQueryOptions = () =>
     z.object({ actions: z.array(actionSchema) }),
   );
 
+const failedPaymentSchema = z.object({
+  id: z.string(),
+  email: z.string(),
+  method: z.string(),
+  amount: z.number(),
+  currency: z.string(),
+  reason: z.string(),
+  code: z.string(),
+  at: z.string(),
+  paidLater: z.boolean(),
+});
+
+/** Read live from Razorpay when the page opens; Razorpay API reads are free. */
+export const failedPaymentsQueryOptions = () =>
+  staffQuery(
+    "failed-payments",
+    "/api/v1/staff/payments/failed",
+    z.object({
+      since: z.string(),
+      payments: z.array(failedPaymentSchema),
+      truncated: z.boolean(),
+    }),
+  );
+
 export type UserAction = "block" | "unblock" | "delete";
 
 export function runUserAction(
@@ -128,6 +152,7 @@ export function syncPayments() {
       subscriptions: z.number(),
       added: z.number(),
       failed: z.number(),
+      refundsUpdated: z.number(),
     }),
     "POST",
     {},
@@ -153,4 +178,9 @@ export function formatUSD(value: number) {
 
 export const dateFormat = new Intl.DateTimeFormat("en-IN", {
   dateStyle: "medium",
+});
+
+export const dateTimeFormat = new Intl.DateTimeFormat("en-IN", {
+  dateStyle: "medium",
+  timeStyle: "short",
 });

@@ -11,8 +11,12 @@ function browser(stored: string | null = null, light = false, blocked = false) {
     {};
   const attributes: Record<string, string> = {};
   const control = {
-    value: "system",
-    disabled: true,
+    hidden: true,
+    label: "",
+    setAttribute: (name: string, value: string) => {
+      expect(name).toBe("aria-label");
+      control.label = value;
+    },
     addEventListener: (name: string, fn: () => void) => {
       listeners[name] = fn;
     },
@@ -74,48 +78,55 @@ function browser(stored: string | null = null, light = false, blocked = false) {
     externalPick(value: string) {
       stored = value;
     },
-    pick(value: string) {
-      control.value = value;
-      listeners.change();
+    toggle() {
+      listeners.click();
     },
   };
 }
 
 describe("public page appearance", () => {
-  it("shares the app preference across page loads and restores system mode", () => {
+  it("shares the app preference across page loads", () => {
     const b = browser("dark", true);
     expect(b.attributes["data-theme"]).toBe("uplumo-dark");
-    expect(b.control.disabled).toBe(false);
-    b.pick("light");
+    expect(b.control.hidden).toBe(false);
+    expect(b.control.label).toBe("Switch to light theme");
+    b.toggle();
     expect(b.attributes["data-theme"]).toBe("uplumo");
     expect(b.meta.content).toBe("#fafcf9");
+    expect(b.control.label).toBe("Switch to dark theme");
     expect(b.stored()).toBe("light");
-    expect(browser(b.stored()).control.value).toBe("light");
-    b.pick("system");
-    expect(b.stored()).toBeNull();
+    expect(browser(b.stored()).attributes["data-theme"]).toBe("uplumo");
+    b.toggle();
+    expect(b.stored()).toBe("dark");
+    expect(b.attributes["data-theme"]).toBe("uplumo-dark");
+  });
+  it("follows the OS until the first click, then flips what is shown", () => {
+    const b = browser(null, true);
+    expect(b.attributes["data-theme"]).toBe("uplumo");
     b.media.matches = false;
     b.listeners.media();
     expect(b.attributes["data-theme"]).toBe("uplumo-dark");
-  });
-  it("honors OS changes only in system mode and syncs other tabs", () => {
-    const b = browser();
+    b.toggle();
+    expect(b.stored()).toBe("light");
     b.media.matches = true;
     b.listeners.media();
-    expect(b.attributes["data-theme"]).toBe("uplumo");
-    b.pick("dark");
+    b.media.matches = false;
     b.listeners.media();
-    expect(b.attributes["data-theme"]).toBe("uplumo-dark");
-    b.externalPick("light");
-    b.listeners.storage({ key: "theme-preference" });
-    expect(b.control.value).toBe("light");
     expect(b.attributes["data-theme"]).toBe("uplumo");
   });
-  it("keeps an in-page selection working when storage is blocked", () => {
+  it("syncs a choice made in another tab", () => {
+    const b = browser();
+    b.externalPick("light");
+    b.listeners.storage({ key: "theme-preference" });
+    expect(b.attributes["data-theme"]).toBe("uplumo");
+    expect(b.control.label).toBe("Switch to dark theme");
+  });
+  it("keeps an in-page choice working when storage is blocked", () => {
     const b = browser(null, false, true);
-    b.pick("light");
+    b.toggle();
     b.listeners.media();
     expect(b.attributes["data-theme"]).toBe("uplumo");
-    b.pick("system");
+    b.toggle();
     expect(b.attributes["data-theme"]).toBe("uplumo-dark");
   });
 });

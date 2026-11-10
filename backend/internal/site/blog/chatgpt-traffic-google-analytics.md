@@ -2,18 +2,31 @@
 title: "How to Track ChatGPT Traffic in Google Analytics 4 (GA4)"
 description: "Find ChatGPT traffic in GA4, check AI referrals and landing pages, troubleshoot missing visits, and measure leads with a practical tracking workflow."
 date: 2026-10-15
-updated: 2026-11-08
-author: Uplumo team
+updated: 2026-11-10
+author: James
+image: /site/blog/chatgpt-traffic-google-analytics-cover.webp
+related: how-to-rank-in-chatgpt, how-to-track-competitors-in-ai-search, seo-vs-aeo-vs-geo
 ---
 
+![Editorial illustration of an identifiable ChatGPT referral reaching website analytics and completing an event](/site/blog/chatgpt-traffic-google-analytics-cover.webp)
 
-To find ChatGPT traffic in Google Analytics 4, open **Traffic acquisition** and inspect **Session source / medium** for sources such as `chatgpt.com`. You can also check the **AI Assistant** channel documented by Google. Then review the landing pages and key events associated with those sessions to understand what visitors did after arriving.
+Someone clicks a link to your website in ChatGPT. Where should it show up in GA4, and how do you tell whether that visit turned into an enquiry?
 
-That gives you a starting point. The harder question is what to do when the report is empty, a visit appears under Direct, or people arrive without making an enquiry.
+**Open Reports → Acquisition → Traffic acquisition, then check Session source / medium for `chatgpt`.** Use the **AI Assistant** channel for a wider view. Once you identify sessions, break them down by landing page and the key event that matters to your business.
 
-This guide walks through each situation. It also explains why GPTBot activity is different from customer traffic, what you can learn about competitors, and where Uplumo can help you monitor the visits your website can identify.
+## In this guide
 
-## What counts as ChatGPT traffic?
+- [Know what counts as a ChatGPT referral](#know-what-counts-as-a-referral)
+- [Find ChatGPT traffic in GA4](#find-chatgpt-traffic-in-ga4)
+- [Break down referrals by landing page](#break-down-traffic-by-landing-page)
+- [Measure leads, signups and sales](#measure-confirmed-leads-and-sales)
+- [Troubleshoot missing or Direct traffic](#troubleshoot-missing-or-direct-traffic)
+- [Set up a custom channel when needed](#set-up-a-custom-channel-when-needed)
+- [Check Google AI Search separately](#check-google-ai-search-separately)
+- [Monitor AI referrals in Uplumo](#monitor-ai-referrals-in-uplumo)
+- [Frequently asked questions](#frequently-asked-questions)
+
+## Know what counts as a referral
 
 ChatGPT referral traffic is a person clicking a link in ChatGPT and visiting your website. GA4 needs a working measurement setup and usable attribution information to report that visit and its source.
 
@@ -28,7 +41,7 @@ A brand mention inside an answer is different. So is a crawler fetching a page.
 
 A website can receive a citation without a click. It can also receive crawler requests without any human visitor arriving. Keep these measurements separate when reporting results.
 
-## 1. Find ChatGPT traffic in Google Analytics
+## Find ChatGPT traffic in GA4
 
 ### Check the AI Assistant channel first
 
@@ -40,6 +53,10 @@ In GA4:
 2. Choose a date range that covers the visits you want to investigate.
 3. Inspect **Session default channel group** for **AI Assistant**.
 4. Switch to **Session source / medium** to inspect the individual sources.
+
+![GA4 navigation diagram from Traffic acquisition to session source and the ChatGPT filter](/site/blog/ga4-chatgpt-traffic-path.webp)
+
+*The channel groups multiple assistants. Use the session source to isolate ChatGPT.*
 
 If you do not see an AI Assistant row, continue with the source check below. An absent row alone does not establish that nobody arrived from an AI assistant.
 
@@ -53,7 +70,7 @@ Use session-scoped dimensions for this task. **First user source** answers a dif
 
 Before exporting a result, check that a country filter, comparison or short date range has not excluded the sessions you are looking for.
 
-## 2. Build a ChatGPT traffic analysis by landing page
+## Break down traffic by landing page
 
 Finding the source is useful. Knowing which page brought someone in gives you something to work on.
 
@@ -70,7 +87,7 @@ For a software company, visits might arrive on a comparison article. A useful ne
 
 Treat landing-page paths carefully when exporting reports. Query strings can contain unnecessary identifiers or personal information if your website has been configured poorly. Do not collect or share sensitive information in page URLs.
 
-## 3. Measure enquiries, not just visits
+## Measure confirmed leads and sales
 
 Choose the action that matters to your business. It might be a completed enquiry, a trial signup or a purchase.
 
@@ -91,7 +108,7 @@ With only a handful of sessions, report the counts alongside any conversion rate
 
 If visits are arriving but enquiries are missing, use our [guide to diagnosing clicks without leads](https://uplumo.com/blog/why-website-not-ranking-google#problem-clicks-but-no-leads--can-the-right-visitor-take-the-next-step) to review the page and its next step.
 
-## 4. Why is ChatGPT traffic missing or showing as Direct?
+## Troubleshoot missing or direct traffic
 
 Work through the evidence before changing your tracking setup.
 
@@ -105,11 +122,15 @@ Work through the evidence before changing your tracking setup.
 
 Links opened from apps, copied addresses and privacy controls can affect the information analytics receives. A deep-page Direct visit may have many explanations. It is not proof of a ChatGPT referral.
 
+![Tracking checklist separating missing source signals, missing sessions and missing lead events](/site/blog/ga4-chatgpt-attribution-check.webp)
+
+*Confirm collection first, then check attribution and the success event.*
+
 Use a controlled test to check the implementation: open an actual link to your website from an assistant, note the destination and any parameters, and verify whether the pageview is recorded under the consent conditions you use. Do not assume your test session represents the attribution of every visitor.
 
 **No analytics tool can reliably identify the origin of every visit when the necessary source information is absent.** Reading supported referrers and campaign tags improves classification where those signals exist. It cannot reconstruct a missing private conversation.
 
-## 5. When should you create a custom AI channel group?
+## Set up a custom channel when needed
 
 A custom channel group is useful when you want your own source list or a consistent reporting definition across a team. You do not need to create one simply because older guides say GA4 has no AI channel.
 
@@ -141,9 +162,9 @@ Use server or CDN logs for crawler requests. Verify identity using the provider'
 
 A crawler visit does not demonstrate that your page was cited, recommended or clicked.
 
-## How do you track Google AI Mode traffic?
+## Check Google AI search separately
 
-Google's documentation places clicks from AI Mode and AI Overviews within **Organic Search**, rather than the AI Assistant channel. Search Console includes performance from these Google AI features in its overall Web search reporting.
+Google Analytics classifies traffic from AI Mode and AI Overviews as **Organic Search**. Search Console includes those experiences in overall Web search reporting. Open its separate **Generative AI performance** report to see which pages earned impressions in Google’s AI features. Use those impressions to assess visibility and GA4 organic sessions to assess visits. [Google’s Generative AI performance reports](https://developers.google.com/search/blog/2026/06/gen-ai-performance-reports)
 
 That means a filter for `chatgpt.com` will not measure AI Mode visits. An increase in Google organic traffic also does not tell you how much came specifically from AI Mode.
 
@@ -162,7 +183,7 @@ For a useful competitive review:
 
 Uplumo's AI Visibility tools support sampled answer and citation research. That can help investigate who appears alongside your brand. It does not grant access to a competitor's visitor data.
 
-Our guide to [why ChatGPT recommends competitors](https://uplumo.com/blog/chatgpt-recommends-competitors-not-my-business) explains how to turn those observations into a page-improvement plan.
+Our guide to [why ChatGPT recommends competitors](https://uplumo.com/blog/chatgpt-recommends-competitors-not-my-business) explains how to turn those observations into a page-improvement plan. To measure competitors with a repeatable prompt panel, see [how to track competitors in AI search](/blog/how-to-track-competitors-in-ai-search).
 
 ## Do you need to connect Google Analytics to ChatGPT?
 
@@ -172,7 +193,7 @@ Connecting analytics to an AI assistant is a separate task: it lets the assistan
 
 For this article's workflow, start in your analytics reports. A connector is optional and does not reveal the private prompts that sent people to your site.
 
-## How Uplumo helps you monitor AI traffic
+## Monitor AI referrals in Uplumo
 
 If you want to check recognised AI referrals alongside your site's other traffic, [Uplumo Analytics](https://uplumo.com/) offers a tracking script that identifies supported AI referrers and campaign tags. You can review the landing pages and select recorded events that your business counts as leads.
 
@@ -189,7 +210,7 @@ When you need to investigate sampled mentions and citations, use AI Visibility o
 
 ## Start with one report and one useful action
 
-Check your ChatGPT sources, choose the landing page with the clearest business relevance, and verify the action you want visitors to take.
+Check your ChatGPT sources, choose the landing page with the clearest business relevance, and verify the action you want visitors to take. If ChatGPT rarely links to you at all, start with the [AI citation checklist](/blog/how-to-get-website-cited-by-ai).
 
 If you want a separate view of recognised AI referrals, [create your free Uplumo account](https://uplumo.com/sign-up), install Analytics and select your lead events. Start with the visits you can actually measure. Use that evidence to decide which page deserves your attention next.
 

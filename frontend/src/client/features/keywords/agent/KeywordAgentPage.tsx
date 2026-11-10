@@ -4,7 +4,6 @@ import { Link } from "@tanstack/react-router";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { PageHeader } from "@/client/components/PageHeader";
 import { Button } from "@/client/components/ui/button";
 import {
   ChatMessage,
@@ -37,13 +36,8 @@ function messageText(message: UIMessage): string {
     .join("\n");
 }
 
-export function KeywordAgentPage({
-  projectId,
-  initialPrompt,
-}: {
-  projectId: string;
-  initialPrompt?: string;
-}) {
+/** The keyword AI planner, shown inside the Keyword Research page. */
+export function KeywordAgentPage({ projectId }: { projectId: string }) {
   const status = useQuery(billingStatusQueryOptions);
   const queryClient = useQueryClient();
   const [session, setSession] = useState<{
@@ -70,11 +64,11 @@ export function KeywordAgentPage({
   const isFree = status.data?.plan === "free" && !status.data.unlimited;
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-4 py-6 md:px-6">
-      <PageHeader
-        title="Keyword Research"
-        description="Ask in plain words. The agent researches, picks the keywords worth your time and tells you what to do with them."
-      />
+    <div className="flex flex-col gap-5">
+      <p className="text-sm text-muted-foreground">
+        Ask in plain words. The planner researches, picks the keywords worth
+        your time and tells you what to do with them.
+      </p>
       {isFree ? (
         <div className="rounded-xl border bg-card p-6">
           <h2 className="text-base font-semibold">
@@ -116,7 +110,6 @@ export function KeywordAgentPage({
           </div>
           <StartComposer
             projectId={projectId}
-            initialPrompt={initialPrompt}
             busy={create.isPending}
             onSend={start}
           />
@@ -140,38 +133,20 @@ function CostNote() {
 
 function StartComposer({
   projectId,
-  initialPrompt,
   busy,
   onSend,
 }: {
   projectId: string;
-  initialPrompt?: string;
   busy: boolean;
   onSend: (text: string) => void;
 }) {
-  const [draft] = useState(() =>
-    initialPrompt ? `Find keywords for "${initialPrompt}"` : "",
-  );
   return (
-    <div className="flex flex-col gap-2">
-      {draft ? (
-        <Button
-          variant="secondary"
-          size="sm"
-          className="self-start"
-          disabled={busy}
-          onClick={() => onSend(draft)}
-        >
-          {draft}
-        </Button>
-      ) : null}
-      <ChatComposer
-        busy={busy}
-        projectId={projectId}
-        onSend={onSend}
-        onStop={() => {}}
-      />
-    </div>
+    <ChatComposer
+      busy={busy}
+      projectId={projectId}
+      onSend={onSend}
+      onStop={() => {}}
+    />
   );
 }
 

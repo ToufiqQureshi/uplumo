@@ -2,10 +2,13 @@ package billing
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/toufiqqureshi/uplumo/backend/internal/plans"
@@ -55,18 +58,36 @@ func (s *Service) recordSubscriptionCharge(ctx context.Context, orgID, plan stri
 	return s.repo.recordPayment(ctx, s.repo.db, p.ID, orgID, "subscription", plan, p.Amount, p.Currency, paidAt, sourceWebhook)
 }
 
-// applyRefund keeps the ledger's refunded amount equal to Razorpay's. Razorpay
-// sends the payment's running refunded total, so redeliveries are harmless.
+// raiseRefunded sets a ledger payment's refunded amount to refunded (capped
+// at the payment) unless it is already higher. found is false when the
+// ledger has no such payment; raised is true when the amount went up.
+func (r repository) raiseRefunded(ctx context.Context, paymentID string, refunded int64) (found, raised bool, err error) {
+	var before, after int64
+	err = r.db.QueryRow(ctx, `WITH old AS (SELECT amount_refunded FROM go_billing_payments WHERE payment_id=$1 FOR UPDATE)
+		UPDATE go_billing_payments p SET amount_refunded=GREATEST(p.amount_refunded, LEAST($2, p.amount))
+		FROM old WHERE p.payment_id=$1 RETURNING old.amount_refunded, p.amount_refunded`, paymentID, refunded).Scan(&before, &after)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, false, nil
+	}
+	if err != nil {
+		return false, false, fmt.Errorf("record refund of payment %s: %w", paymentID, err)
+	}
+	return true, after > before, nil
+}
+
+// applyRefund records a refund.processed event. Its payment carries the
+// payment's running refunded total, which only grows, so redeliveries and
+// out-of-order deliveries never lower it.
 func (s *Service) applyRefund(ctx context.Context, event razorpay.Event) (WebhookResult, error) {
 	if event.Payload.Payment == nil || event.Payload.Payment.Entity.ID == "" {
 		return WebhookIgnored, nil
 	}
 	p := event.Payload.Payment.Entity
-	tag, err := s.repo.db.Exec(ctx, `UPDATE go_billing_payments SET amount_refunded=LEAST($2,amount) WHERE payment_id=$1`, p.ID, p.AmountRefunded)
+	found, _, err := s.repo.raiseRefunded(ctx, p.ID, p.AmountRefunded)
 	if err != nil {
-		return "", fmt.Errorf("record refund of payment %s: %w", p.ID, err)
+		return "", err
 	}
-	if tag.RowsAffected() == 0 {
+	if !found {
 		return WebhookIgnored, nil
 	}
 	return WebhookProcessed, nil
@@ -77,11 +98,14 @@ type SyncResult struct {
 	Subscriptions int `json:"subscriptions"`
 	Added         int `json:"added"`
 	Failed        int `json:"failed"`
+	// RefundsUpdated counts ledger payments whose refunded amount went up.
+	RefundsUpdated int `json:"refundsUpdated"`
 }
 
 // SyncSubscriptionPayments copies the paid invoices of every stored
 // subscription into the ledger, for charges made before webhooks recorded
-// them. It only reads from Razorpay and is safe to run again.
+// them, then brings every ledger payment's refunded amount up to Razorpay's.
+// It only reads from Razorpay and is safe to run again.
 func (s *Service) SyncSubscriptionPayments(ctx context.Context) (SyncResult, error) {
 	var result SyncResult
 	if !s.PaymentsConfigured() {
@@ -126,5 +150,117 @@ func (s *Service) SyncSubscriptionPayments(ctx context.Context) (SyncResult, err
 			result.Added += int(tag.RowsAffected())
 		}
 	}
+	updated, err := s.syncRefunds(ctx)
+	result.RefundsUpdated = updated
+	if err != nil {
+		return result, err
+	}
 	return result, nil
+}
+
+// syncRefunds sums the processed refunds of every ledger payment since the
+// first one and raises the ledger to match, for refunds whose webhook never
+// arrived. It returns how many payments changed.
+func (s *Service) syncRefunds(ctx context.Context) (int, error) {
+	var first *time.Time
+	if err := s.repo.db.QueryRow(ctx, `SELECT min(paid_at) FROM go_billing_payments`).Scan(&first); err != nil {
+		return 0, fmt.Errorf("find first payment: %w", err)
+	}
+	if first == nil {
+		return 0, nil
+	}
+	refunds, truncated, err := s.razorpay.ListRefunds(ctx, *first, time.Now())
+	if err != nil {
+		return 0, fmt.Errorf("sync refunds: %w: %w", ErrPaymentProvider, err)
+	}
+	if truncated {
+		slog.WarnContext(ctx, "razorpay refund sync read only the first 1,000 refunds")
+	}
+	refunded := map[string]int64{}
+	for _, r := range refunds {
+		if r.Status == "processed" && r.PaymentID != "" && r.Amount > 0 {
+			refunded[r.PaymentID] += r.Amount
+		}
+	}
+	updated := 0
+	for paymentID, amount := range refunded {
+		_, raised, err := s.repo.raiseRefunded(ctx, paymentID, amount)
+		if err != nil {
+			return updated, err
+		}
+		if raised {
+			updated++
+		}
+	}
+	return updated, nil
+}
+
+// failedPaymentsWindow is how far back the staff console lists failed payments.
+const failedPaymentsWindow = 30 * 24 * time.Hour
+
+// FailedPayment is one payment attempt that did not go through.
+type FailedPayment struct {
+	ID       string    `json:"id"`
+	Email    string    `json:"email"`
+	Method   string    `json:"method"`
+	Amount   int64     `json:"amount"`
+	Currency string    `json:"currency"`
+	Reason   string    `json:"reason"`
+	Code     string    `json:"code"`
+	At       time.Time `json:"at"`
+	// PaidLater is true when the same order, or the same email, has a
+	// captured payment after this attempt: the customer is not lost.
+	PaidLater bool `json:"paidLater"`
+}
+
+// FailedPayments lists failed payments of the last 30 days, newest first.
+type FailedPayments struct {
+	Since     time.Time       `json:"since"`
+	Payments  []FailedPayment `json:"payments"`
+	Truncated bool            `json:"truncated"`
+}
+
+// ListFailedPayments reads failed payment attempts from Razorpay so the owner
+// can follow up with customers who tried to pay and could not. It only reads.
+func (s *Service) ListFailedPayments(ctx context.Context, now time.Time) (FailedPayments, error) {
+	if !s.PaymentsConfigured() {
+		return FailedPayments{}, ErrPaymentUnavailable
+	}
+	since := now.Add(-failedPaymentsWindow)
+	all, truncated, err := s.razorpay.ListPayments(ctx, since, now)
+	if err != nil {
+		return FailedPayments{}, fmt.Errorf("list failed payments: %w: %w", ErrPaymentProvider, err)
+	}
+	out := FailedPayments{Since: since, Payments: []FailedPayment{}, Truncated: truncated}
+	for _, p := range all {
+		if p.Status != "failed" {
+			continue
+		}
+		out.Payments = append(out.Payments, FailedPayment{
+			ID:        p.ID,
+			Email:     p.Email,
+			Method:    p.Method,
+			Amount:    p.Amount,
+			Currency:  p.Currency,
+			Reason:    p.ErrorDescription,
+			Code:      p.ErrorReason,
+			At:        time.Unix(p.CreatedAt, 0).UTC(),
+			PaidLater: paidLater(p, all),
+		})
+	}
+	return out, nil
+}
+
+// paidLater reports whether failed has a captured payment after it on the
+// same order or from the same email.
+func paidLater(failed razorpay.PaymentAttempt, all []razorpay.PaymentAttempt) bool {
+	for _, p := range all {
+		if p.Status != "captured" && p.Status != "refunded" || p.CreatedAt < failed.CreatedAt {
+			continue
+		}
+		if (failed.OrderID != "" && p.OrderID == failed.OrderID) || (failed.Email != "" && strings.EqualFold(p.Email, failed.Email)) {
+			return true
+		}
+	}
+	return false
 }

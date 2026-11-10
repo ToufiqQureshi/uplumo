@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { type QueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -7,25 +7,28 @@ import { Checkbox } from "@/client/components/ui/checkbox";
 import { apiRequest } from "@/client/lib/uplumoApi";
 import { contentAuthorsQueryOptions } from "./authorsApi";
 import { fetchLinkSuggestions, applySuggestion } from "./linkSuggestions";
+import { BlogThemeCard, ExportCard } from "./ExportCards";
 import { useFreeSeoEditor } from "./FreeSeoEditorContext";
 import type { ContentDraftInput } from "./scoring";
 
 /**
  * PublishTabPanel is the free-pack block for the editor's Publish tab: the
  * author and review-date card, structured-data toggles plus live preview,
- * and the existing PublishToSite at the end. The side panel mounts it with
+ * the existing PublishToSite, then export and the project's blog theme. The side panel mounts it with
  * one line, and every state change goes through the editors' own save flow.
  */ export function PublishTabPanel({
   projectId,
   draftId,
   draft,
   editorBusy,
+  hasUnsavedChanges,
   publishToSite,
 }: {
   projectId: string;
   draftId: string | undefined;
   draft: ContentDraftInput;
   editorBusy: boolean;
+  hasUnsavedChanges: boolean;
   // publishToSite renders the existing publish button block with the
   // schema flags this card owns.
   publishToSite: (schema?: {
@@ -34,6 +37,7 @@ import type { ContentDraftInput } from "./scoring";
   }) => React.ReactNode;
 }) {
   const [schema, setSchema] = useState({ article: true, faq: true });
+  const preview = useSchemaPreview(projectId, draftId, schema);
   return (
     <div className="space-y-3">
       <AuthorReviewCard
@@ -48,6 +52,12 @@ import type { ContentDraftInput } from "./scoring";
         onSchemaChange={setSchema}
       />
       {publishToSite(schema)}
+      <ExportCard
+        projectId={projectId}
+        draft={draft}
+        schemas={hasUnsavedChanges ? undefined : preview.data?.schemas}
+      />
+      <BlogThemeCard projectId={projectId} />
     </div>
   );
 }
@@ -122,18 +132,26 @@ const schemaPreviewSchema = z.object({
   skipped: z.string(),
 });
 
-function StructuredDataCard({
-  projectId,
-  draftId,
-  schema,
-  onSchemaChange,
-}: {
-  projectId: string;
-  draftId: string | undefined;
-  schema: { article: boolean; faq: boolean };
-  onSchemaChange: (next: { article: boolean; faq: boolean }) => void;
-}) {
-  const preview = useQuery({
+// Structured data is built from the saved draft, so each save makes the
+// preview (and the .html export that uses it) out of date.
+export function refreshSchemaPreview(
+  queryClient: QueryClient,
+  projectId: string,
+  draftId: string,
+) {
+  void queryClient.invalidateQueries({
+    queryKey: ["schemaPreview", projectId, draftId],
+  });
+}
+
+// The JSON-LD of the last saved draft; the Structured data card and the
+// export share one request through the query key.
+function useSchemaPreview(
+  projectId: string,
+  draftId: string | undefined,
+  schema: { article: boolean; faq: boolean },
+) {
+  return useQuery({
     queryKey: ["schemaPreview", projectId, draftId, schema],
     enabled: !!draftId,
     queryFn: () =>
@@ -145,6 +163,20 @@ function StructuredDataCard({
       ),
     retry: false,
   });
+}
+
+function StructuredDataCard({
+  projectId,
+  draftId,
+  schema,
+  onSchemaChange,
+}: {
+  projectId: string;
+  draftId: string | undefined;
+  schema: { article: boolean; faq: boolean };
+  onSchemaChange: (next: { article: boolean; faq: boolean }) => void;
+}) {
+  const preview = useSchemaPreview(projectId, draftId, schema);
   const blocks = preview.data?.schemas ?? [];
   return (
     <section className="space-y-3 rounded-lg border border-border bg-card p-4">

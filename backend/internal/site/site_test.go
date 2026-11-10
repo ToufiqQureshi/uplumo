@@ -9,8 +9,11 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
+
+	planCatalog "github.com/toufiqqureshi/uplumo/backend/internal/plans"
 )
 
 func newSite(t *testing.T, publicURL *url.URL) *Site {
@@ -116,7 +119,7 @@ func TestPagesCarryTheirMetadata(t *testing.T) {
 				`<meta property="og:image" content="https://uplumo.com/site/social-card.png?v=` + s.versions["social-card.png"] + `">`,
 				`<meta name="twitter:card" content="summary_large_image">`,
 				`href="/sign-up"`,
-				`aria-label="Color theme"`,
+				`<button class="theme-toggle" id="site-theme" type="button"`,
 				`src="/site/theme.js?v=` + s.versions["theme.js"] + `"`,
 				"₹999",
 				"₹2,499",
@@ -152,6 +155,28 @@ func TestPagesCarryTheirMetadata(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// Pages served to every visitor carry no visible prices, so their plan
+// offers are in US dollars, the global currency, never rupees alone.
+func TestSharedPagesDescribePlansInDollars(t *testing.T) {
+	s := newSite(t, &url.URL{Scheme: "https", Host: "uplumo.com"})
+	pages := map[string]*httptest.ResponseRecorder{"/blog": get(s.ServeBlog, "/blog", nil)}
+	for _, path := range InfoPaths() {
+		pages[path] = get(s.ServeInfo, path, nil)
+	}
+	want := plansFor(planCatalog.USD)
+	for path, rec := range pages {
+		offers := parseJSONLD(t, rec.Body.String()).Graph[1].Offers
+		if len(offers) != len(want) {
+			t.Fatalf("%s has %d offers, want %d", path, len(offers), len(want))
+		}
+		for i, o := range offers {
+			if o.Currency != "USD" || o.Price != strconv.Itoa(want[i].Amount) {
+				t.Errorf("%s offer %d = %+v, want %d USD from the plan catalog", path, i, o, want[i].Amount)
+			}
+		}
 	}
 }
 
@@ -281,13 +306,30 @@ func TestPagesHaveNoDeadLinks(t *testing.T) {
 	blogSourceHosts := map[string]bool{
 		"developers.google.com": true,
 		"developers.openai.com": true,
+		"support.claude.com":    true,
 		"support.google.com":    true,
 		"www.google.com":        true,
+		"www.indexnow.org":      true,
 		"www.reddit.com":        true,
 		"www.w3.org":            true,
 		"www.semrush.com":       true,
 		"ahrefs.com":            true,
+		"help.ahrefs.com":       true,
+		"peec.ai":               true,
+		"docs.tryprofound.com":  true,
+		"docs.perplexity.ai":    true,
+		"blogs.bing.com":        true,
 		"ubersuggest.com":       true,
+		"otterly.ai":            true,
+		"athenahq.ai":           true,
+		"scrunch.com":           true,
+		"higoodie.com":          true,
+		"rankscale.ai":          true,
+		"seranking.com":         true,
+		"www.airops.com":        true,
+		"www.hubspot.com":       true,
+		"www.tryprofound.com":   true,
+		"moz.com":               true,
 	}
 	// The privacy policy must point at Google's own policy and at the page
 	// where a user removes our access. Any other outside link is a mistake.
@@ -383,6 +425,51 @@ func TestRobotsAndSitemap(t *testing.T) {
 	for _, path := range want {
 		if !got["https://uplumo.com"+path] {
 			t.Errorf("sitemap lacks %s", path)
+		}
+	}
+
+	// The signed-in app is kept out, and no rule may catch a sitemap page.
+	for _, rule := range []string{"Disallow: /p/\n", "Disallow: /settings\n", "Disallow: /billing\n", "Disallow: /ai$\n"} {
+		if !strings.Contains(body, rule) {
+			t.Errorf("robots.txt lacks %q", rule)
+		}
+	}
+	for _, path := range want {
+		for _, line := range strings.Split(body, "\n") {
+			rule, ok := strings.CutPrefix(line, "Disallow: ")
+			exact, isExact := strings.CutSuffix(rule, "$")
+			if ok && ((isExact && path == exact) || (!isExact && strings.HasPrefix(path, rule))) {
+				t.Errorf("robots.txt rule %q blocks public page %s", line, path)
+			}
+		}
+	}
+
+	// Every post lists its cover, which must be served, and the blog index
+	// carries the newest post date.
+	var images struct {
+		URLs []struct {
+			Loc     string `xml:"loc"`
+			LastMod string `xml:"lastmod"`
+			Image   string `xml:"image>loc"`
+		} `xml:"url"`
+	}
+	if err := xml.Unmarshal(sitemap.Body.Bytes(), &images); err != nil {
+		t.Fatal(err)
+	}
+	newest := ""
+	for _, u := range images.URLs {
+		if !strings.HasPrefix(u.Loc, "https://uplumo.com/blog/") {
+			continue
+		}
+		newest = max(newest, u.LastMod)
+		path := strings.TrimPrefix(u.Image, "https://uplumo.com")
+		if u.Image == "" || get(s.ServeAsset, path, nil).Code != http.StatusOK {
+			t.Errorf("%s image %q is missing or not served", u.Loc, u.Image)
+		}
+	}
+	for _, u := range images.URLs {
+		if u.Loc == "https://uplumo.com/blog" && u.LastMod != newest {
+			t.Errorf("blog index lastmod = %q, want newest post %q", u.LastMod, newest)
 		}
 	}
 }

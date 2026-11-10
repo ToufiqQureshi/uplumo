@@ -49,7 +49,7 @@
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--fg);font:1rem/1.6 var(--sans);-webkit-font-smoothing:antialiased}
 a{color:inherit}
-a:focus-visible,summary:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:6px}
+a:focus-visible,summary:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:6px}
 img,svg{display:block}
 h1,h2,h3{font-family:var(--serif);font-weight:400;margin:0}
 h1{font-size:clamp(3rem,10vw,7.5rem);line-height:.95;letter-spacing:-.03em}
@@ -69,8 +69,12 @@ em{font-style:italic;color:var(--pink)}
 .nav{display:flex;flex-wrap:wrap;align-items:center;gap:.375rem;min-height:78px}
 .brand{display:flex;align-items:center;gap:.625rem;font-family:var(--serif);font-size:1.875rem;line-height:1;text-decoration:none;margin-right:auto}
 .nav a.link{display:inline-flex;align-items:center;min-height:44px;padding:0 .875rem;font-size:.875rem;font-weight:500;color:var(--muted);text-decoration:none}
-.theme-control{display:inline-flex;align-items:center;gap:.4rem;font-size:.8125rem;color:var(--muted)}
-.theme-control select{min-height:44px;max-width:6rem;padding:0 .4rem;border:1px solid var(--strong);border-radius:10px;background:var(--card);color:var(--fg);font:inherit;cursor:pointer}
+.theme-toggle{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;border:0;border-radius:10px;background:transparent;color:var(--muted);cursor:pointer}
+.theme-toggle[hidden]{display:none}
+.theme-toggle:hover{color:var(--fg);background:var(--raised)}
+.theme-toggle svg{width:20px;height:20px}
+.theme-toggle .moon,:root[data-theme="uplumo"] .theme-toggle .sun{display:none}
+:root[data-theme="uplumo"] .theme-toggle .moon{display:block}
 .nav a.link:hover,.nav a.link[aria-current=page]{color:var(--fg)}
 .btn{display:inline-flex;align-items:center;justify-content:center;min-height:56px;padding:0 1.75rem;border-radius:12px;font-size:1.0625rem;font-weight:600;text-decoration:none;text-align:center;border:1px solid var(--lime);background:var(--lime);color:var(--ink)}
 .btn-ghost{background:transparent;border-color:var(--strong);color:var(--fg);font-weight:500}
@@ -184,9 +188,12 @@ footer .legal{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--bord
 .posts a:hover{border-color:var(--strong)}
 .posts h2{font-size:clamp(1.5rem,3.5vw,2rem);line-height:1.1}
 .posts p{color:var(--muted);margin-top:.5rem}
+.related{margin-top:4rem;padding-top:2rem;border-top:1px solid var(--border)}
+.related .posts{margin-top:1.5rem}
+.posts h3{font-size:1.25rem;line-height:1.2}
 .meta{font-family:var(--mono);font-size:.75rem;color:var(--faint);margin-top:1rem}
 @media (max-width:50rem){.plan-grid{grid-template-columns:1fr}}
-@media (max-width:30rem){.theme-control>span{display:none}.nav{column-gap:.2rem}.nav a.link{padding:0 .4rem}.nav>.btn{padding:0 .7rem}.nav a.link.hide-sm{display:none}.window{box-shadow:6px 6px 0 var(--lime)}}
+@media (max-width:30rem){.nav{column-gap:.2rem}.nav a.link{padding:0 .4rem}.nav>.btn{padding:0 .7rem}.nav a.link.hide-sm{display:none}.window{box-shadow:6px 6px 0 var(--lime)}}
 @media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
 </style>
 </head>
@@ -201,10 +208,10 @@ footer .legal{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--bord
 <a class="link hide-sm" href="/pricing" data-uplumo-event="pricing_open"{{if eq .Path "/pricing"}} aria-current="page"{{end}}>Pricing</a>
 <a class="link hide-sm" href="/blog"{{if eq .Path "/blog"}} aria-current="page"{{end}}>Blog</a>
 <a class="link hide-sm" href="/about"{{if eq .Path "/about"}} aria-current="page"{{end}}>About</a>
-<label class="theme-control" for="site-theme"><span>Theme</span>
-<select id="site-theme" aria-label="Color theme" disabled>
-<option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option>
-</select></label>
+<button class="theme-toggle" id="site-theme" type="button" aria-label="Switch theme" hidden>
+<svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+<svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+</button>
 <a class="link" href="/sign-in">Log in</a>
 <a class="btn btn-sm" href="{{.SignUp}}" data-uplumo-event="signup_click">Start free</a>
 </nav>

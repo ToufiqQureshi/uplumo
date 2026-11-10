@@ -12,6 +12,7 @@ const featureSchema = z.enum([
   "ai_assistant",
   "ai_writing",
   "cite_fix",
+  "local_visibility",
 ]);
 
 export type CreditFeature = z.infer<typeof featureSchema>;
@@ -58,6 +59,7 @@ const FEATURE_LABELS: Record<CreditFeature | "other", string> = {
   ai_assistant: "AI assistant",
   ai_writing: "AI writing",
   cite_fix: "Cite Fix agent",
+  local_visibility: "Local Visibility",
   other: "Other",
 };
 

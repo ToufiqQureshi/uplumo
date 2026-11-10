@@ -32,7 +32,43 @@ export const contentEditorQueryKeys = {
   drafts: (projectId: string) => ["contentDrafts", projectId] as const,
   draft: (projectId: string, draftId: string) =>
     ["contentDraft", projectId, draftId] as const,
+  blogTheme: (projectId: string) => ["contentBlogTheme", projectId] as const,
 };
+
+/** Largest blog theme the server stores; matches contenteditor.MaxThemeCSS. */
+export const MAX_THEME_CSS_BYTES = 100 * 1024;
+
+const blogThemeSchema = z.object({
+  css: z.string(),
+  updatedAt: z.string().nullable(),
+});
+
+export type BlogTheme = z.infer<typeof blogThemeSchema>;
+
+export function getBlogTheme(projectId: string) {
+  return apiRequest(
+    `/api/v1/projects/${encodeURIComponent(projectId)}/content/theme/get`,
+    blogThemeSchema,
+    "POST",
+    {},
+  );
+}
+
+/** Saves the project's blog CSS; an empty string removes it. */
+export function saveBlogTheme({
+  projectId,
+  css,
+}: {
+  projectId: string;
+  css: string;
+}) {
+  return apiRequest(
+    `/api/v1/projects/${encodeURIComponent(projectId)}/content/theme/save`,
+    blogThemeSchema,
+    "POST",
+    { css },
+  );
+}
 
 export function getContentWriterStatus() {
   return apiRequest(
