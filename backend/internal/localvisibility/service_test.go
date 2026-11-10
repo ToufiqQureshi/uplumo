@@ -142,6 +142,10 @@ func (l *fakeLLM) Stream(_ context.Context, req openrouter.Request, _ openrouter
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.calls++
+	if req.ReasoningEffort != "none" {
+		// A thinking model spends the whole budget before answering.
+		return openrouter.Result{FinishReason: "length", Usage: openrouter.Usage{CompletionTokens: req.MaxTokens, CostUSD: 0.004}}, nil
+	}
 	return openrouter.Result{Text: l.text(req), Usage: openrouter.Usage{CostUSD: 0.0004}}, nil
 }
 
