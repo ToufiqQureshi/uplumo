@@ -747,8 +747,6 @@ func landingFAQ() []QA {
 		{"Does AI Visibility cover every answer?", "No. Brand Lookup uses provider datasets with engine and market limits. " +
 			"Prompt Explorer compares selected prompts across supported models; API answers may differ from consumer apps. " +
 			"Saved tracking measures your chosen questions, not every private AI conversation."},
-		{"What does Cite Fix tell me?", "It reviews signals from a completed site audit and saved citation evidence to prioritise page improvements. " +
-			"Its score is a diagnostic checklist, not an official AI ranking or a guarantee of citations. Optional page analysis and rewriting use credits."},
 		{"Will Uplumo guarantee rankings or sales?", "No. Uplumo provides research, measurement and suggested improvements. " +
 			"Search engines and AI platforms decide what appears; content scores and observed traffic do not guarantee customers or revenue."},
 		{"Does the tracker need a cookie banner?", "The tracker sets no cookies and stores no IP addresses. " +

@@ -56,9 +56,6 @@ func TestApprovedDataForSEOCostScenarios(t *testing.T) {
 	if got := OnPageJavaScriptCostUSD(20); got != 0.03 {
 		t.Fatalf("20 JavaScript pages cost $%v, want $0.03", got)
 	}
-	if got := GoogleAIOverviewBatchCostUSD(10, 10); got != 0.012 {
-		t.Fatalf("10 Google AI Overview questions cost $%v, want $0.012", got)
-	}
 }
 
 func TestEstimateUSDForApprovedBriefCalls(t *testing.T) {

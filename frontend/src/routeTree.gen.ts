@@ -47,7 +47,6 @@ import { Route as AppPProjectIdAiSentimentRouteImport } from './routes/_app/p/$p
 import { Route as AppPProjectIdAnalyticsRouteImport } from './routes/_app/p/$projectId/analytics'
 import { Route as AppPProjectIdBacklinksRouteImport } from './routes/_app/p/$projectId/backlinks'
 import { Route as AppPProjectIdBrandLookupRouteImport } from './routes/_app/p/$projectId/brand-lookup'
-import { Route as AppPProjectIdCiteFixRouteImport } from './routes/_app/p/$projectId/cite-fix'
 import { Route as AppPProjectIdContentEditorRouteImport } from './routes/_app/p/$projectId/content-editor'
 import { Route as AppPProjectIdContextRouteImport } from './routes/_app/p/$projectId/context'
 import { Route as AppPProjectIdDomainRouteImport } from './routes/_app/p/$projectId/domain'
@@ -265,11 +264,6 @@ const AppPProjectIdBrandLookupRoute =
     path: '/brand-lookup',
     getParentRoute: () => AppPProjectIdRouteRoute,
   } as any)
-const AppPProjectIdCiteFixRoute = AppPProjectIdCiteFixRouteImport.update({
-  id: '/cite-fix',
-  path: '/cite-fix',
-  getParentRoute: () => AppPProjectIdRouteRoute,
-} as any)
 const AppPProjectIdContentEditorRoute =
   AppPProjectIdContentEditorRouteImport.update({
     id: '/content-editor',
@@ -443,7 +437,6 @@ export interface FileRoutesByFullPath {
   '/p/$projectId/analytics': typeof AppPProjectIdAnalyticsRoute
   '/p/$projectId/backlinks': typeof AppPProjectIdBacklinksRoute
   '/p/$projectId/brand-lookup': typeof AppPProjectIdBrandLookupRoute
-  '/p/$projectId/cite-fix': typeof AppPProjectIdCiteFixRoute
   '/p/$projectId/content-editor': typeof AppPProjectIdContentEditorRoute
   '/p/$projectId/context': typeof AppPProjectIdContextRoute
   '/p/$projectId/domain': typeof AppPProjectIdDomainRoute
@@ -502,7 +495,6 @@ export interface FileRoutesByTo {
   '/p/$projectId/analytics': typeof AppPProjectIdAnalyticsRoute
   '/p/$projectId/backlinks': typeof AppPProjectIdBacklinksRoute
   '/p/$projectId/brand-lookup': typeof AppPProjectIdBrandLookupRoute
-  '/p/$projectId/cite-fix': typeof AppPProjectIdCiteFixRoute
   '/p/$projectId/content-editor': typeof AppPProjectIdContentEditorRoute
   '/p/$projectId/context': typeof AppPProjectIdContextRoute
   '/p/$projectId/domain': typeof AppPProjectIdDomainRoute
@@ -566,7 +558,6 @@ export interface FileRoutesById {
   '/_app/p/$projectId/analytics': typeof AppPProjectIdAnalyticsRoute
   '/_app/p/$projectId/backlinks': typeof AppPProjectIdBacklinksRoute
   '/_app/p/$projectId/brand-lookup': typeof AppPProjectIdBrandLookupRoute
-  '/_app/p/$projectId/cite-fix': typeof AppPProjectIdCiteFixRoute
   '/_app/p/$projectId/content-editor': typeof AppPProjectIdContentEditorRoute
   '/_app/p/$projectId/context': typeof AppPProjectIdContextRoute
   '/_app/p/$projectId/domain': typeof AppPProjectIdDomainRoute
@@ -630,7 +621,6 @@ export interface FileRouteTypes {
     | '/p/$projectId/analytics'
     | '/p/$projectId/backlinks'
     | '/p/$projectId/brand-lookup'
-    | '/p/$projectId/cite-fix'
     | '/p/$projectId/content-editor'
     | '/p/$projectId/context'
     | '/p/$projectId/domain'
@@ -689,7 +679,6 @@ export interface FileRouteTypes {
     | '/p/$projectId/analytics'
     | '/p/$projectId/backlinks'
     | '/p/$projectId/brand-lookup'
-    | '/p/$projectId/cite-fix'
     | '/p/$projectId/content-editor'
     | '/p/$projectId/context'
     | '/p/$projectId/domain'
@@ -752,7 +741,6 @@ export interface FileRouteTypes {
     | '/_app/p/$projectId/analytics'
     | '/_app/p/$projectId/backlinks'
     | '/_app/p/$projectId/brand-lookup'
-    | '/_app/p/$projectId/cite-fix'
     | '/_app/p/$projectId/content-editor'
     | '/_app/p/$projectId/context'
     | '/_app/p/$projectId/domain'
@@ -1060,13 +1048,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPProjectIdBrandLookupRouteImport
       parentRoute: typeof AppPProjectIdRouteRoute
     }
-    '/_app/p/$projectId/cite-fix': {
-      id: '/_app/p/$projectId/cite-fix'
-      path: '/cite-fix'
-      fullPath: '/p/$projectId/cite-fix'
-      preLoaderRoute: typeof AppPProjectIdCiteFixRouteImport
-      parentRoute: typeof AppPProjectIdRouteRoute
-    }
     '/_app/p/$projectId/content-editor': {
       id: '/_app/p/$projectId/content-editor'
       path: '/content-editor'
@@ -1295,7 +1276,6 @@ interface AppPProjectIdRouteRouteChildren {
   AppPProjectIdAnalyticsRoute: typeof AppPProjectIdAnalyticsRoute
   AppPProjectIdBacklinksRoute: typeof AppPProjectIdBacklinksRoute
   AppPProjectIdBrandLookupRoute: typeof AppPProjectIdBrandLookupRoute
-  AppPProjectIdCiteFixRoute: typeof AppPProjectIdCiteFixRoute
   AppPProjectIdContentEditorRoute: typeof AppPProjectIdContentEditorRoute
   AppPProjectIdContextRoute: typeof AppPProjectIdContextRoute
   AppPProjectIdDomainRoute: typeof AppPProjectIdDomainRoute
@@ -1324,7 +1304,6 @@ const AppPProjectIdRouteRouteChildren: AppPProjectIdRouteRouteChildren = {
   AppPProjectIdAnalyticsRoute: AppPProjectIdAnalyticsRoute,
   AppPProjectIdBacklinksRoute: AppPProjectIdBacklinksRoute,
   AppPProjectIdBrandLookupRoute: AppPProjectIdBrandLookupRoute,
-  AppPProjectIdCiteFixRoute: AppPProjectIdCiteFixRoute,
   AppPProjectIdContentEditorRoute: AppPProjectIdContentEditorRoute,
   AppPProjectIdContextRoute: AppPProjectIdContextRoute,
   AppPProjectIdDomainRoute: AppPProjectIdDomainRoute,

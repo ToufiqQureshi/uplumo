@@ -13,6 +13,12 @@ priorities, corrections, and what still waits on him. Read it after
   decision, remove it when he answers.
 - Never write secrets, keys or customer data here.
 
+## 10 Nov 2026: Cite Fix removed completely (Claude)
+
+- Owner: "remove cite fix", "complete remove kar", "db me table hs ye sab hata de mene bola completeley". Cite Fix may return later; it comes back from git history, not from kept code or tables.
+- Removed: backend `citefix` package, routes, MCP/Lumo `get_cite_fix_report`, spend feature, billing rows, catalog caps, sidebar, page, e2e tests, Analytics link, landing/about/privacy/terms/FAQ/blog mentions. Migration 00058 drops the five `go_citefix_*` tables. Audit citation signals and JS render rows stay (the audit uses them).
+- Owner wants it merged and deployed fast.
+
 ## 9 Nov 2026: blog content must rank on Google and in AI answers
 
 - Owner: "valueble and rankable content hi hona chahiye jisse uplumo ko users miley". Asked for an SEO pass on PR #291 using DataForSEO keyword data.

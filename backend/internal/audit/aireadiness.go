@@ -18,7 +18,7 @@ import (
 const maxLDJSONBytes = 256 * 1024
 
 // AIPageSignals are the per-page facts the AI checks need. Everything but
-// Phones is stored with the page (citation_signals_json) for Cite Fix.
+// Phones is stored with the page (citation_signals_json).
 type AIPageSignals struct {
 	// Version distinguishes scans which actually measured the current signals.
 	Version int `json:"version"`

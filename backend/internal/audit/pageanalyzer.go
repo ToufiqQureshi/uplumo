@@ -138,7 +138,7 @@ type analyzerState struct {
 	openQuestion     []string
 	questionHeadings int
 	phones           []string
-	// Cite Fix signals: who wrote it, when, and how the answer is shaped.
+	// Citation signals: who wrote it, when, and how the answer is shaped.
 	chromeDepth int
 	author      bool
 	published   string

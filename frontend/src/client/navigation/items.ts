@@ -19,7 +19,6 @@ import {
   MessageSquare,
   MessagesSquare,
   PenLine,
-  Quote,
   Search,
   Sparkles,
   TrendingUp,
@@ -107,12 +106,6 @@ const projectNavItems = [
     to: "/p/$projectId/rank-tracking" as const,
     label: "Rank Tracking",
     icon: TrendingUp,
-  },
-  {
-    to: "/p/$projectId/cite-fix" as const,
-    label: "Cite Fix",
-    icon: Quote,
-    badge: "New",
   },
   {
     to: "/p/$projectId/audit" as const,
@@ -282,7 +275,6 @@ export function getProjectNavGroups(projectId: string): NavGroup[] {
     {
       label: "Your website",
       items: [
-        item("/p/$projectId/cite-fix"),
         item("/p/$projectId/audit"),
         item("/p/$projectId/rank-tracking"),
         item("/p/$projectId/content-editor"),

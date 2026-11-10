@@ -51,19 +51,6 @@ func TestPublishedMaximumsMatchTheirWorstCaseHolds(t *testing.T) {
 			}
 			continue
 		}
-		if cost.Feature == spend.CiteFix && cost.Action == ActionGoogleAIOverview {
-			if cost.Credits != CreditsForUSD(dataforseo.GoogleAIOverviewCostUSD(10)) || cost.MaxCredits != 16 {
-				t.Errorf("Google AI Overview price = %d/%d credits, want %d/16", cost.Credits, cost.MaxCredits, CreditsForUSD(dataforseo.GoogleAIOverviewCostUSD(10)))
-			}
-			continue
-		}
-		if cost.Feature == spend.CiteFix {
-			// The Deep cap the Cite Fix page shows (citefix.DeepMaxCredits).
-			if cost.MaxCredits != 60 || cost.MaxCredits <= cost.Credits {
-				t.Errorf("cite fix max = %d credits, want the 60-credit Deep cap above the typical %d", cost.MaxCredits, cost.Credits)
-			}
-			continue
-		}
 		if cost.Feature == spend.KeywordResearch && cost.Action == ActionContentBrief {
 			// The dedicated quote test verifies this cost against its provider hold.
 			continue

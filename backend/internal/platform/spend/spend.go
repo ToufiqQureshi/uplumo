@@ -66,8 +66,6 @@ const (
 	SiteAudit       Feature = "site_audit"
 	AIAssistant     Feature = "ai_assistant"
 	AIWriting       Feature = "ai_writing"
-	// CiteFix is the Cite Fix agent's page analyses and rewrites.
-	CiteFix Feature = "cite_fix"
 	// LocalVisibility is the Google Business Profile checks: profile vs top
 	// 3, map rank grid, reviews, competitor watch and reply drafts.
 	LocalVisibility Feature = "local_visibility"
@@ -79,7 +77,7 @@ const (
 // Features lists every feature that can spend credits, in the order the
 // Billing screen shows them.
 func Features() []Feature {
-	return []Feature{RankTracking, KeywordResearch, DomainResearch, Backlinks, AIVisibility, SiteAudit, AIAssistant, AIWriting, CiteFix, LocalVisibility}
+	return []Feature{RankTracking, KeywordResearch, DomainResearch, Backlinks, AIVisibility, SiteAudit, AIAssistant, AIWriting, LocalVisibility}
 }
 
 // Request is one billed piece of provider work about to be sent.

@@ -89,7 +89,7 @@ Save the questions, run them again in each engine over several days and record w
 | AI referral visits | Uplumo Analytics or GA4 | Whether citations send people to your site |
 | Leads and signups | Lead events in Uplumo Analytics or GA4 key events | Whether those visits turn into business |
 
-In Uplumo, save your questions in **AI Visibility**, compare engines in **Prompt Explorer**, review page issues in **Cite Fix**, and check AI referrals and confirmed leads in **Analytics**. To compare tools for this job, see the [best AEO tools](/blog/best-aeo-tools).
+In Uplumo, save your questions in **AI Visibility**, compare engines in **Prompt Explorer**, review page issues in **Site Audit**, and check AI referrals and confirmed leads in **Analytics**. To compare tools for this job, see the [best AEO tools](/blog/best-aeo-tools).
 
 ## Common AEO mistakes
 

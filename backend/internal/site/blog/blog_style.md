@@ -45,7 +45,7 @@ related: pillar-slug, sibling-slug, next-step-slug
 4. **`## In this guide`** linking every major H2. Anchors are the renderer's generated IDs (lower case, spaces to hyphens, punctuation dropped). Tests check that every link has a heading.
 5. **Short H2/H3 headings that match questions people ask.** Paragraphs of 1–4 sentences. Numbered steps where order matters.
 6. **Show the work:** comparison tables, worked calculations (state the denominator), before/after examples, exact menu paths. Label illustrative data.
-7. **Bring in Uplumo at the step where it helps.** Name the feature (Prompt Explorer, AI Visibility, Cite Fix, Site Audit, Content Editor, Rank Tracking, Uplumo Analytics), what the reader sees and what they decide next. Check plan access in `backend/internal/plans/catalog.go` before writing it.
+7. **Bring in Uplumo at the step where it helps.** Name the feature (Prompt Explorer, AI Visibility, Site Audit, Content Editor, Rank Tracking, Uplumo Analytics), what the reader sees and what they decide next. Check plan access in `backend/internal/plans/catalog.go` before writing it.
 8. **`## Frequently asked questions`** with 3–4 `###` questions taken from People Also Ask and the keyword's related searches. Answers are 1–3 plain sentences. Close the section with another `##` heading (for example "Start with one page") before the call to action, because everything under the last question becomes its FAQPage answer.
 9. **End with one clear action** and the links `[Start free with Uplumo](https://uplumo.com/sign-up) · [Compare current plans](https://uplumo.com/pricing)`.
 
@@ -76,7 +76,7 @@ Uplumo is a global product. Examples must not assume one country: no single-coun
 - Diagram style: light green grid background (`#f3f8e6`), dark green headings (`#24391f`), white rounded cards with a `#e1efc6` border, a mono "eyebrow" label, an optional dark footer bar, DejaVu Sans. Size 1200 wide, 640–734 tall. Covers use a large title, a subtitle and 3–5 chips, with "Uplumo guide" bottom left.
 - Make them as HTML cards, screenshot with the pre-installed Playwright (Chromium, `deviceScaleFactor: 1`), and convert to WebP at quality ~82 with Pillow. Look at every image before committing: no overflow, no empty half, no single-country text.
 - Good diagram types: price or price-per-unit bar charts from verified data, before/after quotes, numbered step cards, "pick by the job" cards.
-- Use real Uplumo screenshots from `/site/product/` (dashboard, AI Visibility, Prompt Explorer, Cite Fix) with demo data, captioned "with demo data".
+- Use real Uplumo screenshots from `/site/product/` (dashboard, AI Visibility, Prompt Explorer) with demo data, captioned "with demo data".
 - Every image needs descriptive alt text that includes what it shows (and the keyword where natural) and a short italic caption.
 
 ## 8. Structured data (automatic)

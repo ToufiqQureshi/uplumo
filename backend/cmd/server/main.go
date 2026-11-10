@@ -28,7 +28,6 @@ import (
 	"github.com/toufiqqureshi/uplumo/backend/internal/backlinks"
 	"github.com/toufiqqureshi/uplumo/backend/internal/billing"
 	"github.com/toufiqqureshi/uplumo/backend/internal/branding"
-	"github.com/toufiqqureshi/uplumo/backend/internal/citefix"
 	"github.com/toufiqqureshi/uplumo/backend/internal/config"
 	"github.com/toufiqqureshi/uplumo/backend/internal/contentauthors"
 	"github.com/toufiqqureshi/uplumo/backend/internal/contenteditor"
@@ -348,10 +347,6 @@ func run(logger *slog.Logger) (err error) {
 	if gateSvc != nil {
 		aiTracking.Plans = gateSvc.Gate(planCatalog.AIVisibility)
 	}
-	var citeFixGoogleAIOverview citefix.GoogleAIOverviewRunner
-	if dfClient != nil {
-		citeFixGoogleAIOverview = citefix.GoogleAIOverview{DB: db, Client: dfClient, Plans: aiTracking.Plans}
-	}
 	if err := aiTracking.RunWorkers(ctx, logger); err != nil {
 		return err
 	}
@@ -434,63 +429,60 @@ func run(logger *slog.Logger) (err error) {
 	srv := &http.Server{
 		Addr: cfg.Addr,
 		Handler: httpapi.NewHandler(httpapi.Deps{
-			Logger:                  logger,
-			DB:                      db,
-			Redis:                   httpapi.PingFunc(func(ctx context.Context) error { return rdb.Ping(ctx).Err() }),
-			Auth:                    authService,
-			Analytics:               analytics.NewService(db, rdb, countryLookup),
-			TrustedProxyCIDRs:       cfg.TrustedProxyCIDRs,
-			Billing:                 gateSvc,
-			BillingRoutes:           billingRoutes,
-			Branding:                brandingSvc,
-			OpenAIAppsChallenge:     cfg.OpenAIAppsChallenge,
-			AITracking:              aiTracking,
-			AISentiment:             buildAISentiment(cfg, logger, db, spendGuard.AIMeter(spend.AIVisibility, "openrouter/"+aisearch.SentimentModel), aiTracking.Plans),
-			AISearch:                aiSearchSvc,
-			Ahrefs:                  ahrefs.New(rdb),
-			Backlinks:               backlinksSvc,
-			Domain:                  domainSvc,
-			DashboardOverview:       newDashboardOverview(db, backlinksSvc),
-			DashboardLayouts:        dashboard.Store{DB: db},
-			DashboardActions:        dashboard.Store{DB: db},
-			GoogleAccounts:          google.AccountRepository{Pool: db},
-			GoogleOAuth:             googleOAuthSvc,
-			GA4:                     ga4Svc,
-			GA4Setup:                ga4Setup,
-			GSC:                     gscService,
-			GSCConnections:          buildGSCConnectionOperations(db, googleAPIClient, googleOAuthSvc != nil),
-			ProjectMarkets:          domain.ProjectMarketRepository{DB: db},
-			Locations:               locationSvc,
-			Audit:                   auditSvc,
-			RankTracking:            rankTrackingService,
-			RankChecks:              rankChecks,
-			Projects:                &projects.Service{Store: projects.Repository{DB: db}, Plans: billingRoutes},
-			ContentEditor:           &contenteditor.Repository{DB: db},
-			ContentAuthors:          contentAuthors,
-			LinkSuggest:             linkSuggestSvc,
-			CiteFix:                 citefix.Store{DB: db, Audit: auditSvc, GoogleAIOConfigured: dfClient != nil},
-			CiteFixGoogleAIOverview: citeFixGoogleAIOverview,
-			LocalVisibility:         localVisibility,
-			CiteFixAgent:            buildCiteFixAgent(cfg, logger, db, spendGuard.AIMeter(spend.CiteFix, "openrouter/citefix"), billingRoutes.Gate(planCatalog.AIWriting), gscService),
-			SitePublish:             sitePublish,
-			IndexNow:                indexNowService,
-			ContentWriter:           buildContentWriter(cfg, logger, spendGuard.AIMeter(spend.AIWriting, "openrouter/"+contenteditor.WriterModel), billingRoutes.Gate(planCatalog.AIWriting)),
-			ContentBriefs:           buildContentBriefs(db, dfClient),
-			ProjectsRepo:            projects.Repository{DB: db},
-			ContentImages:           contentImages,
-			ContentImageLimiter:     contenteditor.RedisImageUploadLimiter{Client: rdb},
-			SAMSessions:             &sam.Service{Store: sam.Repository{DB: db}},
-			EmailAuth:               emailAuthSvc,
-			APIKeys:                 &apikeys.Service{DB: db, Auth: authService, Logger: logger},
-			SAMChat:                 samChat,
-			Onboarding:              &onboarding.Service{Store: onboarding.Repository{DB: db}},
-			Team:                    &team.Service{Limits: billingRoutes, DB: db, Redis: rdb, LoopsAPIKey: cfg.LoopsAPIKey, InvitationTemplateID: cfg.LoopsInvitationTemplateID, BaseURL: cfg.BetterAuthURL},
-			CrawlerAccess:           crawlerAccessSvc,
-			Activation:              &activation.Service{Store: activation.Repository{DB: db}},
-			SiteReports:             siteReports,
-			Reports:                 reportsSvc,
-			Support:                 supportSvc,
-			Customers:               customersSvc,
+			Logger:              logger,
+			DB:                  db,
+			Redis:               httpapi.PingFunc(func(ctx context.Context) error { return rdb.Ping(ctx).Err() }),
+			Auth:                authService,
+			Analytics:           analytics.NewService(db, rdb, countryLookup),
+			TrustedProxyCIDRs:   cfg.TrustedProxyCIDRs,
+			Billing:             gateSvc,
+			BillingRoutes:       billingRoutes,
+			Branding:            brandingSvc,
+			OpenAIAppsChallenge: cfg.OpenAIAppsChallenge,
+			AITracking:          aiTracking,
+			AISentiment:         buildAISentiment(cfg, logger, db, spendGuard.AIMeter(spend.AIVisibility, "openrouter/"+aisearch.SentimentModel), aiTracking.Plans),
+			AISearch:            aiSearchSvc,
+			Ahrefs:              ahrefs.New(rdb),
+			Backlinks:           backlinksSvc,
+			Domain:              domainSvc,
+			DashboardOverview:   newDashboardOverview(db, backlinksSvc),
+			DashboardLayouts:    dashboard.Store{DB: db},
+			DashboardActions:    dashboard.Store{DB: db},
+			GoogleAccounts:      google.AccountRepository{Pool: db},
+			GoogleOAuth:         googleOAuthSvc,
+			GA4:                 ga4Svc,
+			GA4Setup:            ga4Setup,
+			GSC:                 gscService,
+			GSCConnections:      buildGSCConnectionOperations(db, googleAPIClient, googleOAuthSvc != nil),
+			ProjectMarkets:      domain.ProjectMarketRepository{DB: db},
+			Locations:           locationSvc,
+			Audit:               auditSvc,
+			RankTracking:        rankTrackingService,
+			RankChecks:          rankChecks,
+			Projects:            &projects.Service{Store: projects.Repository{DB: db}, Plans: billingRoutes},
+			ContentEditor:       &contenteditor.Repository{DB: db},
+			ContentAuthors:      contentAuthors,
+			LinkSuggest:         linkSuggestSvc,
+			LocalVisibility:     localVisibility,
+			SitePublish:         sitePublish,
+			IndexNow:            indexNowService,
+			ContentWriter:       buildContentWriter(cfg, logger, spendGuard.AIMeter(spend.AIWriting, "openrouter/"+contenteditor.WriterModel), billingRoutes.Gate(planCatalog.AIWriting)),
+			ContentBriefs:       buildContentBriefs(db, dfClient),
+			ProjectsRepo:        projects.Repository{DB: db},
+			ContentImages:       contentImages,
+			ContentImageLimiter: contenteditor.RedisImageUploadLimiter{Client: rdb},
+			SAMSessions:         &sam.Service{Store: sam.Repository{DB: db}},
+			EmailAuth:           emailAuthSvc,
+			APIKeys:             &apikeys.Service{DB: db, Auth: authService, Logger: logger},
+			SAMChat:             samChat,
+			Onboarding:          &onboarding.Service{Store: onboarding.Repository{DB: db}},
+			Team:                &team.Service{Limits: billingRoutes, DB: db, Redis: rdb, LoopsAPIKey: cfg.LoopsAPIKey, InvitationTemplateID: cfg.LoopsInvitationTemplateID, BaseURL: cfg.BetterAuthURL},
+			CrawlerAccess:       crawlerAccessSvc,
+			Activation:          &activation.Service{Store: activation.Repository{DB: db}},
+			SiteReports:         siteReports,
+			Reports:             reportsSvc,
+			Support:             supportSvc,
+			Customers:           customersSvc,
 			Staff: &staff.Deps{
 				Staff:   customersSvc,
 				Stats:   staff.Stats{DB: db},
@@ -579,10 +571,6 @@ func buildContentWriter(cfg config.Config, logger *slog.Logger, meter contentedi
 	}
 }
 
-// buildCiteFixAgent wires the paid Cite Fix agent; nil without an OpenRouter
-// key, so the page says it is unavailable and its route answers 503. A nil
-// Search Console service stays a nil interface: the agent then runs without
-// query data instead of calling through it.
 // localTickInterval is how often due weekly watches start and lost runs finish.
 const localTickInterval = 15 * time.Minute
 
@@ -623,21 +611,6 @@ func buildLocalVisibility(ctx context.Context, cfg config.Config, logger *slog.L
 		}
 	}()
 	return svc, nil
-}
-
-func buildCiteFixAgent(cfg config.Config, logger *slog.Logger, db *pgxpool.Pool, meter citefix.AgentMeter, plans citefix.AgentPlans, gscService *gsc.Service) citefix.AgentRunner {
-	if strings.TrimSpace(cfg.OpenRouterAPIKey) == "" {
-		return nil
-	}
-	agent := &citefix.Agent{
-		Store: citefix.Store{DB: db}, LLM: &openrouter.Client{APIKey: cfg.OpenRouterAPIKey},
-		Meter: meter, Plans: plans, Logger: logger,
-		HTTP: audit.NewGuard().NewClient(15 * time.Second),
-	}
-	if gscService != nil {
-		agent.Queries = gscService
-	}
-	return agent
 }
 
 // buildAISentiment wires answer sentiment; nil without an OpenRouter key, so

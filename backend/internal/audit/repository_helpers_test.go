@@ -84,8 +84,8 @@ func TestPageArgsFlattensLinks(t *testing.T) {
 	if len(args) != 36 {
 		t.Fatalf("args = %d, want 36", len(args))
 	}
-	// Column 36 stores the Cite Fix signals; phones stay out, and a page with
-	// no schema stores [] so the row is never mistaken for a pre-Cite Fix one.
+	// Column 36 stores the citation signals; phones stay out, and a page with
+	// no schema stores [] so the row is never mistaken for a pre-signals one.
 	if want := `{"version":2,"schemaTypes":[],"questionHeadings":0,"author":true,"leadWords":12,"lists":0,"tables":0,"quotes":0,"statistics":0,"snippetBlocked":false,"snippetTextWords":0,"noSnippetWords":0,"answerCapsule":false,"definitionAfterHeading":false,"sections":0,"chunkReadySections":0,"authorityLinks":0,"decayYears":null,"datedClaims":false,"injectionEvidence":null,"topicHeadings":null,"topicLinks":null,"hreflangTargets":null,"hsts":null}`; args[35] != want {
 		t.Errorf("citation signals = %v, want %s", args[35], want)
 	}
