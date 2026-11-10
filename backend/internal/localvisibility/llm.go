@@ -92,6 +92,10 @@ func (s *Service) call(ctx context.Context, org, key string, req openrouter.Requ
 	if callErr == nil {
 		if callErr = parse(result.Text); callErr == nil {
 			customer = min(provider, ceiling)
+		} else {
+			// Enough to tell a cut-off answer from an empty or chatty one.
+			callErr = fmt.Errorf("finish=%q prompt_tokens=%d completion_tokens=%d chars=%d: %w",
+				result.FinishReason, result.Usage.PromptTokens, result.Usage.CompletionTokens, len(result.Text), callErr)
 		}
 	}
 	settleCtx, cancelSettle := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
