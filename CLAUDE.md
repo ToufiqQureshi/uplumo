@@ -145,6 +145,8 @@ Content files that code reads are not docs and stay: `.agents/skills/**`,
 `backend/internal/analytics/geo/ATTRIBUTION.md`.
 `frontend/scripts/docs-map.test.ts` enforces this list.
 
+Before writing or editing public blog content, read [blog_style.md](backend/internal/site/blog/blog_style.md).
+
 ## 8. Working with the owner
 
 - Short Hinglish, senior-dev mentor tone. Answer first, then the one or two

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/toufiqqureshi/uplumo/backend/internal/auth"
 	"github.com/toufiqqureshi/uplumo/backend/internal/billing"
@@ -61,6 +62,7 @@ func Mount(mux *http.ServeMux, d Deps) {
 		return d.Actions.Delete(ctx, actor.ID, in.UserID, in.ConfirmEmail)
 	}))))
 	mux.Handle("POST /api/v1/staff/payments/sync", d.WithSession(d.staffOnly(d.sync)))
+	mux.Handle("GET /api/v1/staff/payments/failed", d.WithSession(d.staffOnly(d.failedPayments)))
 }
 
 // staffOnly answers 404 to everyone but verified staff, so the console's
@@ -119,7 +121,29 @@ func (d Deps) sync(w http.ResponseWriter, r *http.Request, actor auth.User) {
 		d.fail(w, r, err)
 		return
 	}
-	if err := d.Actions.LogSync(r.Context(), actor.ID, fmt.Sprintf("%d subscriptions, %d added, %d failed", result.Subscriptions, result.Added, result.Failed)); err != nil {
+	if err := d.Actions.LogSync(r.Context(), actor.ID, fmt.Sprintf("%d subscriptions, %d added, %d failed, %d refunds updated", result.Subscriptions, result.Added, result.Failed, result.RefundsUpdated)); err != nil {
+		d.fail(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, result)
+}
+
+// failedPayments lists the last 30 days of failed payments from Razorpay,
+// read when the console asks; nothing is stored.
+func (d Deps) failedPayments(w http.ResponseWriter, r *http.Request, _ auth.User) {
+	if d.Billing == nil || !d.Billing.PaymentsConfigured() {
+		httpx.WriteError(w, http.StatusServiceUnavailable, "unavailable", "Razorpay is not configured on this server.")
+		return
+	}
+	result, err := d.Billing.ListFailedPayments(r.Context(), time.Now())
+	if errors.Is(err, billing.ErrPaymentProvider) {
+		if d.Logger != nil {
+			d.Logger.WarnContext(r.Context(), "list failed payments", "err", err)
+		}
+		httpx.WriteError(w, http.StatusBadGateway, "payment_provider_error", "Could not reach Razorpay. Try again.")
+		return
+	}
+	if err != nil {
 		d.fail(w, r, err)
 		return
 	}

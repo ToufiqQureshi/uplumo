@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageHeader } from "@/client/components/PageHeader";
 import { Button } from "@/client/components/ui/button";
-import { Plus } from "lucide-react";
+import { PenLine, Sparkles } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { ReportsList } from "@/client/features/reports/ReportsList";
@@ -17,6 +17,7 @@ import {
 } from "@/client/features/reports/reportApi";
 import { REPORT_APP_LIST_LIMIT } from "@/types/schemas/reports";
 import { ManualReportForm } from "@/client/features/reports/ManualReportForm";
+import { SiteReportBuilder } from "@/client/features/reports/SiteReportBuilder";
 
 export const Route = createFileRoute("/_app/p/$projectId/reports/")({
   component: ReportsPage,
@@ -28,6 +29,7 @@ function ReportsPage() {
     null,
   );
   const [manualReportOpen, setManualReportOpen] = useState(false);
+  const [builderOpen, setBuilderOpen] = useState(false);
 
   const reportsQuery = useQuery({
     queryKey: reportsQueryKey(projectId),
@@ -47,7 +49,7 @@ function ReportsPage() {
       <div className="mx-auto max-w-7xl space-y-4">
         <PageHeader
           title="Reports"
-          description="Create reports yourself or review reports saved by your connected AI assistant."
+          description="Build client-ready reports from your site's data, write your own, or review reports saved by your connected AI assistant."
           actions={
             <div className="flex flex-wrap gap-2">
               <Button
@@ -62,9 +64,16 @@ function ReportsPage() {
               >
                 Templates
               </Button>
-              <Button onClick={() => setManualReportOpen(true)}>
-                <Plus data-icon="inline-start" />
-                Write report
+              <Button
+                variant="outline"
+                onClick={() => setManualReportOpen(true)}
+              >
+                <PenLine data-icon="inline-start" />
+                Write manually
+              </Button>
+              <Button onClick={() => setBuilderOpen(true)}>
+                <Sparkles data-icon="inline-start" />
+                Create client report
               </Button>
             </div>
           }
@@ -76,6 +85,7 @@ function ReportsPage() {
               projectId={projectId}
               reports={data.reports}
               onDelete={setPendingDelete}
+              onCreate={() => setBuilderOpen(true)}
             />
           )}
         </QueryState>
@@ -87,6 +97,12 @@ function ReportsPage() {
           isPending={deleteMutation.isPending}
           onClose={() => setPendingDelete(null)}
           onConfirm={() => deleteMutation.mutate(pendingDelete.id)}
+        />
+      ) : null}
+      {builderOpen ? (
+        <SiteReportBuilder
+          projectId={projectId}
+          onClose={() => setBuilderOpen(false)}
         />
       ) : null}
       {manualReportOpen ? (

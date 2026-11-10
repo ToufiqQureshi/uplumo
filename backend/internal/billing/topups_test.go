@@ -41,9 +41,9 @@ func TestPacksFollowThePlan(t *testing.T) {
 		want []string
 	}{
 		{PlanFree, nil},
-		{PlanBasic, nil},
-		{PlanPro, []string{"credits_5000", "credits_15000"}},
-		{plans.Business, []string{"credits_5000", "credits_15000", "sites_5"}},
+		{PlanBasic, []string{"sites_1"}},
+		{PlanPro, []string{"credits_5000", "credits_15000", "sites_1"}},
+		{plans.Business, []string{"credits_5000", "credits_15000", "sites_1"}},
 	} {
 		t.Run(tc.plan, func(t *testing.T) {
 			f := newFixture(ctx, t)
@@ -277,9 +277,10 @@ func TestTopUpCheckoutCanSwitchToAnotherPack(t *testing.T) {
 	}
 }
 
-// Business may add 5 websites for 30 days. Sites added under the add-on keep
+// Business may add a website for 30 days. Sites added under an add-on keep
 // working after it runs out, but no new site fits, and add-ons bought one
-// after another do not stack into a permanent allowance.
+// after another do not stack into a permanent allowance. Rows of the retired
+// 5-website pack still count by the sites they granted.
 func TestSiteAddOnRaisesTheBusinessSiteLimit(t *testing.T) {
 	ctx := t.Context()
 	f := newFixture(ctx, t)
@@ -295,16 +296,19 @@ func TestSiteAddOnRaisesTheBusinessSiteLimit(t *testing.T) {
 	if got := limit(); got != 10 {
 		t.Fatalf("Business site limit = %d, want 10", got)
 	}
-	order, err := f.svc.CheckoutTopUp(ctx, f.org, "sites_5", plans.INR)
+	order, err := f.svc.CheckoutTopUp(ctx, f.org, plans.SiteAddOnPackID, plans.INR)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if order.Amount != 99900 || order.Sites != 5 || order.Credits != 0 {
+	if order.Amount != 99900 || order.Sites != 1 || order.Credits != 0 {
 		t.Fatalf("site add-on order = %+v", order)
 	}
 	f.capture(ctx, t, order)
-	if got := limit(); got != 15 {
-		t.Fatalf("site limit with the add-on = %d, want 15", got)
+	if got := limit(); got != 11 {
+		t.Fatalf("site limit with the add-on = %d, want 11", got)
+	}
+	if _, err := f.svc.CheckoutTopUp(ctx, f.org, "sites_5", plans.INR); !errors.Is(err, errTopUpUnavailable) {
+		t.Fatalf("the retired 5-website pack checkout err = %v, want unavailable", err)
 	}
 	if balance, err := NewCreditLedgerService(f.pool).GetBalance(ctx, f.org); err != nil || balance != 0 {
 		t.Fatalf("a site add-on granted credits: %d, %v", balance, err)
@@ -326,7 +330,7 @@ func TestSiteAddOnRaisesTheBusinessSiteLimit(t *testing.T) {
 		}
 	}
 	// Business pauses paid work above 20 sites (its allowance before 3 Nov)
-	// plus the most add-on sites ever running at once (5).
+	// plus the most add-on sites ever running at once (5, a retired pack).
 	addSites(24)
 	// Three add-ons that ran out one after another: at most 5 at a time.
 	if _, err := f.pool.Exec(ctx, `UPDATE go_billing_topups SET sites_until = now() - interval '1 day' WHERE id = $1`, order.ID); err != nil {
@@ -348,5 +352,64 @@ func TestSiteAddOnRaisesTheBusinessSiteLimit(t *testing.T) {
 	usage, err = f.svc.UsageAgainstPlan(ctx, f.org)
 	if err != nil || !usage.Sites.Exceeded {
 		t.Fatalf("26 sites = %+v, %v; want over the limit: expired add-ons must not stack", usage.Sites, err)
+	}
+}
+
+// Pro includes 3 websites and each add-on adds one for ₹999. Pro workspaces
+// that already run more sites from the 5- and 10-site allowances keep them
+// working; only new sites stop at the limit. Basic may buy the add-on too,
+// Free may not.
+func TestEveryPaidPlanBuysWebsitesOneAtATime(t *testing.T) {
+	ctx := t.Context()
+	f := newFixture(ctx, t)
+	f.onPlan(ctx, t, plans.Pro)
+	limit := func() int {
+		t.Helper()
+		got, err := f.svc.SiteLimit(ctx, f.org)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return got
+	}
+	if got := limit(); got != 3 {
+		t.Fatalf("Pro site limit = %d, want 3", got)
+	}
+	for range 5 {
+		if _, err := f.pool.Exec(ctx, `INSERT INTO projects (id, organization_id, name) VALUES ($1, $2, 'Site')`, "project-"+rand.Text(), f.org); err != nil {
+			t.Fatal(err)
+		}
+	}
+	usage, err := f.svc.UsageAgainstPlan(ctx, f.org)
+	if err != nil || usage.Sites.Used != 5 || usage.Sites.Limit != 3 || usage.Sites.Exceeded {
+		t.Fatalf("a Pro workspace with 5 sites = %+v, %v; want its sites kept working", usage.Sites, err)
+	}
+	for i := range 2 {
+		order, err := f.svc.CheckoutTopUp(ctx, f.org, plans.SiteAddOnPackID, plans.INR)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if order.Amount != 99900 || order.Sites != 1 {
+			t.Fatalf("Pro add-on order %d = %+v, want ₹999 for 1 site", i, order)
+		}
+		f.capture(ctx, t, order)
+	}
+	if got := limit(); got != 5 {
+		t.Fatalf("Pro site limit after two add-ons = %d, want 5", got)
+	}
+
+	basic := newFixture(ctx, t)
+	basic.onPlan(ctx, t, plans.Basic)
+	order, err := basic.svc.CheckoutTopUp(ctx, basic.org, plans.SiteAddOnPackID, plans.INR)
+	if err != nil || order.Amount != 99900 {
+		t.Fatalf("Basic add-on = %+v, %v", order, err)
+	}
+	basic.capture(ctx, t, order)
+	if got, err := basic.svc.SiteLimit(ctx, basic.org); err != nil || got != 2 {
+		t.Fatalf("Basic site limit with one add-on = %d, %v; want 2", got, err)
+	}
+
+	free := newFixture(ctx, t)
+	if _, err := free.svc.CheckoutTopUp(ctx, free.org, plans.SiteAddOnPackID, plans.INR); !errors.Is(err, errTopUpPlan) {
+		t.Fatalf("Free add-on err = %v, want plan refusal", err)
 	}
 }

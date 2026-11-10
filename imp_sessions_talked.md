@@ -13,6 +13,71 @@ priorities, corrections, and what still waits on him. Read it after
   decision, remove it when he answers.
 - Never write secrets, keys or customer data here.
 
+## 9 Nov 2026: blog content must rank on Google and in AI answers
+
+- Owner: "valueble and rankable content hi hona chahiye jisse uplumo ko users miley". Asked for an SEO pass on PR #291 using DataForSEO keyword data.
+- Done on top of #291: `best-seo-aeo-geo-tools` -> `seo-vs-aeo-vs-geo` (pillar; "aeo vs seo" 1.9k, "what is aeo" 5.4k US/mo) and `best-answer-engine-optimisation-tools` -> `best-aeo-tools` (British "optimisation" has no volume). Retitled citation + competitor guides; every guide links to the pillar.
+- Owner rule: every Uplumo price shown anywhere must be in both USD and INR, never INR only. Blog posts link to /pricing and never hard-code an Uplumo price (catalog.go is the only source).
+- Owner decided: blog author is "James", a pen name: never invent a bio or credentials. FAQPage + BreadcrumbList schema on posts. Schema on shared pages (blog index, info pages) in USD only.
+- Owner: "Abe what the fuck is lonaval? Global audience ke liye ha" -> no single-country examples in any post; Lonavala/monsoon/UPI removed.
+- Owner approved all recommendations and said "no more talks only work"; every new blog must follow `blog_style.md` (keyword data, structure, links, prices, visuals, schema, tests).
+- Done in PR #292: 13-tool AEO comparison with verified prices; new posts what-is-aeo, best-semrush-alternatives, profound-alternatives, peec-ai-alternatives, how-to-rank-in-chatgpt; "Related guides" block with `related:` front matter.
+
+## 10 Nov 2026: format the existing blogs consistently
+
+- Owner asked to refresh all three existing guides with the SEOWriting.ai reference’s structure and explanatory visuals, in [PR #291](https://github.com/ToufiqQureshi/uplumo/pull/291).
+- Preserve the published URLs and add `blog_style.md` for future writing sessions.
+
+## 9 Nov 2026: four search and AI guides in PR #291
+
+- Owner requested one long-form Uplumo article in one PR, with the reference article’s scannable structure and explanatory visuals.
+- Proposed slug: `best-seo-aeo-geo-tools`. Covers Google indexing, AI crawler access, intent-led content, rankings, lead tracking and local SEO.
+- Owner then asked for three more guides in the [same PR](https://github.com/ToufiqQureshi/uplumo/pull/291): a 2027 AEO tool comparison, an AI citation troubleshooting guide and a competitor tracking workflow with search demand and rank tracking.
+
+## 9 Nov 2026: Razorpay payment failed, make failure handling industry-ready
+
+- Owner paid ₹4,999 (Business) on 8 Nov by UPI; it failed. Razorpay says `payment_timed_out` at `payment_authentication`, error source customer, no bank RRN (most likely no debit). Not an Uplumo bug.
+- Owner: "indsutry ready kar kuch miss mat karna". Built in one PR: the customer now sees Razorpay's reason + "don't pay again" + **Try again** for plan and top-up checkouts; the staff Finance tab lists failed payments of the last 30 days (live Razorpay read) with "paid later".
+- Also fixed: the extra-website checkout said "Additional usage credits"; the unused Autumn-era `attach` (hard-coded Pro) was removed.
+- Waiting for the owner: merge + deploy; decide on an automatic recovery email for customers whose payment failed (needs his copy approval and consent wording).
+
+## 8 Nov 2026: restore the ChatGPT traffic guide at its original URL
+
+- Owner supplied GSC data and approved the revised GA4 traffic guide.
+- Retain chatgpt-traffic-google-analytics; title: How to Track ChatGPT Traffic in Google Analytics 4 (GA4).
+- Owner explicitly requested a direct main push and production deployment.
+- Keep original publication date 15 October and mark the revision 8 November.
+- Update publication tests to allow this one restored URL; all other retired URLs remain removed.
+
+## 8 Nov 2026: two approved problem-solving blogs
+
+- Owner requested two human-sounding articles grounded in current frontend/backend capabilities.
+- Blog 1 adds Problem → Check → Fix for zero impressions, impressions without clicks and clicks without leads.
+- Owner explicitly requested merging both approved drafts into main; production deployment was not requested in this turn.
+- Publish only these two new slugs; keep the retired article collection removed.
+- Adapt draft metadata to the existing renderer, retain one H1 per article and include both URLs in the sitemap.
+
+## 6 Nov 2026: Live check of client reports and the website add-on
+
+- Owner: "abhi chrome open kar and check kar live ki sab sahi se kaam karra ha ya nai".
+- Live OK: pricing (Pro 3 websites, ₹999 add-on on Basic/Pro/Business, none on Free), report builder, report saved with 0 credits, client link opens logged out, bad link 404.
+- Fixed in a new PR: chart axis labels repeated or skipped numbers ("2 2 1 1 0"), GA chart skipped empty days, "was 0" comparison and "rising searches" shown for a site with no previous data.
+- Not a code bug: the workspace white-label brand name is set to a URL, so client links say "Prepared by https://uplumo.com/". Owner should set the brand name in Settings.
+- Waiting for the owner: merge + deploy the fix PR.
+
+## 6 Nov 2026: Pro gets 3 websites; every extra website is ₹999
+
+- Owner: "pro plan me ab srif 3 sites allowed", "per site ka 999 for every plan", "free plan pe no addon", "bahar ke users ... koi nai chalara uplumo" (USD kept at $12), "bindaas change kar", new PR, then merge #277 and this PR, deploy and test from the UI.
+- Decisions: Pro 5 -> 3 websites. Pack `sites_1` = 1 website for ₹999 / $12 for 30 days, on Basic, Pro and Business; Free cannot buy. The Business 5-site pack is retired; running purchases keep their 30 days. Existing Pro workspaces keep up to 10 sites working (PauseAboveSites); only new sites stop at 3.
+- Paid calls: none; price shown = price charged (all copy reads the pack).
+## 6 Nov 2026: Client site reports (one click, shareable link)
+
+- Owner: "ye to work hi nai karta", wants a Power BI-type A to Z site report the user builds and sends to a client as a clickable link; "user ko value dena ha", "UI ek dum mast".
+- Built: Reports -> "Create client report" (period 7/28/90 days, sections Search, Traffic, Rankings, Site health, Backlinks, client message, next steps, client link). Saved as a normal report, so viewer, PDF and public `/s/` link are reused.
+- 0 paid calls, 0 credits: Google reads (max 10 GSC + 3 GA4) are free; rankings, audit, backlinks read stored rows. Sections without data are skipped with a reason.
+- Taken as default (owner did not answer): simple public link, no password or expiry.
+- Waiting for the owner: merge + deploy; whether to add AI Visibility and own Analytics sections next.
+
 ## 6 Nov 2026: Content Editor fixes in one PR
 
 - Owner: "fix it in one pr samja everything fix the bugs"; the approved paid-test cap remains about 159 credits.

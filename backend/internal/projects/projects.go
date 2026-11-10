@@ -314,7 +314,7 @@ func (r Repository) CreateLimited(ctx context.Context, org string, in Input, lim
 			return Project{}, fmt.Errorf("count active sites: %w", err)
 		}
 		if count >= limit {
-			return Project{}, fail("LIMIT_REACHED", fmt.Sprintf("Your plan allows %d active website(s). Archive a site or upgrade your plan to add another.", limit))
+			return Project{}, fail("LIMIT_REACHED", fmt.Sprintf("Your plan allows %d active website(s). Archive a site, or go to Billing to add a website or upgrade your plan.", limit))
 		}
 	}
 	var p Project
@@ -457,7 +457,7 @@ func (r Repository) RestoreLimited(ctx context.Context, org, id string, limit in
 		return fmt.Errorf("count active sites: %w", err)
 	}
 	if count >= limit {
-		return fail("LIMIT_REACHED", fmt.Sprintf("Your plan allows %d active website(s). Archive a site or upgrade your plan to restore this one.", limit))
+		return fail("LIMIT_REACHED", fmt.Sprintf("Your plan allows %d active website(s). Archive another site, or go to Billing to add a website or upgrade your plan.", limit))
 	}
 	tag, err := tx.Exec(ctx, `UPDATE projects SET archived_at=NULL WHERE organization_id=$1 AND id=$2 AND archived_at IS NOT NULL`, org, id)
 	if err != nil {

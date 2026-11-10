@@ -17,7 +17,7 @@ func TestCatalogMatchesTheOwnersPlanTable(t *testing.T) {
 	}{
 		{Free, 0, 0, 1, 0, 1, 0},
 		{Basic, 999, 15, 1, 100, 1, 4000},
-		{Pro, 2499, 39, 5, 500, 3, 10000},
+		{Pro, 2499, 39, 3, 500, 3, 10000},
 		{Business, 4999, 69, 10, 1000, 5, 15000},
 	}
 	got := Catalog()
@@ -46,8 +46,8 @@ func TestEachPlanIncludesExactlyItsFeatures(t *testing.T) {
 	all := []Feature{GoogleData, Keywords, RankTracking, FullAudit, Publishing, Backlinks, DomainResearch, AIVisibility, AIWriting, WhiteLabel, IndexNow, CreditPacks, SiteAddOn}
 	want := map[string][]Feature{
 		Free:     nil,
-		Basic:    {GoogleData, Keywords, RankTracking, FullAudit, Publishing, AIWriting, IndexNow},
-		Pro:      {GoogleData, Keywords, RankTracking, FullAudit, Publishing, AIWriting, IndexNow, Backlinks, DomainResearch, AIVisibility, CreditPacks},
+		Basic:    {GoogleData, Keywords, RankTracking, FullAudit, Publishing, AIWriting, IndexNow, SiteAddOn},
+		Pro:      {GoogleData, Keywords, RankTracking, FullAudit, Publishing, AIWriting, IndexNow, SiteAddOn, Backlinks, DomainResearch, AIVisibility, CreditPacks},
 		Business: all,
 	}
 	for id, included := range want {
@@ -134,7 +134,7 @@ func TestPacksMatchTheOwnersPrices(t *testing.T) {
 	want := []Pack{
 		{ID: "credits_5000", PriceINR: 1499, Credits: 5000, Feature: CreditPacks},
 		{ID: "credits_15000", PriceINR: 3999, Credits: 15000, Feature: CreditPacks},
-		{ID: "sites_5", PriceINR: 999, Sites: 5, Feature: SiteAddOn},
+		{ID: "sites_1", PriceINR: 999, PriceUSD: 12, Sites: 1, Feature: SiteAddOn},
 	}
 	got := Packs()
 	if len(got) != len(want) {
@@ -142,7 +142,7 @@ func TestPacksMatchTheOwnersPrices(t *testing.T) {
 	}
 	for i, w := range want {
 		g := got[i]
-		if g.ID != w.ID || g.PriceINR != w.PriceINR || g.Credits != w.Credits || g.Sites != w.Sites || g.Feature != w.Feature || g.Name == "" {
+		if g.ID != w.ID || g.PriceINR != w.PriceINR || (w.PriceUSD != 0 && g.PriceUSD != w.PriceUSD) || g.Credits != w.Credits || g.Sites != w.Sites || g.Feature != w.Feature || g.Name == "" {
 			t.Errorf("pack %d = %+v, want %+v", i, g, w)
 		}
 		if (g.Credits > 0) == (g.Sites > 0) {
@@ -155,14 +155,17 @@ func TestPacksMatchTheOwnersPrices(t *testing.T) {
 	if _, ok := GetPack("agency"); ok {
 		t.Error("GetPack found a pack that is not sold")
 	}
-	for _, id := range []string{Basic, Free} {
-		plan, _ := Get(id)
-		if plan.Allows(CreditPacks) || plan.Allows(SiteAddOn) {
-			t.Errorf("%s may buy packs; only Pro and Business may", id)
-		}
+	free, _ := Get(Free)
+	if free.Allows(CreditPacks) || free.Allows(SiteAddOn) {
+		t.Error("Free may buy packs; only paid plans may")
 	}
-	if pro, _ := Get(Pro); pro.Allows(SiteAddOn) {
-		t.Error("Pro may buy a site add-on; only Business may")
+	if basic, _ := Get(Basic); basic.Allows(CreditPacks) {
+		t.Error("Basic may buy credit packs; only Pro and Business may")
+	}
+	for _, id := range Paid() {
+		if plan, _ := Get(id); !plan.Allows(SiteAddOn) {
+			t.Errorf("%s cannot buy extra websites; every paid plan may", id)
+		}
 	}
 }
 
@@ -190,20 +193,32 @@ func TestCreditPacksKeepTheMargin(t *testing.T) {
 	}
 }
 
-// The Business card states the site add-on's price; it must be the pack's.
-func TestBusinessCardStatesTheSiteAddOnPrice(t *testing.T) {
-	business, _ := Get(Business)
-	addOn, _ := GetPack("sites_5")
-	want := fmt.Sprintf("Add %d more websites for ₹%d a month", addOn.Sites, addOn.PriceINR)
-	if !slices.Contains(business.Highlights, want) {
-		t.Errorf("Business highlights do not contain %q", want)
-	}
-	usd := fmt.Sprintf("Add %d more websites for $%d a month", addOn.Sites, addOn.PriceUSD)
-	if got := business.HighlightsIn(USD); !slices.Contains(got, usd) || slices.Contains(got, want) {
-		t.Errorf("Business highlights in dollars = %q, want %q and no rupee price", got, usd)
-	}
-	if got := business.HighlightsIn(INR); !slices.Equal(got, business.Highlights) {
-		t.Errorf("Business highlights in rupees = %q, want the catalog's", got)
+// Every paid card states the per-website add-on price; it must be the pack's,
+// and each card's website line must match the limit the plan enforces.
+func TestPaidCardsStateTheSiteAddOnPrice(t *testing.T) {
+	addOn, _ := GetPack(SiteAddOnPackID)
+	want := fmt.Sprintf("Add more websites for ₹%d a month each", addOn.PriceINR)
+	usd := fmt.Sprintf("Add more websites for $%d a month each", addOn.PriceUSD)
+	for _, plan := range Catalog() {
+		sites := fmt.Sprintf("%d websites", plan.Sites)
+		if plan.Sites == 1 {
+			sites = "1 website"
+		}
+		if !slices.Contains(plan.Highlights, sites) {
+			t.Errorf("%s highlights do not state %q", plan.ID, sites)
+		}
+		if got := slices.Contains(plan.Highlights, want); got != plan.Allows(SiteAddOn) {
+			t.Errorf("%s highlights contain %q = %v, want %v", plan.ID, want, got, plan.Allows(SiteAddOn))
+		}
+		if !plan.Allows(SiteAddOn) {
+			continue
+		}
+		if got := plan.HighlightsIn(USD); !slices.Contains(got, usd) || slices.Contains(got, want) {
+			t.Errorf("%s highlights in dollars = %q, want %q and no rupee price", plan.ID, got, usd)
+		}
+		if got := plan.HighlightsIn(INR); !slices.Equal(got, plan.Highlights) {
+			t.Errorf("%s highlights in rupees = %q, want the catalog's", plan.ID, got)
+		}
 	}
 }
 

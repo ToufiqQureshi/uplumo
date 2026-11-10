@@ -1,6 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { RefreshCw, Search } from "lucide-react";
 import { cn } from "cn";
+import { useConfirm } from "@/client/components/ConfirmDialog";
 import { Button } from "@/client/components/ui/button";
 import { formatCredits } from "@/client/features/billing/credits/format";
 import { useBillingUsage } from "@/client/features/billing/usageApi";
@@ -59,6 +60,7 @@ export function BriefPanel({
       : maxCredits > 0
         ? `Up to ${formatCredits(maxCredits)} credits for a new brief · ${formatCredits(billingUsage.data.balanceCredits)} left.`
         : "Credit quote unavailable; brief actions are disabled.";
+  const confirm = useConfirm();
   const mutation = useMutation({
     mutationFn: (refresh: boolean) =>
       fetchSearchBrief({ data: { projectId, keyword: topic, refresh } }),
@@ -150,16 +152,16 @@ export function BriefPanel({
           variant="outline"
           size="sm"
           disabled={mutation.isPending || !creditQuoteReady}
-          onClick={() => {
-            if (
-              window.confirm(
-                chargesCredits
-                  ? `Refresh the brief? It can use up to ${formatCredits(maxCredits)} credits.`
-                  : "Refresh the brief? No credits are charged to this workspace.",
-              )
-            )
-              mutation.mutate(true);
-          }}
+          onClick={() =>
+            confirm.ask({
+              title: "Refresh the brief?",
+              body: chargesCredits
+                ? `This reads the current top results again and can use up to ${formatCredits(maxCredits)} credits.`
+                : "This reads the current top results again. No credits are charged to this workspace.",
+              confirmLabel: "Refresh brief",
+              onConfirm: () => mutation.mutate(true),
+            })
+          }
         >
           <RefreshCw aria-hidden />
           Refresh
@@ -290,6 +292,7 @@ export function BriefPanel({
           ))}
         </ul>
       </details>
+      {confirm.dialog}
     </section>
   );
 }

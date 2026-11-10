@@ -1,6 +1,7 @@
 package billing
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"testing"
 
@@ -63,19 +64,74 @@ func TestChargedWebhookRecordsThePaymentOnceAndRefundsUpdateIt(t *testing.T) {
 		t.Fatalf("ledger = %+v", got)
 	}
 
-	refund, err := json.Marshal(map[string]any{"event": "payment.refunded", "created_at": t2.Unix(), "payload": map[string]any{
-		"payment": map[string]any{"entity": map[string]any{"id": pay, "amount": 249900, "amount_refunded": 100000, "currency": "INR"}},
-	}})
-	if err != nil {
-		t.Fatal(err)
+	// The two refund events Razorpay can send for a payment, in its shape:
+	// the refund and the payment with its running refunded total.
+	refund := func(event string, refunded int64) []byte {
+		body, err := json.Marshal(map[string]any{"entity": "event", "event": event, "created_at": t2.Unix(), "payload": map[string]any{
+			"refund":  map[string]any{"entity": map[string]any{"id": "rfnd_" + f.org, "payment_id": pay, "amount": 80000, "status": "processed"}},
+			"payment": map[string]any{"entity": map[string]any{"id": pay, "amount": 249900, "amount_refunded": refunded, "currency": "INR", "status": "refunded"}},
+		}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return body
 	}
-	for range 2 {
-		if got := f.deliverAs(t.Context(), t, "evt_refund_"+f.org, refund); got != WebhookProcessed {
-			t.Fatalf("refund = %s, want processed", got)
+	// Razorpay has no payment.refunded event; it must not be what updates refunds.
+	if got := f.deliverAs(t.Context(), t, "evt_old_"+f.org, refund("payment.refunded", 249900)); got != WebhookIgnored {
+		t.Fatalf("payment.refunded = %s, want ignored", got)
+	}
+	for _, step := range []struct {
+		name     string
+		refunded int64
+		want     int64
+	}{
+		{"first refund", 80000, 80000},
+		{"redelivery", 80000, 80000},
+		{"second refund", 180000, 180000},
+		{"older event delivered late never lowers it", 80000, 180000},
+		{"more than paid is capped", 999999, 249900},
+	} {
+		if got := f.deliverAs(t.Context(), t, "evt_"+rand.Text(), refund("refund.processed", step.refunded)); got != WebhookProcessed {
+			t.Fatalf("%s: refund = %s, want processed", step.name, got)
+		}
+		if got := f.ledger(t)[pay].Refunded; got != step.want {
+			t.Fatalf("%s: refunded = %d, want %d", step.name, got, step.want)
 		}
 	}
-	if got := f.ledger(t)[pay].Refunded; got != 100000 {
-		t.Fatalf("refunded = %d, want 100000", got)
+	other, _ := json.Marshal(map[string]any{"event": "refund.processed", "created_at": t2.Unix(), "payload": map[string]any{
+		"payment": map[string]any{"entity": map[string]any{"id": "pay_not_ours_" + f.org, "amount": 100, "amount_refunded": 100, "currency": "INR"}},
+	}})
+	if got := f.deliverAs(t.Context(), t, "evt_"+rand.Text(), other); got != WebhookIgnored {
+		t.Fatalf("refund of another business's payment = %s, want ignored", got)
+	}
+}
+
+func TestSyncRaisesRefundsTheWebhookMissed(t *testing.T) {
+	f := newFixture(t.Context(), t)
+	pay, other := "pay_"+f.org, "pay_other_"+f.org
+	f.deliver(t.Context(), t, f.chargedWithPayment(t, pay, 99900))
+	f.refunds = []razorpay.Refund{
+		{ID: "rfnd_1", PaymentID: pay, Amount: 50000, Status: "processed"},
+		{ID: "rfnd_2", PaymentID: pay, Amount: 30000, Status: "processed"},
+		{ID: "rfnd_3", PaymentID: pay, Amount: 19900, Status: "pending"},
+		{ID: "rfnd_4", PaymentID: pay, Amount: 19900, Status: "failed"},
+		{ID: "rfnd_5", PaymentID: other, Amount: 100, Status: "processed"},
+	}
+	for run, want := range []int{1, 0} {
+		got, err := f.svc.SyncSubscriptionPayments(t.Context())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got.RefundsUpdated != want {
+			t.Fatalf("sync run %d updated %d refunds, want %d", run, got.RefundsUpdated, want)
+		}
+	}
+	ledger := f.ledger(t)
+	if ledger[pay].Refunded != 80000 {
+		t.Fatalf("refunded = %d, want 80000 (processed only)", ledger[pay].Refunded)
+	}
+	if _, ok := ledger[other]; ok {
+		t.Fatal("a refund of a payment outside the ledger was added to it")
 	}
 }
 

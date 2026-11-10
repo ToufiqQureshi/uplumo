@@ -38,8 +38,20 @@ const (
 	AIResponseCeilingUSD = 0.10
 	AIMentionsCeilingUSD = 0.25
 	lighthouseTaskUSD    = 0.005
-	unknownTaskUSD       = 1.0
-	defaultSerpDepth     = 10
+	// Google Maps SERP is billed per 100 results; Business Data per task and,
+	// for updates and reviews, per 10 items. Priority (2) doubles a queued
+	// price. Published prices, Oct 2026.
+	mapsQueuedPer100USD      = 0.0006
+	mapsLivePer100USD        = 0.002
+	businessInfoQueuedUSD    = 0.0015
+	businessInfoLiveUSD      = 0.0054
+	businessUpdatesQueuedUSD = 0.0015
+	businessUpdatesPer10USD  = 0.00075
+	businessReviewsPer10USD  = 0.00075
+	businessDefaultDepth     = 10
+	businessPriorityFactor   = 2
+	unknownTaskUSD           = 1.0
+	defaultSerpDepth         = 10
 )
 
 // serpOperator matches advanced search operators, which Google SERP endpoints
@@ -145,6 +157,10 @@ func taskBodies(body []byte) []map[string]any {
 
 func taskCeiling(path string, task map[string]any) float64 {
 	switch {
+	case strings.HasPrefix(path, "/v3/serp/google/maps/"):
+		return mapsCeiling(path, task)
+	case strings.HasPrefix(path, "/v3/business_data/google/"):
+		return businessCeiling(path, task)
 	case strings.HasPrefix(path, "/v3/serp/"):
 		return serpCeiling(path, task)
 	case strings.HasPrefix(path, "/v3/dataforseo_labs/"):
@@ -188,6 +204,42 @@ func serpCeiling(path string, task map[string]any) float64 {
 	}
 	if keyword, _ := task["keyword"].(string); serpOperator.MatchString(keyword) {
 		price *= serpOperatorFactor
+	}
+	return price
+}
+
+func mapsCeiling(path string, task map[string]any) float64 {
+	blocks := math.Max(1, math.Ceil(number(task, "depth", 100)/100))
+	if !strings.Contains(path, "/task_post") {
+		return blocks * mapsLivePer100USD
+	}
+	price := blocks * mapsQueuedPer100USD
+	if number(task, "priority", 1) >= 2 {
+		price *= businessPriorityFactor
+	}
+	return price
+}
+
+// businessCeiling prices Google Business Data tasks. Only the endpoints
+// Local Visibility posts are known; any other Business Data path is held at
+// unknownTaskUSD like every unknown endpoint.
+func businessCeiling(path string, task map[string]any) float64 {
+	tens := math.Ceil(number(task, "depth", businessDefaultDepth) / 10)
+	var price float64
+	switch path {
+	case "/v3/business_data/google/my_business_info/live":
+		return businessInfoLiveUSD
+	case "/v3/business_data/google/my_business_info/task_post":
+		price = businessInfoQueuedUSD
+	case "/v3/business_data/google/my_business_updates/task_post":
+		price = businessUpdatesQueuedUSD + tens*businessUpdatesPer10USD
+	case "/v3/business_data/google/reviews/task_post":
+		price = tens * businessReviewsPer10USD
+	default:
+		return unknownTaskUSD
+	}
+	if number(task, "priority", 1) >= 2 {
+		price *= businessPriorityFactor
 	}
 	return price
 }

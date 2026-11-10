@@ -167,6 +167,24 @@ func TestSPAIndexCannotBeFramedByOtherSites(t *testing.T) {
 	}
 }
 
+func TestSPAShellIsNotIndexed(t *testing.T) {
+	handler := newTestHandler(t, nil, healthy, healthy)
+	for _, target := range []string{"/dashboard", "/p/abc/keywords", "/no-such-page"} {
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, httptest.NewRequestWithContext(context.Background(), http.MethodGet, target, nil))
+		if got := rec.Header().Get("X-Robots-Tag"); got != "noindex" {
+			t.Errorf("%s X-Robots-Tag = %q, want noindex", target, got)
+		}
+	}
+	for _, target := range []string{"/", "/pricing", "/blog", "/about"} {
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, httptest.NewRequestWithContext(context.Background(), http.MethodGet, target, nil))
+		if got := rec.Header().Get("X-Robots-Tag"); got != "" {
+			t.Errorf("public page %s X-Robots-Tag = %q, want none", target, got)
+		}
+	}
+}
+
 func TestSPAWithoutABuildAnswers503(t *testing.T) {
 	pages, err := site.New(&url.URL{Scheme: "https", Host: "uplumo.com"})
 	if err != nil {

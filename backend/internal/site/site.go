@@ -111,6 +111,8 @@ type page struct {
 	// Posts is the blog index; Post is the post on a post page.
 	Posts []Post
 	Post  *Post
+	// Related is the further reading under a post.
+	Related []Post
 }
 
 // Site serves the pre-rendered pages and the static assets.
@@ -197,15 +199,23 @@ func build(publicURL *url.URL, blogFiles fs.FS) (*Site, error) {
 	blog := base
 	blog.Path = "/blog"
 	blog.Title = "Uplumo blog: SEO and AI search guides"
-	blog.Description = "Plain-language guides to ranking on Google and showing up in AI answers, for business owners and agencies in India."
+	blog.Description = "Plain-language guides to ranking on Google and showing up in AI answers, for business owners and agencies."
 	blog.Canonical = origin + "/blog"
 	blog.Posts = posts
-	blog.JSONLD = jsonLD(origin, blog.Description, plans, planCatalog.INR)
+	// Pages served to everyone describe plans in US dollars; the landing and
+	// pricing pages carry each visitor's own currency.
+	usdPlans := plansFor(planCatalog.USD)
+	blog.JSONLD = jsonLD(origin, blog.Description, usdPlans, planCatalog.USD)
 	if s.blog, err = render(tmpl, "blog.html", blog); err != nil {
+		return nil, err
+	}
+	related, err := relatedPosts(posts)
+	if err != nil {
 		return nil, err
 	}
 	for _, post := range posts {
 		data := base
+		data.Related = related[post.Slug]
 		data.Path = "/blog/" + post.Slug
 		data.Title = post.Title + " | Uplumo"
 		data.Description = post.Description
@@ -218,7 +228,7 @@ func build(publicURL *url.URL, blogFiles fs.FS) (*Site, error) {
 			}
 			data.OGImage = origin + image
 		}
-		data.JSONLD = blogPostingJSONLD(origin, post, data.OGImage)
+		data.JSONLD = postJSONLD(origin, post, data.OGImage)
 		if s.posts[post.Slug], err = render(tmpl, "post.html", data); err != nil {
 			return nil, err
 		}
@@ -229,7 +239,7 @@ func build(publicURL *url.URL, blogFiles fs.FS) (*Site, error) {
 		data.Title = p.title
 		data.Description = p.description
 		data.Canonical = origin + p.path
-		data.JSONLD = jsonLD(origin, p.description, plans, planCatalog.INR)
+		data.JSONLD = jsonLD(origin, p.description, usdPlans, planCatalog.USD)
 		if s.info[p.path], err = render(tmpl, p.file, data); err != nil {
 			return nil, err
 		}
@@ -348,13 +358,27 @@ var crawlerAgents = []string{
 	"DuckAssistBot", "YouBot", "CCBot", "AI2Bot",
 }
 
-// robotsTxt allows every crawler on every public page except the API.
+// privatePaths are the signed-in app's routes and one-time auth links. They
+// show nothing to a crawler but the app shell, so crawl budget goes to the
+// public pages instead. "$" ends a rule at the exact path.
+var privatePaths = []string{
+	"/api/", "/p/", "/projects", "/settings", "/billing", "/ai$", "/support",
+	"/onboarding", "/subscribe", "/oauth-consent", "/staff", "/accept-invitation",
+	"/verify-email", "/reset-password", "/forgot-password", "/auth-error",
+}
+
+// robotsTxt allows every crawler on every public page and keeps all of them
+// out of the API and the signed-in app.
 func robotsTxt(origin string) []byte {
 	var b strings.Builder
 	for _, agent := range crawlerAgents {
 		b.WriteString("User-agent: " + agent + "\n")
 	}
-	b.WriteString("User-agent: *\nAllow: /\nDisallow: /api/\n\nSitemap: " + origin + "/sitemap.xml\n")
+	b.WriteString("User-agent: *\nAllow: /\n")
+	for _, path := range privatePaths {
+		b.WriteString("Disallow: " + path + "\n")
+	}
+	b.WriteString("\nSitemap: " + origin + "/sitemap.xml\n")
 	return []byte(b.String())
 }
 
@@ -378,11 +402,12 @@ func serveText(w http.ResponseWriter, contentType string, body []byte) {
 }
 
 // sitemap lists every public page: the landing page, pricing, the info pages,
-// the blog and each post with the date it last changed.
+// the blog (dated by its newest change) and each post with the date it last
+// changed and its cover image.
 func sitemap(origin string, posts []Post) []byte {
 	var b strings.Builder
-	b.WriteString(xml.Header + `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">` + "\n")
-	write := func(path, lastmod string) {
+	b.WriteString(xml.Header + `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">` + "\n")
+	write := func(path, lastmod, image string) {
 		b.WriteString("<url><loc>")
 		// Paths are constants or validated slugs; escaping keeps the file
 		// valid if one ever carries a special character.
@@ -391,16 +416,27 @@ func sitemap(origin string, posts []Post) []byte {
 		if lastmod != "" {
 			b.WriteString("<lastmod>" + lastmod + "</lastmod>")
 		}
+		if image != "" {
+			b.WriteString("<image:image><image:loc>")
+			_ = xml.EscapeText(&b, []byte(origin+image))
+			b.WriteString("</image:loc></image:image>")
+		}
 		b.WriteString("</url>\n")
 	}
 	for _, path := range append([]string{"/", "/pricing"}, InfoPaths()...) {
-		write(path, "")
+		write(path, "", "")
 	}
 	if len(posts) > 0 {
-		write("/blog", "")
+		newest := posts[0].Updated
+		for _, post := range posts {
+			if post.Updated.After(newest) {
+				newest = post.Updated
+			}
+		}
+		write("/blog", newest.Format(time.DateOnly), "")
 	}
 	for _, post := range posts {
-		write("/blog/"+post.Slug, post.Updated.Format(time.DateOnly))
+		write("/blog/"+post.Slug, post.Updated.Format(time.DateOnly), post.Image)
 	}
 	b.WriteString("</urlset>\n")
 	return []byte(b.String())
@@ -565,7 +601,7 @@ func planLimits(plan planCatalog.Definition, currency string) []string {
 	if plan.Allows(planCatalog.SiteAddOn) {
 		for _, pack := range planCatalog.Packs() {
 			if pack.Feature == planCatalog.SiteAddOn {
-				limits = append(limits, fmt.Sprintf("Add %d more websites for %s a month", pack.Sites, formatMoney(pack.Price(currency), currency)))
+				limits = append(limits, fmt.Sprintf("Add more websites for %s a month each", formatMoney(pack.Price(currency), currency)))
 			}
 		}
 	}
@@ -726,7 +762,7 @@ func pricingFAQ(currency string) []QA {
 	basic, _ := planCatalog.Get(planCatalog.Basic)
 	pro, _ := planCatalog.Get(planCatalog.Pro)
 	business, _ := planCatalog.Get(planCatalog.Business)
-	sites, _ := planCatalog.GetPack("sites_5")
+	sites, _ := planCatalog.GetPack(planCatalog.SiteAddOnPackID)
 	return []QA{
 		{"Is the Free plan really free?", "Yes. It costs " + formatMoney(0, currency) +
 			" and needs no card. Paid plans start at " + formatMoney(int64(basic.Price(currency)), currency) + " a month."},
@@ -736,8 +772,8 @@ func pricingFAQ(currency string) []QA {
 		{"Who is Business for?", "Several brands, freelancers and agencies. It includes everything in Pro, plus white-label reports with your own name, logo and colour, " +
 			strconv.Itoa(business.Sites) + " websites, " + strconv.Itoa(business.Members) + " team members and " + formatNumber(business.MonthlyCredits) + " credits a month."},
 		{"How do site limits work?", fmt.Sprintf("Free and Basic include one active website, Pro includes %d and Business %d. "+
-			"On Business you can add %d more websites for %s, valid for %d days from payment. "+
-			"Archiving a site frees a slot; your data stays in the workspace.", pro.Sites, business.Sites, sites.Sites, formatMoney(sites.Price(currency), currency), planCatalog.SiteAddOnDays)},
+			"On any paid plan you can add more websites from Billing for %s a website, each valid for %d days from payment. "+
+			"Archiving a site frees a slot; your data stays in the workspace.", pro.Sites, business.Sites, formatMoney(sites.Price(currency), currency), planCatalog.SiteAddOnDays)},
 		{"What happens when my credits run out?", "Paid data and AI actions stop until you have credits again: wait for the next month's credits, " +
 			"or, on Pro and Business, buy a credit pack from Billing. Pack credits are used after your monthly credits, " +
 			"last while your paid plan is active and expire when the plan ends. Packs are not refundable."},
@@ -775,14 +811,22 @@ func packOffers(currency string) []PackOffer {
 		}
 		detail := "Used after your monthly credits. Lasts while your paid plan is active and expires when it ends."
 		if pack.Sites > 0 {
-			detail = fmt.Sprintf("Raises your website limit by %d for %d days from payment.", pack.Sites, planCatalog.SiteAddOnDays)
+			detail = fmt.Sprintf("Raises your website limit by %d for %d days from payment. Buy one for each extra website.", pack.Sites, planCatalog.SiteAddOnDays)
 		}
 		offers = append(offers, PackOffer{
 			Name: pack.Name, Price: formatMoney(pack.Price(currency), currency), Detail: detail,
-			Who: "On " + strings.Join(who, " and "),
+			Who: "On " + joinNames(who),
 		})
 	}
 	return offers
+}
+
+// joinNames lists plan names as "A", "A and B" or "A, B and C".
+func joinNames(names []string) string {
+	if len(names) < 3 {
+		return strings.Join(names, " and ")
+	}
+	return strings.Join(names[:len(names)-1], ", ") + " and " + names[len(names)-1]
 }
 
 // jsonLD describes the organization and the product, with each plan as an

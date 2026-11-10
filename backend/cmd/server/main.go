@@ -48,6 +48,7 @@ import (
 	"github.com/toufiqqureshi/uplumo/backend/internal/keywords"
 	"github.com/toufiqqureshi/uplumo/backend/internal/kv"
 	"github.com/toufiqqureshi/uplumo/backend/internal/linksuggest"
+	"github.com/toufiqqureshi/uplumo/backend/internal/localvisibility"
 	"github.com/toufiqqureshi/uplumo/backend/internal/mcp"
 	"github.com/toufiqqureshi/uplumo/backend/internal/onboarding"
 	planCatalog "github.com/toufiqqureshi/uplumo/backend/internal/plans"
@@ -66,6 +67,7 @@ import (
 	"github.com/toufiqqureshi/uplumo/backend/internal/sam"
 	"github.com/toufiqqureshi/uplumo/backend/internal/site"
 	"github.com/toufiqqureshi/uplumo/backend/internal/sitepublish"
+	"github.com/toufiqqureshi/uplumo/backend/internal/sitereport"
 	"github.com/toufiqqureshi/uplumo/backend/internal/staff"
 	"github.com/toufiqqureshi/uplumo/backend/internal/support"
 	"github.com/toufiqqureshi/uplumo/backend/internal/team"
@@ -353,6 +355,10 @@ func run(logger *slog.Logger) (err error) {
 	if err := aiTracking.RunWorkers(ctx, logger); err != nil {
 		return err
 	}
+	localVisibility, err := buildLocalVisibility(ctx, cfg, logger, db, dfClient, spendGuard.AIMeter(spend.LocalVisibility, "openrouter/local_visibility"), gateSvc)
+	if err != nil {
+		return err
+	}
 	billingRoutes.Forecast = func(ctx context.Context, org string, until time.Time) (int64, error) {
 		rank, err := (ranktracking.Store{DB: db}).ScheduledCredits(ctx, org, until)
 		if err != nil {
@@ -362,6 +368,7 @@ func run(logger *slog.Logger) (err error) {
 		return rank + ai, err
 	}
 	reportsSvc := &reports.Service{Store: reports.Repository{DB: db}}
+	brandingSvc := branding.NewService(db)
 	customersSvc := &customers.Service{DB: db, StaffEmails: cfg.StaffEmails}
 	supportSvc := &support.Service{DB: db, StaffEmails: cfg.StaffEmails, PublicURL: cfg.BetterAuthURL.String()}
 	if cfg.LoopsAPIKey != "" && cfg.LoopsSupportReportTemplateID != "" {
@@ -406,6 +413,10 @@ func run(logger *slog.Logger) (err error) {
 	} else {
 		logger.Warn("SUPABASE_* image storage variables not set; content editor image uploads are unavailable")
 	}
+	siteReports := &sitereport.Service{
+		Store: sitereport.Repository{DB: db}, Search: sitereport.GSC{Service: gscService}, Traffic: sitereport.GA4{Service: ga4Svc},
+		Rankings: sitereport.RankTracking{Service: rankTrackingService}, Reports: reportsSvc, Branding: brandingSvc.Get, Logger: logger,
+	}
 	mcpDeps := &mcp.Deps{
 		Logger: logger, DB: db, Redis: rdb, Auth: authService, Billing: gateSvc,
 		Credits:   credits,
@@ -431,7 +442,7 @@ func run(logger *slog.Logger) (err error) {
 			TrustedProxyCIDRs:       cfg.TrustedProxyCIDRs,
 			Billing:                 gateSvc,
 			BillingRoutes:           billingRoutes,
-			Branding:                branding.NewService(db),
+			Branding:                brandingSvc,
 			OpenAIAppsChallenge:     cfg.OpenAIAppsChallenge,
 			AITracking:              aiTracking,
 			AISentiment:             buildAISentiment(cfg, logger, db, spendGuard.AIMeter(spend.AIVisibility, "openrouter/"+aisearch.SentimentModel), aiTracking.Plans),
@@ -459,6 +470,7 @@ func run(logger *slog.Logger) (err error) {
 			LinkSuggest:             linkSuggestSvc,
 			CiteFix:                 citefix.Store{DB: db, Audit: auditSvc, GoogleAIOConfigured: dfClient != nil},
 			CiteFixGoogleAIOverview: citeFixGoogleAIOverview,
+			LocalVisibility:         localVisibility,
 			CiteFixAgent:            buildCiteFixAgent(cfg, logger, db, spendGuard.AIMeter(spend.CiteFix, "openrouter/citefix"), billingRoutes.Gate(planCatalog.AIWriting), gscService),
 			SitePublish:             sitePublish,
 			IndexNow:                indexNowService,
@@ -475,6 +487,7 @@ func run(logger *slog.Logger) (err error) {
 			Team:                    &team.Service{Limits: billingRoutes, DB: db, Redis: rdb, LoopsAPIKey: cfg.LoopsAPIKey, InvitationTemplateID: cfg.LoopsInvitationTemplateID, BaseURL: cfg.BetterAuthURL},
 			CrawlerAccess:           crawlerAccessSvc,
 			Activation:              &activation.Service{Store: activation.Repository{DB: db}},
+			SiteReports:             siteReports,
 			Reports:                 reportsSvc,
 			Support:                 supportSvc,
 			Customers:               customersSvc,
@@ -570,6 +583,48 @@ func buildContentWriter(cfg config.Config, logger *slog.Logger, meter contentedi
 // key, so the page says it is unavailable and its route answers 503. A nil
 // Search Console service stays a nil interface: the agent then runs without
 // query data instead of calling through it.
+// localTickInterval is how often due weekly watches start and lost runs finish.
+const localTickInterval = 15 * time.Minute
+
+// buildLocalVisibility wires Local Visibility and starts its collect workers
+// and weekly-watch ticker. Without a DataForSEO key it is off (nil).
+func buildLocalVisibility(ctx context.Context, cfg config.Config, logger *slog.Logger, db *pgxpool.Pool, dfClient *dataforseo.Client, meter localvisibility.Meter, gateSvc *billing.Service) (*localvisibility.Service, error) {
+	if dfClient == nil {
+		return nil, nil
+	}
+	queue, err := jobs.New(db)
+	if err != nil {
+		return nil, fmt.Errorf("create local visibility job queue: %w", err)
+	}
+	svc := &localvisibility.Service{Store: localvisibility.Store{DB: db}, Client: dfClient, Queue: queue, Logger: logger}
+	if strings.TrimSpace(cfg.OpenRouterAPIKey) != "" {
+		svc.LLM, svc.Meter = &openrouter.Client{APIKey: cfg.OpenRouterAPIKey}, meter
+	}
+	var plans localvisibility.PaidPlans
+	if gateSvc != nil {
+		plans = gateSvc.Gate(planCatalog.LocalVisibility)
+	}
+	worker := jobs.Worker{Queue: queue, QueueName: localvisibility.QueueName, Handle: svc.JobHandler(), Lease: time.Minute, PollInterval: 2 * time.Second}
+	for range 2 {
+		go worker.RunSupervised(ctx, logger)
+	}
+	go func() {
+		timer := time.NewTicker(localTickInterval)
+		defer timer.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-timer.C:
+				if err := svc.Tick(ctx, plans); err != nil && ctx.Err() == nil {
+					logger.Error("local visibility tick failed", "err", err)
+				}
+			}
+		}
+	}()
+	return svc, nil
+}
+
 func buildCiteFixAgent(cfg config.Config, logger *slog.Logger, db *pgxpool.Pool, meter citefix.AgentMeter, plans citefix.AgentPlans, gscService *gsc.Service) citefix.AgentRunner {
 	if strings.TrimSpace(cfg.OpenRouterAPIKey) == "" {
 		return nil

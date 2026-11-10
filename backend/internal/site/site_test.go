@@ -9,8 +9,11 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
+
+	planCatalog "github.com/toufiqqureshi/uplumo/backend/internal/plans"
 )
 
 func newSite(t *testing.T, publicURL *url.URL) *Site {
@@ -116,7 +119,7 @@ func TestPagesCarryTheirMetadata(t *testing.T) {
 				`<meta property="og:image" content="https://uplumo.com/site/social-card.png?v=` + s.versions["social-card.png"] + `">`,
 				`<meta name="twitter:card" content="summary_large_image">`,
 				`href="/sign-up"`,
-				`aria-label="Color theme"`,
+				`<button class="theme-toggle" id="site-theme" type="button"`,
 				`src="/site/theme.js?v=` + s.versions["theme.js"] + `"`,
 				"₹999",
 				"₹2,499",
@@ -152,6 +155,28 @@ func TestPagesCarryTheirMetadata(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// Pages served to every visitor carry no visible prices, so their plan
+// offers are in US dollars, the global currency, never rupees alone.
+func TestSharedPagesDescribePlansInDollars(t *testing.T) {
+	s := newSite(t, &url.URL{Scheme: "https", Host: "uplumo.com"})
+	pages := map[string]*httptest.ResponseRecorder{"/blog": get(s.ServeBlog, "/blog", nil)}
+	for _, path := range InfoPaths() {
+		pages[path] = get(s.ServeInfo, path, nil)
+	}
+	want := plansFor(planCatalog.USD)
+	for path, rec := range pages {
+		offers := parseJSONLD(t, rec.Body.String()).Graph[1].Offers
+		if len(offers) != len(want) {
+			t.Fatalf("%s has %d offers, want %d", path, len(offers), len(want))
+		}
+		for i, o := range offers {
+			if o.Currency != "USD" || o.Price != strconv.Itoa(want[i].Amount) {
+				t.Errorf("%s offer %d = %+v, want %d USD from the plan catalog", path, i, o, want[i].Amount)
+			}
+		}
 	}
 }
 
@@ -281,13 +306,30 @@ func TestPagesHaveNoDeadLinks(t *testing.T) {
 	blogSourceHosts := map[string]bool{
 		"developers.google.com": true,
 		"developers.openai.com": true,
+		"support.claude.com":    true,
 		"support.google.com":    true,
 		"www.google.com":        true,
+		"www.indexnow.org":      true,
 		"www.reddit.com":        true,
 		"www.w3.org":            true,
 		"www.semrush.com":       true,
 		"ahrefs.com":            true,
+		"help.ahrefs.com":       true,
+		"peec.ai":               true,
+		"docs.tryprofound.com":  true,
+		"docs.perplexity.ai":    true,
+		"blogs.bing.com":        true,
 		"ubersuggest.com":       true,
+		"otterly.ai":            true,
+		"athenahq.ai":           true,
+		"scrunch.com":           true,
+		"higoodie.com":          true,
+		"rankscale.ai":          true,
+		"seranking.com":         true,
+		"www.airops.com":        true,
+		"www.hubspot.com":       true,
+		"www.tryprofound.com":   true,
+		"moz.com":               true,
 	}
 	// The privacy policy must point at Google's own policy and at the page
 	// where a user removes our access. Any other outside link is a mistake.
@@ -371,6 +413,9 @@ func TestRobotsAndSitemap(t *testing.T) {
 		got[u.Loc] = true
 	}
 	want := append([]string{"/", "/pricing"}, InfoPaths()...)
+	if len(s.posts) > 0 {
+		want = append(want, "/blog")
+	}
 	for slug := range s.posts {
 		want = append(want, "/blog/"+slug)
 	}
@@ -382,6 +427,51 @@ func TestRobotsAndSitemap(t *testing.T) {
 			t.Errorf("sitemap lacks %s", path)
 		}
 	}
+
+	// The signed-in app is kept out, and no rule may catch a sitemap page.
+	for _, rule := range []string{"Disallow: /p/\n", "Disallow: /settings\n", "Disallow: /billing\n", "Disallow: /ai$\n"} {
+		if !strings.Contains(body, rule) {
+			t.Errorf("robots.txt lacks %q", rule)
+		}
+	}
+	for _, path := range want {
+		for _, line := range strings.Split(body, "\n") {
+			rule, ok := strings.CutPrefix(line, "Disallow: ")
+			exact, isExact := strings.CutSuffix(rule, "$")
+			if ok && ((isExact && path == exact) || (!isExact && strings.HasPrefix(path, rule))) {
+				t.Errorf("robots.txt rule %q blocks public page %s", line, path)
+			}
+		}
+	}
+
+	// Every post lists its cover, which must be served, and the blog index
+	// carries the newest post date.
+	var images struct {
+		URLs []struct {
+			Loc     string `xml:"loc"`
+			LastMod string `xml:"lastmod"`
+			Image   string `xml:"image>loc"`
+		} `xml:"url"`
+	}
+	if err := xml.Unmarshal(sitemap.Body.Bytes(), &images); err != nil {
+		t.Fatal(err)
+	}
+	newest := ""
+	for _, u := range images.URLs {
+		if !strings.HasPrefix(u.Loc, "https://uplumo.com/blog/") {
+			continue
+		}
+		newest = max(newest, u.LastMod)
+		path := strings.TrimPrefix(u.Image, "https://uplumo.com")
+		if u.Image == "" || get(s.ServeAsset, path, nil).Code != http.StatusOK {
+			t.Errorf("%s image %q is missing or not served", u.Loc, u.Image)
+		}
+	}
+	for _, u := range images.URLs {
+		if u.Loc == "https://uplumo.com/blog" && u.LastMod != newest {
+			t.Errorf("blog index lastmod = %q, want newest post %q", u.LastMod, newest)
+		}
+	}
 }
 
 func TestPricingPageShowsWhatThePlanCatalogEnforces(t *testing.T) {
@@ -390,7 +480,7 @@ func TestPricingPageShowsWhatThePlanCatalogEnforces(t *testing.T) {
 	s.ServePricing(rec, httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/pricing", nil))
 	body := rec.Body.String()
 	for _, want := range []string{
-		"<th scope=\"row\">Websites</th><td>1</td><td>1</td><td>5</td><td>10</td>",
+		"<th scope=\"row\">Websites</th><td>1</td><td>1</td><td>3</td><td>10</td>",
 		"<th scope=\"row\">Team members</th><td>1</td><td>1</td><td>3</td><td>5</td>",
 		"<th scope=\"row\">Monthly credits</th><td>0</td><td>4,000</td><td>10,000</td><td>15,000</td>",
 		"<th scope=\"row\">SAM SEO assistant</th><td>—</td><td>Included</td><td>Included</td><td>Included</td>",
@@ -400,11 +490,11 @@ func TestPricingPageShowsWhatThePlanCatalogEnforces(t *testing.T) {
 		"<th scope=\"row\">AI Visibility</th><td>—</td><td>—</td><td>Included</td><td>Included</td>",
 		"<th scope=\"row\">White-label reports</th><td>—</td><td>—</td><td>—</td><td>Included</td>",
 		"<th scope=\"row\">Buy extra credits</th><td>—</td><td>—</td><td>Included</td><td>Included</td>",
-		"<th scope=\"row\">Add more websites</th><td>—</td><td>—</td><td>—</td><td>Included</td>",
+		"<th scope=\"row\">Add more websites</th><td>—</td><td>Included</td><td>Included</td><td>Included</td>",
 		"<th scope=\"row\">Monthly price</th><td>Free</td><td>₹999</td><td>₹2,499</td><td>₹4,999</td>",
 		"<th scope=\"row\">5,000 credits</th><td>₹1,499</td><td>On Pro and Business</td>",
 		"<th scope=\"row\">15,000 credits</th><td>₹3,999</td><td>On Pro and Business</td>",
-		"<th scope=\"row\">5 more websites</th><td>₹999</td><td>On Business</td>",
+		"<th scope=\"row\">1 more website</th><td>₹999</td><td>On Basic, Pro and Business</td>",
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("pricing page lacks the row %s", want)
@@ -415,8 +505,8 @@ func TestPricingPageShowsWhatThePlanCatalogEnforces(t *testing.T) {
 		want []string
 	}{
 		{"Basic", []string{"4,000 credits / month", "1 website", "1 team member", "100 tracked keywords, checked weekly", "Rank checks cover the top 30 results", "Uplumo Analytics with AI traffic detection", "SAM SEO assistant", "Keyword research and SERP analysis", "Publish articles to WordPress"}},
-		{"Pro", []string{"10,000 credits / month", "5 websites", "3 team members", "500 tracked keywords, checked weekly", "Rank checks cover the top 40 results", "Publish articles to WordPress", "Backlink research", "AI Visibility"}},
-		{"Business", []string{"15,000 credits / month", "10 websites", "5 team members", "1,000 tracked keywords, checked weekly", "AI Visibility", "Backlink research", "White-label reports", "Add 5 more websites for ₹999 a month"}},
+		{"Pro", []string{"10,000 credits / month", "3 websites", "Add more websites for ₹999 a month each", "3 team members", "500 tracked keywords, checked weekly", "Rank checks cover the top 40 results", "Publish articles to WordPress", "Backlink research", "AI Visibility"}},
+		{"Business", []string{"15,000 credits / month", "10 websites", "5 team members", "1,000 tracked keywords, checked weekly", "AI Visibility", "Backlink research", "White-label reports", "Add more websites for ₹999 a month each"}},
 	} {
 		start := strings.Index(body, `<h3 id="plan-`+tc.plan+`">`)
 		if start < 0 {
@@ -496,14 +586,14 @@ func TestPricesFollowTheVisitorsCountry(t *testing.T) {
 		"<th scope=\"row\">Monthly price</th><td>Free</td><td>$15</td><td>$39</td><td>$69</td>",
 		"<th scope=\"row\">5,000 credits</th><td>$19</td>",
 		"<th scope=\"row\">15,000 credits</th><td>$59</td>",
-		"<th scope=\"row\">5 more websites</th><td>$12</td>",
-		"Add 5 more websites for $12 a month",
+		"<th scope=\"row\">1 more website</th><td>$12</td>",
+		"Add more websites for $12 a month each",
 		"in US dollars. In India, plans are priced and billed in Indian rupees",
 		`"priceCurrency":"USD"`,
 	}
 	inr := []string{
 		"<th scope=\"row\">Monthly price</th><td>Free</td><td>₹999</td><td>₹2,499</td><td>₹4,999</td>",
-		"Add 5 more websites for ₹999 a month",
+		"Add more websites for ₹999 a month each",
 		"in Indian rupees. Outside India, plans are priced and billed in US dollars",
 		`"priceCurrency":"INR"`,
 	}

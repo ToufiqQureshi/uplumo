@@ -93,7 +93,7 @@ export function ContentEditorSidePanel({
 
   return (
     <aside
-      className={`min-w-0 space-y-3 xl:sticky xl:top-32 xl:max-h-[calc(100vh-9rem)] xl:self-start xl:overflow-y-auto ${className ?? ""}`}
+      className={`min-w-0 space-y-3 xl:sticky xl:-top-6 xl:max-h-[calc(100vh-5rem)] xl:self-start xl:overflow-y-auto ${className ?? ""}`}
     >
       <div
         role="tablist"
@@ -193,6 +193,7 @@ export function ContentEditorSidePanel({
             draftId={draftId}
             draft={draft}
             editorBusy={editorBusy}
+            hasUnsavedChanges={dirty}
             publishToSite={(schema) => (
               <PublishToSite
                 projectId={projectId}

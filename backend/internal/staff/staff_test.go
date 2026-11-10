@@ -225,6 +225,12 @@ func TestRoutesAreHiddenFromEveryoneButStaff(t *testing.T) {
 	if got := call(&staff, "POST", "/api/v1/staff/payments/sync", ""); got != 503 {
 		t.Fatalf("sync without Razorpay = %d, want 503", got)
 	}
+	if got := call(&user, "GET", "/api/v1/staff/payments/failed", ""); got != 404 {
+		t.Fatalf("customer failed payments = %d, want 404", got)
+	}
+	if got := call(&staff, "GET", "/api/v1/staff/payments/failed", ""); got != 503 {
+		t.Fatalf("failed payments without Razorpay = %d, want 503", got)
+	}
 	if got := call(&staff, "POST", "/api/v1/staff/users/block", block); got != 200 {
 		t.Fatalf("staff block = %d, want 200", got)
 	}

@@ -343,6 +343,7 @@ function ArticleBody({
         headings, lists, images and tables. Paste or drag an image to upload it.
       </p>
       <PreviewDialog
+        projectId={projectId}
         open={previewOpen}
         onOpenChange={onPreviewOpenChange}
         title={title}
