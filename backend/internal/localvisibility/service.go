@@ -395,15 +395,16 @@ func (s *Service) collectRound(ctx context.Context, runID string, tasks map[stri
 			continue
 		}
 		result, err := collect(ctx, s.Client, t.Endpoint, t.TaskID)
+		state := taskDone
 		switch {
 		case errors.Is(err, errNotReady):
 			pending++
 			continue
 		case errors.Is(err, errNoResult):
-			err = s.Store.SetTask(ctx, runID, key, taskDone, nil)
+			result = nil
 		case isTaskFailure(err):
 			s.logger().WarnContext(ctx, "local visibility task failed", "run", runID, "task", key, "err", err)
-			err = s.Store.SetTask(ctx, runID, key, taskFailed, nil)
+			state, result = taskFailed, nil
 		case err != nil:
 			if ctx.Err() != nil {
 				return pending, ctx.Err()
@@ -411,13 +412,12 @@ func (s *Service) collectRound(ctx context.Context, runID string, tasks map[stri
 			s.logger().WarnContext(ctx, "local visibility task_get failed", "run", runID, "task", key, "err", err)
 			pending++
 			continue
-		default:
-			err = s.Store.SetTask(ctx, runID, key, taskDone, result)
 		}
-		if err != nil {
+		if err := s.Store.SetTask(ctx, runID, key, state, result); err != nil {
 			return pending, err
 		}
-		t.State = taskDone
+		// The check's second step reads the Maps result from this map.
+		t.State, t.Result = state, result
 		tasks[key] = t
 	}
 	return pending, nil
