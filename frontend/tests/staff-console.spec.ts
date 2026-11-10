@@ -28,7 +28,7 @@ for (const width of [375, 1280]) {
   test(`staff content scrolls independently of navigation at ${width}px`, async ({
     page,
   }) => {
-    await installGrowthFixtures(page);
+    const { paid } = await installGrowthFixtures(page);
     await page.route("**/api/v1/admin/access", (route) =>
       route.fulfill({ json: { staff: true } }),
     );
@@ -71,13 +71,14 @@ for (const width of [375, 1280]) {
         )
         .toBe(0);
     }
+    expect(paid).toEqual([]);
   });
 }
 
 test("staff access can recover after a temporary error without showing staff data first", async ({
   page,
 }) => {
-  await installGrowthFixtures(page);
+  const { paid } = await installGrowthFixtures(page);
   let requests = 0;
   await page.route("**/api/v1/admin/access", async (route) => {
     requests += 1;
@@ -100,4 +101,5 @@ test("staff access can recover after a temporary error without showing staff dat
   await page.getByRole("button", { name: "Try again" }).click();
   await expect(page.getByText("404", { exact: true })).toBeVisible();
   expect(requests).toBe(2);
+  expect(paid).toEqual([]);
 });
