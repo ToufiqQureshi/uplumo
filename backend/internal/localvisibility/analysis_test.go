@@ -1,6 +1,7 @@
 package localvisibility
 
 import (
+	"encoding/json"
 	"math"
 	"strings"
 	"testing"
@@ -164,5 +165,24 @@ func TestCompareWatchFindsWhatChanged(t *testing.T) {
 	}
 	if got := watchSummary(changes, false); got != "A got the most new reviews (19); A added the category “Emergency dental service”." {
 		t.Fatalf("summary = %q", got)
+	}
+}
+
+// A business outside the Maps top 20 has no listing in the results; its
+// result must still encode lists as [] for the page's schema.
+func TestCheckResultOfABusinessOutsideTheTop20EncodesEmptyLists(t *testing.T) {
+	done := func(key string) (json.RawMessage, bool) {
+		if key == "maps" {
+			return json.RawMessage(`{"items":[]}`), true
+		}
+		return nil, false
+	}
+	result, _ := buildCheck(runInput{CID: "100", Term: "dentist"}, done, now)
+	raw, err := json.Marshal(result)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), `"categories":null`) {
+		t.Fatalf("result has a null list: %s", raw)
 	}
 }
