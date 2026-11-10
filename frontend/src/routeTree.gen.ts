@@ -52,6 +52,7 @@ import { Route as AppPProjectIdContentEditorRouteImport } from './routes/_app/p/
 import { Route as AppPProjectIdContextRouteImport } from './routes/_app/p/$projectId/context'
 import { Route as AppPProjectIdDomainRouteImport } from './routes/_app/p/$projectId/domain'
 import { Route as AppPProjectIdKeywordsRouteImport } from './routes/_app/p/$projectId/keywords'
+import { Route as AppPProjectIdLocalVisibilityRouteImport } from './routes/_app/p/$projectId/local-visibility'
 import { Route as AppPProjectIdNextActionsRouteImport } from './routes/_app/p/$projectId/next-actions'
 import { Route as AppPProjectIdPromptExplorerRouteImport } from './routes/_app/p/$projectId/prompt-explorer'
 import { Route as AppPProjectIdPromptIdeasRouteImport } from './routes/_app/p/$projectId/prompt-ideas'
@@ -290,6 +291,12 @@ const AppPProjectIdKeywordsRoute = AppPProjectIdKeywordsRouteImport.update({
   path: '/keywords',
   getParentRoute: () => AppPProjectIdRouteRoute,
 } as any)
+const AppPProjectIdLocalVisibilityRoute =
+  AppPProjectIdLocalVisibilityRouteImport.update({
+    id: '/local-visibility',
+    path: '/local-visibility',
+    getParentRoute: () => AppPProjectIdRouteRoute,
+  } as any)
 const AppPProjectIdNextActionsRoute =
   AppPProjectIdNextActionsRouteImport.update({
     id: '/next-actions',
@@ -441,6 +448,7 @@ export interface FileRoutesByFullPath {
   '/p/$projectId/context': typeof AppPProjectIdContextRoute
   '/p/$projectId/domain': typeof AppPProjectIdDomainRoute
   '/p/$projectId/keywords': typeof AppPProjectIdKeywordsRoute
+  '/p/$projectId/local-visibility': typeof AppPProjectIdLocalVisibilityRoute
   '/p/$projectId/next-actions': typeof AppPProjectIdNextActionsRoute
   '/p/$projectId/prompt-explorer': typeof AppPProjectIdPromptExplorerRoute
   '/p/$projectId/prompt-ideas': typeof AppPProjectIdPromptIdeasRoute
@@ -499,6 +507,7 @@ export interface FileRoutesByTo {
   '/p/$projectId/context': typeof AppPProjectIdContextRoute
   '/p/$projectId/domain': typeof AppPProjectIdDomainRoute
   '/p/$projectId/keywords': typeof AppPProjectIdKeywordsRoute
+  '/p/$projectId/local-visibility': typeof AppPProjectIdLocalVisibilityRoute
   '/p/$projectId/next-actions': typeof AppPProjectIdNextActionsRoute
   '/p/$projectId/prompt-explorer': typeof AppPProjectIdPromptExplorerRoute
   '/p/$projectId/prompt-ideas': typeof AppPProjectIdPromptIdeasRoute
@@ -562,6 +571,7 @@ export interface FileRoutesById {
   '/_app/p/$projectId/context': typeof AppPProjectIdContextRoute
   '/_app/p/$projectId/domain': typeof AppPProjectIdDomainRoute
   '/_app/p/$projectId/keywords': typeof AppPProjectIdKeywordsRoute
+  '/_app/p/$projectId/local-visibility': typeof AppPProjectIdLocalVisibilityRoute
   '/_app/p/$projectId/next-actions': typeof AppPProjectIdNextActionsRoute
   '/_app/p/$projectId/prompt-explorer': typeof AppPProjectIdPromptExplorerRoute
   '/_app/p/$projectId/prompt-ideas': typeof AppPProjectIdPromptIdeasRoute
@@ -625,6 +635,7 @@ export interface FileRouteTypes {
     | '/p/$projectId/context'
     | '/p/$projectId/domain'
     | '/p/$projectId/keywords'
+    | '/p/$projectId/local-visibility'
     | '/p/$projectId/next-actions'
     | '/p/$projectId/prompt-explorer'
     | '/p/$projectId/prompt-ideas'
@@ -683,6 +694,7 @@ export interface FileRouteTypes {
     | '/p/$projectId/context'
     | '/p/$projectId/domain'
     | '/p/$projectId/keywords'
+    | '/p/$projectId/local-visibility'
     | '/p/$projectId/next-actions'
     | '/p/$projectId/prompt-explorer'
     | '/p/$projectId/prompt-ideas'
@@ -745,6 +757,7 @@ export interface FileRouteTypes {
     | '/_app/p/$projectId/context'
     | '/_app/p/$projectId/domain'
     | '/_app/p/$projectId/keywords'
+    | '/_app/p/$projectId/local-visibility'
     | '/_app/p/$projectId/next-actions'
     | '/_app/p/$projectId/prompt-explorer'
     | '/_app/p/$projectId/prompt-ideas'
@@ -1082,6 +1095,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPProjectIdKeywordsRouteImport
       parentRoute: typeof AppPProjectIdRouteRoute
     }
+    '/_app/p/$projectId/local-visibility': {
+      id: '/_app/p/$projectId/local-visibility'
+      path: '/local-visibility'
+      fullPath: '/p/$projectId/local-visibility'
+      preLoaderRoute: typeof AppPProjectIdLocalVisibilityRouteImport
+      parentRoute: typeof AppPProjectIdRouteRoute
+    }
     '/_app/p/$projectId/next-actions': {
       id: '/_app/p/$projectId/next-actions'
       path: '/next-actions'
@@ -1280,6 +1300,7 @@ interface AppPProjectIdRouteRouteChildren {
   AppPProjectIdContextRoute: typeof AppPProjectIdContextRoute
   AppPProjectIdDomainRoute: typeof AppPProjectIdDomainRoute
   AppPProjectIdKeywordsRoute: typeof AppPProjectIdKeywordsRoute
+  AppPProjectIdLocalVisibilityRoute: typeof AppPProjectIdLocalVisibilityRoute
   AppPProjectIdNextActionsRoute: typeof AppPProjectIdNextActionsRoute
   AppPProjectIdPromptExplorerRoute: typeof AppPProjectIdPromptExplorerRoute
   AppPProjectIdPromptIdeasRoute: typeof AppPProjectIdPromptIdeasRoute
@@ -1308,6 +1329,7 @@ const AppPProjectIdRouteRouteChildren: AppPProjectIdRouteRouteChildren = {
   AppPProjectIdContextRoute: AppPProjectIdContextRoute,
   AppPProjectIdDomainRoute: AppPProjectIdDomainRoute,
   AppPProjectIdKeywordsRoute: AppPProjectIdKeywordsRoute,
+  AppPProjectIdLocalVisibilityRoute: AppPProjectIdLocalVisibilityRoute,
   AppPProjectIdNextActionsRoute: AppPProjectIdNextActionsRoute,
   AppPProjectIdPromptExplorerRoute: AppPProjectIdPromptExplorerRoute,
   AppPProjectIdPromptIdeasRoute: AppPProjectIdPromptIdeasRoute,
