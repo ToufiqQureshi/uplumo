@@ -14,7 +14,7 @@ type Category struct {
 var categories = []Category{
 	{ID: "access", Label: "AI can read the site", Weight: 25},
 	{ID: "identity", Label: "AI knows who you are", Weight: 10},
-	{ID: "trust", Label: "Author and freshness", Weight: 20},
+	{ID: "trust", Label: "Trust and freshness", Weight: 20},
 	{ID: "answers", Label: "Direct answers", Weight: 20},
 	{ID: "evidence", Label: "Facts and sources", Weight: 15},
 	{ID: "content", Label: "Content depth", Weight: 10},
