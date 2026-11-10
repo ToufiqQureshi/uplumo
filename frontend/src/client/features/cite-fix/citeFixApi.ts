@@ -6,6 +6,7 @@ import { visibilityMetricsSchema } from "../ai-search/trackingApi";
 const pageRefSchema = z.object({
   url: z.string(),
   title: z.string(),
+  alsoAt: z.array(z.string()).optional(),
   evidence: z.array(z.string()).optional(),
 });
 const topicSchema = z.object({
@@ -97,6 +98,7 @@ const reportSchema = z.object({
       id: z.string(),
       category: z.string(),
       title: z.string(),
+      label: z.string(),
       why: z.string(),
       how: z.string(),
       impact: z.enum(["high", "medium", "low"]),
@@ -109,6 +111,8 @@ const reportSchema = z.object({
     z.object({
       url: z.string(),
       title: z.string(),
+      alsoAt: z.array(z.string()),
+      article: z.boolean(),
       score: z.number(),
       failed: z.array(z.string()),
     }),

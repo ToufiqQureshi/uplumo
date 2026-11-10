@@ -300,7 +300,7 @@ function Ready({
         </p>
       </section>
 
-      {report.topics ? (
+      {report.topics?.clusters.length ? (
         <TopicsSection projectId={projectId} topics={report.topics} />
       ) : null}
       <section aria-labelledby="cite-fix-fixes" className="flex flex-col gap-3">

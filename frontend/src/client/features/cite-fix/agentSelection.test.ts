@@ -13,6 +13,8 @@ const offer = {
 const page = (url: string, score: number) => ({
   url,
   title: "",
+  alsoAt: [],
+  article: false,
   score,
   failed: [],
 });

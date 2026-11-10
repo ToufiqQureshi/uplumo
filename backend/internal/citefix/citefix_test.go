@@ -75,32 +75,141 @@ func TestBuildPerfectSiteScoresFullMarks(t *testing.T) {
 // the weights in checks.go, so a weight change has to change this test.
 func TestBuildBarePageScoreAndFixOrder(t *testing.T) {
 	report := Build(testScan(), []Page{barePage("https://shop.example/rooms")}, nil)
-	// Access 25, identity 6, trust 20*5/8 = 12.5, answers 0,
-	// evidence 0, content 10: 53.5 rounds to 54.
-	if *report.Score != 54 {
-		t.Fatalf("score = %d, want 54", *report.Score)
+	// Not an article: author, date, quotes and question headings are not
+	// judged. Access 25, identity 6, trust 20 (stale claims and hidden
+	// instructions pass), answers 0, evidence 0, content 10 = 61.
+	if *report.Score != 61 {
+		t.Fatalf("score = %d, want 61", *report.Score)
 	}
-	wantCategories := map[string]int{"access": 100, "identity": 60, "trust": 63, "answers": 0, "evidence": 0, "content": 100}
+	wantCategories := map[string]int{"access": 100, "identity": 60, "trust": 100, "answers": 0, "evidence": 0, "content": 100}
 	for _, category := range report.Categories {
 		if category.Score != wantCategories[category.ID] {
 			t.Errorf("category %s = %d, want %d", category.ID, category.Score, wantCategories[category.ID])
 		}
 	}
-	// Fresh is not judged without a date. Author and both answer checks
-	// each gain five points; ties retain category and check order.
-	want := []string{"author", "answer-first", "answer-capsule", "structured-data", "statistics", "sources", "authoritative-sources", "quotes", "dated", "definition-after-heading", "chunk-ready-sections", "question-headings", "scannable"}
+	// Answers weigh 7 without question headings: 20*2/7 = 5.7 each.
+	// Evidence weighs 6 without quotes: 15*2/6 = 5 each. Ties keep
+	// category and check order.
+	want := []string{"answer-first", "answer-capsule", "statistics", "sources", "authoritative-sources", "structured-data", "definition-after-heading", "chunk-ready-sections", "scannable"}
 	if got := fixIDs(report); !slices.Equal(got, want) {
 		t.Fatalf("fix order = %v\nwant        %v", got, want)
 	}
-	gains := map[string]float64{"author": 5, "answer-first": 5, "answer-capsule": 5}
+	gains := map[string]float64{"answer-first": 5.7, "answer-capsule": 5.7, "statistics": 5}
 	for id, gain := range gains {
 		if fix := findFix(t, report, id); fix.Gain != gain || fix.Impact != "high" {
 			t.Errorf("%s gain %v impact %s, want %v high", id, fix.Gain, fix.Impact, gain)
 		}
 	}
-	fix := findFix(t, report, "author")
-	if fix.PagesAffected != 1 || len(fix.Pages) != 1 || fix.Pages[0].URL != "https://shop.example/rooms" || fix.Title == "" || fix.How == "" {
-		t.Fatalf("author fix = %+v", fix)
+	fix := findFix(t, report, "answer-first")
+	if fix.PagesAffected != 1 || len(fix.Pages) != 1 || fix.Pages[0].URL != "https://shop.example/rooms" || fix.Title == "" || fix.Label == "" || fix.How == "" {
+		t.Fatalf("answer-first fix = %+v", fix)
+	}
+	if page := report.Pages[0]; page.Article || len(page.Failed) != len(want) {
+		t.Fatalf("page = %+v, want a non-article failing %d checks", page, len(want))
+	}
+}
+
+// Author, date, quotes and question headings are judged only on articles:
+// a page with an article schema type or a publish date, never the home page.
+func TestBuildArticleOnlyChecks(t *testing.T) {
+	articleOnly := []string{"author", "dated", "quotes", "question-headings"}
+	withSchema := func(url string, types ...string) Page {
+		page := barePage(url)
+		page.Signals.SchemaTypes = types
+		return page
+	}
+	dated := barePage("https://shop.example/notes/one")
+	dated.Signals.Published = "2026-10-01"
+	for name, tt := range map[string]struct {
+		page    Page
+		article bool
+	}{
+		"blog posting":         {withSchema("https://shop.example/blog/a", "BlogPosting"), true},
+		"news article as IRI":  {withSchema("https://shop.example/news/b", "https://schema.org/NewsArticle"), true},
+		"report":               {withSchema("https://shop.example/r", "Report"), true},
+		"publish date only":    {dated, true},
+		"service page":         {withSchema("https://shop.example/offer/x", "LocalBusiness", "Service"), false},
+		"product page":         {withSchema("https://shop.example/p/1", "Product"), false},
+		"no schema":            {barePage("https://shop.example/contact"), false},
+		"home page as article": {withSchema("https://shop.example/", "Article"), false},
+		"home page, no slash":  {withSchema("https://shop.example", "Article"), false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			report := Build(testScan(), []Page{tt.page}, nil)
+			if report.Pages[0].Article != tt.article {
+				t.Fatalf("article = %v, want %v", report.Pages[0].Article, tt.article)
+			}
+			for _, id := range articleOnly {
+				if id == "dated" && tt.page.Signals.Published != "" {
+					continue
+				}
+				if hasFix(report, id) != tt.article || slices.Contains(report.Pages[0].Failed, id) != tt.article {
+					t.Errorf("%s judged = %v, want %v", id, hasFix(report, id), tt.article)
+				}
+			}
+		})
+	}
+}
+
+// The same page crawled with ?from=home or a fragment is one row: scored,
+// listed and offered to the paid agent once, and not called a duplicate of
+// itself.
+func TestBuildCollapsesAddressesOfOnePage(t *testing.T) {
+	variant := func(url, hash string) Page {
+		page := barePage(url)
+		page.Title, page.ContentHash = "Training", hash
+		return page
+	}
+	pages := []Page{
+		variant("https://shop.example/offer/a?from=work", "h1"),
+		variant("https://shop.example/offer/a", "h1"),
+		variant("https://shop.example/offer/a?from=home", "h1"),
+		variant("https://shop.example/offer/a#top", "h1"),
+		// Same path, different text: a real different page (?id=2).
+		variant("https://shop.example/offer/a?id=2", "h2"),
+		// Same text, different path: a real duplicate.
+		variant("https://shop.example/offer/b", "h3"),
+		variant("https://shop.example/offer/b-copy", "h3"),
+		// No hash stored: never merged.
+		variant("https://shop.example/offer/c", ""),
+		variant("https://shop.example/offer/c?from=home", ""),
+	}
+	dupIssue := func(url string, size any) Issue {
+		return Issue{Type: string(audit.IssueDuplicateContent), PageURL: url, Details: map[string]any{"groupSize": size}}
+	}
+	issues := []Issue{
+		dupIssue("https://shop.example/offer/a", float64(4)), dupIssue("https://shop.example/offer/a?from=home", float64(4)),
+		dupIssue("https://shop.example/offer/a?from=work", float64(4)), dupIssue("https://shop.example/offer/a#top", float64(4)),
+		dupIssue("https://shop.example/offer/b", 2), dupIssue("https://shop.example/offer/b-copy", 2),
+	}
+	report := Build(testScan(), pages, issues)
+
+	if report.PagesTotal != 6 || report.PagesChecked != 6 || len(report.Pages) != 6 {
+		t.Fatalf("pages %d checked of %d, %d rows; want 6", report.PagesChecked, report.PagesTotal, len(report.Pages))
+	}
+	i := slices.IndexFunc(report.Pages, func(p PageScore) bool { return p.URL == "https://shop.example/offer/a" })
+	if i < 0 {
+		t.Fatalf("the shortest address is not the row: %+v", report.Pages)
+	}
+	wantAlso := []string{"https://shop.example/offer/a#top", "https://shop.example/offer/a?from=home", "https://shop.example/offer/a?from=work"}
+	if got := report.Pages[i].AlsoAt; !slices.Equal(got, wantAlso) {
+		t.Fatalf("alsoAt = %v, want %v", got, wantAlso)
+	}
+	if slices.Contains(report.Pages[i].Failed, "unique") {
+		t.Fatal("a page was called a duplicate of its own addresses")
+	}
+	unique := findFix(t, report, "unique")
+	var dupURLs []string
+	for _, page := range unique.Pages {
+		dupURLs = append(dupURLs, page.URL)
+	}
+	if want := []string{"https://shop.example/offer/b", "https://shop.example/offer/b-copy"}; !slices.Equal(dupURLs, want) {
+		t.Fatalf("duplicates = %v, want %v", dupURLs, want)
+	}
+	for _, page := range report.Pages {
+		if page.AlsoAt == nil {
+			t.Fatalf("alsoAt must be an array for JSON: %+v", page)
+		}
 	}
 }
 
@@ -270,9 +379,9 @@ func TestBuildCapsListsAndSortsPagesWorstFirst(t *testing.T) {
 	}
 	pages = append(pages, goodPage("https://shop.example/best"))
 	report := Build(testScan(), pages, nil)
-	fix := findFix(t, report, "author")
+	fix := findFix(t, report, "answer-first")
 	if fix.PagesAffected != 60 || len(fix.Pages) != maxFixPages {
-		t.Fatalf("author fix lists %d of %d pages, want %d of 60", len(fix.Pages), fix.PagesAffected, maxFixPages)
+		t.Fatalf("answer-first fix lists %d of %d pages, want %d of 60", len(fix.Pages), fix.PagesAffected, maxFixPages)
 	}
 	if len(report.Pages) != maxReportPages {
 		t.Fatalf("report pages = %d, want %d", len(report.Pages), maxReportPages)
@@ -283,10 +392,11 @@ func TestBuildCapsListsAndSortsPagesWorstFirst(t *testing.T) {
 	if slices.ContainsFunc(report.Pages, func(p PageScore) bool { return p.URL == "https://shop.example/best" }) {
 		t.Fatal("the best page was listed among the 50 worst")
 	}
-	// A bare page passes snippet access, stale-claim and trust checks,
-	// plus not-thin and unique: 13 of 34 weight = 38.
-	if report.Pages[0].Score != 38 {
-		t.Fatalf("bare page score = %d, want 38", report.Pages[0].Score)
+	// A bare page is not an article. It passes snippet access, stale-claim
+	// and hidden-instruction checks, plus not-thin and unique: 13 of 28
+	// weight = 46.
+	if report.Pages[0].Score != 46 {
+		t.Fatalf("bare page score = %d, want 46", report.Pages[0].Score)
 	}
 }
 

@@ -19,5 +19,9 @@
    last update and length.
 7. With a current scan you also get your score, topic clusters, the fix list
    and the AI agent that writes fixes for chosen pages (credits shown first).
+   A page found at several addresses (`?from=home`) is one row. Byline,
+   date, quotes and question headings are only expected on articles; service,
+   product, contact and home pages are not marked missing for them. Topics
+   appear only when the scan finds at least one.
 8. History tables, mentions, Google AI Overview answers and SEO issues are
    under "All citation data".

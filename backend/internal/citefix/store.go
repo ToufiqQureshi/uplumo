@@ -137,7 +137,7 @@ func (s Store) running(ctx context.Context, organizationID, projectID string) (*
 // without citation signals: the audit predates them.
 func (s Store) pages(ctx context.Context, auditID string) ([]Page, bool, error) {
 	rows, err := s.DB.Query(ctx, `SELECT url, COALESCE(title, ''), COALESCE(status_code, 0), is_indexable,
-			word_count, external_link_count, citation_signals_json
+			word_count, external_link_count, citation_signals_json, COALESCE(content_hash, '')
 		FROM go_audit_pages WHERE audit_id = $1 ORDER BY url LIMIT $2`, auditID, audit.PaidMaxAuditPages)
 	if err != nil {
 		return nil, false, fmt.Errorf("list audit pages: %w", err)
@@ -149,7 +149,7 @@ func (s Store) pages(ctx context.Context, auditID string) ([]Page, bool, error) 
 		var page Page
 		var signalsJSON *string
 		if err := rows.Scan(&page.URL, &page.Title, &page.StatusCode, &page.Indexable, &page.WordCount,
-			&page.ExternalLinks, &signalsJSON); err != nil {
+			&page.ExternalLinks, &signalsJSON, &page.ContentHash); err != nil {
 			return nil, false, fmt.Errorf("scan audit page: %w", err)
 		}
 		if signalsJSON == nil {

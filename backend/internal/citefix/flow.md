@@ -5,7 +5,8 @@
 Screen → `POST .../cite-fix/report` → `Store.Report`:
 
 1. Latest completed site scan: score, fixes, pages, topics (or `no_scan` /
-   `needs_rescan`).
+   `needs_rescan`). Addresses of one page (same path and text, another query
+   string) are merged first; article-only checks run on articles only.
 2. `proof`: the latest finished AI Visibility run's saved answers → how many
    cite the customer, rivals, every missed question and engine (up to 60) with
    the sites cited instead (URLs canonical: no `#:~:text` or `utm_`), plus the
