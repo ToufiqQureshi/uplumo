@@ -51,6 +51,7 @@ type Overview struct {
 	EndingNext7        int        `json:"endingNext7Days"`
 	PaymentFailing     int        `json:"paymentFailing"`
 	SignupsByDay       []DayCount `json:"signupsByDay"`
+	DeletionReasons    []Count    `json:"deletionReasons"`
 }
 
 // Stats is reads the console numbers from Postgres.
@@ -105,6 +106,9 @@ func (s Stats) Overview(ctx context.Context) (Overview, error) {
 	}
 	if o.CollectedLastMonth, err = collected(ctx, s.DB, `paid_at >= date_trunc('month', now()) - interval '1 month' AND paid_at < date_trunc('month', now())`); err != nil {
 		return o, err
+	}
+	if o.DeletionReasons, err = counts(ctx, s.DB, `SELECT reason, total FROM go_account_deletion_reason_counts ORDER BY total DESC, reason`); err != nil {
+		return o, fmt.Errorf("overview account deletion reasons: %w", err)
 	}
 	o.SignupsByDay, err = pgxCollect(ctx, s.DB, `SELECT to_char(d, 'YYYY-MM-DD'), (SELECT count(*) FROM "user" WHERE created_at >= d AND created_at < d + interval '1 day')
 		FROM generate_series(date_trunc('day', now()) - interval '29 days', date_trunc('day', now()), interval '1 day') d ORDER BY d`,

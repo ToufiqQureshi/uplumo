@@ -133,33 +133,46 @@ func TestEraseAccountChecksSessionAndWorkspaceBeforeDeleting(t *testing.T) {
 		}
 	}
 	token := "self-token-" + id
+	const reason = "technical_problem"
+	reasonTotal := func() int {
+		t.Helper()
+		var total int
+		if err := pool.QueryRow(ctx, `SELECT coalesce((SELECT total FROM go_account_deletion_reason_counts WHERE reason = $1), 0)`, reason).Scan(&total); err != nil {
+			t.Fatal(err)
+		}
+		return total
+	}
+	before := reasonTotal()
 	exec(`INSERT INTO session (id,token,user_id,expires_at,created_at,updated_at)
 		VALUES ($1,$1,$2,now()+interval '1 hour',now()-interval '1 hour',now())`, token, userID)
 	since := time.Now().Add(-15 * time.Minute)
-	if err := eraser.EraseAccount(ctx, "invalid", since); !errors.Is(err, ErrSessionExpired) {
+	if err := eraser.EraseAccount(ctx, "invalid", since, reason); !errors.Is(err, ErrSessionExpired) {
 		t.Fatalf("invalid session: %v", err)
 	}
-	if err := eraser.EraseAccount(ctx, token, since); !errors.Is(err, ErrSessionNotRecent) {
+	if err := eraser.EraseAccount(ctx, token, since, reason); !errors.Is(err, ErrSessionNotRecent) {
 		t.Fatalf("old session: %v", err)
 	}
 	exec(`UPDATE session SET created_at = now() WHERE token = $1`, token)
 	exec(`INSERT INTO member (id,organization_id,user_id,role,created_at) VALUES ($1,$2,$3,'member',now())`, otherID, orgID, otherID)
-	if err := eraser.EraseAccount(ctx, token, since); !errors.Is(err, ErrSharedOrganization) {
+	if err := eraser.EraseAccount(ctx, token, since, reason); !errors.Is(err, ErrSharedOrganization) {
 		t.Fatalf("shared workspace: %v", err)
 	}
 	exec(`DELETE FROM member WHERE id = $1`, otherID)
 	exec(`INSERT INTO go_billing_subscriptions (organization_id,razorpay_subscription_id,plan,status,event_at)
 		VALUES ($1,$2,'pro','created',now())`, orgID, "sub_"+id)
-	if err := eraser.EraseAccount(ctx, token, since); !errors.Is(err, ErrOpenBilling) {
+	if err := eraser.EraseAccount(ctx, token, since, reason); !errors.Is(err, ErrOpenBilling) {
 		t.Fatalf("payable subscription: %v", err)
 	}
 	if _, err := eraser.Find(ctx, "", userID); err != nil {
 		t.Fatalf("blocked deletion removed user: %v", err)
 	}
+	if got := reasonTotal(); got != before {
+		t.Fatalf("blocked deletions changed reason total to %d; want %d", got, before)
+	}
 	exec(`UPDATE go_billing_subscriptions SET status = 'cancelled' WHERE organization_id = $1`, orgID)
 	results := make(chan error, 2)
 	for range 2 {
-		go func() { results <- eraser.EraseAccount(ctx, token, since) }()
+		go func() { results <- eraser.EraseAccount(ctx, token, since, reason) }()
 	}
 	first, second := <-results, <-results
 	if first != nil {
@@ -168,12 +181,24 @@ func TestEraseAccountChecksSessionAndWorkspaceBeforeDeleting(t *testing.T) {
 	if first != nil || !errors.Is(second, ErrSessionExpired) {
 		t.Fatalf("concurrent deletion = %v, %v; want one success and one expired session", first, second)
 	}
+	if got := reasonTotal(); got != before+1 {
+		t.Fatalf("successful deletion changed reason total to %d; want %d", got, before+1)
+	}
 	if _, err := eraser.Find(ctx, "", otherID); err != nil {
 		t.Fatalf("other user was affected: %v", err)
 	}
 	var projectExists bool
 	if err := pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM projects WHERE id = $1)`, projectID).Scan(&projectExists); err != nil || projectExists {
 		t.Fatalf("personal project exists = %t, err = %v", projectExists, err)
+	}
+	otherToken := "other-token-" + id
+	exec(`INSERT INTO session (id,token,user_id,expires_at,created_at,updated_at)
+		VALUES ($1,$1,$2,now()+interval '1 hour',now(),now())`, otherToken, otherID)
+	if err := eraser.EraseAccount(ctx, otherToken, since, ""); err != nil {
+		t.Fatalf("deletion without a reason: %v", err)
+	}
+	if got := reasonTotal(); got != before+1 {
+		t.Fatalf("skipped reason changed total to %d; want %d", got, before+1)
 	}
 }
 

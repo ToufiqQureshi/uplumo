@@ -14,6 +14,7 @@ import {
 } from "@/client/components/ui/chart";
 import { CountTable, QueryView, Section, StatTile } from "./StaffParts";
 import { formatMoney, overviewQueryOptions, type Money } from "./staffApi";
+import { accountDeletionReasons } from "@/shared/accountDeletion";
 
 const signupConfig = {
   count: { label: "Signups", color: "var(--chart-1)" },
@@ -43,6 +44,19 @@ export function OverviewPage() {
               <StatTile label="New in 30 days" value={o.new30Days} />
             </div>
           </Section>
+          {o.deletionReasons.length > 0 && (
+            <Section
+              title="Account deletion reasons"
+              description="All-time totals from optional exit feedback."
+            >
+              <CountTable
+                rows={o.deletionReasons.map((row) => ({
+                  ...row,
+                  label: accountDeletionReasons[row.label] ?? row.label,
+                }))}
+              />
+            </Section>
+          )}
           <Section
             title="Money"
             description="MRR is every active subscription at its plan price. Collected is real payments after refunds."

@@ -13,7 +13,8 @@ const deletionSessionAge = 15 * time.Minute
 
 func (s *Service) deleteAccount(w http.ResponseWriter, r *http.Request) error {
 	var input struct {
-		Confirm bool `json:"confirm"`
+		Confirm bool   `json:"confirm"`
+		Reason  string `json:"reason"`
 	}
 	if err := decode(r, &input); err != nil {
 		return err
@@ -36,7 +37,9 @@ func (s *Service) deleteAccount(w http.ResponseWriter, r *http.Request) error {
 	ctx, cancel := context.WithTimeout(r.Context(), 25*time.Second)
 	defer cancel()
 	eraser := gdpr.Eraser{DB: s.DB}
-	switch err := eraser.EraseAccount(ctx, token, s.Now().Add(-deletionSessionAge)); {
+	switch err := eraser.EraseAccount(ctx, token, s.Now().Add(-deletionSessionAge), input.Reason); {
+	case errors.Is(err, gdpr.ErrInvalidReason):
+		return &apiError{http.StatusBadRequest, "INVALID_DELETION_REASON", "Choose a reason from the list or leave it blank."}
 	case errors.Is(err, gdpr.ErrSessionExpired):
 		return errUnauthorized
 	case errors.Is(err, gdpr.ErrSessionNotRecent):

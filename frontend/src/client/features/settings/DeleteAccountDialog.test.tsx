@@ -9,11 +9,11 @@ vi.mock("@/lib/auth-client", () => ({ signOutAndRedirect: vi.fn() }));
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
-it("waits for confirmation, submits once, and keeps a failed deletion visible", async () => {
+it("sends the optional reason once on confirmation and keeps a failure visible", async () => {
   const client = new QueryClient();
   const host = document.body.appendChild(document.createElement("div"));
   const root = createRoot(host);
-  let finish: (response: Response) => void = () => {};
+  let finish: ((response: Response) => void) | undefined;
   const send = vi.spyOn(globalThis, "fetch").mockImplementation(
     () =>
       new Promise<Response>((resolve) => {
@@ -29,6 +29,12 @@ it("waits for confirmation, submits once, and keeps a failed deletion visible", 
       );
     });
     expect(send).not.toHaveBeenCalled();
+    const reason = document.querySelector("select");
+    expect(reason?.value).toBe("");
+    await act(async () => {
+      if (reason) reason.value = "missing_feature";
+      reason?.dispatchEvent(new Event("change", { bubbles: true }));
+    });
     const button = Array.from(document.querySelectorAll("button")).find(
       (element) => element.textContent === "Delete my account",
     );
@@ -41,10 +47,10 @@ it("waits for confirmation, submits once, and keeps a failed deletion visible", 
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
-      body: '{"confirm":true}',
+      body: '{"confirm":true,"reason":"missing_feature"}',
     });
     await act(async () => {
-      finish(
+      finish?.(
         Response.json(
           {
             code: "SHARED_WORKSPACE",

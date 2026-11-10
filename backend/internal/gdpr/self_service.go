@@ -11,14 +11,24 @@ import (
 )
 
 var (
-	ErrSessionExpired   = errors.New("no valid account deletion session")
+	// ErrSessionExpired means the session is missing, expired, or revoked.
+	ErrSessionExpired = errors.New("no valid account deletion session")
+	// ErrSessionNotRecent means the user must sign in again.
 	ErrSessionNotRecent = errors.New("account deletion requires a recent sign-in")
-	ErrOpenBilling      = errors.New("a workspace has a subscription or open payment")
+	// ErrOpenBilling means a workspace could still be charged.
+	ErrOpenBilling = errors.New("a workspace has a subscription or open payment")
+	// ErrInvalidReason means the optional answer is not a supported category.
+	ErrInvalidReason = errors.New("invalid account deletion reason")
 )
 
 // EraseAccount deletes the account identified by a verified browser cookie's
-// token. Session, ownership, billing checks and erasure share one transaction.
-func (e Eraser) EraseAccount(ctx context.Context, token string, recentSince time.Time) error {
+// token and optionally increments a reason tally in the same transaction.
+func (e Eraser) EraseAccount(ctx context.Context, token string, recentSince time.Time, reason string) error {
+	switch reason {
+	case "", "just_testing", "no_longer_needed", "too_expensive", "missing_feature", "hard_to_use", "technical_problem", "other":
+	default:
+		return ErrInvalidReason
+	}
 	return pgdb.InTx(ctx, e.DB, func(tx pgx.Tx) error {
 		var userID string
 		var createdAt time.Time
@@ -48,7 +58,16 @@ func (e Eraser) EraseAccount(ctx context.Context, token string, recentSince time
 		if err != nil {
 			return fmt.Errorf("read projects for account deletion: %w", err)
 		}
-		return eraseTx(ctx, tx, userID, orgIDs, projectIDs)
+		if err := eraseTx(ctx, tx, userID, orgIDs, projectIDs); err != nil {
+			return err
+		}
+		if reason != "" {
+			if _, err := tx.Exec(ctx, `INSERT INTO go_account_deletion_reason_counts (reason, total) VALUES ($1, 1)
+				ON CONFLICT (reason) DO UPDATE SET total = go_account_deletion_reason_counts.total + 1`, reason); err != nil {
+				return fmt.Errorf("count account deletion reason: %w", err)
+			}
+		}
+		return nil
 	})
 }
 

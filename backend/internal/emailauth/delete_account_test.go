@@ -23,6 +23,9 @@ func TestDeleteAccountRequiresOriginConfirmationAndSignedSession(t *testing.T) {
 	if resp := e.request(http.MethodPost, path, confirm, originHeaders()); resp.StatusCode != http.StatusUnauthorized {
 		t.Fatalf("anonymous deletion = %d %s", resp.StatusCode, resp.raw)
 	}
+	if resp := e.request(http.MethodPost, path, map[string]any{"confirm": true, "reason": "free text"}, originHeaders(), cookie); resp.StatusCode != http.StatusBadRequest || resp.errCode() != "INVALID_DELETION_REASON" {
+		t.Fatalf("unrecognized reason = %d %s", resp.StatusCode, resp.raw)
+	}
 	if _, err := e.authenticate(cookie); err != nil {
 		t.Fatalf("refused deletion ended session: %v", err)
 	}

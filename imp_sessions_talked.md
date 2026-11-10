@@ -18,6 +18,7 @@ priorities, corrections, and what still waits on him. Read it after
 - A Hacker News user asked where to delete their account. Owner asked for a one-click deletion confirmation and the Bugs & Feedback relabel in one PR.
 - Add the deletion action to personal settings and the onboarding account menu. Reuse the existing erasure transaction and protect shared workspaces and payable billing.
 - Relabel the existing Help entry and suggestion option. Deletion and report submission cost zero credits.
+- Owner asked to ask why users delete their accounts. Offer a skippable reason and show category totals in the staff overview.
 
 ## 10 Nov 2026: Cite Fix removed completely (Claude)
 
