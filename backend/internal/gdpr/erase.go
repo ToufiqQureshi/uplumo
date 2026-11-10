@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/toufiqqureshi/uplumo/backend/internal/platform/pgdb"
 )
 
 // ErrSharedOrganization means a workspace the user belongs to has other members.
@@ -168,41 +169,44 @@ func (e Eraser) Plan(ctx context.Context, subject Subject) (Plan, error) {
 	return plan, nil
 }
 
-// Execute erases the subject in one transaction. The plan is recomputed inside
-// the transaction's view of the data by the caller having just produced it; a
-// workspace that gained a member in between makes the sweep delete only what
-// still references the erased ids, never the new member's account.
-func (e Eraser) Execute(ctx context.Context, plan Plan) (retErr error) {
+// Execute erases a planned subject in one transaction after rechecking members.
+func (e Eraser) Execute(ctx context.Context, plan Plan) error {
 	orgIDs := make([]string, len(plan.Organizations))
 	for i, o := range plan.Organizations {
 		orgIDs[i] = o.ID
 	}
-	tx, err := e.DB.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("begin erasure: %w", err)
-	}
-	defer func(rollbackCtx context.Context) {
-		if err := tx.Rollback(rollbackCtx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
-			retErr = errors.Join(retErr, fmt.Errorf("rollback erasure: %w", err))
+	return pgdb.InTx(ctx, e.DB, func(tx pgx.Tx) error {
+		if err := lockPrivateOrganizations(ctx, tx, orgIDs, plan.Subject.ID); err != nil {
+			return err
 		}
-	}(ctx)
+		return eraseTx(ctx, tx, plan.Subject.ID, orgIDs, plan.ProjectIDs)
+	})
+}
 
-	// Re-check under lock that nobody joined a workspace since the dry run.
+// An organization row lock conflicts with the foreign key check for a new
+// member or project, keeping either from appearing after the last check.
+func lockPrivateOrganizations(ctx context.Context, tx pgx.Tx, orgIDs []string, userID string) error {
+	if _, err := tx.Exec(ctx, `SELECT id FROM organization WHERE id = ANY($1) ORDER BY id FOR UPDATE`, orgIDs); err != nil {
+		return fmt.Errorf("lock organizations: %w", err)
+	}
 	var others int
-	if err := tx.QueryRow(ctx, `SELECT count(*) FROM member WHERE organization_id = ANY($1) AND user_id <> $2`, orgIDs, plan.Subject.ID).Scan(&others); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT count(*) FROM member WHERE organization_id = ANY($1) AND user_id <> $2`, orgIDs, userID).Scan(&others); err != nil {
 		return fmt.Errorf("recheck members: %w", err)
 	}
 	if others > 0 {
-		return fmt.Errorf("%w: a member joined after the dry run", ErrSharedOrganization)
+		return ErrSharedOrganization
 	}
+	return nil
+}
 
+func eraseTx(ctx context.Context, tx pgx.Tx, userID string, orgIDs, projectIDs []string) error {
 	steps := []struct {
 		what, sql string
 		args      []any
 	}{
-		{"reset tokens", `DELETE FROM verification WHERE value = $1`, []any{plan.Subject.ID}},
+		{"reset tokens", `DELETE FROM verification WHERE value = $1`, []any{userID}},
 		{"organizations", `DELETE FROM organization WHERE id = ANY($1)`, []any{orgIDs}},
-		{"user", `DELETE FROM "user" WHERE id = $1`, []any{plan.Subject.ID}},
+		{"user", `DELETE FROM "user" WHERE id = $1`, []any{userID}},
 	}
 	for _, step := range steps {
 		if _, err := tx.Exec(ctx, step.sql, step.args...); err != nil {
@@ -220,17 +224,14 @@ func (e Eraser) Execute(ctx context.Context, plan Plan) (retErr error) {
 	slices.SortStableFunc(columns, func(a, b column) int { return strings.Compare(b.table, a.table) })
 	for _, c := range columns {
 		query := fmt.Sprintf(`DELETE FROM %s WHERE %s = ANY($1)`, pgx.Identifier{c.table}.Sanitize(), pgx.Identifier{c.name}.Sanitize())
-		if _, err := tx.Exec(ctx, query, idsFor(c, plan.Subject.ID, orgIDs, plan.ProjectIDs)); err != nil {
+		if _, err := tx.Exec(ctx, query, idsFor(c, userID, orgIDs, projectIDs)); err != nil {
 			return fmt.Errorf("sweep %s: %w", c.key(), err)
 		}
 	}
 
 	var remaining int
-	if err := tx.QueryRow(ctx, `SELECT count(*) FROM "user" WHERE id = $1`, plan.Subject.ID).Scan(&remaining); err != nil || remaining != 0 {
+	if err := tx.QueryRow(ctx, `SELECT count(*) FROM "user" WHERE id = $1`, userID).Scan(&remaining); err != nil || remaining != 0 {
 		return errors.New("user row still present after erasure")
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit erasure: %w", err)
 	}
 	return nil
 }

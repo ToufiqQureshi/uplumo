@@ -521,6 +521,15 @@ func (s *Service) CheckoutPlan(ctx context.Context, orgID, plan, currency string
 		return Checkout{}, fmt.Errorf("checkout for organization %s: %w", orgID, err)
 	}
 	defer unlock()
+	// The session can have been authorized before a concurrent account erasure
+	// won the checkout lock. Never call Razorpay for the deleted workspace.
+	var organizationExists bool
+	if err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM organization WHERE id = $1)`, orgID).Scan(&organizationExists); err != nil {
+		return Checkout{}, fmt.Errorf("check checkout organization: %w", err)
+	}
+	if !organizationExists {
+		return Checkout{}, ErrPlanUnavailable
+	}
 	current, found, err := loadSubscription(ctx, q, orgID)
 	if err != nil {
 		return Checkout{}, fmt.Errorf("checkout for organization %s: %w", orgID, err)

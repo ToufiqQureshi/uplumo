@@ -3,6 +3,7 @@ import {
   sanitizePostHogProperties,
   sanitizePostHogUrl,
 } from "@/client/lib/posthog-sanitize";
+import { ACCOUNT_DELETION_PATH } from "@/shared/accountDeletion";
 
 // Type-only import: extracts the type at compile time without bundling posthog-js
 // oxlint-disable-next-line typescript/consistent-type-imports -- import() type avoids eagerly bundling posthog-js
@@ -100,6 +101,12 @@ function getBrowserPostHogClient(): Promise<BrowserPostHogClient | null> {
             maskAllInputs: true,
             maskTextSelector: "[data-ph-mask], .ph-mask",
             maskCapturedNetworkRequestFn(request) {
+              if (
+                request.name === ACCOUNT_DELETION_PATH ||
+                request.name === window.location.origin + ACCOUNT_DELETION_PATH
+              ) {
+                return undefined;
+              }
               return {
                 ...request,
                 name: sanitizePostHogUrl(request.name),

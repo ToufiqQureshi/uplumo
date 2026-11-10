@@ -4,7 +4,9 @@ import { toast } from "sonner";
 import { ApiKeySettings } from "@/client/features/settings/ApiKeySettings";
 import { SectionHeader } from "@/client/components/PageHeader";
 import { ThemePreferenceRadio } from "@/client/components/ThemePreferenceMenuItems";
+import { Button } from "@/client/components/ui/button";
 import { Switch } from "@/client/components/ui/switch";
+import { DeleteAccountDialog } from "@/client/features/settings/DeleteAccountDialog";
 import { authClient, useSession } from "@/lib/auth-client";
 
 export const Route = createFileRoute("/_app/settings/")({
@@ -14,6 +16,7 @@ export const Route = createFileRoute("/_app/settings/")({
 function PersonalSettings() {
   const { data: session } = useSession();
   const [isSaving, setIsSaving] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const analyticsEnabled = session?.user?.analyticsOptedOut !== true;
 
@@ -65,6 +68,17 @@ function PersonalSettings() {
             aria-label="Enable product analytics"
           />
         </div>
+      </section>
+
+      <section className="space-y-3">
+        <SectionHeader title="Delete account" />
+        <p className="text-sm text-muted-foreground">
+          Permanently remove your account and personal workspace data.
+        </p>
+        <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
+          Delete my account
+        </Button>
+        <DeleteAccountDialog open={deleteOpen} onOpenChange={setDeleteOpen} />
       </section>
     </div>
   );

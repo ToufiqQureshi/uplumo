@@ -137,7 +137,9 @@ export function ReportProblemForm() {
                 <SelectContent>
                   <SelectItem value="bug">Bug or something broken</SelectItem>
                   <SelectItem value="billing">Credits or payment</SelectItem>
-                  <SelectItem value="suggestion">Suggestion</SelectItem>
+                  <SelectItem value="suggestion">
+                    Feature request or feedback
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>

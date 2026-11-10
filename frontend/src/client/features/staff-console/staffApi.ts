@@ -23,6 +23,7 @@ const overviewSchema = z.object({
   endingNext7Days: z.number(),
   paymentFailing: z.number(),
   signupsByDay: z.array(z.object({ day: z.string(), count: z.number() })),
+  deletionReasons: z.array(count).default([]),
 });
 
 const subscriptionSchema = z.object({
