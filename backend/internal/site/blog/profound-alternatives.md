@@ -55,7 +55,7 @@ Profound remains a strong choice when you need enterprise reporting, many brands
 | **Scrunch** | $250 | 125 | ChatGPT, Perplexity, Google AI, Copilot | 5 site audits a month |
 | **Goodie** | $295 | 110 | 5 models | 50 optimizations a month, strategist support |
 | **Rankscale** | $99 | 1,200 credits | Multiple engines | 10 brand dashboards, 50 page audits |
-| **Uplumo** | Free plan; AI Visibility from Pro. [See pricing](https://uplumo.com/pricing) | Saved AI checks | ChatGPT, Claude, Gemini, Perplexity | Site audit, Cite Fix, editor, Search Console, lead tracking |
+| **Uplumo** | Free plan; AI Visibility from Pro. [See pricing](https://uplumo.com/pricing) | Saved AI checks | ChatGPT, Claude, Gemini, Perplexity | Site audit, editor, Search Console, lead tracking |
 
 Sources: [Profound](https://www.tryprofound.com/pricing) · [Peec AI](https://peec.ai/pricing) · [Otterly.AI](https://otterly.ai/pricing) · [AthenaHQ](https://athenahq.ai/plans) · [Scrunch](https://scrunch.com/pricing) · [Goodie](https://higoodie.com/pricing/) · [Rankscale](https://rankscale.ai/pricing) · [Uplumo](https://uplumo.com/pricing)
 
@@ -65,7 +65,7 @@ Sources: [Profound](https://www.tryprofound.com/pricing) · [Peec AI](https://pe
 - **You are testing AI visibility for the first time.** Otterly.AI at $29 or Uplumo's free plan let you set up a baseline before committing.
 - **You need hands-on help.** Goodie includes AEO strategist support. Scrunch adds site audits.
 - **You manage many brands.** Rankscale's credits and brand dashboards suit agencies.
-- **You need to prove business results.** Uplumo connects AI answers to page fixes in Cite Fix and the content editor, then to AI referrals and confirmed leads in Uplumo Analytics.
+- **You need to prove business results.** Uplumo connects AI answers to page fixes in Site Audit and the content editor, then to AI referrals and confirmed leads in Uplumo Analytics.
 
 ![Uplumo AI Visibility screen showing visibility, mentions and citations with example data](/site/product/ai-visibility.webp)
 

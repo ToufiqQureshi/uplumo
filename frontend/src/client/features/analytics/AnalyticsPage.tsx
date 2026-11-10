@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import { Code } from "lucide-react";
 import {
   AiVisitorsCard,
@@ -154,24 +153,7 @@ export function AnalyticsPage({
                 />
                 <div className="grid gap-6 lg:grid-cols-2">
                   <LeadSourcesCard summary={summary} />
-                  <AiVisitorsCard
-                    summary={summary}
-                    citeFixLink={
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        nativeButton={false}
-                        render={
-                          <Link
-                            to="/p/$projectId/cite-fix"
-                            params={{ projectId }}
-                          />
-                        }
-                      >
-                        See which AI answers name you
-                      </Button>
-                    }
-                  />
+                  <AiVisitorsCard summary={summary} />
                 </div>
                 <LeadPagesCard summary={summary} />
                 <Dashboard

@@ -394,14 +394,6 @@ func parseTrackingAnswer(raw []byte, engine string) (string, []Citation, []Recom
 	return truncate(text, 64000), citations, recommendedBrands(entities), nil
 }
 
-// ParseGoogleAIOverview extracts the answer and only the references inside the
-// Google AI Overview result. It is shared by AI Visibility Tracking and Cite
-// Fix so both surfaces show the same provider evidence.
-func ParseGoogleAIOverview(raw []byte) (string, []Citation, error) {
-	answer, citations, _, err := parseTrackingAnswer(raw, "google_ai_overview")
-	return answer, citations, err
-}
-
 // recommendedBrands keeps the distinct brands the AI named, first mention first.
 func recommendedBrands(entities []trackingBrandEntity) []RecommendedBrand {
 	brands := []RecommendedBrand{}

@@ -103,13 +103,13 @@ A big prompt database helps you **discover** a category. A small tracked set tel
 Say you run a software business and a customer asks, “Which booking systems let a small hotel take payments on its own website?” A useful AEO workflow starts with that question and ends with a decision about a real page.
 
 1. **Capture the evidence.** Use **Brand Lookup** for available category data. In **Prompt Explorer**, run the question across supported models. Save important questions for repeat checks and record the cited URLs. An answer may mention your company while linking to a third-party directory. That calls for a different fix than a citation to your own page.
-2. **Find the missing detail.** Read the rival pages cited for the same question. If they explain payment methods, supported markets and deposit rules while your site says “seamless payments,” you have something concrete to investigate. Run a **Site Audit** and review **Cite Fix** where available to prioritise technical and content improvements.
+2. **Find the missing detail.** Read the rival pages cited for the same question. If they explain payment methods, supported markets and deposit rules while your site says “seamless payments,” you have something concrete to investigate. Run a **Site Audit** to prioritise technical and content improvements.
 3. **Improve the page buyers will use.** Bring the question into the **Content Editor**. Use the search brief to understand what pages already cover, then add verified product details, original screenshots or a worked example. The editor’s scores help review the draft. A paid plan can publish to a connected WordPress site.
 4. **Check the outcome.** Recheck the saved questions. Review recognised AI referrals and their landing pages in **Uplumo Analytics**, and compare configured lead or signup events. Connect Search Console and GA4 where eligible to review Google discovery and website outcomes in the same workspace.
 
-![Uplumo Cite Fix interface showing checks and page improvement suggestions on example data](/site/product/cite-fix.webp)
+![Uplumo Prompt Explorer showing answers and cited sources from several AI models on example data](/site/product/prompt-explorer.webp)
 
-*Example Uplumo Cite Fix screen. Use the underlying findings to pick an edit a colleague can verify.*
+*Example Uplumo Prompt Explorer screen with demo data. Compare the cited pages before you pick an edit a colleague can verify.*
 
 A small hotel might track direct-booking questions and completed enquiries. A larger technology firm can start with one product line and split prompts by use case, market and buyer stage. A team that needs a large rollout should compare project capacity, collaborator access, reporting, engine coverage and credit usage before committing. Uplumo’s scheduled Google keyword checks are weekly, while AI tracking follows the available settings for the saved questions. Full AI Visibility and broader research require an eligible plan. [Check current Uplumo plans](https://uplumo.com/pricing)
 

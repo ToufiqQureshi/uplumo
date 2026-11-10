@@ -13,6 +13,6 @@
 5. "Sources that bring leads" shows which channel's visits led to a lead.
    "Busy pages and their leads" shows where people arrive and where leads
    happen. "Visitors from AI assistants" shows ChatGPT, Perplexity and other
-   AI visits and where they landed; it links to Cite Fix.
+   AI visits and where they landed.
 6. Everything else (chart, pages, actions, audience, campaigns, countries,
    devices) is under "All numbers".

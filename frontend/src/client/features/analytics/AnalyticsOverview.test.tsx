@@ -218,12 +218,9 @@ describe("lead pages", () => {
 });
 
 describe("AI visitors", () => {
-  it("says plainly when no AI assistant sent anyone, and links on", () => {
-    const html = renderToStaticMarkup(
-      <AiVisitorsCard summary={base} citeFixLink={<a href="/x">Why</a>} />,
-    );
+  it("says plainly when no AI assistant sent anyone", () => {
+    const html = renderToStaticMarkup(<AiVisitorsCard summary={base} />);
     expect(html).toContain("No visitor came from an AI assistant");
-    expect(html).toContain('href="/x"');
   });
 
   it("lists where AI visitors landed and their leads", () => {
@@ -243,7 +240,6 @@ describe("AI visitors", () => {
             ],
           },
         )}
-        citeFixLink={null}
       />,
     );
     expect(html).toContain("ChatGPT");

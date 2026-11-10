@@ -23,7 +23,6 @@ import (
 	"github.com/toufiqqureshi/uplumo/backend/internal/backlinks"
 	"github.com/toufiqqureshi/uplumo/backend/internal/billing"
 	"github.com/toufiqqureshi/uplumo/backend/internal/branding"
-	"github.com/toufiqqureshi/uplumo/backend/internal/citefix"
 	"github.com/toufiqqureshi/uplumo/backend/internal/contentauthors"
 	"github.com/toufiqqureshi/uplumo/backend/internal/contenteditor"
 	"github.com/toufiqqureshi/uplumo/backend/internal/crawleraccess"
@@ -151,14 +150,6 @@ type Deps struct {
 	// LinkSuggest serves free internal link suggestions for drafts. Nil
 	// answers 503.
 	LinkSuggest *linksuggest.Service
-	// CiteFix builds the free Cite Fix report from the latest site audit.
-	// Nil answers 503.
-	CiteFix citefix.Reporter
-	// CiteFixGoogleAIOverview submits the explicit paid SERP refresh and reads
-	// its saved results; nil disables the provider action.
-	CiteFixGoogleAIOverview citefix.GoogleAIOverviewRunner
-	// CiteFixAgent runs the paid Cite Fix agent. Nil without OpenRouter.
-	CiteFixAgent citefix.AgentRunner
 	// LocalVisibility is nil without a DataForSEO key; its routes answer 503.
 	LocalVisibility *localvisibility.Service
 	// SAMSessions serves the project chat-session registry.
@@ -418,10 +409,6 @@ func NewHandler(d Deps) http.Handler {
 			WithProjectAccess: func(next http.Handler) http.Handler { return requireProjectAccess(d.Logger, d.Auth, next) },
 		})
 	}
-	citefix.Mount(mux, citefix.Deps{
-		Logger: d.Logger, Reporter: d.CiteFix, Agent: d.CiteFixAgent, GoogleAIOverview: d.CiteFixGoogleAIOverview, WithSession: withSession,
-		WithProjectAccess: func(next http.Handler) http.Handler { return requireProjectAccess(d.Logger, d.Auth, next) },
-	})
 	var localPlans localvisibility.PaidPlans
 	if d.Billing != nil {
 		localPlans = d.Billing.Gate(planCatalog.LocalVisibility)

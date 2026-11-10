@@ -52,7 +52,7 @@ On unit price, Peec AI is already competitive at about $1.90 a prompt. The bette
 | **Semrush** | $199 | 50 | Per plan | Full SEO toolkit included |
 | **AthenaHQ** | $295 | 3,600 credits | 11 | Content recommendations |
 | **Goodie** | $295 | 110 | 5 | Strategist support, 50 optimizations |
-| **Uplumo** | Free plan; AI Visibility from Pro. [See pricing](https://uplumo.com/pricing) | Saved AI checks | ChatGPT, Claude, Gemini, Perplexity | Cite Fix, editor, Search Console and lead tracking |
+| **Uplumo** | Free plan; AI Visibility from Pro. [See pricing](https://uplumo.com/pricing) | Saved AI checks | ChatGPT, Claude, Gemini, Perplexity | Site audit, editor, Search Console and lead tracking |
 
 Sources: [Peec AI](https://peec.ai/pricing) · [Otterly.AI](https://otterly.ai/pricing) · [Scrunch](https://scrunch.com/pricing) · [SE Ranking](https://seranking.com/subscription.html) · [Semrush](https://www.semrush.com/pricing/seo-ai-search/) · [AthenaHQ](https://athenahq.ai/plans) · [Goodie](https://higoodie.com/pricing/) · [Uplumo](https://uplumo.com/pricing)
 
@@ -74,7 +74,7 @@ Sources: [Peec AI](https://peec.ai/pricing) · [Otterly.AI](https://otterly.ai/p
 - **Same job, more prompts.** Scrunch includes 125 prompts and audits on Core.
 - **One tool for SEO and AI.** SE Ranking or Semrush, depending on which SEO suite you prefer. Compare them in our [Semrush alternatives guide](/blog/best-semrush-alternatives).
 - **More engines.** AthenaHQ's entry plan covers 11 models.
-- **From visibility to revenue.** Uplumo lets you run a question in **Prompt Explorer**, review the cited page in **Cite Fix**, improve your page in the **Content Editor**, and check AI referrals and confirmed leads in **Uplumo Analytics**.
+- **From visibility to revenue.** Uplumo lets you run a question in **Prompt Explorer**, review the cited pages, improve your page in the **Content Editor**, and check AI referrals and confirmed leads in **Uplumo Analytics**.
 
 ![Uplumo Prompt Explorer showing answers and cited sources from ChatGPT, Claude, Gemini and Perplexity with example data](/site/product/prompt-explorer.webp)
 

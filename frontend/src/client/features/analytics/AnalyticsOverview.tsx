@@ -1,5 +1,4 @@
 import { firstBy } from "remeda";
-import type { ReactNode } from "react";
 import { Button } from "@/client/components/ui/button";
 import { formatCount } from "@/client/features/search-performance/SearchPerformanceColumns";
 import type { AnalyticsSummary } from "./analyticsApi";
@@ -306,15 +305,9 @@ export function LeadPagesCard({ summary }: { summary: AnalyticsSummary }) {
 
 /**
  * Visitors sent by AI assistants and where they landed. With none, it says
- * so and points to Cite Fix, which shows why AI answers skip the site.
+ * so.
  */
-export function AiVisitorsCard({
-  summary,
-  citeFixLink,
-}: {
-  summary: AnalyticsSummary;
-  citeFixLink: ReactNode;
-}) {
+export function AiVisitorsCard({ summary }: { summary: AnalyticsSummary }) {
   const total = summary.aiSources.reduce((sum, row) => sum + row.visitors, 0);
   const configured = summary.leads.configured;
   const leads = summary.aiLandings.reduce(
@@ -365,7 +358,6 @@ export function AiVisitorsCard({
           </ul>
         </>
       )}
-      <div className="border-t pt-3">{citeFixLink}</div>
     </section>
   );
 }

@@ -21,15 +21,6 @@ const (
 // Daily checks are an opt-in that must pass the rank-tracking credit preflight.
 const RankScheduleWeekly = "weekly"
 
-// Cite Fix paid actions: the most one click can cost a workspace, shown on
-// the button before it is clicked. Owner decisions: the agent's caps on
-// 27 Oct 2026, the outreach pitch on 4 Nov 2026.
-const (
-	CiteFixQuickMaxCredits int64 = 25
-	CiteFixDeepMaxCredits  int64 = 60
-	CiteFixPitchMaxCredits int64 = 25
-)
-
 // Feature is something a plan either includes or does not.
 type Feature string
 

@@ -475,6 +475,6 @@ func (g *Guard) ResolveStartURLRedirects(ctx context.Context, startURL string) (
 const auditUserAgent = "Uplumo-Audit/1.0"
 
 // UserAgent is the user agent any Uplumo fetch of a public page must send:
-// RobotsAllows judges robots.txt for exactly this agent, so a fetch that
+// the audit judges robots.txt for exactly this agent, so a fetch that
 // announced another name could read pages the site blocked for Uplumo.
 const UserAgent = auditUserAgent

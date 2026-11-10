@@ -79,7 +79,6 @@ func registry() []*tool {
 		deleteAuditTool(),
 		runSiteAuditTool(),
 		auditIssuesTool(),
-		citeFixReportTool(),
 		getBacklinksOverviewTool(),
 		getBacklinksProfileTool(),
 		getDomainOverviewTool(),

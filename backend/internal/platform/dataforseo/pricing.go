@@ -119,23 +119,6 @@ func ContentParsingCostUSD(pages int) float64 {
 	return math.Round(float64(pages)*contentParsePageUSD*1e6) / 1e6
 }
 
-// GoogleAIOverviewCostUSD returns the cheapest queued Google SERP price with
-// asynchronous AI Overview references enabled.
-func GoogleAIOverviewCostUSD(depth int) float64 {
-	return serpCeiling("/v3/serp/google/organic/task_post", map[string]any{
-		"depth": float64(depth), "load_async_ai_overview": true,
-	})
-}
-
-// GoogleAIOverviewBatchCostUSD returns the queued maximum for questionCount
-// Google AI Overview tasks at the requested depth.
-func GoogleAIOverviewBatchCostUSD(questionCount, depth int) float64 {
-	if questionCount <= 0 {
-		return 0
-	}
-	return math.Round(float64(questionCount)*GoogleAIOverviewCostUSD(depth)*1e6) / 1e6
-}
-
 // OnPageJavaScriptCostUSD returns the published JavaScript-rendered On-Page
 // price for the requested pages.
 func OnPageJavaScriptCostUSD(pages int) float64 {

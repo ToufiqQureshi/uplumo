@@ -478,7 +478,7 @@ func pageArgs(auditID string, page CrawledPageResult) []any {
 	images, _ := json.Marshal(defaultImageSlice(page.Images))
 	hreflang, _ := json.Marshal(defaultStringSlice(page.HreflangTags))
 	// Written for every page of a new crawl, so a NULL marks an audit crawled
-	// before Cite Fix existed rather than a page with no signals.
+	// before these signals existed rather than a page with no signals.
 	signals := page.AI
 	signals.Version = CitationSignalsVersion
 	signals.SchemaTypes = defaultStringSlice(signals.SchemaTypes)
