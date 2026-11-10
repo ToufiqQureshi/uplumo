@@ -1,3 +1,5 @@
+export const ACCOUNT_DELETION_PATH = "/api/auth/delete-account";
+
 export const accountDeletionReasons: Readonly<Record<string, string>> = {
   just_testing: "I was just trying Uplumo",
   no_longer_needed: "I no longer need Uplumo",

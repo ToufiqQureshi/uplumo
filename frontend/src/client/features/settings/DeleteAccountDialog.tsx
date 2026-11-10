@@ -15,14 +15,17 @@ import {
 import { resetAnalyticsUser } from "@/client/lib/posthog";
 import { ApiError } from "@/client/lib/uplumoApi";
 import { signOutAndRedirect } from "@/lib/auth-client";
-import { accountDeletionReasons } from "@/shared/accountDeletion";
+import {
+  ACCOUNT_DELETION_PATH,
+  accountDeletionReasons,
+} from "@/shared/accountDeletion";
 
 const deletionResponse = z.object({ success: z.literal(true) });
 const deletionError = z.object({ code: z.string(), message: z.string() });
 const retryMessage = "Could not delete your account. Please try again.";
 
 async function requestDeletion(reason: string) {
-  const response = await fetch("/api/auth/delete-account", {
+  const response = await fetch(ACCOUNT_DELETION_PATH, {
     method: "POST",
     credentials: "same-origin",
     headers: { "Content-Type": "application/json" },
@@ -90,7 +93,7 @@ export function DeleteAccountDialog({
             kept for accounting.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <div className="space-y-2">
+        <div className="ph-no-capture space-y-2">
           <label htmlFor={reasonID} className="block text-sm font-medium">
             Why are you leaving? (optional)
           </label>
