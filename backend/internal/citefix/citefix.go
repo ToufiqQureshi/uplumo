@@ -8,6 +8,7 @@ import (
 	"cmp"
 	"fmt"
 	"math"
+	"net/url"
 	"slices"
 	"strings"
 	"time"
@@ -56,6 +57,11 @@ type Page struct {
 	Indexable     bool
 	WordCount     int
 	ExternalLinks int
+	// ContentHash is the crawler's hash of the page text; empty when unknown.
+	ContentHash string
+	// AlsoAt lists the other crawled addresses of this same page: the same
+	// path with another query string or fragment and the same text.
+	AlsoAt []string
 	// Signals is nil for a page crawled before signals were stored.
 	Signals *audit.AIPageSignals
 }
@@ -71,6 +77,7 @@ type Issue struct {
 type PageRef struct {
 	URL      string   `json:"url"`
 	Title    string   `json:"title"`
+	AlsoAt   []string `json:"alsoAt,omitempty"`
 	Evidence []string `json:"evidence,omitempty"`
 }
 
@@ -85,8 +92,10 @@ type Fix struct {
 	ID       string `json:"id"`
 	Category string `json:"category"`
 	Title    string `json:"title"`
-	Why      string `json:"why"`
-	How      string `json:"how"`
+	// Label is the short name of the problem on one page, for page rows.
+	Label string `json:"label"`
+	Why   string `json:"why"`
+	How   string `json:"how"`
 	// Impact is high, medium or low, from Gain.
 	Impact string `json:"impact"`
 	// Gain is the points the site score would rise if this check passed
@@ -100,8 +109,11 @@ type Fix struct {
 type PageScore struct {
 	URL    string   `json:"url"`
 	Title  string   `json:"title"`
-	Score  int      `json:"score"`
-	Failed []string `json:"failed"`
+	AlsoAt []string `json:"alsoAt"`
+	// Article is true when the article-only checks were judged.
+	Article bool     `json:"article"`
+	Score   int      `json:"score"`
+	Failed  []string `json:"failed"`
 }
 
 // Report is the Cite Fix result for a project.
@@ -158,6 +170,99 @@ func isContentPage(page Page) bool {
 	return page.StatusCode >= 200 && page.StatusCode < 300 && page.Indexable && page.WordCount > 0
 }
 
+// articleTypes are schema.org article types whose names do not end in
+// "Article" or "Posting" (NewsArticle, BlogPosting and the like do).
+var articleTypes = map[string]bool{"report": true, "review": true}
+
+// isArticle reports whether the article-only checks apply to a page: it
+// declares an article schema type or states a publish date. The site root is
+// never an article. Only markup is read, never words, so it works in every
+// language.
+func isArticle(page Page) bool {
+	if u, err := url.Parse(page.URL); err != nil || u.Path == "" || u.Path == "/" {
+		return false
+	}
+	if page.Signals.Published != "" {
+		return true
+	}
+	for _, schemaType := range page.Signals.SchemaTypes {
+		name := strings.ToLower(schemaType[strings.LastIndexAny(schemaType, "/:#")+1:])
+		if articleTypes[name] || strings.HasSuffix(name, "article") || strings.HasSuffix(name, "posting") {
+			return true
+		}
+	}
+	return false
+}
+
+// collapseVariants merges crawled addresses of one page: the same scheme,
+// host and path with only the query string or fragment changed (?from=home)
+// and the same text. The shortest address stays and the others go to AlsoAt,
+// so one page is scored, listed and offered to the paid agent once.
+func collapseVariants(pages []Page) []Page {
+	key := func(page Page) string {
+		if page.ContentHash == "" {
+			return ""
+		}
+		u, err := url.Parse(page.URL)
+		if err != nil {
+			return ""
+		}
+		return u.Scheme + "://" + u.Host + u.EscapedPath() + " " + page.ContentHash
+	}
+	groups := map[string][]int{}
+	for i, page := range pages {
+		if k := key(page); k != "" {
+			groups[k] = append(groups[k], i)
+		}
+	}
+	out := make([]Page, 0, len(pages))
+	for i, page := range pages {
+		members := groups[key(page)]
+		if len(members) < 2 {
+			out = append(out, page)
+			continue
+		}
+		primary := slices.MinFunc(members, func(a, b int) int {
+			return cmp.Or(cmp.Compare(len(pages[a].URL), len(pages[b].URL)), strings.Compare(pages[a].URL, pages[b].URL))
+		})
+		if i != primary {
+			continue
+		}
+		for _, member := range members {
+			if member != primary {
+				page.AlsoAt = append(page.AlsoAt, pages[member].URL)
+			}
+		}
+		slices.Sort(page.AlsoAt)
+		out = append(out, page)
+	}
+	return out
+}
+
+// duplicateSet names the pages whose text also appears on another page, not
+// counting their own collapsed addresses. An issue stored without a group
+// size counts as a duplicate.
+func duplicateSet(pages []Page, issues []Issue) map[string]struct{} {
+	sizes := map[string]int{}
+	for _, issue := range issues {
+		switch size := issue.Details["groupSize"].(type) {
+		case float64:
+			sizes[issue.PageURL] = int(size)
+		case int:
+			sizes[issue.PageURL] = size
+		default:
+			sizes[issue.PageURL] = 0
+		}
+	}
+	set := map[string]struct{}{}
+	for _, page := range pages {
+		if size, ok := sizes[page.URL]; ok && (size == 0 || size > 1+len(page.AlsoAt)) {
+			set[page.URL] = struct{}{}
+		}
+	}
+	return set
+}
+
 // result is one check's outcome: passed of eligible (1 of 1 for a site check).
 type result struct {
 	passed, eligible int
@@ -177,6 +282,7 @@ func (r result) ratio() float64 { return float64(r.passed) / float64(r.eligible)
 func Build(scan Scan, pages []Page, issues []Issue) Report {
 	report := emptyReport(StateReady)
 	report.Scan = &scan
+	pages = collapseVariants(pages)
 	report.PagesTotal = len(pages)
 
 	byType := map[string][]Issue{}
@@ -184,7 +290,7 @@ func Build(scan Scan, pages []Page, issues []Issue) Report {
 		byType[issue.Type] = append(byType[issue.Type], issue)
 	}
 	shells := pageSet(byType[string(audit.IssueJavaScriptRenderingSuspected)])
-	duplicates := pageSet(byType[string(audit.IssueDuplicateContent)])
+	duplicates := duplicateSet(pages, byType[string(audit.IssueDuplicateContent)])
 	topics := buildTopics(pages, duplicates, shells)
 	report.Topics = &topics
 
@@ -211,6 +317,7 @@ func Build(scan Scan, pages []Page, issues []Issue) Report {
 		report.PagesChecked++
 		signals := page.Signals
 		_, duplicate := duplicates[page.URL]
+		article := isArticle(page)
 		outcomes := []outcome{
 			{"snippet-access", !signals.SnippetBlocked && signals.NoSnippetWords == 0},
 			{"structured-data", len(signals.SchemaTypes) > 0},
@@ -239,8 +346,12 @@ func Build(scan Scan, pages []Page, issues []Issue) Report {
 		var passedWeight, totalWeight int
 		failed := []string{}
 		for _, outcome := range outcomes {
+			c := checkByID(outcome.id)
+			if c.articleOnly && !article {
+				continue
+			}
 			record(results, outcome.id, page, outcome.pass)
-			weight := checkByID(outcome.id).weight
+			weight := c.weight
 			totalWeight += weight
 			if outcome.pass {
 				passedWeight += weight
@@ -249,7 +360,7 @@ func Build(scan Scan, pages []Page, issues []Issue) Report {
 			}
 		}
 		pageScores = append(pageScores, PageScore{
-			URL: page.URL, Title: page.Title, Failed: failed,
+			URL: page.URL, Title: page.Title, AlsoAt: append([]string{}, page.AlsoAt...), Article: article, Failed: failed,
 			Score: int(math.Round(100 * float64(passedWeight) / float64(totalWeight))),
 		})
 	}
@@ -313,7 +424,7 @@ func newFix(c check, r result, gain float64) Fix {
 		affected = 0
 	}
 	return Fix{
-		ID: c.id, Category: c.category, Title: c.title, Why: c.why, How: c.how,
+		ID: c.id, Category: c.category, Title: c.title, Label: c.label, Why: c.why, How: c.how,
 		Impact: impact, Gain: gain, PagesAffected: affected, Pages: pages,
 	}
 }
@@ -332,7 +443,7 @@ func record(results map[string]result, id string, page Page, pass bool) {
 	if pass {
 		r.passed++
 	} else if len(r.failing) < maxFixPages {
-		ref := PageRef{URL: page.URL, Title: page.Title}
+		ref := PageRef{URL: page.URL, Title: page.Title, AlsoAt: page.AlsoAt}
 		if id == "hidden-instructions" {
 			for _, evidence := range page.Signals.InjectionEvidence {
 				ref.Evidence = append(ref.Evidence, evidence.Kind+": "+evidence.Text)

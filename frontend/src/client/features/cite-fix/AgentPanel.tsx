@@ -16,6 +16,7 @@ import {
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { ApiError } from "@/client/lib/uplumoApi";
 import { BILLING_ROUTE } from "@/shared/billing";
+import { AlsoAt } from "./AlsoAt";
 import { batchMaxCredits, defaultSelection } from "./agentSelection";
 import {
   citeFixResultsKey,
@@ -69,7 +70,7 @@ export function AgentPanel({
   const [confirming, setConfirming] = useState(false);
   const [progress, setProgress] = useState<Record<string, PageState>>({});
   const [busy, setBusy] = useState(false);
-  const titles = new Map(report.fixes.map((fix) => [fix.id, fix.title]));
+  const labels = new Map(report.fixes.map((fix) => [fix.id, fix.label]));
   const run = useMutation({
     retry: false,
     mutationFn: (url: string) =>
@@ -266,6 +267,7 @@ export function AgentPanel({
                       label={page.url}
                       className="inline-flex max-w-full items-center gap-1 truncate text-xs text-muted-foreground hover:underline"
                     />
+                    <AlsoAt urls={page.alsoAt} />
                     {state ? <ProgressNote state={state} /> : null}
                   </td>
                   <td
@@ -280,7 +282,7 @@ export function AgentPanel({
                     {page.failed.length === 0
                       ? "Nothing"
                       : page.failed
-                          .map((id) => titles.get(id) ?? id)
+                          .map((id) => labels.get(id) ?? id)
                           .join(" · ")}
                   </td>
                 </tr>

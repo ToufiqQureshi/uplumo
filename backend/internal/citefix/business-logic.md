@@ -17,6 +17,18 @@
   AI-cited sites, not from word lists. Steps appear only when the data shows
   their problem. The UI says a signal gap is a likely reason, not proof: no
   tool can promise a citation.
+- **One page, one row in the scan too:** addresses with the same path and
+  the same text that differ only by query string or fragment
+  (`/offer/a?from=home`) are one page, scored and listed once with "also at";
+  so the agent is never offered (and never charged for) the same page three
+  times, and a page is not called a duplicate of its own addresses. Same text
+  on another path is still a duplicate.
+- **Only fair checks:** author, publish date, freshness, quotes and question
+  headings are judged only on articles: a page with an article schema type
+  (`Article`, `BlogPosting`, `NewsArticle`, `Report`, ...) or a stated publish
+  date, never the site root. A service, product, contact or home page is not
+  marked "missing" for lacking a byline. Detection reads markup only, no word
+  lists, so it works in every language.
 - **One page, one row:** cited URLs lose `#:~:text=` highlights and `utm_`
   tags, so one page is never counted as several.
 - **Global:** engine names and dates come from shared labels and the viewer's

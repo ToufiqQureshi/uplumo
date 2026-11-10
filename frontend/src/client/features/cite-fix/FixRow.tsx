@@ -2,6 +2,7 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { cn } from "cn";
 import { SafeExternalLink } from "@/client/components/SafeExternalLink";
+import { AlsoAt } from "./AlsoAt";
 import type { CiteFix } from "./citeFixApi";
 
 const impactStyle = {
@@ -69,6 +70,7 @@ export function FixRow({ fix, position }: { fix: CiteFix; position: number }) {
                       label={page.title || page.url}
                       className="inline-flex max-w-full items-center gap-1 truncate hover:underline"
                     />
+                    <AlsoAt urls={page.alsoAt} />
                     {page.evidence?.map((item) => (
                       <p
                         key={item}
