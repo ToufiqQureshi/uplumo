@@ -140,8 +140,8 @@ func TestPaidLookupsSpendTheWorkspacesCreditsEndToEnd(t *testing.T) {
 		t.Fatalf("usage = %+v, want %d credits left and %d spent on domain_research", usage, balance, spentCredits)
 	}
 	// Site Audit's page speed test is free; only opt-in JavaScript rendering has a cost.
-	if len(usage.Costs) != 12 { // AI visibility lists brand lookup and prompt explorer apart; rendering, AI Overview and the search brief add rows
-		t.Fatalf("usage lists %d action costs, want 12", len(usage.Costs))
+	if len(usage.Costs) != 10 { // AI visibility lists brand lookup and prompt explorer apart; rendering and the search brief add rows
+		t.Fatalf("usage lists %d action costs, want 10", len(usage.Costs))
 	}
 	for _, cost := range usage.Costs {
 		if cost.Feature == "site_audit" && cost.Action == "" {
