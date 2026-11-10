@@ -41,7 +41,7 @@ const checkResult = {
       title: "Smile Studio",
       address: "",
       category: "",
-      categories: [],
+      categories: null,
       rating: null,
       reviews: 0,
       latitude: 0,

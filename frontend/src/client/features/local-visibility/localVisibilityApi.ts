@@ -15,7 +15,11 @@ const placeSchema = z.object({
   title: z.string(),
   address: z.string(),
   category: z.string(),
-  categories: z.array(z.string()),
+  // Go encodes an empty list as null in results stored before 10 Nov.
+  categories: z
+    .array(z.string())
+    .nullable()
+    .transform((v) => v ?? []),
   rating: z.number().nullable(),
   reviews: z.number().int(),
   latitude: z.number(),

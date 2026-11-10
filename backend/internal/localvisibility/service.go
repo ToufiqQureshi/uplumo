@@ -506,7 +506,7 @@ func buildCheck(in runInput, done doneFunc, now time.Time) (CheckResult, bool) {
 		}
 		return c
 	}
-	own := Place{CID: in.CID, Rank: result.YourRank}
+	own := Place{CID: in.CID, Rank: result.YourRank, Categories: []string{}}
 	for _, p := range places {
 		if p.CID == in.CID {
 			own = p
