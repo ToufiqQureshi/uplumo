@@ -26,6 +26,9 @@ for (const width of [1280, 375]) {
     await page.setViewportSize({ width, height: 960 });
     await page.goto("/support");
     await expect(
+      page.getByRole("heading", { name: "Bugs & Feedback" }),
+    ).toBeVisible();
+    await expect(
       page.getByRole("heading", { name: "Report a problem" }),
     ).toBeVisible();
     await page.getByLabel("Report type").click();
@@ -79,3 +82,33 @@ for (const width of [1280, 375]) {
     ).toBe(true);
   });
 }
+
+test("personal settings asks for confirmation before account deletion", async ({
+  page,
+}) => {
+  await installGrowthFixtures(page);
+  const submitted: unknown[] = [];
+  await page.route("**/api/auth/delete-account", async (route) => {
+    submitted.push(route.request().postDataJSON() as unknown);
+    await route.fulfill({
+      status: 409,
+      json: {
+        code: "SHARED_WORKSPACE",
+        message: "Transfer ownership or leave shared workspaces first.",
+      },
+    });
+  });
+  await page.goto("/settings");
+  const deleteButton = page.getByRole("button", { name: "Delete my account" });
+  await deleteButton.click();
+  const dialog = page.getByRole("alertdialog");
+  await expect(dialog).toBeVisible();
+  expect(submitted).toEqual([]);
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(dialog).toHaveCount(0);
+  expect(submitted).toEqual([]);
+  await deleteButton.click();
+  await dialog.getByRole("button", { name: "Delete my account" }).click();
+  await expect(dialog.getByRole("alert")).toContainText("shared workspaces");
+  expect(submitted).toEqual([{ confirm: true }]);
+});

@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Settings, User } from "lucide-react";
+import { useState } from "react";
 import { ThemePreferenceDropdownItems } from "@/client/components/ThemePreferenceMenuItems";
 import { Button } from "@/client/components/ui/button";
 import {
@@ -11,10 +12,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/client/components/ui/dropdown-menu";
+import { DeleteAccountDialog } from "@/client/features/settings/DeleteAccountDialog";
 import { signOutAndRedirect } from "@/lib/auth-client";
 
 // Shared account menu for onboarding and standalone plan pages.
 export function PlanPageAccountMenu({ email }: { email: string | undefined }) {
+  const [deleteOpen, setDeleteOpen] = useState(false);
   if (!email) return null;
 
   return (
@@ -49,8 +52,15 @@ export function PlanPageAccountMenu({ email }: { email: string | undefined }) {
           >
             Sign out
           </DropdownMenuItem>
+          <DropdownMenuItem
+            variant="destructive"
+            onClick={() => setDeleteOpen(true)}
+          >
+            Delete my account
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      <DeleteAccountDialog open={deleteOpen} onOpenChange={setDeleteOpen} />
     </div>
   );
 }

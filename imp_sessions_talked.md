@@ -13,6 +13,12 @@ priorities, corrections, and what still waits on him. Read it after
   decision, remove it when he answers.
 - Never write secrets, keys or customer data here.
 
+## 11 Nov 2026: self-service account deletion and Bugs & Feedback
+
+- A Hacker News user asked where to delete their account. Owner asked for a one-click deletion confirmation and the Bugs & Feedback relabel in one PR.
+- Add the deletion action to personal settings and the onboarding account menu. Reuse the existing erasure transaction and protect shared workspaces and payable billing.
+- Relabel the existing Help entry and suggestion option. Deletion and report submission cost zero credits.
+
 ## 10 Nov 2026: Cite Fix removed completely (Claude)
 
 - Owner: "remove cite fix", "complete remove kar", "db me table hs ye sab hata de mene bola completeley". Cite Fix may return later; it comes back from git history, not from kept code or tables.

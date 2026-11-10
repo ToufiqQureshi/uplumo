@@ -209,7 +209,11 @@ export const accountNavGroup: NavGroup = {
       icon: CreditCard,
       link: linkOptions({ to: "/billing/plan" }),
     },
-    { label: "Help", icon: CircleHelp, link: linkOptions({ to: "/support" }) },
+    {
+      label: "Bugs & Feedback",
+      icon: CircleHelp,
+      link: linkOptions({ to: "/support" }),
+    },
   ],
 };
 

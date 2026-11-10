@@ -20,8 +20,8 @@ function SupportPage() {
     <div className="h-full overflow-auto px-4 py-4 pb-24 md:px-6 md:py-6 md:pb-8">
       <div className="mx-auto max-w-7xl space-y-8">
         <PageHeader
-          title="Help"
-          description="Stuck, or have an idea? Send a report or email our team."
+          title="Bugs & Feedback"
+          description="Report a bug, suggest an improvement, or contact our team."
         />
 
         <div className="space-y-3">

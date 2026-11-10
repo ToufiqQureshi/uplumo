@@ -1,7 +1,9 @@
 # gdpr
 
 Erases one account and the data only that account owns, in one Postgres
-transaction. Run it as `cmd/erase-user` (dry run by default).
+transaction. Users can start in **Settings → Personal** or the onboarding
+account menu. The staff console and `cmd/erase-user` (dry run by default)
+also use this package.
 
 ```sh
 DATABASE_URL=... go run ./cmd/erase-user -email person@example.com
