@@ -9,7 +9,7 @@ watch and `PriceList()`. **0 paid calls.** A running run is polled with
 | Search (find business) | 1 Maps live search, depth 20 | 3 credits |
 | Run profile check | 1 Maps task, then 4 profile + 4 posts tasks (you and the top 3) | 40 credits |
 | Scan 3 x 3 / 5 x 5 | 9 / 25 Maps tasks, depth 20 | 14 / 39 credits |
-| Analyse reviews | 1 reviews task (100) + up to 3 (50 each), then 1 AI call for themes | 58 credits |
+| Analyse reviews | 1 reviews task (100) + up to 3 (50 each), then 1 AI call for themes | 61 credits |
 | Turn on watch | per competitor: 1 profile + 1 posts task, now and every 7 days | 10 per competitor |
 | Draft a reply / Rewrite | 1 AI call | 1 credit |
 
@@ -33,5 +33,6 @@ pins them.
 5. The result is stored on the run; failed when nothing came back.
 6. `Tick` (every 15 min): due watches start, runs whose job was lost finish.
 
-Reviews: themes are one AI call over at most 48 KB of review text; the model
-returns review ids only and the server counts them.
+Reviews: themes are one AI call over at most 48 KB of review text, capped at
+4,000 output tokens; the model returns short review ids (y3, a12) and the
+server counts them.

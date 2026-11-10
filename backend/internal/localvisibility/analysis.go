@@ -343,7 +343,9 @@ func gridSummary(points []GridPoint) string {
 			leader, most = name, n
 		}
 	}
-	if most > 0 {
+	// A leader is named only when one business is #1 at several points;
+	// when every point has a different #1 there is no one to name.
+	if most > 1 {
 		text += fmt.Sprintf(" Where you are not in the top 3, %s is #1 most often (%d points).", leader, most)
 	}
 	return text

@@ -34,7 +34,7 @@ var price = openrouter.MaxPrice{Prompt: 0.30, Completion: 1.20}
 const (
 	themesSystemBytes  = 1600
 	themesInputBytes   = 48000
-	themesMaxTokens    = 2000
+	themesMaxTokens    = 4000
 	replyInputBytes    = 2600
 	replyMaxTokens     = 400
 	reviewSnippetRunes = 400
@@ -112,9 +112,9 @@ type reviewSet struct {
 const themesSystem = `You group Google reviews of local businesses into themes.
 Input: reviews, each starting with an id in square brackets, then the star rating.
 Find at most 8 themes customers mention (for example a service, staff, waiting, price, cleanliness). Name each theme in 1-3 plain English words.
-For each theme list every review that mentions it, with "positive" or "negative" for what that review says about it.
+For each theme list the ids of the reviews that speak well of it in "pos" and of those that complain about it in "neg".
 Use only ids from the input. Do not invent themes nobody mentions.
-Answer with JSON only: {"themes":[{"name":"...","mentions":[{"id":"...","sentiment":"positive"}]}]}`
+Answer with compact JSON only: {"themes":[{"name":"...","pos":["y1","a4"],"neg":["y7"]}]}`
 
 // themes asks the model which reviews mention which theme, and counts the
 // mentions itself: the model never reports a number, only review ids that
@@ -122,13 +122,19 @@ Answer with JSON only: {"themes":[{"name":"...","mentions":[{"id":"...","sentime
 func (s *Service) themes(ctx context.Context, run *Run, sets []reviewSet) (map[string][]Theme, error) {
 	var b strings.Builder
 	known := map[string]string{}
-	for _, set := range sets {
+	// Ids are a letter per business and the review's index (y3, a12): short
+	// ids keep the answer small enough to finish inside its token cap.
+	for n, set := range sets {
+		letter := string(rune('y' + n))
+		if n > 0 {
+			letter = string(rune('a' + n - 1))
+		}
 		for i, r := range set.Reviews {
 			text := strings.Join(strings.Fields(r.Text), " ")
 			if text == "" {
 				continue
 			}
-			id := set.Key + ":" + strconv.Itoa(i)
+			id := letter + strconv.Itoa(i)
 			line := fmt.Sprintf("[%s] %d★ %s\n", id, r.Rating, truncate(text, reviewSnippetRunes))
 			if b.Len()+len(line) > themesInputBytes {
 				break
@@ -159,11 +165,9 @@ func (s *Service) themes(ctx context.Context, run *Run, sets []reviewSet) (map[s
 func countThemes(text string, known map[string]string) (map[string][]Theme, error) {
 	var answer struct {
 		Themes []struct {
-			Name     string `json:"name"`
-			Mentions []struct {
-				ID        string `json:"id"`
-				Sentiment string `json:"sentiment"`
-			} `json:"mentions"`
+			Name string   `json:"name"`
+			Pos  []string `json:"pos"`
+			Neg  []string `json:"neg"`
 		} `json:"themes"`
 	}
 	if err := json.Unmarshal([]byte(strings.TrimSpace(text)), &answer); err != nil {
@@ -177,26 +181,23 @@ func countThemes(text string, known map[string]string) (map[string][]Theme, erro
 		}
 		perSet := map[string]*Theme{}
 		seen := map[string]bool{}
-		for _, m := range t.Mentions {
-			set, ok := known[m.ID]
-			if !ok || seen[m.ID] {
-				continue
-			}
-			seen[m.ID] = true
-			if perSet[set] == nil {
-				perSet[set] = &Theme{Name: name}
-			}
-			switch m.Sentiment {
-			case "positive":
-				perSet[set].Positive++
-			case "negative":
-				perSet[set].Negative++
+		count := func(ids []string, add func(*Theme)) {
+			for _, id := range ids {
+				set, ok := known[id]
+				if !ok || seen[id] {
+					continue
+				}
+				seen[id] = true
+				if perSet[set] == nil {
+					perSet[set] = &Theme{Name: name}
+				}
+				add(perSet[set])
 			}
 		}
+		count(t.Pos, func(theme *Theme) { theme.Positive++ })
+		count(t.Neg, func(theme *Theme) { theme.Negative++ })
 		for set, theme := range perSet {
-			if theme.Positive+theme.Negative > 0 {
-				out[set] = append(out[set], *theme)
-			}
+			out[set] = append(out[set], *theme)
 		}
 	}
 	return out, nil

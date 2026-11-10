@@ -101,30 +101,34 @@ func TestGridSummaryNamesTheMostFrequentLeader(t *testing.T) {
 	if got := gridSummary(points); got != want {
 		t.Fatalf("summary = %q\nwant      %q", got, want)
 	}
+	scattered := []GridPoint{{Rank: 0, Top: []string{"A"}}, {Rank: 0, Top: []string{"B"}}}
+	if got := gridSummary(scattered); strings.Contains(got, "most often") {
+		t.Fatalf("summary = %q names a leader that is #1 at one point only", got)
+	}
 	if got := gridSummary([]GridPoint{{Missing: true}}); !strings.HasPrefix(got, "No point") {
 		t.Fatalf("summary = %q", got)
 	}
 }
 
 func TestCountThemesCountsOnlyKnownReviewsOnce(t *testing.T) {
-	known := map[string]string{"you:0": "you", "you:1": "you", "r0:0": "r0"}
+	known := map[string]string{"y0": "you", "y1": "you", "a0": "r0"}
 	answer := `{"themes":[
-		{"name":"Waiting time","mentions":[{"id":"you:0","sentiment":"negative"},{"id":"you:0","sentiment":"negative"},{"id":"r0:0","sentiment":"positive"},{"id":"you:99","sentiment":"negative"}]},
-		{"name":"  ","mentions":[{"id":"you:1","sentiment":"positive"}]},
-		{"name":"Price","mentions":[{"id":"you:1","sentiment":"maybe"}]}
+		{"name":"Waiting time","pos":["a0"],"neg":["y0","y0","y99"]},
+		{"name":"  ","pos":["y1"]},
+		{"name":"Price","pos":["y1"],"neg":["y1"]}
 	]}`
 	got, err := countThemes(answer, known)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(got["you"]) != 1 || got["you"][0] != (Theme{Name: "Waiting time", Negative: 1}) {
-		t.Fatalf("your themes = %+v, want one negative mention of waiting time", got["you"])
+	if len(got["you"]) != 2 || got["you"][0] != (Theme{Name: "Waiting time", Negative: 1}) || got["you"][1] != (Theme{Name: "Price", Positive: 1}) {
+		t.Fatalf("your themes = %+v, want one waiting-time complaint and one price mention counted once", got["you"])
 	}
 	if len(got["r0"]) != 1 || got["r0"][0].Positive != 1 {
 		t.Fatalf("rival themes = %+v", got["r0"])
 	}
-	if _, err := countThemes("not json", known); err == nil {
-		t.Fatal("a non-JSON answer must fail, so it is not charged")
+	if _, err := countThemes(`{"themes":[{"name":"Wait","pos":["y0"`, known); err == nil {
+		t.Fatal("a cut-off answer must fail, so it is not charged")
 	}
 }
 
