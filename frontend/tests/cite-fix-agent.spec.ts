@@ -5,6 +5,7 @@ const fix = (id: string, title: string, gain: number, pages: number) => ({
   id,
   category: "answers",
   title,
+  label: title,
   why: "Assistants quote short, direct answers.",
   how: "Start the page with a 1 to 3 sentence answer.",
   impact: gain >= 5 ? "high" : gain >= 2 ? "medium" : "low",
@@ -37,6 +38,8 @@ const ready = {
     {
       url: "https://example.com/page-0",
       title: "Page 0",
+      alsoAt: [],
+      article: false,
       score: 17,
       failed: ["answer-first"],
     },
