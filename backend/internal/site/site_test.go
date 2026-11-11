@@ -306,6 +306,10 @@ func TestPagesHaveNoDeadLinks(t *testing.T) {
 	blogSourceHosts := map[string]bool{
 		"developers.google.com": true,
 		"developers.openai.com": true,
+		"ads.openai.com":        true,
+		"chatgpt.com":           true,
+		"help.openai.com":       true,
+		"openai.com":            true,
 		"support.claude.com":    true,
 		"support.google.com":    true,
 		"www.google.com":        true,

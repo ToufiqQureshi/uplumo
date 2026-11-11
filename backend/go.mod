@@ -1,6 +1,6 @@
 module github.com/toufiqqureshi/uplumo/backend
 
-go 1.27.3
+go 1.27.4
 
 require (
 	github.com/getsentry/sentry-go v0.50.0

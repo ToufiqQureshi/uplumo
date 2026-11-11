@@ -33,9 +33,9 @@ for (const width of [1280, 375]) {
     ).toBeVisible();
     await page.getByLabel("Report type").click();
     await page.getByRole("option", { name: "Credits or payment" }).click();
-    await page
-      .getByLabel("What happened?")
-      .fill("My credit balance did not update after the payment completed.");
+    const description = page.getByLabel("What happened?");
+    const send = page.getByRole("button", { name: "Send report", exact: true });
+    await description.fill("404");
     await page
       .getByLabel("Affected page")
       .fill("/billing/plan?token=secret#private");
@@ -47,13 +47,21 @@ for (const width of [1280, 375]) {
         "base64",
       ),
     });
+    await send.click();
+    await expect(page.getByRole("alert")).toContainText(
+      "at least 10 characters",
+    );
+    await expect(description).toBeFocused();
+    expect(submissions).toHaveLength(0);
+    await description.fill(
+      "My credit balance did not update after the payment completed.",
+    );
+    await expect(page.getByRole("alert")).toHaveCount(0);
     await page.screenshot({
       path: testInfo.outputPath(`support-${width}.png`),
       fullPage: true,
     });
-    await page
-      .getByRole("button", { name: "Send report", exact: true })
-      .click();
+    await send.click();
     await expect(page.getByRole("alert")).toContainText(
       "Something went wrong on our side",
     );
@@ -61,9 +69,7 @@ for (const width of [1280, 375]) {
       "My credit balance did not update after the payment completed.",
     );
     expect(submissions).toHaveLength(1);
-    await page
-      .getByRole("button", { name: "Send report", exact: true })
-      .click();
+    await send.click();
     await expect(page.getByRole("status")).toContainText(
       "12345678-1234-4234-8234-123456789012",
     );

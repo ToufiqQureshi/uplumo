@@ -68,6 +68,8 @@ Pick 10 to 20 buyer questions and check them repeatedly. Record whether you are 
 
 ## How to check your ChatGPT ranking
 
+If you need to manage your official business details first, [claim your business on ChatGPT](/blog/how-to-list-your-business-on-chatgpt).
+
 1. **Write the questions.** Use unbranded buyer questions, not “What is [brand]?”.
 2. **Run them repeatedly.** Answers vary between runs. Use fresh chats, or a tool that samples the same prompts on a schedule.
 3. **Record three things per answer.** Were you mentioned? Were you recommended? Was your site linked?

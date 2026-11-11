@@ -265,6 +265,7 @@ func TestBlogCoverValidation(t *testing.T) {
 func TestPublishedBlogContent(t *testing.T) {
 	s := newSite(t, &url.URL{Scheme: "https", Host: "uplumo.com"})
 	posts := []struct{ slug, published, updated string }{
+		{"how-to-list-your-business-on-chatgpt", "2026-11-11", "2026-11-11"},
 		{"best-aeo-tools", "2026-11-09", "2026-11-09"},
 		{"best-semrush-alternatives", "2026-11-09", "2026-11-09"},
 		{"how-to-rank-in-chatgpt", "2026-11-09", "2026-11-09"},
@@ -327,6 +328,7 @@ func TestGuideNavigationAndImages(t *testing.T) {
 		slug          string
 		links, images int
 	}{
+		{"how-to-list-your-business-on-chatgpt", 7, 8},
 		{"seo-vs-aeo-vs-geo", 10, 5},
 		{"best-aeo-tools", 7, 4},
 		{"best-semrush-alternatives", 5, 4},
