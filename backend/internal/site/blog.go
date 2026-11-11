@@ -293,6 +293,11 @@ func postJSONLD(origin string, post Post, image string) []any {
 
 // blogPostingJSONLD describes a post for search engines.
 func blogPostingJSONLD(origin string, post Post, image string) map[string]any {
+	author := map[string]string{"@type": authorType(post.Author), "name": post.Author}
+	if post.Author == "ChatGPT Plus Content Writer Agent with Skills" {
+		// Credit the publisher in structured data when the visible byline is an AI tool.
+		author = map[string]string{"@type": "Organization", "name": name}
+	}
 	return map[string]any{
 		"@context":         "https://schema.org",
 		"@type":            "BlogPosting",
@@ -302,7 +307,7 @@ func blogPostingJSONLD(origin string, post Post, image string) map[string]any {
 		"dateModified":     post.Updated.Format(time.DateOnly),
 		"mainEntityOfPage": origin + "/blog/" + post.Slug,
 		"image":            image,
-		"author":           map[string]string{"@type": authorType(post.Author), "name": post.Author},
+		"author":           author,
 		"publisher": map[string]any{
 			"@type": "Organization", "name": name,
 			"logo": map[string]string{"@type": "ImageObject", "url": origin + AssetsPrefix + "logo.svg"},

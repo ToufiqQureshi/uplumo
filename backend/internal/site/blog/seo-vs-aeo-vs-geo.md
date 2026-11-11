@@ -198,6 +198,8 @@ For a **daily check**, review high-value landing pages, recognised referrals, co
 
 ## Improve your local SEO
 
+To manage the information ChatGPT shows about your business, [learn how to claim a ChatGPT business listing](/blog/how-to-list-your-business-on-chatgpt).
+
 For a hotel, clinic, restaurant or service business, customers may find you in Google Maps and call before they ever visit your website. **Google Business Profile**, formerly Google My Business, gives you a separate view of how people discover and interact with an eligible verified listing. Google says local results primarily depend on relevance, distance and prominence.
 
 1. **Get the listing right.** Verify eligible locations, choose an accurate primary category, keep hours and contact details current, and add recent photos. Link each listing to its relevant location or service page.
