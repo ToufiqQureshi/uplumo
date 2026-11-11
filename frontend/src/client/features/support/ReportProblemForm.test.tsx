@@ -91,6 +91,19 @@ it("keeps failed reports and their submission ID for manual retry, then confirms
   expect(host.querySelector("form")).toBeNull();
 });
 
+it("explains why a short description cannot be submitted", async () => {
+  await type("textarea", "  404  ");
+  const description = host.querySelector("textarea")!;
+  const send = host.querySelector<HTMLButtonElement>("button[type=submit]")!;
+  expect(send.disabled).toBe(false);
+  await act(async () => send.click());
+  expect(host.querySelector("[role=alert]")?.textContent).toContain(
+    "at least 10 characters",
+  );
+  expect(document.activeElement).toBe(description);
+  expect(submitReport).not.toHaveBeenCalled();
+});
+
 it("dispatches once when the same form is submitted twice before rendering", async () => {
   let resolve: ((result: { ticketId: string }) => void) | undefined;
   vi.mocked(submitReport).mockReturnValue(

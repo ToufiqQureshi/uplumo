@@ -44,15 +44,21 @@ export function ReportProblemForm() {
   const [context] = useState(initialContext);
   const [kind, setKind] = useState<ReportInput["kind"]>("bug");
   const [description, setDescription] = useState("");
+  const [validateDescription, setValidateDescription] = useState(false);
   const [pagePath, setPagePath] = useState(context.pagePath);
   const [submissionId, setSubmissionId] = useState(() => crypto.randomUUID());
   const [screenshot, setScreenshot] = useState<string>();
   const [fileError, setFileError] = useState("");
   const [reading, setReading] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
+  const descriptionInput = useRef<HTMLTextAreaElement>(null);
   const sending = useRef(false);
   const report = useMutation({ mutationFn: submitReport, retry: false });
   const busy = reading || report.isPending;
+  const trimmedDescription = description.trim();
+  // Count Unicode code points to match the server's rune count.
+  const descriptionTooShort = Array.from(trimmedDescription).length < 10;
+  const showDescriptionError = validateDescription && descriptionTooShort;
 
   function edited() {
     setSubmissionId(crypto.randomUUID());
@@ -62,11 +68,16 @@ export function ReportProblemForm() {
   async function send(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (sending.current || busy || fileError) return;
+    if (descriptionTooShort) {
+      setValidateDescription(true);
+      descriptionInput.current?.focus();
+      return;
+    }
     sending.current = true;
     try {
       await report.mutateAsync({
         kind,
-        description: description.trim(),
+        description: trimmedDescription,
         pagePath: reportPath(pagePath),
         appVersion: version,
         requestId: context.requestId,
@@ -103,6 +114,7 @@ export function ReportProblemForm() {
               variant="outline"
               onClick={() => {
                 setDescription("");
+                setValidateDescription(false);
                 setScreenshot(undefined);
                 setFileError("");
                 edited();
@@ -151,9 +163,10 @@ export function ReportProblemForm() {
                 What happened?
               </label>
               <Textarea
+                ref={descriptionInput}
                 id="report-description"
-                required
-                minLength={10}
+                aria-required="true"
+                aria-invalid={showDescriptionError || undefined}
                 maxLength={5000}
                 rows={5}
                 value={description}
@@ -162,11 +175,24 @@ export function ReportProblemForm() {
                   setDescription(event.target.value);
                   edited();
                 }}
-                aria-describedby="report-privacy"
+                aria-describedby={
+                  showDescriptionError
+                    ? "report-description-error report-privacy"
+                    : "report-privacy"
+                }
               />
+              {showDescriptionError && (
+                <p
+                  id="report-description-error"
+                  role="alert"
+                  className="text-sm text-destructive"
+                >
+                  Enter at least 10 characters describing what happened.
+                </p>
+              )}
               <p id="report-privacy" className="text-xs text-muted-foreground">
-                Include the steps to reproduce it. Do not include passwords, API
-                keys or payment details.
+                Minimum 10 characters. Include the steps to reproduce it. Do not
+                include passwords, API keys or payment details.
               </p>
             </div>
             <div className="space-y-2">
@@ -261,12 +287,7 @@ export function ReportProblemForm() {
                 )}
               </p>
             ) : null}
-            <Button
-              type="submit"
-              disabled={
-                busy || Boolean(fileError) || description.trim().length < 10
-              }
-            >
+            <Button type="submit" disabled={busy || Boolean(fileError)}>
               {reading
                 ? "Reading screenshot…"
                 : report.isPending

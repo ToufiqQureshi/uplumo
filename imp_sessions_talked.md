@@ -13,6 +13,11 @@ priorities, corrections, and what still waits on him. Read it after
   decision, remove it when he answers.
 - Never write secrets, keys or customer data here.
 
+## 11 Nov 2026: Bugs & Feedback submission validation
+
+- Owner reported that Send report appeared unresponsive with a short description and an attached screenshot.
+- Explain the 10-character minimum in the form, focus the description on an invalid submission, and retain the screenshot for retry. Zero paid calls.
+
 ## 11 Nov 2026: self-service account deletion and Bugs & Feedback
 
 - A Hacker News user asked where to delete their account. Owner asked for a one-click deletion confirmation and the Bugs & Feedback relabel in one PR.
