@@ -77,6 +77,7 @@ function ReceiptPage() {
               From
             </p>
             <p className="font-semibold">Uplumo</p>
+            <p>uplumo.com</p>
             <p>{SUPPORT_EMAIL}</p>
           </div>
           {b.name ? (
@@ -148,8 +149,8 @@ function ReceiptPage() {
           </tbody>
         </table>
         <p className="border-t border-neutral-200 pt-3 text-xs text-neutral-500">
-          This is a receipt for a payment received. It is not a tax invoice. The
-          seller is not registered under GST, so no GST was charged.
+          {r.currency === "INR" ? "GST not applicable. " : ""}Thank you for your
+          payment. Questions about this receipt? {SUPPORT_EMAIL}
         </p>
       </article>
     </div>
