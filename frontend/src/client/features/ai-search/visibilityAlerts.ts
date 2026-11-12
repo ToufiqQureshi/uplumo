@@ -6,8 +6,8 @@ import { engineLabel } from "./platformLabels";
  * What changed between two tracker checks with the same questions, engines
  * and market. Built from answers already saved: no provider call.
  *
- * Only pairs where both checks got a real answer are compared, so a failed
- * collection never reads as "AI stopped naming you".
+ * Only question/engine pairs where both checks got a real answer are
+ * compared, so a failed or recovered collection never reads as a change.
  */
 export type VisibilityAlert = {
   kind: "lost" | "won" | "new_rival" | "negative" | "new_source";
@@ -68,34 +68,40 @@ export function visibilityAlerts(
 
   for (const now of latest.filter(measured)) {
     const was = before.get(key(now));
+    // No earlier answer to this question on this engine: nothing in this
+    // answer can be called a change.
+    if (!was) continue;
     const engine = engineLabel(now.engine);
-    if (was) {
-      const ownBefore = !!was.brands[0]?.mentioned;
-      const ownNow = !!now.brands[0]?.mentioned;
-      if (ownBefore && !ownNow) {
-        const instead = namedRivals(now).slice(0, 2);
-        alerts.push({
-          kind: "lost",
-          severity: 3,
-          title: `${engine} stopped naming you for “${now.prompt}”`,
-          detail: instead.length
-            ? `It now recommends ${instead.join(" and ")}.`
-            : "It no longer names your brand in this answer.",
-          prompt: now.prompt,
-          engine: now.engine,
-        });
-      } else if (!ownBefore && ownNow) {
-        alerts.push({
-          kind: "won",
-          severity: 1,
-          title: `${engine} now names you for “${now.prompt}”`,
-          detail: "It did not in the previous check.",
-          prompt: now.prompt,
-          engine: now.engine,
-        });
-      }
+    const ownBefore = !!was.brands[0]?.mentioned;
+    const ownNow = !!now.brands[0]?.mentioned;
+    if (ownBefore && !ownNow) {
+      const instead = namedRivals(now).slice(0, 2);
+      alerts.push({
+        kind: "lost",
+        severity: 3,
+        title: `${engine} stopped naming you for “${now.prompt}”`,
+        detail: instead.length
+          ? `It now recommends ${instead.join(" and ")}.`
+          : "It no longer names your brand in this answer.",
+        prompt: now.prompt,
+        engine: now.engine,
+      });
+    } else if (!ownBefore && ownNow) {
+      alerts.push({
+        kind: "won",
+        severity: 1,
+        title: `${engine} now names you for “${now.prompt}”`,
+        detail: "It did not in the previous check.",
+        prompt: now.prompt,
+        engine: now.engine,
+      });
     }
-    if (now.sentiment === "negative" && was?.sentiment !== "negative") {
+    // Sentiment is classified on request; "" means unknown, not positive.
+    if (
+      now.sentiment === "negative" &&
+      was.sentiment !== "" &&
+      was.sentiment !== "negative"
+    ) {
       alerts.push({
         kind: "negative",
         severity: 3,

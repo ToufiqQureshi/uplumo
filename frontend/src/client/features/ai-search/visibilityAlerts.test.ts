@@ -112,7 +112,7 @@ describe("visibilityAlerts", () => {
   it("reports a negative answer, but not one that was already negative", () => {
     const alerts = visibilityAlerts(
       [
-        answer("q1", "chat_gpt", true),
+        answer("q1", "chat_gpt", true, { sentiment: "neutral" }),
         answer("q2", "chat_gpt", true, { sentiment: "negative" }),
       ],
       [
@@ -165,5 +165,32 @@ describe("visibilityAlerts", () => {
       "AI started citing new.example",
     ]);
     expect(alerts[0]?.detail).toMatch(/^Cited in 1 answer that/u);
+  });
+  it("does not call an answer newly negative when the earlier one was never classified", () => {
+    expect(
+      visibilityAlerts(
+        [answer("q", "chat_gpt", true)],
+        [answer("q", "chat_gpt", true, { sentiment: "negative" })],
+      ),
+    ).toEqual([]);
+  });
+
+  it("announces nothing for a question the previous check failed to collect", () => {
+    expect(
+      visibilityAlerts(
+        [
+          answer("q1", "chat_gpt", false),
+          answer("q2", "chat_gpt", true, { status: "failed" }),
+        ],
+        [
+          answer("q1", "chat_gpt", false),
+          answer("q2", "chat_gpt", true, {
+            sentiment: "negative",
+            recommended: [{ name: "Fresh Ltd", position: 1 }],
+            citations: [cite("https://new.example/")],
+          }),
+        ],
+      ),
+    ).toEqual([]);
   });
 });
