@@ -6,6 +6,7 @@ import { BillingUsageChart } from "@/client/features/billing/BillingUsageChart";
 import { CreditBreakdown } from "@/client/features/billing/credits/CreditBreakdown";
 import { TopUpsCard } from "@/client/features/billing/credits/TopUpsCard";
 import { CreditsCard } from "@/client/features/billing/credits/CreditsCard";
+import { PaymentsCard } from "@/client/features/billing/receipts/PaymentsCard";
 import { useBillingUsage } from "@/client/features/billing/usageApi";
 import { useCanManageBilling } from "@/client/features/team/organizationQueries";
 import { useSession } from "@/lib/auth-client";
@@ -58,6 +59,7 @@ function BillingPage() {
           usageQuery.data.chargesCredits && usageQuery.data.plan !== "free"
         }
       />
+      {canManageBilling ? <PaymentsCard /> : null}
       <CreditBreakdown usage={usageQuery.data} />
       <BillingUsageChart />
     </div>

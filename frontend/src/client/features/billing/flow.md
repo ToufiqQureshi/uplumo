@@ -11,3 +11,11 @@
 ## Paid calls per click
 
 None to DataForSEO or OpenRouter. One Razorpay create call at most (subscription or order), and none when an unpaid one is reused. Razorpay API calls are free; nothing is retried automatically (`retry: false`).
+
+## Payments and receipts
+
+1. The Billing page shows **Payments and receipts** to owners and admins (`receipts/PaymentsCard.tsx`) when the workspace has at least one payment. It reads `GET /api/v1/billing/payments` (`billing.Service.Payments`) from `go_billing_payments`, newest first.
+2. **View receipt** opens `/billing/receipts/$paymentId`, which reads `GET /api/v1/billing/payments/{id}/receipt`. A payment of another workspace answers 404. **Download PDF** opens the browser's print dialog; the print styles show only the receipt.
+3. **Billing details** (name, address, country, tax ID) are read from `GET /api/v1/billing/details` and saved with `POST /api/v1/billing/details` into `go_billing_details`. Every receipt, old ones included, shows the current details.
+
+Paid calls: none. Everything is read from Uplumo's own database; Razorpay is not called.
