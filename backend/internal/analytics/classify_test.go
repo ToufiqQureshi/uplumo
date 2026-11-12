@@ -136,8 +136,10 @@ func TestDeviceOf(t *testing.T) {
 		{name: "windows without width", ua: windows, width: 0, want: deviceDesktop},
 		{name: "narrow unknown agent", ua: "curl/8.0", width: 360, want: deviceMobile},
 		{name: "mobile width boundary", ua: windows, width: maxMobileWidth, want: deviceMobile},
-		{name: "tablet width boundary", ua: windows, width: maxMobileWidth + 1, want: deviceTablet},
-		{name: "desktop width boundary", ua: windows, width: maxTabletWidth, want: deviceDesktop},
+		{name: "windows laptop at 150% scaling", ua: windows, width: 911, want: deviceDesktop},
+		{name: "windows just above phone width", ua: windows, width: maxMobileWidth + 1, want: deviceDesktop},
+		{name: "ipados tablet width boundary", ua: mac, width: maxMobileWidth + 1, want: deviceTablet},
+		{name: "ipados desktop width boundary", ua: mac, width: maxTabletWidth, want: deviceDesktop},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

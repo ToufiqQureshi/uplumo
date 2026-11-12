@@ -6,7 +6,12 @@ const loader = readFileSync(
   new URL("../../backend/internal/site/static/analytics.js", import.meta.url),
   "utf8",
 );
-function browser(path = "/pricing", hostname = "uplumo.com", optedOut = false) {
+function browser(
+  path = "/pricing",
+  hostname = "uplumo.com",
+  optedOut = false,
+  publicSite = true,
+) {
   const scripts: Record<string, unknown>[] = [];
   const listeners: Record<string, (event: unknown) => void> = {};
   const window: { dataLayer: unknown[][]; [key: string]: unknown } = {
@@ -20,6 +25,11 @@ function browser(path = "/pricing", hostname = "uplumo.com", optedOut = false) {
     navigator: { doNotTrack: optedOut ? "1" : "0" },
     window,
     document: {
+      // Public pages load this script with data-public-site; the app does not.
+      currentScript: {
+        hasAttribute: (name: string) =>
+          publicSite && name === "data-public-site",
+      },
       createElement: () => ({
         setAttribute(name: string, value: string) {
           Object.assign(this, { [name]: value });
@@ -37,13 +47,20 @@ function browser(path = "/pricing", hostname = "uplumo.com", optedOut = false) {
 }
 describe("owner tracking boundaries", () => {
   it("initializes after client navigation leaves the login page, only once", () => {
-    const b = browser("/sign-in");
+    const b = browser("/sign-in", "uplumo.com", false, false);
     runInNewContext(loader, b.context);
     expect(b.scripts).toHaveLength(0);
     b.context.location.pathname = "/p/example/billing/plan";
     b.listeners["uplumo:navigation"]({});
     b.listeners["uplumo:navigation"]({});
-    expect(b.scripts).toHaveLength(2);
+    expect(b.scripts).toHaveLength(1);
+  });
+  it("keeps the app's pages out of Uplumo's own website analytics", () => {
+    const b = browser("/p/example/content-editor", "uplumo.com", false, false);
+    runInNewContext(loader, b.context);
+    expect(b.scripts.map((script) => script.src)).toEqual([
+      "https://www.googletagmanager.com/gtag/js?id=G-NTP32DNMN2",
+    ]);
   });
   it("initializes both trackers once and records named intent without form data", () => {
     const b = browser();

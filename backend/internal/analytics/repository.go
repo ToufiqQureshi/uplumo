@@ -223,6 +223,19 @@ func (r repository) summary(ctx context.Context, projectID string, start, end ti
 		GROUP BY 1 ORDER BY 2 DESC, 1`, append(args, leadNames, channelInternal, channelDirect)...).
 		Query(collectInto(&s.SourceLeads, pgx.RowToStructByPos[SourceLeads]))
 
+	if s.Leads.Configured {
+		b.Queue(visitLeads+`, tied AS (
+				SELECT DISTINCT f.visitor_hash FROM first_page f JOIN lead_visits USING (session_hash)
+			)
+			SELECT count(DISTINCT c.visitor_hash)
+			FROM go_analytics_custom_events c
+			WHERE c.site_id = (SELECT id FROM go_analytics_sites WHERE project_id = $1)
+				AND c.occurred_at >= $2 AND c.occurred_at < $3 AND c.name = ANY($4)
+				AND NOT EXISTS (SELECT 1 FROM tied WHERE tied.visitor_hash = c.visitor_hash)`,
+			append(args, leadNames)...).
+			QueryRow(func(row pgx.Row) error { return row.Scan(&s.Leads.UntiedVisitors) })
+	}
+
 	b.Queue(visitLeads+`
 		SELECT f.ai_source, f.path, count(DISTINCT f.visitor_hash),
 			count(DISTINCT f.visitor_hash) FILTER (WHERE l.session_hash IS NOT NULL)

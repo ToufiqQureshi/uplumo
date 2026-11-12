@@ -27,6 +27,11 @@
   // Whether the page was visible since tickAt. Checked instead of the current
   // state, because visibilitychange fires after the page is already hidden.
   var visibleSinceTick = false;
+  // A visible tab nobody touches is not being read: time counts only up to
+  // activeMS after the last input, and an idle tab does not keep its session
+  // alive.
+  var activeMS = 2 * 60 * 1000;
+  var lastActive = 0;
   var idleMS = 30 * 60 * 1000;
   var maxSessionMS = 24 * 60 * 60 * 1000;
   var browserKey = "uplumo-browser:" + site;
@@ -123,10 +128,26 @@
 
   function accrue() {
     var now = performance.now();
-    if (tickAt && visibleSinceTick) engagedMS += Math.min(now - tickAt, 15000);
+    var until = Math.min(now, lastActive + activeMS);
+    if (tickAt && visibleSinceTick && until > tickAt) engagedMS += until - tickAt;
     tickAt = now;
     visibleSinceTick = document.visibilityState === "visible";
   }
+
+  function active() {
+    return document.visibilityState === "visible" && performance.now() - lastActive <= activeMS;
+  }
+
+  // Input after an idle spell first closes the idle stretch, so the time
+  // nobody was there is never counted.
+  function touched() {
+    var now = performance.now();
+    if (now - lastActive > activeMS) accrue();
+    lastActive = now;
+  }
+  ["pointerdown", "pointermove", "keydown", "scroll", "wheel", "touchstart"].forEach(function (name) {
+    addEventListener(name, touched, { capture: true, passive: true });
+  });
 
   function flushEngagement() {
     accrue();
@@ -145,6 +166,7 @@
     pageviewID = id();
     engagedMS = 0;
     tickAt = performance.now();
+    lastActive = tickAt;
     visibleSinceTick = document.visibilityState === "visible";
     post(payload({ r: referrer || "" }));
   }
@@ -270,12 +292,13 @@
       var activeSession = currentSession();
       if (oldSession && oldSession !== activeSession) startPage("", true);
       tickAt = performance.now();
+      lastActive = tickAt;
       visibleSinceTick = true;
     }
   });
   addEventListener("pagehide", flushEngagement);
   setInterval(function () {
-    if (document.visibilityState !== "visible" || !collectionAllowed || privacyBlocked()) return;
+    if (!active() || !collectionAllowed || privacyBlocked()) return;
     var oldSession = session && session.id;
     var activeSession = currentSession();
     if (oldSession && oldSession !== activeSession) startPage("", true);

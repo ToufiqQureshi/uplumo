@@ -29,6 +29,9 @@ export function DailyAudienceCard({
   const recognized = days.some(
     (day) => day.newBrowsers + day.returningBrowsers > 0,
   );
+  // Without browser recognition every column but pageviews is zero: nothing
+  // to show (recognition is offered in Tracking code).
+  if (!recognized) return null;
   return (
     <CardShell
       title="Daily new and returning"
@@ -39,13 +42,6 @@ export function DailyAudienceCard({
         an earlier day. Ten visits from one recognized browser count once per
         day.
       </p>
-      {!recognized ? (
-        <p className="mb-4 rounded-lg border border-border p-3 text-sm">
-          No recognized browsers in this period. Enable optional browser
-          recognition in Tracking code after connecting your consent setup.
-          Older visits cannot be classified.
-        </p>
-      ) : null}
       <p className="mb-2 text-xs text-muted-foreground sm:hidden">
         Swipe the table to see all columns.
       </p>
@@ -232,9 +228,11 @@ export function ClickDestinationsCard({
                     {row.visitorDays.toLocaleString()}
                   </td>
                   <td className="pl-2 text-right tabular-nums">
-                    {row.type === "internal"
-                      ? row.arrivals.toLocaleString()
-                      : "—"}
+                    {row.type !== "internal"
+                      ? "—"
+                      : row.destinationTracked
+                        ? row.arrivals.toLocaleString()
+                        : "Not tracked"}
                   </td>
                 </tr>
               ))}

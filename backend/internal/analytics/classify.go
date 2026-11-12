@@ -377,7 +377,9 @@ const (
 // deviceOf classifies the visitor's device. The user agent decides when it
 // says: "Mobi" is the cross-browser mobile marker, and iPads and Android
 // devices without "Mobi" are tablets. iPadOS sends a desktop Safari user
-// agent, so a touch-sized screen width decides otherwise.
+// agent, so for a Mac agent a tablet-sized screen width decides otherwise.
+// Windows and Linux laptops at 125-150% scaling report widths in that range
+// too, so width alone never makes them a tablet.
 func deviceOf(userAgent string, screenWidth int) string {
 	switch {
 	case strings.Contains(userAgent, "Mobi"):
@@ -386,7 +388,7 @@ func deviceOf(userAgent string, screenWidth int) string {
 		return deviceTablet
 	case screenWidth > 0 && screenWidth <= maxMobileWidth:
 		return deviceMobile
-	case screenWidth > maxMobileWidth && screenWidth < maxTabletWidth:
+	case strings.Contains(userAgent, "Macintosh") && screenWidth > maxMobileWidth && screenWidth < maxTabletWidth:
 		return deviceTablet
 	default:
 		return deviceDesktop

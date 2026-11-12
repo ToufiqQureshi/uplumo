@@ -95,12 +95,17 @@ func TestClickDestinationsAndObservedArrivals(t *testing.T) {
 	unknown := click
 	unknown.EventID, unknown.EventName, unknown.Destination = "unknown", "Modal", ""
 	send(d.Add(33*time.Minute), unknown)
+	// A page the tracker never runs on (a sign-up form) can never show an
+	// arrival, so the report must not claim zero arrivals for it.
+	untracked := click
+	untracked.EventID, untracked.EventName, untracked.Destination = "untracked", "Signup", "https://acme.com/sign-up"
+	send(d.Add(34*time.Minute), untracked)
 	r, err := f.svc.Clicks(ctx, s.project, d, d, 2, 0)
 	if err != nil || len(r.Rows) != 2 || !r.HasMore {
 		t.Fatalf("page one=%+v %v", r, err)
 	}
-	second, err := f.svc.Clicks(ctx, s.project, d, d, 2, 2)
-	if err != nil || len(second.Rows) != 2 || second.HasMore {
+	second, err := f.svc.Clicks(ctx, s.project, d, d, 3, 2)
+	if err != nil || len(second.Rows) != 3 || second.HasMore {
 		t.Fatalf("page two=%+v %v", second, err)
 	}
 	all := append(r.Rows, second.Rows...)
@@ -110,16 +115,20 @@ func TestClickDestinationsAndObservedArrivals(t *testing.T) {
 		}
 		switch row.Name {
 		case "Book":
-			if row.Host != "acme.com" || row.Path != "/book" || row.Type != "internal" || row.Arrivals != 1 {
+			if row.Host != "acme.com" || row.Path != "/book" || row.Type != "internal" || row.Arrivals != 1 || !row.DestinationTracked {
 				t.Errorf("internal=%+v", row)
 			}
 		case "Other":
-			if row.Arrivals != 0 {
+			if row.Arrivals != 0 || !row.DestinationTracked {
 				t.Errorf("false arrival=%+v", row)
 			}
 		case "Partner":
 			if row.Host != "partner.test" || row.Path != "/book" || row.Type != "external" || row.Arrivals != 0 {
 				t.Errorf("external=%+v", row)
+			}
+		case "Signup":
+			if row.Type != "internal" || row.Arrivals != 0 || row.DestinationTracked {
+				t.Errorf("untracked destination=%+v", row)
 			}
 		case "Modal":
 			if row.Type != "unknown" || row.Host != "" || row.Path != "" {
