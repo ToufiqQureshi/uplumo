@@ -18,7 +18,7 @@ func TrySessionLock(ctx context.Context, pool *pgxpool.Pool, key string) (*pgxpo
 	}
 	var locked bool
 	if err := conn.QueryRow(ctx, "SELECT pg_try_advisory_lock(hashtextextended($1, 0))", key).Scan(&locked); err != nil {
-		closeSession(conn)
+		closeSession(ctx, conn)
 		return nil, nil, fmt.Errorf("claim session lock: %w", err)
 	}
 	if !locked {
@@ -27,11 +27,11 @@ func TrySessionLock(ctx context.Context, pool *pgxpool.Pool, key string) (*pgxpo
 	}
 	// End the session to release the lock and discard any buffered LISTEN
 	// notifications before another request can borrow a connection.
-	return conn, func() { closeSession(conn) }, nil
+	return conn, func() { closeSession(ctx, conn) }, nil
 }
 
-func closeSession(conn *pgxpool.Conn) {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+func closeSession(parent context.Context, conn *pgxpool.Conn) {
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(parent), 3*time.Second)
 	defer cancel()
 	_ = conn.Hijack().Close(ctx)
 }
