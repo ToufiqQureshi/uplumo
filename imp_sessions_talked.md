@@ -1,5 +1,13 @@
 # Important session talks
 
+## 12 Nov 2026: refocus on agencies, cut features, new UI
+
+- Owner: "current ui bhi ganda ha ... har baar same hi aata ha", "koi users hi nai ha uplumo pe", buttons and DataForSEO data not checked, embarrassed when marketing.
+- Live DB on 12 Nov: 18 orgs, 3 paying subscriptions, paid calls in the last 30 days from at most 2 orgs.
+- Decision: first customers are **SEO agencies, freelancers and individual consultants**. Owner wants features cut, code removed, product lighter, and a new professional UI (not the current shadcn look).
+- Prototype (Clients list, client Google + AI visibility, white-label report): https://claude.ai/artifact/Jy23iuWxnfsmX6wwPUh1ks
+- Waiting for owner: approve prototype look; "haan" on the exact feature-removal list before any code is deleted.
+
 ## 12 Nov 2026: Analytics accuracy
 
 - Owner: "nothing is accurate" on Analytics; then "pura accurate bana ... ek hi cheez bekkar nai honi chahiye ... phele qa test kar fir saare points cover kar".
