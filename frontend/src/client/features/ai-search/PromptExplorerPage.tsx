@@ -6,7 +6,6 @@ import { Columns3, MessageSquare, SearchCheck, Sparkles } from "lucide-react";
 import { explorePrompt } from "@/client/features/ai-search/aiSearchApi";
 import { useHostedPlanGate } from "@/client/features/billing/HostedPlanGate";
 import { ResearchPageShell } from "@/client/features/ai-search/ResearchPageShell";
-import { AiVisibilityGuide } from "@/client/features/ai-search/AiVisibilityGuide";
 import { PromptExplorerForm } from "@/client/features/ai-search/components/PromptExplorerForm";
 import { PromptExplorerResults } from "@/client/features/ai-search/components/PromptExplorerResults";
 import { RecentSearches } from "@/client/components/RecentSearches";
@@ -31,6 +30,8 @@ type PromptExplorerFormValues = {
 type Props = {
   projectId: string;
   urlState: PromptExplorerFormValues;
+  /** False for a URL the customer opened but did not submit: nothing is bought. */
+  requested: boolean;
   onSubmit: (values: PromptExplorerFormValues) => void;
 };
 
@@ -52,7 +53,12 @@ const PROMPT_EXPLORER_BULLETS = [
   },
 ];
 
-export function PromptExplorerPage({ projectId, urlState, onSubmit }: Props) {
+export function PromptExplorerPage({
+  projectId,
+  urlState,
+  requested,
+  onSubmit,
+}: Props) {
   const planStatus = useHostedPlanGate();
   const [form, setForm] = useState<PromptExplorerFormValues>(urlState);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -65,7 +71,7 @@ export function PromptExplorerPage({ projectId, urlState, onSubmit }: Props) {
   } = usePromptExplorerSearchHistory(projectId);
 
   const trimmedPrompt = urlState.prompt.trim();
-  const hasActivePrompt = trimmedPrompt.length > 0;
+  const hasActivePrompt = requested && trimmedPrompt.length > 0;
 
   const exploreQuery = useQuery({
     queryKey: [
@@ -151,10 +157,6 @@ export function PromptExplorerPage({ projectId, urlState, onSubmit }: Props) {
 
   return (
     <ResearchPageShell
-      guide={
-        <AiVisibilityGuide current="prompt-explorer" projectId={projectId} />
-      }
-      title="Prompt Explorer"
       description="Ask any prompt across ChatGPT, Claude, Gemini, and Perplexity side-by-side."
       planStatus={planStatus}
       gate={{
@@ -200,8 +202,8 @@ export function PromptExplorerPage({ projectId, urlState, onSubmit }: Props) {
       }
       backLink={
         <BackLink
-          from="/p/$projectId/prompt-explorer"
-          to="/p/$projectId/prompt-explorer"
+          from="/p/$projectId/ai-visibility/test"
+          to="/p/$projectId/ai-visibility/test"
           params={{ projectId }}
           search={{}}
           replace
@@ -221,8 +223,8 @@ export function PromptExplorerPage({ projectId, urlState, onSubmit }: Props) {
           getSubtitle={(item) => item.models.map(formatModelLabel).join(", ")}
           renderLink={(item, props) => (
             <Link
-              from="/p/$projectId/prompt-explorer"
-              to="/p/$projectId/prompt-explorer"
+              from="/p/$projectId/ai-visibility/test"
+              to="/p/$projectId/ai-visibility/test"
               params={{ projectId }}
               search={{
                 q: item.prompt,

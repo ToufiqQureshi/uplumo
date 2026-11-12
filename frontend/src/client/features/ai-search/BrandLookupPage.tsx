@@ -8,7 +8,6 @@ import {
 } from "@/client/features/ai-search/aiSearchApi";
 import { useHostedPlanGate } from "@/client/features/billing/HostedPlanGate";
 import { ResearchPageShell } from "@/client/features/ai-search/ResearchPageShell";
-import { AiVisibilityGuide } from "@/client/features/ai-search/AiVisibilityGuide";
 import { BrandLookupResults } from "@/client/features/ai-search/components/BrandLookupResults";
 import { BrandVisibilityHistoryCard } from "@/client/features/ai-search/components/BrandVisibilityHistoryCard";
 import { BrandLookupSearchCard } from "@/client/features/ai-search/components/BrandLookupSearchCard";
@@ -42,6 +41,8 @@ type Props = {
   initialScope: ResearchScope | undefined;
   /** The country in the URL; undefined means the project's market. */
   initialLocationCode: number | undefined;
+  /** False for a URL the customer opened but did not submit: nothing is bought. */
+  requested: boolean;
   onSearchChange: (
     nextQuery: string,
     nextCompetitors: string[],
@@ -76,6 +77,7 @@ export function BrandLookupPage({
   initialCompetitors,
   initialScope,
   initialLocationCode,
+  requested,
   onSearchChange,
 }: Props) {
   const planStatus = useHostedPlanGate();
@@ -104,7 +106,7 @@ export function BrandLookupPage({
   } | null>(null);
 
   const trimmedInitialQuery = initialQuery.trim();
-  const hasActiveQuery = trimmedInitialQuery.length > 0;
+  const hasActiveQuery = requested && trimmedInitialQuery.length > 0;
   // The URL `c` param is the source of truth for the active lookup; the local
   // `competitorsInput` text only drives the input until the next submit. A
   // stable string key, since `initialCompetitors` is a fresh array each render.
@@ -265,8 +267,6 @@ export function BrandLookupPage({
 
   return (
     <ResearchPageShell
-      guide={<AiVisibilityGuide current="brand-lookup" projectId={projectId} />}
-      title="Brand Lookup"
       description="See how AI search cites any brand name or domain."
       planStatus={planStatus}
       gate={{
@@ -325,8 +325,8 @@ export function BrandLookupPage({
       }
       backLink={
         <BackLink
-          from="/p/$projectId/brand-lookup"
-          to="/p/$projectId/brand-lookup"
+          from="/p/$projectId/ai-visibility/research"
+          to="/p/$projectId/ai-visibility/research"
           params={{ projectId }}
           search={{
             q: undefined,
@@ -388,8 +388,8 @@ export function BrandLookupPage({
           }
           renderLink={(item, props) => (
             <Link
-              from="/p/$projectId/brand-lookup"
-              to="/p/$projectId/brand-lookup"
+              from="/p/$projectId/ai-visibility/research"
+              to="/p/$projectId/ai-visibility/research"
               params={{ projectId }}
               search={{
                 q: item.query,

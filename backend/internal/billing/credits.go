@@ -40,6 +40,10 @@ const (
 	CreditMarkupMultiplier = 1.28
 	// CreditsPerUSD is legacy rate: 1000 credits = $1.00 USD.
 	CreditsPerUSD = 1000
+	// CreditsPerProviderUSD is how many credits one dollar of provider cost
+	// costs the customer, markup included (exactly 1280). Divide a credit
+	// ceiling by it to get the provider budget.
+	CreditsPerProviderUSD = CreditMarkupMultiplier * CreditsPerUSD
 )
 
 // CreditReservation is a pending reservation of organization AI credits.

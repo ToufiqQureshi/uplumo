@@ -45,6 +45,7 @@ import { Route as AppBillingReceiptsPaymentIdRouteImport } from './routes/_app/b
 import { Route as AppPProjectIdIndexRouteImport } from './routes/_app/p/$projectId/index'
 import { Route as AppPProjectIdAiOpportunitiesRouteImport } from './routes/_app/p/$projectId/ai-opportunities'
 import { Route as AppPProjectIdAiSentimentRouteImport } from './routes/_app/p/$projectId/ai-sentiment'
+import { Route as AppPProjectIdAiVisibilityRouteImport } from './routes/_app/p/$projectId/ai-visibility'
 import { Route as AppPProjectIdAnalyticsRouteImport } from './routes/_app/p/$projectId/analytics'
 import { Route as AppPProjectIdBacklinksRouteImport } from './routes/_app/p/$projectId/backlinks'
 import { Route as AppPProjectIdBrandLookupRouteImport } from './routes/_app/p/$projectId/brand-lookup'
@@ -62,6 +63,14 @@ import { Route as AppPProjectIdSamRouteImport } from './routes/_app/p/$projectId
 import { Route as AppPProjectIdSavedRouteImport } from './routes/_app/p/$projectId/saved'
 import { Route as AppPProjectIdSearchPerformanceRouteImport } from './routes/_app/p/$projectId/search-performance'
 import { Route as AppPProjectIdSettingsRouteImport } from './routes/_app/p/$projectId/settings'
+import { Route as AppPProjectIdAiVisibilityIndexRouteImport } from './routes/_app/p/$projectId/ai-visibility/index'
+import { Route as AppPProjectIdAiVisibilityIdeasRouteImport } from './routes/_app/p/$projectId/ai-visibility/ideas'
+import { Route as AppPProjectIdAiVisibilityOpportunitiesRouteImport } from './routes/_app/p/$projectId/ai-visibility/opportunities'
+import { Route as AppPProjectIdAiVisibilityPromptsRouteImport } from './routes/_app/p/$projectId/ai-visibility/prompts'
+import { Route as AppPProjectIdAiVisibilityResearchRouteImport } from './routes/_app/p/$projectId/ai-visibility/research'
+import { Route as AppPProjectIdAiVisibilitySentimentRouteImport } from './routes/_app/p/$projectId/ai-visibility/sentiment'
+import { Route as AppPProjectIdAiVisibilitySetupRouteImport } from './routes/_app/p/$projectId/ai-visibility/setup'
+import { Route as AppPProjectIdAiVisibilityTestRouteImport } from './routes/_app/p/$projectId/ai-visibility/test'
 import { Route as AppPProjectIdAuditIndexRouteImport } from './routes/_app/p/$projectId/audit/index'
 import { Route as AppPProjectIdRankTrackingIndexRouteImport } from './routes/_app/p/$projectId/rank-tracking/index'
 import { Route as AppPProjectIdRankTrackingConfigIdRouteImport } from './routes/_app/p/$projectId/rank-tracking/$configId'
@@ -255,6 +264,12 @@ const AppPProjectIdAiSentimentRoute =
     path: '/ai-sentiment',
     getParentRoute: () => AppPProjectIdRouteRoute,
   } as any)
+const AppPProjectIdAiVisibilityRoute =
+  AppPProjectIdAiVisibilityRouteImport.update({
+    id: '/ai-visibility',
+    path: '/ai-visibility',
+    getParentRoute: () => AppPProjectIdRouteRoute,
+  } as any)
 const AppPProjectIdAnalyticsRoute = AppPProjectIdAnalyticsRouteImport.update({
   id: '/analytics',
   path: '/analytics',
@@ -349,6 +364,54 @@ const AppPProjectIdSettingsRoute = AppPProjectIdSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AppPProjectIdRouteRoute,
 } as any)
+const AppPProjectIdAiVisibilityIndexRoute =
+  AppPProjectIdAiVisibilityIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AppPProjectIdAiVisibilityRoute,
+  } as any)
+const AppPProjectIdAiVisibilityIdeasRoute =
+  AppPProjectIdAiVisibilityIdeasRouteImport.update({
+    id: '/ideas',
+    path: '/ideas',
+    getParentRoute: () => AppPProjectIdAiVisibilityRoute,
+  } as any)
+const AppPProjectIdAiVisibilityOpportunitiesRoute =
+  AppPProjectIdAiVisibilityOpportunitiesRouteImport.update({
+    id: '/opportunities',
+    path: '/opportunities',
+    getParentRoute: () => AppPProjectIdAiVisibilityRoute,
+  } as any)
+const AppPProjectIdAiVisibilityPromptsRoute =
+  AppPProjectIdAiVisibilityPromptsRouteImport.update({
+    id: '/prompts',
+    path: '/prompts',
+    getParentRoute: () => AppPProjectIdAiVisibilityRoute,
+  } as any)
+const AppPProjectIdAiVisibilityResearchRoute =
+  AppPProjectIdAiVisibilityResearchRouteImport.update({
+    id: '/research',
+    path: '/research',
+    getParentRoute: () => AppPProjectIdAiVisibilityRoute,
+  } as any)
+const AppPProjectIdAiVisibilitySentimentRoute =
+  AppPProjectIdAiVisibilitySentimentRouteImport.update({
+    id: '/sentiment',
+    path: '/sentiment',
+    getParentRoute: () => AppPProjectIdAiVisibilityRoute,
+  } as any)
+const AppPProjectIdAiVisibilitySetupRoute =
+  AppPProjectIdAiVisibilitySetupRouteImport.update({
+    id: '/setup',
+    path: '/setup',
+    getParentRoute: () => AppPProjectIdAiVisibilityRoute,
+  } as any)
+const AppPProjectIdAiVisibilityTestRoute =
+  AppPProjectIdAiVisibilityTestRouteImport.update({
+    id: '/test',
+    path: '/test',
+    getParentRoute: () => AppPProjectIdAiVisibilityRoute,
+  } as any)
 const AppPProjectIdAuditIndexRoute = AppPProjectIdAuditIndexRouteImport.update({
   id: '/audit/',
   path: '/audit/',
@@ -442,6 +505,7 @@ export interface FileRoutesByFullPath {
   '/billing/receipts/$paymentId': typeof AppBillingReceiptsPaymentIdRoute
   '/p/$projectId/ai-opportunities': typeof AppPProjectIdAiOpportunitiesRoute
   '/p/$projectId/ai-sentiment': typeof AppPProjectIdAiSentimentRoute
+  '/p/$projectId/ai-visibility': typeof AppPProjectIdAiVisibilityRouteWithChildren
   '/p/$projectId/analytics': typeof AppPProjectIdAnalyticsRoute
   '/p/$projectId/backlinks': typeof AppPProjectIdBacklinksRoute
   '/p/$projectId/brand-lookup': typeof AppPProjectIdBrandLookupRoute
@@ -460,11 +524,19 @@ export interface FileRoutesByFullPath {
   '/p/$projectId/search-performance': typeof AppPProjectIdSearchPerformanceRoute
   '/p/$projectId/settings': typeof AppPProjectIdSettingsRouteWithChildren
   '/p/$projectId/': typeof AppPProjectIdIndexRoute
+  '/p/$projectId/ai-visibility/ideas': typeof AppPProjectIdAiVisibilityIdeasRoute
+  '/p/$projectId/ai-visibility/opportunities': typeof AppPProjectIdAiVisibilityOpportunitiesRoute
+  '/p/$projectId/ai-visibility/prompts': typeof AppPProjectIdAiVisibilityPromptsRoute
+  '/p/$projectId/ai-visibility/research': typeof AppPProjectIdAiVisibilityResearchRoute
+  '/p/$projectId/ai-visibility/sentiment': typeof AppPProjectIdAiVisibilitySentimentRoute
+  '/p/$projectId/ai-visibility/setup': typeof AppPProjectIdAiVisibilitySetupRoute
+  '/p/$projectId/ai-visibility/test': typeof AppPProjectIdAiVisibilityTestRoute
   '/p/$projectId/rank-tracking/$configId': typeof AppPProjectIdRankTrackingConfigIdRoute
   '/p/$projectId/reports/$reportId': typeof AppPProjectIdReportsReportIdRoute
   '/p/$projectId/reports/templates': typeof AppPProjectIdReportsTemplatesRoute
   '/p/$projectId/settings/context': typeof AppPProjectIdSettingsContextRoute
   '/p/$projectId/settings/integrations': typeof AppPProjectIdSettingsIntegrationsRoute
+  '/p/$projectId/ai-visibility/': typeof AppPProjectIdAiVisibilityIndexRoute
   '/p/$projectId/audit/': typeof AppPProjectIdAuditIndexRoute
   '/p/$projectId/rank-tracking/': typeof AppPProjectIdRankTrackingIndexRoute
   '/p/$projectId/reports/': typeof AppPProjectIdReportsIndexRoute
@@ -517,11 +589,19 @@ export interface FileRoutesByTo {
   '/p/$projectId/saved': typeof AppPProjectIdSavedRoute
   '/p/$projectId/search-performance': typeof AppPProjectIdSearchPerformanceRoute
   '/p/$projectId': typeof AppPProjectIdIndexRoute
+  '/p/$projectId/ai-visibility/ideas': typeof AppPProjectIdAiVisibilityIdeasRoute
+  '/p/$projectId/ai-visibility/opportunities': typeof AppPProjectIdAiVisibilityOpportunitiesRoute
+  '/p/$projectId/ai-visibility/prompts': typeof AppPProjectIdAiVisibilityPromptsRoute
+  '/p/$projectId/ai-visibility/research': typeof AppPProjectIdAiVisibilityResearchRoute
+  '/p/$projectId/ai-visibility/sentiment': typeof AppPProjectIdAiVisibilitySentimentRoute
+  '/p/$projectId/ai-visibility/setup': typeof AppPProjectIdAiVisibilitySetupRoute
+  '/p/$projectId/ai-visibility/test': typeof AppPProjectIdAiVisibilityTestRoute
   '/p/$projectId/rank-tracking/$configId': typeof AppPProjectIdRankTrackingConfigIdRoute
   '/p/$projectId/reports/$reportId': typeof AppPProjectIdReportsReportIdRoute
   '/p/$projectId/reports/templates': typeof AppPProjectIdReportsTemplatesRoute
   '/p/$projectId/settings/context': typeof AppPProjectIdSettingsContextRoute
   '/p/$projectId/settings/integrations': typeof AppPProjectIdSettingsIntegrationsRoute
+  '/p/$projectId/ai-visibility': typeof AppPProjectIdAiVisibilityIndexRoute
   '/p/$projectId/audit': typeof AppPProjectIdAuditIndexRoute
   '/p/$projectId/rank-tracking': typeof AppPProjectIdRankTrackingIndexRoute
   '/p/$projectId/reports': typeof AppPProjectIdReportsIndexRoute
@@ -565,6 +645,7 @@ export interface FileRoutesById {
   '/_app/billing_/receipts/$paymentId': typeof AppBillingReceiptsPaymentIdRoute
   '/_app/p/$projectId/ai-opportunities': typeof AppPProjectIdAiOpportunitiesRoute
   '/_app/p/$projectId/ai-sentiment': typeof AppPProjectIdAiSentimentRoute
+  '/_app/p/$projectId/ai-visibility': typeof AppPProjectIdAiVisibilityRouteWithChildren
   '/_app/p/$projectId/analytics': typeof AppPProjectIdAnalyticsRoute
   '/_app/p/$projectId/backlinks': typeof AppPProjectIdBacklinksRoute
   '/_app/p/$projectId/brand-lookup': typeof AppPProjectIdBrandLookupRoute
@@ -583,11 +664,19 @@ export interface FileRoutesById {
   '/_app/p/$projectId/search-performance': typeof AppPProjectIdSearchPerformanceRoute
   '/_app/p/$projectId/settings': typeof AppPProjectIdSettingsRouteWithChildren
   '/_app/p/$projectId/': typeof AppPProjectIdIndexRoute
+  '/_app/p/$projectId/ai-visibility/ideas': typeof AppPProjectIdAiVisibilityIdeasRoute
+  '/_app/p/$projectId/ai-visibility/opportunities': typeof AppPProjectIdAiVisibilityOpportunitiesRoute
+  '/_app/p/$projectId/ai-visibility/prompts': typeof AppPProjectIdAiVisibilityPromptsRoute
+  '/_app/p/$projectId/ai-visibility/research': typeof AppPProjectIdAiVisibilityResearchRoute
+  '/_app/p/$projectId/ai-visibility/sentiment': typeof AppPProjectIdAiVisibilitySentimentRoute
+  '/_app/p/$projectId/ai-visibility/setup': typeof AppPProjectIdAiVisibilitySetupRoute
+  '/_app/p/$projectId/ai-visibility/test': typeof AppPProjectIdAiVisibilityTestRoute
   '/_app/p/$projectId/rank-tracking/$configId': typeof AppPProjectIdRankTrackingConfigIdRoute
   '/_app/p/$projectId/reports/$reportId': typeof AppPProjectIdReportsReportIdRoute
   '/_app/p/$projectId/reports/templates': typeof AppPProjectIdReportsTemplatesRoute
   '/_app/p/$projectId/settings/context': typeof AppPProjectIdSettingsContextRoute
   '/_app/p/$projectId/settings/integrations': typeof AppPProjectIdSettingsIntegrationsRoute
+  '/_app/p/$projectId/ai-visibility/': typeof AppPProjectIdAiVisibilityIndexRoute
   '/_app/p/$projectId/audit/': typeof AppPProjectIdAuditIndexRoute
   '/_app/p/$projectId/rank-tracking/': typeof AppPProjectIdRankTrackingIndexRoute
   '/_app/p/$projectId/reports/': typeof AppPProjectIdReportsIndexRoute
@@ -629,6 +718,7 @@ export interface FileRouteTypes {
     | '/billing/receipts/$paymentId'
     | '/p/$projectId/ai-opportunities'
     | '/p/$projectId/ai-sentiment'
+    | '/p/$projectId/ai-visibility'
     | '/p/$projectId/analytics'
     | '/p/$projectId/backlinks'
     | '/p/$projectId/brand-lookup'
@@ -647,11 +737,19 @@ export interface FileRouteTypes {
     | '/p/$projectId/search-performance'
     | '/p/$projectId/settings'
     | '/p/$projectId/'
+    | '/p/$projectId/ai-visibility/ideas'
+    | '/p/$projectId/ai-visibility/opportunities'
+    | '/p/$projectId/ai-visibility/prompts'
+    | '/p/$projectId/ai-visibility/research'
+    | '/p/$projectId/ai-visibility/sentiment'
+    | '/p/$projectId/ai-visibility/setup'
+    | '/p/$projectId/ai-visibility/test'
     | '/p/$projectId/rank-tracking/$configId'
     | '/p/$projectId/reports/$reportId'
     | '/p/$projectId/reports/templates'
     | '/p/$projectId/settings/context'
     | '/p/$projectId/settings/integrations'
+    | '/p/$projectId/ai-visibility/'
     | '/p/$projectId/audit/'
     | '/p/$projectId/rank-tracking/'
     | '/p/$projectId/reports/'
@@ -704,11 +802,19 @@ export interface FileRouteTypes {
     | '/p/$projectId/saved'
     | '/p/$projectId/search-performance'
     | '/p/$projectId'
+    | '/p/$projectId/ai-visibility/ideas'
+    | '/p/$projectId/ai-visibility/opportunities'
+    | '/p/$projectId/ai-visibility/prompts'
+    | '/p/$projectId/ai-visibility/research'
+    | '/p/$projectId/ai-visibility/sentiment'
+    | '/p/$projectId/ai-visibility/setup'
+    | '/p/$projectId/ai-visibility/test'
     | '/p/$projectId/rank-tracking/$configId'
     | '/p/$projectId/reports/$reportId'
     | '/p/$projectId/reports/templates'
     | '/p/$projectId/settings/context'
     | '/p/$projectId/settings/integrations'
+    | '/p/$projectId/ai-visibility'
     | '/p/$projectId/audit'
     | '/p/$projectId/rank-tracking'
     | '/p/$projectId/reports'
@@ -751,6 +857,7 @@ export interface FileRouteTypes {
     | '/_app/billing_/receipts/$paymentId'
     | '/_app/p/$projectId/ai-opportunities'
     | '/_app/p/$projectId/ai-sentiment'
+    | '/_app/p/$projectId/ai-visibility'
     | '/_app/p/$projectId/analytics'
     | '/_app/p/$projectId/backlinks'
     | '/_app/p/$projectId/brand-lookup'
@@ -769,11 +876,19 @@ export interface FileRouteTypes {
     | '/_app/p/$projectId/search-performance'
     | '/_app/p/$projectId/settings'
     | '/_app/p/$projectId/'
+    | '/_app/p/$projectId/ai-visibility/ideas'
+    | '/_app/p/$projectId/ai-visibility/opportunities'
+    | '/_app/p/$projectId/ai-visibility/prompts'
+    | '/_app/p/$projectId/ai-visibility/research'
+    | '/_app/p/$projectId/ai-visibility/sentiment'
+    | '/_app/p/$projectId/ai-visibility/setup'
+    | '/_app/p/$projectId/ai-visibility/test'
     | '/_app/p/$projectId/rank-tracking/$configId'
     | '/_app/p/$projectId/reports/$reportId'
     | '/_app/p/$projectId/reports/templates'
     | '/_app/p/$projectId/settings/context'
     | '/_app/p/$projectId/settings/integrations'
+    | '/_app/p/$projectId/ai-visibility/'
     | '/_app/p/$projectId/audit/'
     | '/_app/p/$projectId/rank-tracking/'
     | '/_app/p/$projectId/reports/'
@@ -1047,6 +1162,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPProjectIdAiSentimentRouteImport
       parentRoute: typeof AppPProjectIdRouteRoute
     }
+    '/_app/p/$projectId/ai-visibility': {
+      id: '/_app/p/$projectId/ai-visibility'
+      path: '/ai-visibility'
+      fullPath: '/p/$projectId/ai-visibility'
+      preLoaderRoute: typeof AppPProjectIdAiVisibilityRouteImport
+      parentRoute: typeof AppPProjectIdRouteRoute
+    }
     '/_app/p/$projectId/analytics': {
       id: '/_app/p/$projectId/analytics'
       path: '/analytics'
@@ -1166,6 +1288,62 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPProjectIdSettingsRouteImport
       parentRoute: typeof AppPProjectIdRouteRoute
     }
+    '/_app/p/$projectId/ai-visibility/': {
+      id: '/_app/p/$projectId/ai-visibility/'
+      path: '/'
+      fullPath: '/p/$projectId/ai-visibility/'
+      preLoaderRoute: typeof AppPProjectIdAiVisibilityIndexRouteImport
+      parentRoute: typeof AppPProjectIdAiVisibilityRoute
+    }
+    '/_app/p/$projectId/ai-visibility/ideas': {
+      id: '/_app/p/$projectId/ai-visibility/ideas'
+      path: '/ideas'
+      fullPath: '/p/$projectId/ai-visibility/ideas'
+      preLoaderRoute: typeof AppPProjectIdAiVisibilityIdeasRouteImport
+      parentRoute: typeof AppPProjectIdAiVisibilityRoute
+    }
+    '/_app/p/$projectId/ai-visibility/opportunities': {
+      id: '/_app/p/$projectId/ai-visibility/opportunities'
+      path: '/opportunities'
+      fullPath: '/p/$projectId/ai-visibility/opportunities'
+      preLoaderRoute: typeof AppPProjectIdAiVisibilityOpportunitiesRouteImport
+      parentRoute: typeof AppPProjectIdAiVisibilityRoute
+    }
+    '/_app/p/$projectId/ai-visibility/prompts': {
+      id: '/_app/p/$projectId/ai-visibility/prompts'
+      path: '/prompts'
+      fullPath: '/p/$projectId/ai-visibility/prompts'
+      preLoaderRoute: typeof AppPProjectIdAiVisibilityPromptsRouteImport
+      parentRoute: typeof AppPProjectIdAiVisibilityRoute
+    }
+    '/_app/p/$projectId/ai-visibility/research': {
+      id: '/_app/p/$projectId/ai-visibility/research'
+      path: '/research'
+      fullPath: '/p/$projectId/ai-visibility/research'
+      preLoaderRoute: typeof AppPProjectIdAiVisibilityResearchRouteImport
+      parentRoute: typeof AppPProjectIdAiVisibilityRoute
+    }
+    '/_app/p/$projectId/ai-visibility/sentiment': {
+      id: '/_app/p/$projectId/ai-visibility/sentiment'
+      path: '/sentiment'
+      fullPath: '/p/$projectId/ai-visibility/sentiment'
+      preLoaderRoute: typeof AppPProjectIdAiVisibilitySentimentRouteImport
+      parentRoute: typeof AppPProjectIdAiVisibilityRoute
+    }
+    '/_app/p/$projectId/ai-visibility/setup': {
+      id: '/_app/p/$projectId/ai-visibility/setup'
+      path: '/setup'
+      fullPath: '/p/$projectId/ai-visibility/setup'
+      preLoaderRoute: typeof AppPProjectIdAiVisibilitySetupRouteImport
+      parentRoute: typeof AppPProjectIdAiVisibilityRoute
+    }
+    '/_app/p/$projectId/ai-visibility/test': {
+      id: '/_app/p/$projectId/ai-visibility/test'
+      path: '/test'
+      fullPath: '/p/$projectId/ai-visibility/test'
+      preLoaderRoute: typeof AppPProjectIdAiVisibilityTestRouteImport
+      parentRoute: typeof AppPProjectIdAiVisibilityRoute
+    }
     '/_app/p/$projectId/audit/': {
       id: '/_app/p/$projectId/audit/'
       path: '/audit'
@@ -1255,6 +1433,38 @@ const AppSettingsRouteWithChildren = AppSettingsRoute._addFileChildren(
   AppSettingsRouteChildren,
 )
 
+interface AppPProjectIdAiVisibilityRouteChildren {
+  AppPProjectIdAiVisibilityIdeasRoute: typeof AppPProjectIdAiVisibilityIdeasRoute
+  AppPProjectIdAiVisibilityOpportunitiesRoute: typeof AppPProjectIdAiVisibilityOpportunitiesRoute
+  AppPProjectIdAiVisibilityPromptsRoute: typeof AppPProjectIdAiVisibilityPromptsRoute
+  AppPProjectIdAiVisibilityResearchRoute: typeof AppPProjectIdAiVisibilityResearchRoute
+  AppPProjectIdAiVisibilitySentimentRoute: typeof AppPProjectIdAiVisibilitySentimentRoute
+  AppPProjectIdAiVisibilitySetupRoute: typeof AppPProjectIdAiVisibilitySetupRoute
+  AppPProjectIdAiVisibilityTestRoute: typeof AppPProjectIdAiVisibilityTestRoute
+  AppPProjectIdAiVisibilityIndexRoute: typeof AppPProjectIdAiVisibilityIndexRoute
+}
+
+const AppPProjectIdAiVisibilityRouteChildren: AppPProjectIdAiVisibilityRouteChildren =
+  {
+    AppPProjectIdAiVisibilityIdeasRoute: AppPProjectIdAiVisibilityIdeasRoute,
+    AppPProjectIdAiVisibilityOpportunitiesRoute:
+      AppPProjectIdAiVisibilityOpportunitiesRoute,
+    AppPProjectIdAiVisibilityPromptsRoute:
+      AppPProjectIdAiVisibilityPromptsRoute,
+    AppPProjectIdAiVisibilityResearchRoute:
+      AppPProjectIdAiVisibilityResearchRoute,
+    AppPProjectIdAiVisibilitySentimentRoute:
+      AppPProjectIdAiVisibilitySentimentRoute,
+    AppPProjectIdAiVisibilitySetupRoute: AppPProjectIdAiVisibilitySetupRoute,
+    AppPProjectIdAiVisibilityTestRoute: AppPProjectIdAiVisibilityTestRoute,
+    AppPProjectIdAiVisibilityIndexRoute: AppPProjectIdAiVisibilityIndexRoute,
+  }
+
+const AppPProjectIdAiVisibilityRouteWithChildren =
+  AppPProjectIdAiVisibilityRoute._addFileChildren(
+    AppPProjectIdAiVisibilityRouteChildren,
+  )
+
 interface AppPProjectIdRankTrackingRouteChildren {
   AppPProjectIdRankTrackingConfigIdRoute: typeof AppPProjectIdRankTrackingConfigIdRoute
   AppPProjectIdRankTrackingIndexRoute: typeof AppPProjectIdRankTrackingIndexRoute
@@ -1293,6 +1503,7 @@ const AppPProjectIdSettingsRouteWithChildren =
 interface AppPProjectIdRouteRouteChildren {
   AppPProjectIdAiOpportunitiesRoute: typeof AppPProjectIdAiOpportunitiesRoute
   AppPProjectIdAiSentimentRoute: typeof AppPProjectIdAiSentimentRoute
+  AppPProjectIdAiVisibilityRoute: typeof AppPProjectIdAiVisibilityRouteWithChildren
   AppPProjectIdAnalyticsRoute: typeof AppPProjectIdAnalyticsRoute
   AppPProjectIdBacklinksRoute: typeof AppPProjectIdBacklinksRoute
   AppPProjectIdBrandLookupRoute: typeof AppPProjectIdBrandLookupRoute
@@ -1321,6 +1532,7 @@ interface AppPProjectIdRouteRouteChildren {
 const AppPProjectIdRouteRouteChildren: AppPProjectIdRouteRouteChildren = {
   AppPProjectIdAiOpportunitiesRoute: AppPProjectIdAiOpportunitiesRoute,
   AppPProjectIdAiSentimentRoute: AppPProjectIdAiSentimentRoute,
+  AppPProjectIdAiVisibilityRoute: AppPProjectIdAiVisibilityRouteWithChildren,
   AppPProjectIdAnalyticsRoute: AppPProjectIdAnalyticsRoute,
   AppPProjectIdBacklinksRoute: AppPProjectIdBacklinksRoute,
   AppPProjectIdBrandLookupRoute: AppPProjectIdBrandLookupRoute,

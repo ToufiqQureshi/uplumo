@@ -17,13 +17,17 @@ import (
 )
 
 // CreditsForUSD converts provider cost to credits: the markup, rounded up to
-// a whole credit, so a real charge is never zero.
+// a whole credit, so a real charge is never zero. A millionth of a credit of
+// float error is ignored first, so a ceiling of n credits converted to dollars
+// and back stays n (18/1280 dollars is 18.000000000000004 credits in floats).
 func CreditsForUSD(costUSD float64) int64 {
 	if costUSD <= 0 || math.IsNaN(costUSD) || math.IsInf(costUSD, 0) {
 		return 0
 	}
-	return int64(math.Ceil(costUSD * CreditMarkupMultiplier * CreditsPerUSD))
+	return max(1, int64(math.Ceil(costUSD*CreditsPerProviderUSD-creditFloatSlack)))
 }
+
+const creditFloatSlack = 1e-6
 
 // SpendGuard is the one gate every paid provider request goes through. It
 // implements spend.Guard for DataForSEO and, through AIMeter, meters AI

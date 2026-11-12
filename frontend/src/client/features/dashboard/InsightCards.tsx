@@ -149,7 +149,7 @@ export function AiVisibilityCard({ projectId }: { projectId: string }) {
   });
   const action = (
     <Link
-      to="/p/$projectId/prompt-tracking"
+      to="/p/$projectId/ai-visibility"
       params={{ projectId }}
       className={moreDetailsClass}
     >
@@ -181,10 +181,7 @@ export function AiVisibilityCard({ projectId }: { projectId: string }) {
               size="lg"
               nativeButton={false}
               render={
-                <Link
-                  to="/p/$projectId/prompt-tracking"
-                  params={{ projectId }}
-                />
+                <Link to="/p/$projectId/ai-visibility" params={{ projectId }} />
               }
             >
               Set up AI tracking
@@ -256,7 +253,7 @@ export function AiVisibilityCard({ projectId }: { projectId: string }) {
             nativeButton={false}
             render={
               <Link
-                to="/p/$projectId/prompt-tracking"
+                to="/p/$projectId/ai-visibility"
                 params={{ projectId }}
                 hash="why-not-cited"
               />
@@ -280,10 +277,7 @@ export function AiVisibilityCard({ projectId }: { projectId: string }) {
                   params={{ projectId }}
                 />
               ) : (
-                <Link
-                  to="/p/$projectId/prompt-tracking"
-                  params={{ projectId }}
-                />
+                <Link to="/p/$projectId/ai-visibility" params={{ projectId }} />
               )
             }
           >

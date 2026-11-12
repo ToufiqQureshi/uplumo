@@ -2,7 +2,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Sparkles } from "lucide-react";
 import { useState } from "react";
-import { PageHeader } from "@/client/components/PageHeader";
 import { Button } from "@/client/components/ui/button";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { trackingKey } from "@/client/features/ai-search/trackingApi";
@@ -10,14 +9,8 @@ import { AiAction, InsightCard, MAX_AI_ACTION_CREDITS } from "./AiAction";
 import { insightsApi } from "./insightsApi";
 import { MOODS, sentimentSummary, topComplaint, type Mood } from "./sentiment";
 import { useLatestAnswers } from "./useLatestAnswers";
+import { engineLabel } from "@/client/features/ai-search/platformLabels";
 
-const ENGINE: Record<string, string> = {
-  chat_gpt: "ChatGPT",
-  gemini: "Gemini",
-  google_ai_overview: "AI Overviews",
-  claude: "Claude",
-  perplexity: "Perplexity",
-};
 const MOOD_STYLE: Record<Mood, string> = {
   positive: "text-success",
   neutral: "text-muted-foreground",
@@ -60,11 +53,10 @@ export function AiSentimentPage({ projectId }: { projectId: string }) {
     return <p className="p-6 text-sm text-muted-foreground">Loading…</p>;
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 p-4 sm:p-6">
-      <PageHeader
-        title="AI Sentiment"
-        description={`What ChatGPT, Gemini and other assistants say about ${brand}, and where it comes from.`}
-      />
+    <div className="flex flex-col gap-6">
+      <p className="text-sm text-muted-foreground">
+        {`What ChatGPT, Gemini and other assistants say about ${brand}, and where it comes from.`}
+      </p>
       {!ai.run ? (
         <InsightCard
           headline="Run your first AI Visibility check, then come back to see how AI talks about you."
@@ -73,7 +65,10 @@ export function AiSentimentPage({ projectId }: { projectId: string }) {
           <Button
             nativeButton={false}
             render={
-              <Link to="/p/$projectId/prompt-tracking" params={{ projectId }} />
+              <Link
+                to="/p/$projectId/ai-visibility/setup"
+                params={{ projectId }}
+              />
             }
           >
             Set up the AI Visibility Tracker
@@ -201,11 +196,11 @@ export function AiSentimentPage({ projectId }: { projectId: string }) {
                   key={engine}
                   className="grid grid-cols-[100px_1fr_70px] items-center gap-3 text-sm"
                 >
-                  <span>{ENGINE[engine] ?? engine}</span>
+                  <span>{engineLabel(engine)}</span>
                   <div
                     className="flex h-3 overflow-hidden rounded-full bg-muted"
                     role="img"
-                    aria-label={`${ENGINE[engine] ?? engine}: ${c.positive} positive, ${c.neutral} neutral, ${c.negative} negative`}
+                    aria-label={`${engineLabel(engine)}: ${c.positive} positive, ${c.neutral} neutral, ${c.negative} negative`}
                   >
                     {MOODS.map((m) => (
                       <div
@@ -238,7 +233,7 @@ export function AiSentimentPage({ projectId }: { projectId: string }) {
                       {a.sentiment}
                     </span>
                     <span className="font-mono text-muted-foreground">
-                      {ENGINE[a.engine] ?? a.engine} · “{a.prompt}”
+                      {engineLabel(a.engine)} · “{a.prompt}”
                     </span>
                   </span>
                   <span className="text-sm">

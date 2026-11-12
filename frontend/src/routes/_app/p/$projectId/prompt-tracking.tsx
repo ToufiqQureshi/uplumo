@@ -1,8 +1,12 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { PromptTrackingPage } from "@/client/features/ai-search/PromptTrackingPage";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+
+// Merged into the AI visibility page. Old links and bookmarks keep working.
 export const Route = createFileRoute("/_app/p/$projectId/prompt-tracking")({
-  component: TrackingRoute,
+  beforeLoad: ({ params }) => {
+    throw redirect({
+      to: "/p/$projectId/ai-visibility",
+      params: { projectId: params.projectId },
+      replace: true,
+    });
+  },
 });
-function TrackingRoute() {
-  return <PromptTrackingPage projectId={Route.useParams().projectId} />;
-}

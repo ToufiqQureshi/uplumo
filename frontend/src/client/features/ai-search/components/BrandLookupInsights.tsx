@@ -92,7 +92,7 @@ export function BrandLookupInsights({ result, projectId }: Props) {
         </Panel>
       ) : null}
       <Link
-        to="/p/$projectId/prompt-tracking"
+        to="/p/$projectId/ai-visibility/setup"
         params={{ projectId }}
         className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline lg:col-span-3"
       >
@@ -199,7 +199,7 @@ export function NoMentionsAdvice({
         </li>
       </ol>
       <Link
-        to="/p/$projectId/prompt-tracking"
+        to="/p/$projectId/ai-visibility/setup"
         params={{ projectId }}
         className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
       >

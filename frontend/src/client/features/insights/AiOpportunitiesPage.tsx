@@ -1,6 +1,5 @@
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { PageHeader } from "@/client/components/PageHeader";
 import { Button } from "@/client/components/ui/button";
 import { WhyNotCitedCard } from "@/client/features/ai-search/components/WhyNotCitedCard";
 import { whyNotCited } from "@/client/features/ai-search/whyNotCited";
@@ -21,11 +20,11 @@ export function AiOpportunitiesPage({ projectId }: { projectId: string }) {
   const current = gaps.find((g) => g.prompt === selected) ?? gaps[0];
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 p-4 sm:p-6">
-      <PageHeader
-        title="AI Opportunities"
-        description="Questions where AI recommends someone else instead of you, and what to do about each."
-      />
+    <div className="flex flex-col gap-6">
+      <p className="text-sm text-muted-foreground">
+        Questions where AI recommends someone else instead of you, and what to
+        do about each.
+      </p>
       {ai.isPending ? (
         <p className="text-sm text-muted-foreground">Reading saved answers…</p>
       ) : !ai.run ? (
@@ -36,7 +35,10 @@ export function AiOpportunitiesPage({ projectId }: { projectId: string }) {
           <Button
             nativeButton={false}
             render={
-              <Link to="/p/$projectId/prompt-tracking" params={{ projectId }} />
+              <Link
+                to="/p/$projectId/ai-visibility/setup"
+                params={{ projectId }}
+              />
             }
           >
             Set up the AI Visibility Tracker
@@ -45,7 +47,7 @@ export function AiOpportunitiesPage({ projectId }: { projectId: string }) {
       ) : (
         <>
           <InsightCard
-            stamp={`Latest check · ${new Date(ai.run.createdAt).toLocaleDateString("en-IN")}`}
+            stamp={`Latest check · ${new Date(ai.run.createdAt).toLocaleDateString()}`}
             headline={
               gaps.length === 0 ? (
                 "AI names you in every answer it gave. Track more questions to find new gaps."
@@ -180,7 +182,7 @@ export function AiOpportunitiesPage({ projectId }: { projectId: string }) {
                     nativeButton={false}
                     render={
                       <Link
-                        to="/p/$projectId/prompt-explorer"
+                        to="/p/$projectId/ai-visibility/test"
                         params={{ projectId }}
                       />
                     }

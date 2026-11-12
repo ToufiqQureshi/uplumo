@@ -5,9 +5,6 @@ import {
   ChartNoAxesCombined,
   ListChecks,
   MapPin,
-  Lightbulb,
-  Smile,
-  Target,
   CircleHelp,
   Users,
   ClipboardCheck,
@@ -16,7 +13,6 @@ import {
   Globe,
   LayoutDashboard,
   Link2,
-  MessageSquare,
   MessagesSquare,
   PenLine,
   Search,
@@ -35,8 +31,8 @@ import { GoogleGlyphMuted } from "@/client/features/gsc/GoogleGlyph";
 // heading agree.
 const projectNavItems = [
   {
-    to: "/p/$projectId/prompt-tracking" as const,
-    label: "AI Visibility Tracker",
+    to: "/p/$projectId/ai-visibility" as const,
+    label: "AI visibility",
     icon: Sparkles,
     badge: "New",
   },
@@ -53,22 +49,6 @@ const projectNavItems = [
     label: "Next Actions",
     icon: ListChecks,
     badge: "New",
-  },
-  {
-    to: "/p/$projectId/ai-opportunities" as const,
-    label: "AI Opportunities",
-    icon: Target,
-    badge: "New",
-  },
-  {
-    to: "/p/$projectId/ai-sentiment" as const,
-    label: "AI Sentiment",
-    icon: Smile,
-  },
-  {
-    to: "/p/$projectId/prompt-ideas" as const,
-    label: "AI Prompt Ideas",
-    icon: Lightbulb,
   },
   {
     to: "/p/$projectId/sam" as const,
@@ -91,16 +71,6 @@ const projectNavItems = [
     to: "/p/$projectId/search-performance" as const,
     label: "Search Growth",
     icon: GoogleGlyphMuted,
-  },
-  {
-    to: "/p/$projectId/brand-lookup" as const,
-    label: "Brand Lookup",
-    icon: Sparkles,
-  },
-  {
-    to: "/p/$projectId/prompt-explorer" as const,
-    label: "Prompt Explorer",
-    icon: MessageSquare,
   },
   {
     to: "/p/$projectId/rank-tracking" as const,
@@ -263,16 +233,7 @@ export function getProjectNavGroups(projectId: string): NavGroup[] {
         // sees, and what Google Search Console and Analytics report.
         item("/p/$projectId/analytics"),
         item("/p/$projectId/search-performance"),
-        tabbedItem(
-          "AI Visibility",
-          Sparkles,
-          [
-            item("/p/$projectId/prompt-tracking"),
-            item("/p/$projectId/brand-lookup"),
-            item("/p/$projectId/prompt-explorer"),
-          ],
-          "New",
-        ),
+        item("/p/$projectId/ai-visibility"),
         item("/p/$projectId/local-visibility"),
       ],
     },

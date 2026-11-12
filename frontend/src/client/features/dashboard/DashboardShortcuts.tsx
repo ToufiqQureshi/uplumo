@@ -10,8 +10,8 @@ const SHORTCUTS = [
     description: "Who visits, and how many come from AI chats",
   },
   {
-    path: "/p/$projectId/brand-lookup",
-    description: "Where AI answers mention your brand",
+    path: "/p/$projectId/ai-visibility",
+    description: "What ChatGPT and Google AI say about your brand",
   },
   {
     path: "/p/$projectId/rank-tracking",

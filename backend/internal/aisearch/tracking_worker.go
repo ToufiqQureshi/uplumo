@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/toufiqqureshi/uplumo/backend/internal/billing"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/dataforseo"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/jobs"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/market"
@@ -85,7 +86,7 @@ func (s *Tracking) Execute(ctx context.Context, job jobs.Job) error {
 		}
 		credits := c.estimate().Credits
 		budgetCtx := spend.WithIdempotencyKey(ctx, "ai-tracking:"+payload.RunID)
-		err = s.Search.provider.client.DoBudgeted(budgetCtx, org, spend.AIVisibility, float64(credits)/1280, func(request dataforseo.DoBudgetedRequest) error {
+		err = s.Search.provider.client.DoBudgeted(budgetCtx, org, spend.AIVisibility, float64(credits)/billing.CreditsPerProviderUSD, func(request dataforseo.DoBudgetedRequest) error {
 			return s.submit(ctxWithBudget(budgetCtx, request), org, payload.RunID, c, answers, request)
 		})
 		if err != nil {

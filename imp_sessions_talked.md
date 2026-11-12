@@ -6,7 +6,9 @@
 - Live DB on 12 Nov: 18 orgs, 3 paying subscriptions, paid calls in the last 30 days from at most 2 orgs.
 - Decision: first customers are **SEO agencies, freelancers and individual consultants**. Owner wants features cut, code removed, product lighter, and a new professional UI (not the current shadcn look).
 - Prototype (Clients list, client Google + AI visibility, white-label report): https://claude.ai/artifact/Jy23iuWxnfsmX6wwPUh1ks
-- Waiting for owner: approve prototype look; "haan" on the exact feature-removal list before any code is deleted.
+- Owner on AI pages: "sab game ui ka ha ... data dikha kis way me rahe ha". Then gave full control: build 2 PRs, merge and deploy.
+- PR 1: six AI pages merged into one AI visibility page (verdict, share of voice from tracker answers, question × engine grid with the saved answer as proof); fixed paid lookups firing from an opened URL; credits round-trip bug (18 → 19). PR 2: in-app alerts.
+- Still waiting for owner: the wider feature-removal list (content editor, site publishing, local, analytics) before any of that code is deleted.
 
 ## 12 Nov 2026: Analytics accuracy
 

@@ -1,7 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { PageHeader } from "@/client/components/PageHeader";
 import { Button } from "@/client/components/ui/button";
 import { Checkbox } from "@/client/components/ui/checkbox";
 import { Input } from "@/client/components/ui/input";
@@ -51,11 +50,11 @@ export function PromptIdeasPage({ projectId }: { projectId: string }) {
     });
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-4 sm:p-6">
-      <PageHeader
-        title="AI Prompt Ideas"
-        description="The questions your customers type into ChatGPT and Gemini. Track the ones that matter."
-      />
+    <div className="flex flex-col gap-6">
+      <p className="text-sm text-muted-foreground">
+        The questions your customers type into ChatGPT and Gemini. Track the
+        ones that matter.
+      </p>
       <InsightCard
         stamp={
           config
@@ -151,7 +150,7 @@ export function PromptIdeasPage({ projectId }: { projectId: string }) {
                 nativeButton={false}
                 render={
                   <Link
-                    to="/p/$projectId/prompt-tracking"
+                    to="/p/$projectId/ai-visibility/setup"
                     params={{ projectId }}
                   />
                 }

@@ -8,7 +8,7 @@ describe("getProjectNavGroups", () => {
   it("keeps every page reachable exactly once from the sidebar or a tab", () => {
     const routes = pages.map((page) => String(page.link.to));
     expect(new Set(routes).size).toBe(routes.length);
-    expect(routes).toHaveLength(18);
+    expect(routes).toHaveLength(16);
   });
 
   it("shows thirteen sidebar rows", () => {
