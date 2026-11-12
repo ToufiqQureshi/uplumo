@@ -2,9 +2,7 @@ import { EngineLogo } from "@/client/components/BrandLogo";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/client/components/ui/button";
-import { PageHeader } from "@/client/components/PageHeader";
 import { TrackingForm } from "./TrackingForm";
-import { AiVisibilityGuide } from "./AiVisibilityGuide";
 import { MarkdownAnswer } from "./components/MarkdownAnswer";
 import { WhyNotCitedCard } from "./components/WhyNotCitedCard";
 import { VisibilityInsights } from "./components/VisibilityInsights";
@@ -91,9 +89,7 @@ export function PromptTrackingPage({ projectId }: { projectId: string }) {
       </div>
     );
   return (
-    <div className="mx-auto max-w-7xl space-y-5 p-4 md:p-6">
-      <PageHeader title="AI Visibility Tracker" />
-      <AiVisibilityGuide current="prompt-tracking" projectId={projectId} />
+    <div className="space-y-5">
       <p className="text-sm text-muted-foreground">
         Save the questions your customers ask. Track fresh brand mentions,
         competitor appearances and website citations over time.

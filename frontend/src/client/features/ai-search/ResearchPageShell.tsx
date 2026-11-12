@@ -5,7 +5,6 @@ import { Sparkles, type LucideIcon } from "lucide-react";
 import { SUBSCRIBE_ROUTE } from "@/shared/billing";
 import type { PlanStatus } from "@/client/features/billing/plan-detection";
 import { GateCard } from "@/client/components/GateCard";
-import { PageHeader } from "@/client/components/PageHeader";
 import { QueryError } from "@/client/components/QueryState";
 import {
   SkeletonCard,
@@ -18,12 +17,11 @@ import { Card, CardContent } from "@/client/components/ui/card";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 
 /**
- * The frame of Brand Lookup and Prompt Explorer: header, paid-plan gate,
+ * The frame of Market research and Test a question: summary, paid-plan gate,
  * search form, error, then the loading skeleton, the results or the recent
  * searches. The URL holds the active search; the page holds the form state.
  */
 export function ResearchPageShell<TData>({
-  title,
   description,
   planStatus,
   gate,
@@ -38,11 +36,7 @@ export function ResearchPageShell<TData>({
   backLink,
   renderResults,
   history,
-  guide,
 }: {
-  /** Explains which AI visibility tool to use, under the page title. */
-  guide?: ReactNode;
-  title: string;
   description: string;
   planStatus: "loading" | PlanStatus;
   gate: {
@@ -91,75 +85,69 @@ export function ResearchPageShell<TData>({
   const resultData = hasActiveQuery ? query.data : undefined;
 
   return (
-    <div className="overflow-auto px-4 py-4 pb-24 md:px-6 md:py-6 md:pb-8">
-      <div className="mx-auto max-w-7xl space-y-4">
-        <PageHeader
-          title={title}
-          description={description}
-          backLink={resultData && !isLoading ? backLink : undefined}
-        />
-        {guide}
-
-        {planStatus === "loading" ? (
-          <SkeletonCard />
-        ) : planStatus === "free" ? (
-          <GateCard
-            className="mx-auto max-w-3xl"
-            badge={
-              <Badge variant="soft">
-                <Sparkles data-icon="inline-start" />
-                Paid plan
-              </Badge>
-            }
-            title={`Unlock ${gate.feature}`}
-            description={<p className="max-w-xl">{gate.description}</p>}
-            actions={
-              <Button
-                size="lg"
-                nativeButton={false}
-                render={
-                  <Link to={SUBSCRIBE_ROUTE} search={{ upgrade: true }} />
-                }
-              >
-                Upgrade
-              </Button>
-            }
-            features={gate.bullets}
-          />
-        ) : (
-          <>
-            {form}
-
-            {errorMessage ? (
-              <QueryError
-                cause={query.error}
-                fallback={
-                  resultData
-                    ? `${errorMessage} Showing earlier results.`
-                    : errorMessage
-                }
-                onRetry={() => void query.refetch()}
-                isRetrying={query.isFetching}
-              />
-            ) : null}
-
-            {isLoading ? (
-              <div className="space-y-4">
-                <SkeletonStatGrid count={3} className="lg:grid-cols-3" />
-                <Card>
-                  <CardContent>
-                    <SkeletonTableRows rows={6} columns={3} />
-                  </CardContent>
-                </Card>
-              </div>
-            ) : resultData ? (
-              renderResults(resultData)
-            ) : !errorMessage ? (
-              history
-            ) : null}
-          </>
-        )}
+    <div className="space-y-4">
+      <div className="space-y-2">
+        {resultData && !isLoading ? backLink : null}
+        <p className="text-sm text-muted-foreground">{description}</p>
       </div>
+
+      {planStatus === "loading" ? (
+        <SkeletonCard />
+      ) : planStatus === "free" ? (
+        <GateCard
+          className="mx-auto max-w-3xl"
+          badge={
+            <Badge variant="soft">
+              <Sparkles data-icon="inline-start" />
+              Paid plan
+            </Badge>
+          }
+          title={`Unlock ${gate.feature}`}
+          description={<p className="max-w-xl">{gate.description}</p>}
+          actions={
+            <Button
+              size="lg"
+              nativeButton={false}
+              render={<Link to={SUBSCRIBE_ROUTE} search={{ upgrade: true }} />}
+            >
+              Upgrade
+            </Button>
+          }
+          features={gate.bullets}
+        />
+      ) : (
+        <>
+          {form}
+
+          {errorMessage ? (
+            <QueryError
+              cause={query.error}
+              fallback={
+                resultData
+                  ? `${errorMessage} Showing earlier results.`
+                  : errorMessage
+              }
+              onRetry={() => void query.refetch()}
+              isRetrying={query.isFetching}
+            />
+          ) : null}
+
+          {isLoading ? (
+            <div className="space-y-4">
+              <SkeletonStatGrid count={3} className="lg:grid-cols-3" />
+              <Card>
+                <CardContent>
+                  <SkeletonTableRows rows={6} columns={3} />
+                </CardContent>
+              </Card>
+            </div>
+          ) : resultData ? (
+            renderResults(resultData)
+          ) : !errorMessage ? (
+            history
+          ) : null}
+        </>
+      )}
     </div>
   );
 }

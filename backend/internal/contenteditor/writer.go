@@ -9,6 +9,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/toufiqqureshi/uplumo/backend/internal/billing"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/openrouter"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/spend"
 )
@@ -24,7 +25,7 @@ const (
 	writerModel             = WriterModel
 	writerInputUSDPerToken  = 0.40 / 1_000_000
 	writerOutputUSDPerToken = 1.60 / 1_000_000
-	writerMaxChargeUSD      = float64(MaxWriterCreditsPerAction) / 1280
+	writerMaxChargeUSD      = float64(MaxWriterCreditsPerAction) / billing.CreditsPerProviderUSD
 )
 
 // ErrWriterUnavailable indicates the writing assistant is not configured.

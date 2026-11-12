@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/toufiqqureshi/uplumo/backend/internal/billing"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/openrouter"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/spend"
 )
@@ -52,7 +53,7 @@ const (
 	// MaxSentimentCredits is the most one click can charge, like one AI
 	// writing action.
 	MaxSentimentCredits   int64 = 15
-	sentimentMaxUSD             = float64(MaxSentimentCredits) / 1280
+	sentimentMaxUSD             = float64(MaxSentimentCredits) / billing.CreditsPerProviderUSD
 	sentimentBatch              = 20
 	sentimentExcerptRunes       = 700
 	sentimentOutputTokens       = 1_600

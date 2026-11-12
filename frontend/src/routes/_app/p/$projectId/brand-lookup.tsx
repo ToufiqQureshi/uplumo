@@ -1,45 +1,15 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { BrandLookupPage } from "@/client/features/ai-search/BrandLookupPage";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { brandLookupSearchSchema } from "@/types/schemas/ai-search";
 
+// Merged into the AI visibility page. Old links and bookmarks keep working.
 export const Route = createFileRoute("/_app/p/$projectId/brand-lookup")({
   validateSearch: brandLookupSearchSchema,
-  // The project switcher keeps this page; filter drafts must not follow.
-  remountDeps: ({ params }) => params.projectId,
-  component: BrandLookupRoute,
+  beforeLoad: ({ params, search }) => {
+    throw redirect({
+      to: "/p/$projectId/ai-visibility/research",
+      params: { projectId: params.projectId },
+      search,
+      replace: true,
+    });
+  },
 });
-
-function BrandLookupRoute() {
-  const { projectId } = Route.useParams();
-  const navigate = useNavigate({ from: Route.fullPath });
-  // `c` is already an opaque competitor string array via the schema transform.
-  const { q = "", c = [], scope, loc } = Route.useSearch();
-
-  return (
-    <BrandLookupPage
-      projectId={projectId}
-      initialQuery={q}
-      initialCompetitors={c}
-      initialScope={scope}
-      initialLocationCode={loc}
-      onSearchChange={(nextQuery, nextCompetitors, nextScope, nextLocation) => {
-        void navigate({
-          search: (prev) => ({
-            ...prev,
-            q: nextQuery.trim() || undefined,
-            // One serialization site: comma-join the competitor list.
-            c:
-              nextCompetitors.length > 0
-                ? nextCompetitors.join(",")
-                : undefined,
-            // The page passes a scope only when it differs from the default
-            // derived from `q`.
-            scope: nextScope,
-            loc: nextLocation,
-          }),
-          replace: true,
-        });
-      }}
-    />
-  );
-}

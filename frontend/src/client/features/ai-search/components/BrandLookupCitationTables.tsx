@@ -147,7 +147,7 @@ function KeywordsCell({
       renderItem={(keyword) => (
         <li key={keyword.question}>
           <Link
-            to="/p/$projectId/prompt-explorer"
+            to="/p/$projectId/ai-visibility/test"
             params={{ projectId }}
             search={{ q: keyword.question, hb: brand || undefined }}
             className="group/kw inline-flex items-baseline gap-2 text-xs"
@@ -323,7 +323,7 @@ export function buildTopQueriesColumns({
             delay={150}
             render={
               <Link
-                to="/p/$projectId/prompt-explorer"
+                to="/p/$projectId/ai-visibility/test"
                 params={{ projectId }}
                 search={{ q: row.original.question, hb: brand || undefined }}
                 className={buttonVariants({

@@ -127,6 +127,7 @@ it.each(["brand", "prompt"] as const)(
             initialCompetitors: [],
             initialScope: undefined,
             initialLocationCode: 2356,
+            requested: true,
             onSearchChange: vi.fn(),
           })
         : createElement(PromptExplorerPage, {
@@ -138,6 +139,7 @@ it.each(["brand", "prompt"] as const)(
               webSearch: true,
               webSearchCountryCode: "default",
             },
+            requested: true,
             onSubmit: vi.fn(),
           });
     const request = kind === "brand" ? lookupBrand : explorePrompt;
@@ -162,7 +164,10 @@ it.each(["brand", "prompt"] as const)(
   },
 );
 
-function renderBrandLookup(initialLocationCode: number | undefined) {
+function renderBrandLookup(
+  initialLocationCode: number | undefined,
+  requested = true,
+) {
   act(() =>
     root.render(
       createElement(
@@ -174,6 +179,7 @@ function renderBrandLookup(initialLocationCode: number | undefined) {
           initialCompetitors: [],
           initialScope: undefined,
           initialLocationCode,
+          requested,
           onSearchChange: vi.fn(),
         }),
       ),
@@ -207,3 +213,41 @@ it("never buys a lookup before it knows the country", async () => {
     expect.objectContaining({ locationCode: 2356, languageCode: "en" }),
   );
 });
+
+it.each(["brand", "prompt"] as const)(
+  "never buys a %s search from a URL the customer only opened",
+  async (kind) => {
+    const page =
+      kind === "brand"
+        ? createElement(BrandLookupPage, {
+            projectId: "p1",
+            initialQuery: "Acme",
+            initialCompetitors: [],
+            initialScope: undefined,
+            initialLocationCode: 2356,
+            requested: false,
+            onSearchChange: vi.fn(),
+          })
+        : createElement(PromptExplorerPage, {
+            projectId: "p1",
+            urlState: {
+              prompt: "best hotels",
+              highlightBrand: "",
+              models: ["chat_gpt"],
+              webSearch: true,
+              webSearchCountryCode: "default",
+            },
+            requested: false,
+            onSubmit: vi.fn(),
+          });
+    act(() =>
+      root.render(createElement(QueryClientProvider, { client }, page)),
+    );
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    expect(
+      kind === "brand" ? lookupBrand : explorePrompt,
+    ).not.toHaveBeenCalled();
+  },
+);

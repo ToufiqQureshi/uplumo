@@ -205,7 +205,7 @@ function TrackArticle({
     <div className="space-y-1.5 rounded-md bg-muted px-3 py-2.5 text-sm">
       <p className="font-medium">Measure this article</p>
       <Link
-        to="/p/$projectId/prompt-tracking"
+        to="/p/$projectId/ai-visibility"
         params={{ projectId }}
         className="block text-primary underline-offset-4 hover:underline"
       >
@@ -220,7 +220,7 @@ function TrackArticle({
       </Link>
       {topic ? (
         <Link
-          to="/p/$projectId/prompt-explorer"
+          to="/p/$projectId/ai-visibility/test"
           params={{ projectId }}
           search={{ q: `What is ${topic}?` }}
           className="block text-primary underline-offset-4 hover:underline"

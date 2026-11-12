@@ -131,7 +131,7 @@ export function GrowthCitationEvidence({
         )
       ) : null}
       <Link
-        to="/p/$projectId/prompt-tracking"
+        to="/p/$projectId/ai-visibility"
         params={{ projectId }}
         className="text-xs underline"
       >

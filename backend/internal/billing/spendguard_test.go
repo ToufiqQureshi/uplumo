@@ -642,6 +642,7 @@ func TestCreditsForUSD(t *testing.T) {
 	}{
 		{0, 0}, {-1, 0}, {math.NaN(), 0}, {math.Inf(1), 0},
 		{0.0001, 1}, // rounds up so a real charge is never free
+		{1e-12, 1},  // even below the float slack
 		{0.01, 13}, {1, 1280},
 	} {
 		if got := CreditsForUSD(tt.usd); got != tt.want {
@@ -833,5 +834,16 @@ func TestSettledCreditsAreCountedForTheRequest(t *testing.T) {
 	}
 	if spent := 10_000 - balanceOf(ctx, t, ledger, org); spent != want {
 		t.Fatalf("balance fell by %d, the meter says %d", spent, want)
+	}
+}
+
+func TestCreditsPerProviderUSDInvertsCreditsForUSD(t *testing.T) {
+	if CreditsPerProviderUSD != 1280 {
+		t.Fatalf("CreditsPerProviderUSD = %v, want 1280", float64(CreditsPerProviderUSD))
+	}
+	for _, credits := range []int64{1, 4, 15, 18, 300, 1280, 15000, 99999} {
+		if got := CreditsForUSD(float64(credits) / CreditsPerProviderUSD); got != credits {
+			t.Errorf("CreditsForUSD(%d credits of USD) = %d", credits, got)
+		}
 	}
 }

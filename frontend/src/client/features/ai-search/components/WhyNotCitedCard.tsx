@@ -107,7 +107,7 @@ function GapButton({
       nativeButton={false}
       render={
         <Link
-          to="/p/$projectId/prompt-tracking"
+          to="/p/$projectId/ai-visibility/setup"
           params={{ projectId }}
           hash="tracker-setup"
         />

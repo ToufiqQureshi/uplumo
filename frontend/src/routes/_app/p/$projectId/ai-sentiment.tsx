@@ -1,8 +1,12 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { AiSentimentPage } from "@/client/features/insights/AiSentimentPage";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+
+// Merged into the AI visibility page. Old links and bookmarks keep working.
 export const Route = createFileRoute("/_app/p/$projectId/ai-sentiment")({
-  component: InsightRoute,
+  beforeLoad: ({ params }) => {
+    throw redirect({
+      to: "/p/$projectId/ai-visibility/sentiment",
+      params: { projectId: params.projectId },
+      replace: true,
+    });
+  },
 });
-function InsightRoute() {
-  return <AiSentimentPage projectId={Route.useParams().projectId} />;
-}
