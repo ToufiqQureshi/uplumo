@@ -66,6 +66,10 @@ func (m *memoryStore) SavePublication(_ context.Context, p Publication) error {
 	return nil
 }
 
+func (m *memoryStore) LockPublication(context.Context, string, string) (func(), error) {
+	return func() {}, nil
+}
+
 type memoryDrafts map[string]contenteditor.Draft
 
 func (d memoryDrafts) Get(_ context.Context, projectID, id string) (contenteditor.Draft, error) {
@@ -336,5 +340,62 @@ func TestNormalizeSiteURL(t *testing.T) {
 		if _, err := normalizeSiteURL(bad); err == nil {
 			t.Errorf("normalizeSiteURL(%q) accepted", bad)
 		}
+	}
+}
+
+type interruptedPublicationStore struct {
+	*memoryStore
+	failAt int
+	writes int
+}
+
+func (s *interruptedPublicationStore) SavePublication(ctx context.Context, p Publication) error {
+	s.writes++
+	if s.writes == s.failAt {
+		return errors.New("publication storage unavailable")
+	}
+	return s.memoryStore.SavePublication(ctx, p)
+}
+
+func TestPublishRecoversAfterPublicationWriteFails(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		failAt     int
+		wantStatus string
+	}{
+		{"after remote draft creation", 1, StatusDraft},
+		{"after remote publication", 2, StatusPublish},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			wp := newFakeWordPress(t)
+			drafts := memoryDrafts{"d": {ID: "d", ProjectID: "p", Title: "First article", Content: "Body"}}
+			service, store := newTestService(t, wp, drafts)
+			service.Store = &interruptedPublicationStore{memoryStore: store, failAt: tc.failAt}
+			connect(t, service, wp, "p")
+
+			if _, _, err := service.Publish(t.Context(), "p", "d", StatusPublish, SchemaOptions{}); err == nil {
+				t.Fatal("expected publication storage error")
+			}
+			posts, _, _ := wp.snapshot()
+			if len(posts) != 1 || posts[101].Status != tc.wantStatus {
+				t.Fatalf("remote posts after failure: %+v", posts)
+			}
+			if _, err := service.Publication(t.Context(), "p", "d"); !errors.Is(err, ErrNotFound) {
+				t.Fatalf("unfinished publication leaked: %v", err)
+			}
+
+			// Recovery uses the draft identity even when the editor changes the slug.
+			draft := drafts["d"]
+			draft.Slug = "updated-article"
+			drafts["d"] = draft
+			published, _, err := service.Publish(t.Context(), "p", "d", StatusPublish, SchemaOptions{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			posts, _, _ = wp.snapshot()
+			if len(posts) != 1 || published.RemoteID != "101" || posts[101].Status != StatusPublish || posts[101].Slug != "updated-article" {
+				t.Fatalf("retry published %+v, remote posts %+v", published, posts)
+			}
+		})
 	}
 }

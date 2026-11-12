@@ -8,13 +8,26 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/toufiqqureshi/uplumo/backend/internal/platform/pgdb"
 )
 
 // ErrNotFound means the project or draft has no publication.
 var ErrNotFound = errors.New("not published")
 
 // Repository stores connections and publications in Postgres.
-type Repository struct{ DB *pgxpool.Pool }
+type Repository struct {
+	DB    *pgxpool.Pool
+	Locks *pgxpool.Pool
+}
+
+// LockPublication serializes remote writes for a draft across replicas.
+func (r Repository) LockPublication(ctx context.Context, projectID, draftID string) (func(), error) {
+	_, release, err := pgdb.TrySessionLock(ctx, r.Locks, "wordpress-publish:"+projectID+":"+draftID)
+	if err == nil && release == nil {
+		return nil, ErrPublishInProgress
+	}
+	return release, err
+}
 
 // Connection returns the project's website, or ErrNotConnected.
 func (r Repository) Connection(ctx context.Context, projectID string) (Connection, error) {

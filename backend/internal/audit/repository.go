@@ -158,7 +158,7 @@ func (r *Repository) UpdateAuditProgress(ctx context.Context, auditID, workflowI
 			lighthouse_completed = COALESCE($6, lighthouse_completed),
 			lighthouse_failed = COALESCE($7, lighthouse_failed),
 			current_phase = COALESCE($8, current_phase)
-		WHERE id = $1 AND workflow_instance_id = $2`,
+		WHERE id = $1 AND workflow_instance_id = $2 AND status = 'running'`,
 		auditID, workflowInstanceID, update.PagesCrawled, update.PagesTotal, update.LighthouseTotal,
 		update.LighthouseCompleted, update.LighthouseFailed, update.CurrentPhase)
 	if err != nil {
@@ -175,7 +175,7 @@ func (r *Repository) CompleteAudit(ctx context.Context, auditID, workflowInstanc
 	tag, err := r.pool.Exec(ctx, `
 		UPDATE go_audits SET status = 'completed', completed_at = now(), current_phase = 'completed',
 			pages_crawled = $3, pages_total = $4
-		WHERE id = $1 AND workflow_instance_id = $2`,
+		WHERE id = $1 AND workflow_instance_id = $2 AND status = 'running'`,
 		auditID, workflowInstanceID, pagesCrawled, pagesTotal)
 	if err != nil {
 		return fmt.Errorf("complete audit: %w", err)

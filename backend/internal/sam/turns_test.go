@@ -6,8 +6,7 @@ import (
 	"time"
 )
 
-// turns tracks the one running turn each session may have. It is in memory, so
-// it assumes a single server instance per deployment (see the README).
+// turns is the in-memory coordinator used by route tests.
 type turns struct {
 	mu     sync.Mutex
 	active map[string]*activeTurn
@@ -20,13 +19,13 @@ type activeTurn struct {
 
 func newTurns() *turns { return &turns{active: map[string]*activeTurn{}} }
 
-// begin claims the session for a turn. ok is false when one is already running.
+// begin claims the session for a turn. release is nil when one is already running.
 // The returned context is canceled when the client leaves or cancelAndWait runs.
-func (t *turns) begin(parent context.Context, sessionID string) (ctx context.Context, release func(), ok bool) {
+func (t *turns) begin(parent context.Context, sessionID string) (ctx context.Context, release func(), err error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	if _, running := t.active[sessionID]; running {
-		return nil, nil, false
+		return nil, nil, nil
 	}
 	ctx, cancel := context.WithCancel(parent)
 	turn := &activeTurn{cancel: cancel, done: make(chan struct{})}
@@ -37,7 +36,7 @@ func (t *turns) begin(parent context.Context, sessionID string) (ctx context.Con
 		delete(t.active, sessionID)
 		t.mu.Unlock()
 		close(turn.done)
-	}, true
+	}, nil
 }
 
 // cancelAndWait stops the session's running turn, if any, and waits for it to
@@ -58,4 +57,12 @@ func (t *turns) cancelAndWait(sessionID string, timeout time.Duration) bool {
 	case <-timer.C:
 		return false
 	}
+}
+
+func (t *turns) rewind(ctx context.Context, sessionID string) (func(), error) {
+	if !t.cancelAndWait(sessionID, rewindWait) {
+		return nil, context.DeadlineExceeded
+	}
+	_, release, err := t.begin(ctx, sessionID)
+	return release, err
 }

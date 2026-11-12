@@ -130,6 +130,15 @@ func run(logger *slog.Logger) (err error) {
 		return err
 	}
 	defer db.Close()
+	lockConfig := db.Config()
+	lockConfig.MinConns = 0
+	lockConfig.MinIdleConns = 0
+	lockConfig.MaxConns = min(lockConfig.MaxConns, 16)
+	lockPool, err := pgxpool.NewWithConfig(ctx, lockConfig)
+	if err != nil {
+		return fmt.Errorf("configure workflow lock pool: %w", err)
+	}
+	defer lockPool.Close()
 	migrateCtx, cancelMigrate := context.WithTimeout(ctx, migrateTimeout)
 	defer cancelMigrate()
 	if err := database.Migrate(migrateCtx, db); err != nil {
@@ -314,7 +323,7 @@ func run(logger *slog.Logger) (err error) {
 		}
 	}
 
-	sitePublish, err := buildSitePublish(cfg, db)
+	sitePublish, err := buildSitePublish(cfg, db, lockPool)
 	if err != nil {
 		return err
 	}
@@ -425,7 +434,7 @@ func run(logger *slog.Logger) (err error) {
 	if samModel == "" {
 		samModel = openrouter.DefaultModel
 	}
-	samChat := buildSAMChat(cfg, logger, db, projectContextSvc, mcpDeps, spendGuard.AIMeter(spend.AIAssistant, "openrouter/"+samModel))
+	samChat := buildSAMChat(cfg, logger, db, lockPool, projectContextSvc, mcpDeps, spendGuard.AIMeter(spend.AIAssistant, "openrouter/"+samModel))
 	srv := &http.Server{
 		Addr: cfg.Addr,
 		Handler: httpapi.NewHandler(httpapi.Deps{
@@ -544,14 +553,14 @@ func planGateService(environment string, payments, readOnly *billing.Service) *b
 // buildSitePublish wires publishing to customers' websites. Their passwords
 // are encrypted with a key derived from BETTER_AUTH_SECRET: rotating that
 // secret means every customer reconnects their website.
-func buildSitePublish(cfg config.Config, db *pgxpool.Pool) (*sitepublish.Service, error) {
+func buildSitePublish(cfg config.Config, db, lockPool *pgxpool.Pool) (*sitepublish.Service, error) {
 	derived := sha256.Sum256([]byte("uplumo-site-credentials-v1:" + cfg.BetterAuthSecret))
 	cipher, err := google.NewTokenCipher("site-v1", base64.StdEncoding.EncodeToString(derived[:]))
 	if err != nil {
 		return nil, fmt.Errorf("configure site credential encryption: %w", err)
 	}
 	return &sitepublish.Service{
-		Store:     sitepublish.Repository{DB: db},
+		Store:     sitepublish.Repository{DB: db, Locks: lockPool},
 		Drafts:    contenteditor.Repository{DB: db},
 		Cipher:    cipher,
 		WordPress: sitepublish.WordPress{HTTP: audit.NewGuard().NewClient(30 * time.Second)},
@@ -675,7 +684,7 @@ func buildEmailAuth(cfg config.Config, logger *slog.Logger, db *pgxpool.Pool, rd
 // customer's: it returns nil without OPENROUTER_API_KEY and the chat routes
 // then answer 503. Every turn is gated on and charged to the organization's
 // credits.
-func buildSAMChat(cfg config.Config, logger *slog.Logger, db *pgxpool.Pool, memory *projectcontext.Service, mcpDeps *mcp.Deps, meter sam.Meter) *sam.Chat {
+func buildSAMChat(cfg config.Config, logger *slog.Logger, db, lockPool *pgxpool.Pool, memory *projectcontext.Service, mcpDeps *mcp.Deps, meter sam.Meter) *sam.Chat {
 	if cfg.OpenRouterAPIKey == "" {
 		return nil
 	}
@@ -695,7 +704,7 @@ func buildSAMChat(cfg config.Config, logger *slog.Logger, db *pgxpool.Pool, memo
 		Logger:  logger,
 	}
 	agent.Meter = meter
-	return sam.NewChat(agent, sam.ContextLoader{DB: db}, sam.MessageRepository{DB: db})
+	return sam.NewChat(agent, sam.ContextLoader{DB: db}, sam.MessageRepository{DB: db}, db, lockPool)
 }
 
 func buildGSCService(db *pgxpool.Pool, api *google.APIClient) *gsc.Service {

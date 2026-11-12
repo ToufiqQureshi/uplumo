@@ -60,7 +60,7 @@ type chatServer struct {
 func newChatServer(t *testing.T, h *harness, authed bool) *chatServer {
 	t.Helper()
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	chat := NewChat(h.agent, ownerLoader{sc: h.sc}, h.store)
+	chat := &Chat{Agent: h.agent, Loader: ownerLoader{sc: h.sc}, Messages: h.store, turns: newTurns()}
 	withSession := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if authed {

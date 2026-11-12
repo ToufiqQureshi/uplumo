@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -437,5 +438,49 @@ func TestRegressionLighthouseDeadlineKeepsCompletedChecks(t *testing.T) {
 	last := memory.lighthouse["audit-1"][3]
 	if last.ErrorMessage == nil || !strings.Contains(*last.ErrorMessage, "ran out of time") {
 		t.Fatalf("last check = %+v, want it skipped once the budget is spent instead of started", last)
+	}
+}
+
+func TestQueuedAuditKeepsRunningUntilFinalAttempt(t *testing.T) {
+	for _, recoverOnRetry := range []bool{true, false} {
+		t.Run(fmt.Sprintf("recover=%t", recoverOnRetry), func(t *testing.T) {
+			server := auditTestServer(t)
+			store := newMemoryStore()
+			cfg := Config{MaxPages: 10, LighthouseStrategy: LighthouseNone}
+			seedAudit(t, store, cfg)
+			store.failInsert = true
+			meter := &fakeRenderingMeter{}
+			runner := newTestRunner(store, server, nil, meter)
+			payload, err := json.Marshal(JobPayload{
+				AuditID: "audit-1", ProjectID: "proj-1", StartURL: "http://audit.test/", Config: cfg,
+				RenderingLocks: []RenderingLock{{LockID: "lock-1", EstimatedCredits: 5}},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			handler := RunnerHandler(runner)
+			job := jobs.Job{ID: 1, Payload: payload, Attempts: 1, MaxAttempts: 2}
+			if err := handler(t.Context(), job); err == nil {
+				t.Fatal("expected first attempt to fail")
+			}
+			audit, err := store.GetAuditForProject(t.Context(), "audit-1", "proj-1")
+			if err != nil || audit.Status != "running" || meter.released != 0 {
+				t.Fatalf("retryable attempt ended the audit: status=%s released=%d err=%v", audit.Status, meter.released, err)
+			}
+			store.failInsert = !recoverOnRetry
+			job.Attempts++
+			err = handler(t.Context(), job)
+			if (err == nil) != recoverOnRetry {
+				t.Fatalf("final attempt returned %v", err)
+			}
+			want := "failed"
+			if recoverOnRetry {
+				want = "completed"
+			}
+			audit, err = store.GetAuditForProject(t.Context(), "audit-1", "proj-1")
+			if err != nil || audit.Status != want {
+				t.Fatalf("final attempt: status=%s want=%s err=%v", audit.Status, want, err)
+			}
+		})
 	}
 }
