@@ -6,6 +6,7 @@ import { whyNotCited } from "@/client/features/ai-search/whyNotCited";
 import { AiAction, InsightCard } from "./AiAction";
 import { promptGaps } from "./opportunities";
 import { useLatestAnswers } from "./useLatestAnswers";
+import { EngineName } from "@/client/features/ai-search/EngineName";
 
 /**
  * Prompts where AI names someone else instead of the customer, from answers
@@ -128,9 +129,11 @@ export function AiOpportunitiesPage({ projectId }: { projectId: string }) {
                             {r}
                           </span>
                         ))}
-                        <span className="font-mono text-muted-foreground">
-                          {g.engines.join(" · ")}
-                        </span>
+                        {g.engines.map((engine) => (
+                          <span key={engine} className="text-muted-foreground">
+                            <EngineName engine={engine} size={14} />
+                          </span>
+                        ))}
                       </span>
                     </button>
                   </li>

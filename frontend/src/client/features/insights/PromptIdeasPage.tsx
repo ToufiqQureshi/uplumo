@@ -92,7 +92,7 @@ export function PromptIdeasPage({ projectId }: { projectId: string }) {
             id="prompt-keyword"
             value={keyword}
             maxLength={200}
-            placeholder="e.g. cafe in bhopal"
+            placeholder="e.g. project management software"
             onChange={(e) => setKeyword(e.target.value)}
           />
         </form>
@@ -114,24 +114,20 @@ export function PromptIdeasPage({ projectId }: { projectId: string }) {
       {ideas.length ? (
         <section className="flex flex-col rounded-xl border bg-card">
           <ul className="flex flex-col divide-y">
-            {ideas.map((idea) => {
-              const id = `idea-${idea.question}`;
-              return (
-                <li key={idea.question} className="flex items-center gap-3 p-4">
+            {ideas.map((idea) => (
+              <li key={idea.question} className="flex items-center gap-3 p-4">
+                <Label className="flex flex-1 items-center gap-3 font-normal">
                   <Checkbox
-                    id={id}
                     checked={picked.has(idea.question)}
                     onCheckedChange={() => toggle(idea.question)}
                   />
-                  <Label htmlFor={id} className="flex-1 font-normal">
-                    {idea.question}
-                  </Label>
-                  <span className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground">
-                    {idea.intent}
-                  </span>
-                </li>
-              );
-            })}
+                  {idea.question}
+                </Label>
+                <span className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground">
+                  {idea.intent}
+                </span>
+              </li>
+            ))}
           </ul>
           <div className="sticky bottom-3 flex flex-wrap items-center justify-between gap-3 border-t bg-card p-4">
             <span className="text-sm">

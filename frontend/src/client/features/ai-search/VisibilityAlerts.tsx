@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { cn } from "cn";
 import { trackingApi, trackingKey, type TrackingAnswer } from "./trackingApi";
 import { visibilityAlerts, type VisibilityAlert } from "./visibilityAlerts";
+import { EngineLogo } from "@/client/components/BrandLogo";
 
 const KIND: Record<
   VisibilityAlert["kind"],
@@ -75,7 +76,14 @@ export function VisibilityAlerts({
                 {KIND[a.kind].label}
               </span>
               <div className="min-w-0 flex-1 basis-64 text-sm">
-                <p className="font-medium">{a.title}</p>
+                <p className="flex items-start gap-1.5 font-medium">
+                  {a.engine ? (
+                    <span className="mt-0.5 shrink-0">
+                      <EngineLogo engine={a.engine} />
+                    </span>
+                  ) : null}
+                  <span>{a.title}</span>
+                </p>
                 <p className="text-muted-foreground">{a.detail}</p>
               </div>
               {a.prompt && a.engine ? (

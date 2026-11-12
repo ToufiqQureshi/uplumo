@@ -42,6 +42,7 @@ import {
   type WebSearchCountrySelection,
 } from "@/types/schemas/ai-search";
 import { CreditCostHint } from "@/client/features/billing/credits/CreditCostHint";
+import { EngineLogo } from "@/client/components/BrandLogo";
 
 type FormValues = {
   prompt: string;
@@ -172,7 +173,10 @@ export function PromptExplorerForm({
                       onCheckedChange={() => toggleModel(model)}
                     />
                     <span>
-                      {formatModelLabel(model)}
+                      <span className="inline-flex items-center gap-1.5">
+                        <EngineLogo engine={model} size={14} />
+                        {formatModelLabel(model)}
+                      </span>
                       {unsupportedModels.includes(model) &&
                       form.webSearchCountryCode !== "default" ? (
                         <span className="block text-xs text-muted-foreground">

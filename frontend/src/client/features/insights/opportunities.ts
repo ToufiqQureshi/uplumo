@@ -1,6 +1,5 @@
 import { sortBy } from "remeda";
 import type { TrackingAnswer } from "@/client/features/ai-search/trackingApi";
-import { engineLabel } from "@/client/features/ai-search/platformLabels";
 
 type PromptGap = {
   prompt: string;
@@ -53,7 +52,7 @@ export function promptGaps(
       excerpt: "",
     };
     row.misses++;
-    row.engines.add(engineLabel(a.engine));
+    row.engines.add(a.engine);
     for (const r of a.recommended)
       row.rivals.set(r.name, (row.rivals.get(r.name) ?? 0) + 1);
     for (const c of a.citations) if (c.domain) row.sources.add(bare(c.domain));

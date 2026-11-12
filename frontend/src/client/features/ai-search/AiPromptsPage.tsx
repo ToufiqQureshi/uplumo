@@ -13,6 +13,8 @@ import {
   type PromptRow,
 } from "./aiVisibilityMetrics";
 import type { TrackingAnswer } from "./trackingApi";
+import { EngineName } from "./EngineName";
+import { EngineLogo } from "@/client/components/BrandLogo";
 
 type Show = "all" | "gaps" | "named";
 
@@ -142,7 +144,7 @@ export function AiPromptsPage({
               </th>
               {engines.map((e) => (
                 <th key={e} scope="col" className="px-2 py-3 font-medium">
-                  {engineLabel(e)}
+                  <EngineName engine={e} />
                 </th>
               ))}
               <th scope="col" className="px-4 py-3 font-medium">
@@ -245,7 +247,8 @@ function AnswerProof({
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
-            What {engineLabel(answer.engine)} answered
+            <EngineLogo engine={answer.engine} size={14} /> What{" "}
+            {engineLabel(answer.engine)} answered
             {answer.collectedAt
               ? ` · ${new Date(answer.collectedAt).toLocaleString()}`
               : ""}
