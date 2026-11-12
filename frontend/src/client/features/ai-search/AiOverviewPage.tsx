@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight } from "lucide-react";
+import { VisibilityAlerts } from "./VisibilityAlerts";
 import { Button } from "@/client/components/ui/button";
 import { useLatestAnswers } from "@/client/features/insights/useLatestAnswers";
 import { trackingApi, trackingKey } from "./trackingApi";
@@ -115,6 +116,15 @@ export function AiOverviewPage({ projectId }: { projectId: string }) {
           </Button>
         </div>
       </section>
+
+      {previous ? (
+        <VisibilityAlerts
+          projectId={projectId}
+          previousRunId={previous.id}
+          previousDate={previous.createdAt}
+          latest={ai.answers}
+        />
+      ) : null}
 
       <dl className="grid gap-3 sm:grid-cols-3">
         <Stat

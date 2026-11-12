@@ -13,6 +13,15 @@ nothing until the customer submits the form in this page load
 (`userRequestedRun.ts`). A reload, bookmark, shared link, redirect from an
 old URL or a "recent searches" link only fills the form.
 
+## Changes since the previous check: 0 paid calls
+
+Overview finds the previous run with the same `scopeKey`, reads its saved
+answers with `GET .../tracking/runs/{previousId}` and compares
+(`visibilityAlerts.ts`): lost and won mentions per question and engine, a
+new negative answer, a business AI now recommends that is not tracked, and
+sites AI started citing in answers that do not link the customer. Each
+change links to `ai-visibility/prompts?q=…&e=…`, which opens that answer.
+
 ## Run a tracker check: 1 click = 1 run
 
 Setup → **Review cost** → `POST .../tracking/estimate` (free) → **Run** →

@@ -37,16 +37,16 @@ const CELL: Record<CellState, { label: string; className: string }> = {
 export function AiPromptsPage({
   projectId,
   show,
+  initialOpen,
   onShowChange,
 }: {
   projectId: string;
   show: Show;
+  initialOpen: { prompt: string; engine: string } | null;
   onShowChange: (next: Show) => void;
 }) {
   const ai = useLatestAnswers(projectId);
-  const [open, setOpen] = useState<{ prompt: string; engine: string } | null>(
-    null,
-  );
+  const [open, setOpen] = useState(initialOpen);
 
   if (ai.isPending) {
     return (

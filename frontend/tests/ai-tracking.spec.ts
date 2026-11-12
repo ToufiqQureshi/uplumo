@@ -197,6 +197,13 @@ test("AI visibility tabs show saved answers and buy nothing on load", async ({
         runs: [run("r2", 1), run("r1", 0)],
         providerConfigured: true,
       };
+    else if (path.endsWith("/tracking/runs/r1"))
+      body = [
+        answer("best crm for small teams", "chat_gpt", false, true),
+        answer("best crm for small teams", "gemini", true, false),
+        answer("cheap crm", "chat_gpt", false, false),
+        answer("cheap crm", "gemini", false, true),
+      ];
     else if (path.endsWith("/tracking/runs/r2"))
       body = [
         answer("best crm for small teams", "chat_gpt", false, true),
@@ -220,6 +227,20 @@ test("AI visibility tabs show saved answers and buy nothing on load", async ({
   );
   await expect(page.getByText("1 of 4", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("▲ 25 points vs previous check")).toBeVisible();
+
+  // Changes since the previous check, each with its proof one click away.
+  const changes = page.getByRole("region", {
+    name: "Changes since the previous check",
+  });
+  await expect(changes).toContainText(
+    "Gemini stopped naming you for “best crm for small teams”",
+  );
+  await expect(changes).toContainText("ChatGPT now names you for “cheap crm”");
+  await changes.getByRole("link", { name: "Read the answer" }).first().click();
+  await expect(
+    page.getByRole("region", { name: "Saved answer" }),
+  ).toContainText("What Gemini answered");
+  await page.goBack();
 
   // The verdict's button opens the gaps, and a cell opens the saved answer.
   await page.getByText(/where AI leaves you out/u).click();
