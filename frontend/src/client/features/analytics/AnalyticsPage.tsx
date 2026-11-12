@@ -27,9 +27,7 @@ import {
   type RangeDays,
 } from "./analyticsApi";
 import {
-  AiTrafficCard,
   CampaignPerformanceCard,
-  ChannelsCard,
   CountListCard,
   deviceRows,
   TrafficChartCard,
@@ -151,7 +149,13 @@ export function AnalyticsPage({
                   projectId={projectId}
                   events={summary.events}
                 />
-                <div className="grid gap-6 lg:grid-cols-2">
+                <div
+                  className={
+                    summary.aiSources.some((row) => row.visitors > 0)
+                      ? "grid gap-6 lg:grid-cols-2"
+                      : "grid gap-6"
+                  }
+                >
                   <LeadSourcesCard summary={summary} />
                   <AiVisitorsCard summary={summary} />
                 </div>
@@ -259,23 +263,16 @@ function Dashboard({
             </CardContent>
           </Card>
           <TrafficChartCard series={summary.series} />
-          <div className="grid gap-6 lg:grid-cols-2">
-            <ChannelsCard
-              acquisitionChannels={summary.acquisitionChannels}
-              sessions={summary.sessions}
-            />
-
-            <CountListCard
-              title="Top pages"
-              unit="Pageviews"
-              emptyTitle="No pages viewed in this period"
-              rows={summary.topPages.map((row) => ({
-                key: row.path,
-                label: `${displayPath(row.path)} · avg ${formatDuration(row.avgEngagementMs)}`,
-                count: row.pageviews,
-              }))}
-            />
-          </div>
+          <CountListCard
+            title="Top pages"
+            unit="Pageviews"
+            emptyTitle="No pages viewed in this period"
+            rows={summary.topPages.map((row) => ({
+              key: row.path,
+              label: `${displayPath(row.path)} · avg ${formatDuration(row.avgEngagementMs)}`,
+              count: row.pageviews,
+            }))}
+          />
           <section id="visitor-actions" className="space-y-3 scroll-mt-4">
             <h2 className="text-lg font-semibold">Actions visitors take</h2>
             <p className="text-sm text-muted-foreground">
@@ -297,10 +294,6 @@ function Dashboard({
           <div className="space-y-6">
             <DailyAudienceCard days={summary.audience} />
             <div className="grid gap-6 lg:grid-cols-2">
-              <AiTrafficCard
-                aiSources={summary.aiSources}
-                acquisitionChannels={summary.acquisitionChannels}
-              />
               <CampaignPerformanceCard campaigns={summary.campaigns} />
               <CountriesCard projectId={projectId} range={range} />
               <CountListCard

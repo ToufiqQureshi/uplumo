@@ -59,7 +59,7 @@ export const DEVICE_LABELS = {
   tablet: "Tablet",
 } as const;
 
-export interface ShareRow {
+interface ShareRow {
   key: string;
   label: string;
   hint?: string;

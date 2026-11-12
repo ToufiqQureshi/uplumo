@@ -362,6 +362,41 @@ describe("tracker", () => {
     expect(reports.map((b) => b.d)).toEqual([5_000, 5_000]);
   });
 
+  it("stops counting a visible tab two minutes after the last input", () => {
+    const pageview = runTracker(options);
+    clock += 60_000;
+    window.dispatchEvent(new Event("scroll"));
+    // Left open and untouched for an hour.
+    clock += 60 * 60_000;
+    window.dispatchEvent(new Event("pagehide"));
+    const reports = beacons.filter(
+      (b) => b.p === pageview?.p && typeof b.d === "number",
+    );
+    expect(reports.at(-1)?.d).toBe(60_000 + 120_000);
+  });
+
+  it("does not count the idle stretch when input comes back", () => {
+    const pageview = runTracker(options);
+    clock += 10 * 60_000;
+    window.dispatchEvent(new Event("keydown"));
+    clock += 5_000;
+    window.dispatchEvent(new Event("pagehide"));
+    const reports = beacons.filter(
+      (b) => b.p === pageview?.p && typeof b.d === "number",
+    );
+    expect(reports.at(-1)?.d).toBe(120_000 + 5_000);
+  });
+
+  it("does not keep an untouched visible tab's session alive", () => {
+    runTracker(options);
+    const started = JSON.parse(sessionStorage.getItem(sessionKey) ?? "{}");
+    clock += 31 * 60_000;
+    vi.spyOn(Date, "now").mockReturnValue(started.last + 31 * 60_000);
+    vi.advanceTimersByTime(31 * 60_000);
+    const stored = JSON.parse(sessionStorage.getItem(sessionKey) ?? "{}");
+    expect(stored.last).toBe(started.last);
+  });
+
   it("keeps the session across reloads of a tab that has an opener", () => {
     const stored = {
       id: "a".repeat(32),

@@ -1,4 +1,3 @@
-import { Bot } from "lucide-react";
 import { Area, AreaChart } from "recharts";
 import {
   ChartGrid,
@@ -17,14 +16,7 @@ import {
 } from "@/client/components/ui/chart";
 import { formatCount } from "@/client/features/search-performance/SearchPerformanceColumns";
 import type { AnalyticsSummary } from "./analyticsApi";
-import {
-  aiShareOfVisits,
-  aiSourceRows,
-  channelRows,
-  DEVICE_LABELS,
-  formatShare,
-  type ShareRow,
-} from "./presentation";
+import { DEVICE_LABELS } from "./presentation";
 
 const trafficChartConfig = {
   visitors: { label: "Visitors", color: "var(--chart-1)" },
@@ -76,101 +68,6 @@ export function TrafficChartCard({
           ))}
         </AreaChart>
       </ChartContainer>
-    </CardShell>
-  );
-}
-
-/** Rows of label, count and a bar showing the row's share. */
-function ShareList({ rows }: { rows: ShareRow[] }) {
-  return (
-    <ul className="space-y-3">
-      {rows.map((row) => (
-        <li key={row.key} className="space-y-1">
-          <div className="flex items-baseline justify-between gap-3 text-sm">
-            <span className="min-w-0 truncate">
-              <span className="font-medium">{row.label}</span>
-              {row.hint ? (
-                <span className="ml-2 text-xs text-muted-foreground">
-                  {row.hint}
-                </span>
-              ) : null}
-            </span>
-            <span className="shrink-0 tabular-nums">
-              {formatCount(row.count)}{" "}
-              <span className="text-muted-foreground">
-                · {formatShare(row.share)}
-              </span>
-            </span>
-          </div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-            <div
-              className="h-full rounded-full bg-primary"
-              style={{ width: `${row.share * 100}%` }}
-            />
-          </div>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-export function AiTrafficCard({
-  aiSources,
-  acquisitionChannels,
-}: Pick<AnalyticsSummary, "aiSources" | "acquisitionChannels">) {
-  const rows = aiSourceRows(aiSources);
-  const aiVisitors = rows.reduce((sum, row) => sum + row.count, 0);
-  return (
-    <CardShell
-      title="AI traffic"
-      icon={<Bot className="size-4 text-primary" />}
-      stamp={
-        aiVisitors > 0
-          ? `${formatShare(aiShareOfVisits(acquisitionChannels))} of your visits`
-          : undefined
-      }
-    >
-      <div className="space-y-4">
-        <p className="text-sm text-muted-foreground">
-          Visits attributed to AI assistants from available referral and
-          campaign signals. Unidentified visits cannot reliably be assigned to
-          an assistant.
-        </p>
-        {aiVisitors === 0 ? (
-          <EmptyState
-            icon={Bot}
-            size="sm"
-            title="No visitors from AI assistants yet"
-            description="When ChatGPT, Perplexity, Gemini, Claude or Copilot sends someone to your site, it shows up here."
-          />
-        ) : (
-          <ShareList rows={rows} />
-        )}
-      </div>
-    </CardShell>
-  );
-}
-
-/** Where visits come from: each visit's first source, adding up to 100%. */
-export function ChannelsCard({
-  acquisitionChannels,
-  sessions,
-}: Pick<AnalyticsSummary, "acquisitionChannels" | "sessions">) {
-  const rows = channelRows(acquisitionChannels);
-  return (
-    <CardShell
-      title="Where visits come from"
-      stamp={sessions > 0 ? `${formatCount(sessions)} visits` : undefined}
-    >
-      {rows.length === 0 ? (
-        <EmptyState
-          variant="plain"
-          size="sm"
-          title="No visits in this period"
-        />
-      ) : (
-        <ShareList rows={rows} />
-      )}
     </CardShell>
   );
 }

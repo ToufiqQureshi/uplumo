@@ -32,9 +32,12 @@ type LeadSummary struct {
 	Visitors   int64 `json:"visitors"`
 	// PreviousVisitors is Visitors for the same-length period just before
 	// the range, for a "compared with last period" line.
-	PreviousVisitors int64        `json:"previousVisitors"`
-	Actions          []EventCount `json:"actions"`
-	Pages            []LeadPage   `json:"pages"`
+	PreviousVisitors int64 `json:"previousVisitors"`
+	// UntiedVisitors are lead visitors no visit can be tied to (an old
+	// snippet sent no session), so the sources table can still add up.
+	UntiedVisitors int64        `json:"untiedVisitors"`
+	Actions        []EventCount `json:"actions"`
+	Pages          []LeadPage   `json:"pages"`
 }
 
 // SourceLeads is one acquisition channel's visitors and the visitors whose

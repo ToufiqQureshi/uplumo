@@ -752,6 +752,9 @@ func TestSummarizeTiesLeadsToSourcesAndAILandings(t *testing.T) {
 	if !slices.Equal(got.AILandings, wantAI) {
 		t.Errorf("AI landings = %+v\nwant %+v", got.AILandings, wantAI)
 	}
+	if got.Leads.UntiedVisitors != 1 {
+		t.Errorf("untied lead visitors = %d, want 1 (the old snippet's lead)", got.Leads.UntiedVisitors)
+	}
 	if got.Leads.Visitors != 3 || got.Leads.PreviousVisitors != 1 {
 		t.Errorf("lead visitors = %d, previous = %d; want 3 (old snippet included) and 1",
 			got.Leads.Visitors, got.Leads.PreviousVisitors)

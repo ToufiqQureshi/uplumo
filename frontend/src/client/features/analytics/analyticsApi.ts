@@ -53,6 +53,7 @@ const summarySchema = z.object({
     count,
     visitors: count,
     previousVisitors: count,
+    untiedVisitors: count,
     actions: z.array(z.object({ name: z.string(), count, visitors: count })),
     pages: z.array(
       z.object({ path: z.string(), visitors: count, leadVisitors: count }),
@@ -199,6 +200,7 @@ const clickReportSchema = z.object({
       clicks: count,
       visitorDays: count,
       arrivals: count,
+      destinationTracked: z.boolean(),
     }),
   ),
   hasMore: z.boolean(),

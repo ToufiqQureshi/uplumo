@@ -1,5 +1,12 @@
 # Important session talks
 
+## 12 Nov 2026: Analytics accuracy
+
+- Owner: "nothing is accurate" on Analytics; then "pura accurate bana ... ek hi cheez bekkar nai honi chahiye ... phele qa test kar fir saare points cover kar".
+- Owner decisions: Uplumo's own tracker runs on public pages only, not the app (supersedes the 20 Oct app-wide tracking; GA4 stays on both). Delete Uplumo's own past app-path pageviews from its analytics site after deploy.
+- Built as PR #304 (tracker idle time, laptop-as-tablet, untied leads, "Not tracked" arrivals, ties, duplicate/empty cards removed). Not merged or deployed: waiting on owner.
+- Open: lead actions include subscription_checkout_agency/basic/business but not _pro; with app tracking off they stop arriving, owner may untick them.
+
 What the owner (Toufiq) said to any AI agent: decisions, feelings,
 priorities, corrections, and what still waits on him. Read it after
 `CLAUDE.md`, so you understand him without asking again.

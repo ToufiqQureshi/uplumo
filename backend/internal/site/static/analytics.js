@@ -1,5 +1,10 @@
-// Owner-approved analytics for uplumo.com; shared by public pages and the app.
+// Owner-approved analytics for uplumo.com. GA4 runs on public pages and the
+// app; Uplumo's own tracker runs only on public pages (their script tag has
+// data-public-site), so signed-in customers using the app are not counted as
+// website visitors (owner, 12 Nov 2026).
 (function () {
+  var script = document.currentScript;
+  var publicSite = !!(script && script.hasAttribute("data-public-site"));
   function initialize() {
     if (
       location.hostname !== "uplumo.com" &&
@@ -39,11 +44,13 @@
     google.src = "https://www.googletagmanager.com/gtag/js?id=G-NTP32DNMN2";
     document.head.appendChild(google);
 
-    var uplumo = document.createElement("script");
-    uplumo.defer = true;
-    uplumo.setAttribute("data-site", "DDVAYTG2IADAYZQSEM4GMU6HFA");
-    uplumo.src = "https://uplumo.com/t.js";
-    document.head.appendChild(uplumo);
+    if (publicSite) {
+      var uplumo = document.createElement("script");
+      uplumo.defer = true;
+      uplumo.setAttribute("data-site", "DDVAYTG2IADAYZQSEM4GMU6HFA");
+      uplumo.src = "https://uplumo.com/t.js";
+      document.head.appendChild(uplumo);
+    }
 
     // Uplumo's tracker reads the same named attributes. Do not record form values
     // or claim that a checkout click means a successful payment.

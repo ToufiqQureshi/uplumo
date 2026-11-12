@@ -50,6 +50,10 @@ type ClickRow struct {
 	Clicks      int64  `json:"clicks"`
 	VisitorDays int64  `json:"visitorDays"`
 	Arrivals    int64  `json:"arrivals"`
+	// DestinationTracked is whether the internal destination had any
+	// pageview in the range. Without one (a page the tracker does not run
+	// on), zero arrivals says nothing about the click.
+	DestinationTracked bool `json:"destinationTracked"`
 }
 
 // ClickReport is a bounded, project-authorized page of grouped click activity.
@@ -78,7 +82,13 @@ func (r repository) clicks(ctx context.Context, project string, start, end time.
 					AND e.page_host=c.destination_host AND e.path=c.destination_path
 					AND e.pageview_hash <> c.pageview_hash
 					AND e.occurred_at >= c.occurred_at AND e.occurred_at <= c.occurred_at + interval '30 minutes'
-			))
+			)),
+			c.destination_type = 'internal' AND EXISTS (
+				SELECT 1 FROM go_analytics_events e
+				WHERE e.site_id = (SELECT id FROM go_analytics_sites WHERE project_id=$1)
+					AND e.page_host = c.destination_host AND e.path = c.destination_path
+					AND e.occurred_at >= $2 AND e.occurred_at < $3
+			)
 		FROM go_analytics_custom_events c
 		WHERE c.site_id=(SELECT id FROM go_analytics_sites WHERE project_id=$1)
 			AND c.occurred_at >= $2 AND c.occurred_at < $3 AND c.is_click

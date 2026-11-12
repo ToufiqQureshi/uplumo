@@ -42,6 +42,7 @@ beforeEach(() => {
       count: 0,
       visitors: 0,
       previousVisitors: 0,
+      untiedVisitors: 0,
       actions: [],
       pages: [],
     },
@@ -106,24 +107,30 @@ describe("analytics overview", () => {
     );
     expect(html).toContain(">6<");
     expect(html).toContain("15%"); // 6 of 40 visitors
-    expect(html).toContain("+50%"); // 6 leads vs 4
-    expect(html).toContain("+100%"); // 40 visitors vs 20
-    expect(html).toContain("Leads: Book a call");
+    expect(html).toContain("6 of 40 visitors");
+    expect(html).toContain("+50% (was 4)"); // 6 leads vs 4
+    expect(html).toContain("+100% (was 20)"); // 40 visitors vs 20
+    // The chosen actions are listed once, in "What counts as a lead?".
+    expect(html).not.toContain("Book a call");
   });
 
-  it("names no lead action when none happened in the period", () => {
-    expect(overview(withLeads({}))).toContain("none in this period");
+  it("claims no change when the previous period has no data", () => {
+    const html = overview(
+      withLeads({ visitors: 6, previousVisitors: 0 }, { previousVisitors: 0 }),
+    );
+    expect(html).not.toContain("vs previous");
+    expect(html).not.toContain("new");
   });
 });
 
 describe("changeLabel", () => {
   it.each([
-    [10, 0, "new"],
+    [10, 0, null],
     [0, 0, null],
-    [5, 10, "−50%"],
+    [5, 10, "−50% (was 10)"],
     [10, 10, "no change"],
     [1001, 1000, "no change"],
-    [3, 1, "+200%"],
+    [3, 1, "+200% (was 1)"],
   ])("%i vs %i is %s", (now, before, want) => {
     expect(changeLabel(now, before)).toBe(want);
   });
@@ -153,6 +160,25 @@ describe("leadInsight", () => {
     const text = leadInsight(summary) ?? "";
     expect(text).toContain("Most leads came from Search engines.");
     expect(text).toContain("/ह gets 50% of visitors but converts at 0%");
+  });
+
+  it("names every source that ties for the most leads", () => {
+    const text = leadInsight(
+      withLeads(
+        { visitors: 8 },
+        {
+          sourceLeads: [
+            { channel: "direct", visitors: 250, leadVisitors: 4 },
+            { channel: "social", visitors: 42, leadVisitors: 4 },
+            { channel: "referral", visitors: 20, leadVisitors: 3 },
+          ],
+        },
+      ),
+    );
+    expect(text).toContain(
+      "Direct and Social media brought the most leads (4 each).",
+    );
+    expect(text).not.toContain("Most leads came from");
   });
 
   it("points at the busiest page when there are no leads yet", () => {
@@ -197,6 +223,24 @@ describe("lead sources", () => {
     expect(unchosen).not.toContain("Lead rate");
     expect(renderToStaticMarkup(<LeadSourcesCard summary={base} />)).toBe("");
   });
+
+  it("shows leads with no known source so the table adds up", () => {
+    const rows: AnalyticsSummary["sourceLeads"] = [
+      { channel: "direct", visitors: 10, leadVisitors: 2 },
+    ];
+    const html = renderToStaticMarkup(
+      <LeadSourcesCard
+        summary={withLeads({ untiedVisitors: 1 }, { sourceLeads: rows })}
+      />,
+    );
+    expect(html).toContain("Source not known");
+    expect(html).toContain("old tracking code");
+    const tied = renderToStaticMarkup(
+      <LeadSourcesCard summary={withLeads({}, { sourceLeads: rows })} />,
+    );
+    expect(tied).not.toContain("Source not known");
+    expect(tied).not.toContain("old tracking code");
+  });
 });
 
 describe("lead pages", () => {
@@ -218,9 +262,8 @@ describe("lead pages", () => {
 });
 
 describe("AI visitors", () => {
-  it("says plainly when no AI assistant sent anyone", () => {
-    const html = renderToStaticMarkup(<AiVisitorsCard summary={base} />);
-    expect(html).toContain("No visitor came from an AI assistant");
+  it("is hidden when no AI assistant sent anyone", () => {
+    expect(renderToStaticMarkup(<AiVisitorsCard summary={base} />)).toBe("");
   });
 
   it("lists where AI visitors landed and their leads", () => {

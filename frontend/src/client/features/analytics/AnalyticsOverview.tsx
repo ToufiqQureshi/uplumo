@@ -1,9 +1,7 @@
-import { firstBy } from "remeda";
 import { Button } from "@/client/components/ui/button";
 import { formatCount } from "@/client/features/search-performance/SearchPerformanceColumns";
 import type { AnalyticsSummary } from "./analyticsApi";
 import {
-  actionLabel,
   aiSourceLabel,
   channelLabel,
   countOf,
@@ -45,12 +43,16 @@ export function TrackingProblemCard({
   );
 }
 
-/** "+25%", "−40%", "new", or null when there is nothing to compare. */
+/**
+ * "+25% (was 40)", "−40% (was 10)", "no change", or null when the previous
+ * period has nothing to compare with (often: tracking had not started yet).
+ * The old number is shown so a jump from a tiny base reads for what it is.
+ */
 export function changeLabel(now: number, before: number): string | null {
-  if (before === 0) return now > 0 ? "new" : null;
+  if (before === 0) return null;
   const change = (now - before) / before;
   if (Math.abs(change) < 0.005) return "no change";
-  return `${change > 0 ? "+" : "−"}${formatShare(Math.abs(change))}`;
+  return `${change > 0 ? "+" : "−"}${formatShare(Math.abs(change))} (was ${formatCount(before)})`;
 }
 
 /**
@@ -68,11 +70,16 @@ export function leadInsight(summary: AnalyticsSummary): string | null {
       : null;
   }
   const parts: string[] = [];
-  const best = firstBy(
-    summary.sourceLeads.filter((row) => row.leadVisitors > 0),
-    [(row) => row.leadVisitors, "desc"],
+  const most = Math.max(0, ...summary.sourceLeads.map((r) => r.leadVisitors));
+  const best = summary.sourceLeads.filter(
+    (row) => most > 0 && row.leadVisitors === most,
   );
-  if (best) parts.push(`Most leads came from ${channelLabel(best.channel)}.`);
+  if (best.length === 1)
+    parts.push(`Most leads came from ${channelLabel(best[0].channel)}.`);
+  else if (best.length > 1)
+    parts.push(
+      `${best.map((row) => channelLabel(row.channel)).join(" and ")} brought the most leads (${formatCount(most)} each).`,
+    );
   const siteRate = leads.visitors / visitors;
   const leaky = leads.pages.find(
     (page) =>
@@ -104,7 +111,6 @@ export function AnalyticsOverview({
   const rate = summary.visitors ? leads.visitors / summary.visitors : 0;
   const insight = leadInsight(summary);
   const merged = mergeEvents(summary.events).filter((row) => row.spellings > 1);
-  const leadNames = leads.actions.map((row) => actionLabel(row.name));
 
   return (
     <section
@@ -137,13 +143,13 @@ export function AnalyticsOverview({
           value={formatCount(summary.visitors)}
           change={changeLabel(summary.visitors, summary.previousVisitors)}
           days={days}
-          hint="Counted once per day"
+          hint="Visitor-days: someone who comes on 3 days counts 3 times"
         />
         {leads.configured ? (
           <Figure
             label="Became leads"
             value={formatShare(rate)}
-            hint={`Leads: ${leadNames.join(", ") || "none in this period"}`}
+            hint={`${formatCount(leads.visitors)} of ${formatCount(summary.visitors)} visitors`}
           />
         ) : null}
       </div>
@@ -203,6 +209,7 @@ export function LeadSourcesCard({ summary }: { summary: AnalyticsSummary }) {
   const rows = summary.sourceLeads.filter((row) => row.visitors > 0);
   if (rows.length === 0) return null;
   const { configured } = summary.leads;
+  const untied = summary.leads.untiedVisitors;
   return (
     <section
       aria-labelledby="lead-sources"
@@ -243,11 +250,23 @@ export function LeadSourcesCard({ summary }: { summary: AnalyticsSummary }) {
               ) : null}
             </tr>
           ))}
+          {configured && untied > 0 ? (
+            <tr className="border-t text-muted-foreground">
+              <td className="py-2">Source not known</td>
+              <td className="py-2 text-right">—</td>
+              <td className="py-2 text-right tabular-nums">
+                {formatCount(untied)}
+              </td>
+              <td className="py-2 text-right">—</td>
+            </tr>
+          ) : null}
         </tbody>
       </table>
       <p className="mt-3 text-xs text-muted-foreground">
-        A visit belongs to the source of its first page. Old tracking codes send
-        no visits, so their leads are not tied to a source.
+        A visit belongs to the source of its first page.
+        {configured && untied > 0
+          ? " Leads sent by an old tracking code carry no visit, so their source is not known."
+          : ""}
       </p>
     </section>
   );
@@ -303,10 +322,7 @@ export function LeadPagesCard({ summary }: { summary: AnalyticsSummary }) {
   );
 }
 
-/**
- * Visitors sent by AI assistants and where they landed. With none, it says
- * so.
- */
+/** Visitors sent by AI assistants and where they landed; hidden with none. */
 export function AiVisitorsCard({ summary }: { summary: AnalyticsSummary }) {
   const total = summary.aiSources.reduce((sum, row) => sum + row.visitors, 0);
   const configured = summary.leads.configured;
@@ -314,6 +330,7 @@ export function AiVisitorsCard({ summary }: { summary: AnalyticsSummary }) {
     (sum, row) => sum + row.leadVisitors,
     0,
   );
+  if (total === 0) return null;
   return (
     <section
       aria-labelledby="ai-visitors"
@@ -322,42 +339,33 @@ export function AiVisitorsCard({ summary }: { summary: AnalyticsSummary }) {
       <h2 id="ai-visitors" className="font-serif text-2xl">
         Visitors from AI assistants
       </h2>
-      {total === 0 ? (
+      <p className="font-serif text-5xl leading-none tabular-nums">
+        {formatCount(total)}
+      </p>
+      {configured ? (
         <p className="text-sm text-muted-foreground">
-          No visitor came from an AI assistant in this period.
+          {countOf(leads, "became a lead", "became leads")} in the same visit.
         </p>
-      ) : (
-        <>
-          <p className="font-serif text-5xl leading-none tabular-nums">
-            {formatCount(total)}
-          </p>
-          {configured ? (
-            <p className="text-sm text-muted-foreground">
-              {countOf(leads, "became a lead", "became leads")} in the same
-              visit.
-            </p>
-          ) : null}
-          <ul className="space-y-2 text-sm">
-            {summary.aiLandings.map((row) => (
-              <li
-                key={`${row.source}:${row.path}`}
-                className="flex justify-between gap-3 border-t pt-2"
-              >
-                <span className="min-w-0 truncate">
-                  {aiSourceLabel(row.source)} →{" "}
-                  <span className="font-mono">{displayPath(row.path)}</span>
-                </span>
-                <span className="shrink-0 text-muted-foreground tabular-nums">
-                  {formatCount(row.visitors)}
-                  {configured
-                    ? ` · ${countOf(row.leadVisitors, "lead", "leads")}`
-                    : ""}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
+      ) : null}
+      <ul className="space-y-2 text-sm">
+        {summary.aiLandings.map((row) => (
+          <li
+            key={`${row.source}:${row.path}`}
+            className="flex justify-between gap-3 border-t pt-2"
+          >
+            <span className="min-w-0 truncate">
+              {aiSourceLabel(row.source)} →{" "}
+              <span className="font-mono">{displayPath(row.path)}</span>
+            </span>
+            <span className="shrink-0 text-muted-foreground tabular-nums">
+              {formatCount(row.visitors)}
+              {configured
+                ? ` · ${countOf(row.leadVisitors, "lead", "leads")}`
+                : ""}
+            </span>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
