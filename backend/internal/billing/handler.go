@@ -48,6 +48,7 @@ func checkoutCurrency(svc *Service, country func(*http.Request) string, r *http.
 // Mount registers billing routes on mux.
 func Mount(mux *http.ServeMux, d Deps) {
 	mountTopUps(mux, d)
+	mountReceipts(mux, d)
 	mux.Handle("POST /webhooks/razorpay", webhookHandler(d.Logger, d.Service))
 	mux.Handle("GET /api/v1/billing/plans", d.WithSession(plansHandler(d.Service, d.Country)))
 	mux.Handle("GET /api/v1/billing/status", d.WithSession(statusHandler(d.Logger, d.Service, d.Country)))

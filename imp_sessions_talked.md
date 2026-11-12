@@ -13,6 +13,13 @@ priorities, corrections, and what still waits on him. Read it after
   decision, remove it when he answers.
 - Never write secrets, keys or customer data here.
 
+## 12 Nov 2026: payment receipts for customers
+
+- Owner: "users ko invoices chahiye ... option nai ha invoice and receipt ka".
+- Decisions: Uplumo is **not GST-registered**, so customers get a "Payment receipt" (no GST, says it is not a tax invoice), never a tax invoice. Seller name on receipts: "Uplumo" (no address given). Prototype approved: https://claude.ai/artifact/T26g2FjoPcQAr24NHqg1jB
+- Built: Billing page "Payments and receipts" (owners/admins), billing details form, printable receipt page (Download PDF = browser print). Zero paid calls.
+- Left out of the prototype on purpose: "Send receipts to" email (we do not email receipts yet).
+
 ## 11 Nov 2026: Bugs & Feedback submission validation
 
 - Owner reported that Send report appeared unresponsive with a short description and an attached screenshot.

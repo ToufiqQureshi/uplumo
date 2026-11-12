@@ -41,6 +41,7 @@ import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings/ind
 import { Route as AppSettingsBrandingRouteImport } from './routes/_app/settings/branding'
 import { Route as AppSettingsOrganizationRouteImport } from './routes/_app/settings/organization'
 import { Route as AuthenticatedOnboardingIndexRouteImport } from './routes/_authenticated.onboarding.index'
+import { Route as AppBillingReceiptsPaymentIdRouteImport } from './routes/_app/billing_.receipts.$paymentId'
 import { Route as AppPProjectIdIndexRouteImport } from './routes/_app/p/$projectId/index'
 import { Route as AppPProjectIdAiOpportunitiesRouteImport } from './routes/_app/p/$projectId/ai-opportunities'
 import { Route as AppPProjectIdAiSentimentRouteImport } from './routes/_app/p/$projectId/ai-sentiment'
@@ -230,6 +231,12 @@ const AuthenticatedOnboardingIndexRoute =
     id: '/onboarding/',
     path: '/onboarding/',
     getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AppBillingReceiptsPaymentIdRoute =
+  AppBillingReceiptsPaymentIdRouteImport.update({
+    id: '/billing_/receipts/$paymentId',
+    path: '/billing/receipts/$paymentId',
+    getParentRoute: () => AppRouteRoute,
   } as any)
 const AppPProjectIdIndexRoute = AppPProjectIdIndexRouteImport.update({
   id: '/',
@@ -432,6 +439,7 @@ export interface FileRoutesByFullPath {
   '/settings/organization': typeof AppSettingsOrganizationRoute
   '/settings/': typeof AppSettingsIndexRoute
   '/onboarding/': typeof AuthenticatedOnboardingIndexRoute
+  '/billing/receipts/$paymentId': typeof AppBillingReceiptsPaymentIdRoute
   '/p/$projectId/ai-opportunities': typeof AppPProjectIdAiOpportunitiesRoute
   '/p/$projectId/ai-sentiment': typeof AppPProjectIdAiSentimentRoute
   '/p/$projectId/analytics': typeof AppPProjectIdAnalyticsRoute
@@ -490,6 +498,7 @@ export interface FileRoutesByTo {
   '/settings/organization': typeof AppSettingsOrganizationRoute
   '/settings': typeof AppSettingsIndexRoute
   '/onboarding': typeof AuthenticatedOnboardingIndexRoute
+  '/billing/receipts/$paymentId': typeof AppBillingReceiptsPaymentIdRoute
   '/p/$projectId/ai-opportunities': typeof AppPProjectIdAiOpportunitiesRoute
   '/p/$projectId/ai-sentiment': typeof AppPProjectIdAiSentimentRoute
   '/p/$projectId/analytics': typeof AppPProjectIdAnalyticsRoute
@@ -553,6 +562,7 @@ export interface FileRoutesById {
   '/_app/settings/organization': typeof AppSettingsOrganizationRoute
   '/_app/settings/': typeof AppSettingsIndexRoute
   '/_authenticated/onboarding/': typeof AuthenticatedOnboardingIndexRoute
+  '/_app/billing_/receipts/$paymentId': typeof AppBillingReceiptsPaymentIdRoute
   '/_app/p/$projectId/ai-opportunities': typeof AppPProjectIdAiOpportunitiesRoute
   '/_app/p/$projectId/ai-sentiment': typeof AppPProjectIdAiSentimentRoute
   '/_app/p/$projectId/analytics': typeof AppPProjectIdAnalyticsRoute
@@ -616,6 +626,7 @@ export interface FileRouteTypes {
     | '/settings/organization'
     | '/settings/'
     | '/onboarding/'
+    | '/billing/receipts/$paymentId'
     | '/p/$projectId/ai-opportunities'
     | '/p/$projectId/ai-sentiment'
     | '/p/$projectId/analytics'
@@ -674,6 +685,7 @@ export interface FileRouteTypes {
     | '/settings/organization'
     | '/settings'
     | '/onboarding'
+    | '/billing/receipts/$paymentId'
     | '/p/$projectId/ai-opportunities'
     | '/p/$projectId/ai-sentiment'
     | '/p/$projectId/analytics'
@@ -736,6 +748,7 @@ export interface FileRouteTypes {
     | '/_app/settings/organization'
     | '/_app/settings/'
     | '/_authenticated/onboarding/'
+    | '/_app/billing_/receipts/$paymentId'
     | '/_app/p/$projectId/ai-opportunities'
     | '/_app/p/$projectId/ai-sentiment'
     | '/_app/p/$projectId/analytics'
@@ -1005,6 +1018,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/onboarding/'
       preLoaderRoute: typeof AuthenticatedOnboardingIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/_app/billing_/receipts/$paymentId': {
+      id: '/_app/billing_/receipts/$paymentId'
+      path: '/billing/receipts/$paymentId'
+      fullPath: '/billing/receipts/$paymentId'
+      preLoaderRoute: typeof AppBillingReceiptsPaymentIdRouteImport
+      parentRoute: typeof AppRouteRoute
     }
     '/_app/p/$projectId/': {
       id: '/_app/p/$projectId/'
@@ -1339,6 +1359,7 @@ interface AppRouteRouteChildren {
   AppPProjectIdRouteRoute: typeof AppPProjectIdRouteRouteWithChildren
   AppBillingFixPaymentRoute: typeof AppBillingFixPaymentRoute
   AppBillingPlanRoute: typeof AppBillingPlanRoute
+  AppBillingReceiptsPaymentIdRoute: typeof AppBillingReceiptsPaymentIdRoute
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
@@ -1351,6 +1372,7 @@ const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppPProjectIdRouteRoute: AppPProjectIdRouteRouteWithChildren,
   AppBillingFixPaymentRoute: AppBillingFixPaymentRoute,
   AppBillingPlanRoute: AppBillingPlanRoute,
+  AppBillingReceiptsPaymentIdRoute: AppBillingReceiptsPaymentIdRoute,
 }
 
 const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
