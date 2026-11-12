@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight } from "lucide-react";
+import { VisibilityAlerts } from "./VisibilityAlerts";
 import { Button } from "@/client/components/ui/button";
 import { useLatestAnswers } from "@/client/features/insights/useLatestAnswers";
 import { trackingApi, trackingKey } from "./trackingApi";
@@ -10,6 +11,7 @@ import {
   shareOfVoice,
   visibilityVerdict,
 } from "./aiVisibilityMetrics";
+import { EngineName } from "./EngineName";
 
 const pct = (n: number, d: number) => (d ? Math.round((100 * n) / d) : 0);
 
@@ -116,6 +118,15 @@ export function AiOverviewPage({ projectId }: { projectId: string }) {
         </div>
       </section>
 
+      {previous ? (
+        <VisibilityAlerts
+          projectId={projectId}
+          previousRunId={previous.id}
+          previousDate={previous.createdAt}
+          latest={ai.answers}
+        />
+      ) : null}
+
       <dl className="grid gap-3 sm:grid-cols-3">
         <Stat
           label="Answers that name you"
@@ -179,7 +190,7 @@ export function AiOverviewPage({ projectId }: { projectId: string }) {
             {engines.map((e) => (
               <Bar
                 key={e.engine}
-                label={e.label}
+                label={<EngineName engine={e.engine} />}
                 value={`${e.mentioned}/${e.answered}`}
                 width={pct(e.mentioned, e.answered)}
                 tone="accent"
@@ -330,7 +341,7 @@ function Bar({
   tone,
   strong = false,
 }: {
-  label: string;
+  label: React.ReactNode;
   value: string;
   width: number;
   tone: keyof typeof BAR_TONE;

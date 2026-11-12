@@ -20,6 +20,11 @@
   named"; a question is a gap only when an engine answered and none named
   the brand. Changes compare only runs with the same questions, engines and
   market (`scopeKey`).
+- **Alerts only compare like with like.** Two runs are compared only when
+  their `scopeKey` matches, and only question/engine pairs that both got a
+  real answer. A failed or recovered collection never shows as a change. A
+  tracked competitor is never announced as a "new" business, and an answer
+  is "newly negative" only if the earlier one was classified and was not.
 - **Proof for every number.** Every cell opens the saved answer text,
   recommended businesses and citations, so an agency can show a client
   exactly what AI said.

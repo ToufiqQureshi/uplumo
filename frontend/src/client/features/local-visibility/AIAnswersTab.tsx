@@ -65,7 +65,10 @@ export function AIAnswersTab({
         <Button
           variant="outline"
           render={
-            <Link to="/p/$projectId/ai-visibility" params={{ projectId }} />
+            <Link
+              to="/p/$projectId/ai-visibility/setup"
+              params={{ projectId }}
+            />
           }
         >
           Track a prompt every week

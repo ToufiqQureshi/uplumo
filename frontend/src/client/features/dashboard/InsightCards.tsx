@@ -181,7 +181,10 @@ export function AiVisibilityCard({ projectId }: { projectId: string }) {
               size="lg"
               nativeButton={false}
               render={
-                <Link to="/p/$projectId/ai-visibility" params={{ projectId }} />
+                <Link
+                  to="/p/$projectId/ai-visibility/setup"
+                  params={{ projectId }}
+                />
               }
             >
               Set up AI tracking
@@ -253,7 +256,7 @@ export function AiVisibilityCard({ projectId }: { projectId: string }) {
             nativeButton={false}
             render={
               <Link
-                to="/p/$projectId/ai-visibility"
+                to="/p/$projectId/ai-visibility/setup"
                 params={{ projectId }}
                 hash="why-not-cited"
               />
@@ -277,7 +280,10 @@ export function AiVisibilityCard({ projectId }: { projectId: string }) {
                   params={{ projectId }}
                 />
               ) : (
-                <Link to="/p/$projectId/ai-visibility" params={{ projectId }} />
+                <Link
+                  to="/p/$projectId/ai-visibility/setup"
+                  params={{ projectId }}
+                />
               )
             }
           >

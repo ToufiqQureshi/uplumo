@@ -7,7 +7,8 @@ Every coding agent follows this file. Read it, then `imp_sessions_talked.md`
 
 - Live at `https://uplumo.com` on Railway (project `jubilant-kindness`,
   service `uplumo`): one Go server that also serves the React build, plus
-  Railway Redis and Supabase Postgres. Merging to `main` does **not** deploy.
+  Railway Redis and Supabase Postgres. Merging to `main` **deploys to
+  production** (Railway's source is `main`), so merge only what is ready.
 - A **global** SEO + AI-search platform (owner, 3 Nov 2026), not India-only.
   Prices: INR in India, USD elsewhere. Default copy plain English; Hinglish
   only for Indian users. Nothing in the product may assume one country.

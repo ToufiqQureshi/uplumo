@@ -140,7 +140,7 @@ describe("promptGaps", () => {
       "sunrise.in",
     );
     expect(gaps.map((g) => g.prompt)).toEqual(["q2", "q1"]);
-    expect(gaps[0].engines).toEqual(["ChatGPT", "Gemini"]);
+    expect(gaps[0].engines).toEqual(["chat_gpt", "gemini"]);
   });
 
   it("does not treat every citation as the customer's when the domain is unknown", () => {

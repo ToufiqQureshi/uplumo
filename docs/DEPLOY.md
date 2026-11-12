@@ -9,9 +9,10 @@ Secrets go into Railway variables only. Never put them in the repo or in chat.
 
 ## Shipping a change
 
-Merging to `main` does **not** deploy. In Railway, open the `uplumo` service
-and deploy the latest commit of `main` (or reconnect the source to branch
-`main`, which starts a deploy). Changing a variable also redeploys.
+The `uplumo` service's source is branch `main`, so every merge to `main`
+starts a production deploy (seen on 12 Nov 2026: merging #308 built its merge
+commit within a minute). To redeploy without a merge, open the service in
+Railway and deploy the latest commit. Changing a variable also redeploys.
 
 If Railway shows "Could not load branches", its GitHub link is broken and
 neither of those works. Deploy from a checkout of `main` with the Railway CLI

@@ -10,6 +10,10 @@
    3.0× as often as you"), with the weakest engine. Below: answers that name
    you (and the change since the previous comparable check), share of voice
    against competitors, a bar per engine, and the sites AI cites most.
+   When there is an earlier check of the same questions, a list says what
+   changed: where an engine stopped or started naming you, a new negative
+   answer, a new business AI recommends, a new site AI cites. Each change
+   has a link to the answer.
 4. **Prompts.** A grid of questions × engines. Each cell says Named, Linked
    only, Not named or No answer. Click it to read what the engine actually
    said, who it recommended and which sources it trusted. Filter to "AI

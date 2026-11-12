@@ -10,6 +10,7 @@ import { insightsApi } from "./insightsApi";
 import { MOODS, sentimentSummary, topComplaint, type Mood } from "./sentiment";
 import { useLatestAnswers } from "./useLatestAnswers";
 import { engineLabel } from "@/client/features/ai-search/platformLabels";
+import { EngineName } from "@/client/features/ai-search/EngineName";
 
 const MOOD_STYLE: Record<Mood, string> = {
   positive: "text-success",
@@ -196,7 +197,7 @@ export function AiSentimentPage({ projectId }: { projectId: string }) {
                   key={engine}
                   className="grid grid-cols-[100px_1fr_70px] items-center gap-3 text-sm"
                 >
-                  <span>{engineLabel(engine)}</span>
+                  <EngineName engine={engine} />
                   <div
                     className="flex h-3 overflow-hidden rounded-full bg-muted"
                     role="img"
@@ -233,7 +234,7 @@ export function AiSentimentPage({ projectId }: { projectId: string }) {
                       {a.sentiment}
                     </span>
                     <span className="font-mono text-muted-foreground">
-                      {engineLabel(a.engine)} · “{a.prompt}”
+                      <EngineName engine={a.engine} size={14} /> · “{a.prompt}”
                     </span>
                   </span>
                   <span className="text-sm">
