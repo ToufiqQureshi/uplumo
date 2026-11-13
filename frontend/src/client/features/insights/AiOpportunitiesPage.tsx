@@ -7,6 +7,16 @@ import { AiAction, InsightCard } from "./AiAction";
 import { promptGaps } from "./opportunities";
 import { useLatestAnswers } from "./useLatestAnswers";
 import { EngineName } from "@/client/features/ai-search/EngineName";
+import { MarkdownAnswer } from "@/client/features/ai-search/components/MarkdownAnswer";
+
+/** A cited page as its site name; anything else unchanged. */
+const siteName = (source: string) => {
+  try {
+    return new URL(source).hostname.replace(/^www\./u, "");
+  } catch {
+    return source;
+  }
+};
 
 /**
  * Prompts where AI names someone else instead of the customer, from answers
@@ -79,7 +89,9 @@ export function AiOpportunitiesPage({ projectId }: { projectId: string }) {
                 ? [
                     {
                       source: "Sources AI trusted",
-                      text: why.gaps[0].evidence.slice(0, 3).join(", "),
+                      text: [...new Set(why.gaps[0].evidence.map(siteName))]
+                        .slice(0, 3)
+                        .join(", "),
                     },
                   ]
                 : []),
@@ -146,7 +158,11 @@ export function AiOpportunitiesPage({ projectId }: { projectId: string }) {
                   </span>
                   <h2 className="font-serif text-2xl">“{current.prompt}”</h2>
                   <blockquote className="rounded-lg bg-muted p-3 text-sm">
-                    {current.excerpt || "No answer text saved."}
+                    {current.excerpt ? (
+                      <MarkdownAnswer text={current.excerpt} />
+                    ) : (
+                      "No answer text saved."
+                    )}
                   </blockquote>
                   {current.sources.length ? (
                     <p className="font-mono text-xs text-muted-foreground">
@@ -187,6 +203,10 @@ export function AiOpportunitiesPage({ projectId }: { projectId: string }) {
                       <Link
                         to="/p/$projectId/ai-visibility/test"
                         params={{ projectId }}
+                        search={{
+                          q: current.prompt.slice(0, 500),
+                          hb: ai.configuration?.brand || undefined,
+                        }}
                       />
                     }
                   >

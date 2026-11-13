@@ -148,7 +148,8 @@ export function AiOverviewPage({ projectId }: { projectId: string }) {
         />
         <Stat
           label="Share of voice"
-          value={ownShare ? `${ownShare.share}%` : "—"}
+          // With no competitor tracked, "100%" says nothing.
+          value={ownShare && shares.length > 1 ? `${ownShare.share}%` : "—"}
           note={
             rank && shares.length > 1
               ? `#${rank} of ${shares.length} tracked brands`

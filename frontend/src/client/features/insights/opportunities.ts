@@ -14,6 +14,29 @@ type PromptGap = {
 const bare = (d: string) => d.toLowerCase().replace(/^www\./, "");
 
 /**
+ * Whole lines of the answer from the line that names `name`, up to about 320
+ * characters, so the Markdown shown never starts or ends mid-word.
+ */
+export function excerptAround(answer: string, name: string): string {
+  const lines = answer.split("\n");
+  const start = Math.max(
+    0,
+    lines.findIndex((line) => name !== "" && line.includes(name)),
+  );
+  const kept: string[] = [];
+  let length = 0;
+  for (const line of lines.slice(start)) {
+    if (kept.length && length + line.length > 320) break;
+    kept.push(line);
+    length += line.length + 1;
+  }
+  const text = kept.join("\n").trim();
+  return text.length > 400
+    ? `${text.slice(0, text.lastIndexOf(" ", 400))}…`
+    : text;
+}
+
+/**
  * Questions where at least one completed answer neither names nor links the
  * customer but names another business. Sorted by how many answers left them
  * out. Pure: it reads saved answers only.
@@ -57,9 +80,7 @@ export function promptGaps(
       row.rivals.set(r.name, (row.rivals.get(r.name) ?? 0) + 1);
     for (const c of a.citations) if (c.domain) row.sources.add(bare(c.domain));
     if (!row.excerpt) {
-      const first = a.recommended[0]?.name ?? "";
-      const at = Math.max(0, a.answer.indexOf(first) - 80);
-      row.excerpt = a.answer.slice(at, at + 320).trim();
+      row.excerpt = excerptAround(a.answer, a.recommended[0]?.name ?? "");
     }
     byPrompt.set(a.prompt, row);
   }

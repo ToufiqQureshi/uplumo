@@ -421,11 +421,13 @@ func (s *Tracking) finishAnswer(ctx context.Context, id string, c TrackingConfig
 	brands = append(brands, c.Competitors...)
 	observed := make([]storedBrand, 0, len(brands)+len(recommended))
 	prose := trackingProse(text)
-	for _, b := range brands {
+	for i, b := range brands {
 		cited := false
-		for _, citation := range citations {
+		for j, citation := range citations {
 			if citation.Domain != nil && (*citation.Domain == b.Domain || strings.HasSuffix(*citation.Domain, "."+b.Domain)) {
 				cited = true
+				// The customer's own pages are marked so the screen can open them.
+				citations[j].MatchedBrand = citations[j].MatchedBrand || i == 0
 			}
 		}
 		observed = append(observed, storedBrand{BrandObservation: BrandObservation{b.Name, b.Domain, mentionsBrand(prose, b.Name), cited}})
