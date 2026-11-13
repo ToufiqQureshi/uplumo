@@ -25,6 +25,7 @@ import {
   WriterReminder,
 } from "./EditorPanels";
 import { askToDiscard, useLinkedDraft } from "./useLinkedDraft";
+import { useDebounce } from "@/client/hooks/useDebounce";
 import { refreshSchemaPreview } from "./FreeSeoPublishCards";
 import { useConfirm } from "@/client/components/ConfirmDialog";
 import { ArticleComposer } from "./ArticleComposer";
@@ -68,6 +69,12 @@ const blankDraftForKeyword = (keyword?: string): ContentDraftInput => ({
   targetKeyword: keyword ?? "",
 });
 
+// A keyword from the link fills an empty target as an unsaved edit.
+const withLinkKeyword = (draft: ContentDraftInput, keyword?: string) =>
+  keyword && !draft.targetKeyword
+    ? { ...draft, targetKeyword: keyword }
+    : draft;
+
 export function ContentEditorPage({
   projectId,
   initialKeyword,
@@ -100,13 +107,9 @@ export function ContentEditorPage({
   );
   const [initialized, setInitialized] = useState(false);
   const [imageUploadBusy, setImageUploadBusy] = useState(false);
-  const [scoredDraft, setScoredDraft] = useState(draft);
   const [slugEdited, setSlugEdited] = useState(false);
   const dirty = !sameDraft(draft, savedSnapshot);
-  useEffect(() => {
-    const timer = window.setTimeout(() => setScoredDraft(draft), 300);
-    return () => window.clearTimeout(timer);
-  }, [draft]);
+  const scoredDraft = useDebounce(draft, 300);
   const [brief, setBrief] = useState<SearchBrief | null>(null);
   // A brief scores only the topic it was built for.
   const scoredTopic = primaryTargetTopic(scoredDraft.targetKeyword);
@@ -138,11 +141,7 @@ export function ContentEditorPage({
   const restoreDraft = useCallback(
     (saved?: ContentDraft, sent?: ContentDraftInput, keyword?: string) => {
       const snapshot = saved ? asInput(saved) : blankDraft;
-      // A keyword from the link fills an empty target as an unsaved edit.
-      const shown =
-        keyword && !snapshot.targetKeyword
-          ? { ...snapshot, targetKeyword: keyword }
-          : snapshot;
+      const shown = withLinkKeyword(snapshot, keyword);
       if (!sent) setEditorSession((session) => session + 1);
       setDraftId(saved?.id);
       setSavedSnapshot(snapshot);

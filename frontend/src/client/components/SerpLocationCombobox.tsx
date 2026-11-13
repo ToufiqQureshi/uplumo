@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { MapPin } from "lucide-react";
+import { useDebounce } from "@/client/hooks/useDebounce";
 import { Badge } from "@/client/components/ui/badge";
 import {
   Combobox,
@@ -32,15 +33,6 @@ type Props = {
   id?: string;
   invalid?: boolean;
 };
-
-function useDebounce<T>(value: T, delayMs: number): T {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => setDebounced(value), delayMs);
-    return () => clearTimeout(timer);
-  }, [value, delayMs]);
-  return debounced;
-}
 
 /** Searches the cities, counties and regions of one country. */
 export function SerpLocationCombobox({

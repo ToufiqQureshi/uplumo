@@ -25,11 +25,7 @@ export function useLinkedDraft({
   dirty: boolean;
   /** Fills the opened draft's target keyword when it has none. */
   keyword?: string;
-  onRestore: (
-    saved?: ContentDraft,
-    sent?: undefined,
-    keyword?: string,
-  ) => void;
+  onRestore: (saved?: ContentDraft, sent?: undefined, keyword?: string) => void;
 }) {
   const query = useQuery({
     queryKey: contentEditorQueryKeys.draft(projectId, selectedDraftId ?? ""),
