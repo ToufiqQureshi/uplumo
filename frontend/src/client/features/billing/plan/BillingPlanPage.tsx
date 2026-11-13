@@ -185,7 +185,7 @@ function CurrentPlanCard({
       : (plans.find((plan) => plan.id === status.plan)?.name ?? status.plan);
   const { label, detail, canUpgrade } = describeStatus(status.status);
   const renews = status.currentPeriodEnd
-    ? new Date(status.currentPeriodEnd).toLocaleDateString("en-IN", {
+    ? new Date(status.currentPeriodEnd).toLocaleDateString(undefined, {
         day: "numeric",
         month: "long",
         year: "numeric",

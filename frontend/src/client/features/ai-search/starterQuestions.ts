@@ -58,7 +58,7 @@ export function starterQuestions({
 export function addQuestions(
   current: Prompt[],
   suggested: Prompt[],
-  max = 30,
+  max: number,
 ): Prompt[] {
   const seen = new Set(
     current.map((p) => p.text.trim().toLowerCase()).filter(Boolean),

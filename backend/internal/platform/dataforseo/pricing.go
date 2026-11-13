@@ -91,13 +91,9 @@ func BrandLookupCeilingUSD(platforms int, comparisons bool) float64 {
 }
 
 // PromptExplorerCeilingUSD is the most one Prompt Explorer run can charge: one
-// answer per model, and with web search one bounded retry per model.
-func PromptExplorerCeilingUSD(models int, webSearch bool) float64 {
-	calls := models
-	if webSearch {
-		calls *= 2
-	}
-	return float64(calls) * AIResponseCeilingUSD
+// answer per model, never retried.
+func PromptExplorerCeilingUSD(models int) float64 {
+	return float64(models) * AIResponseCeilingUSD
 }
 
 // SerpCostUSD returns the published cost of one Google Organic SERP task at

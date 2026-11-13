@@ -26,15 +26,20 @@ const ENGINES = [
 const selectClass =
   "rounded-md border border-input bg-background px-3 py-2 text-sm";
 
+type TrackingFormProps = {
+  projectId: string;
+  saved: TrackingConfig | null;
+  providerConfigured: boolean;
+  /** How many questions the server lets one project track. */
+  maxPrompts: number;
+};
+
 export function TrackingForm({
   projectId,
   saved,
   providerConfigured,
-}: {
-  projectId: string;
-  saved: TrackingConfig | null;
-  providerConfigured: boolean;
-}) {
+  maxPrompts,
+}: TrackingFormProps) {
   const queryClient = useQueryClient();
   const [config, setConfig] = useState<TrackingConfig>(
     saved ?? {
@@ -175,6 +180,7 @@ export function TrackingForm({
         chosen sample of AI answers.
       </p>
       <QuestionStarter
+        maxPrompts={maxPrompts}
         config={config}
         onChange={(prompts) => update({ prompts })}
       />
@@ -242,7 +248,7 @@ export function TrackingForm({
       ))}
       <Button
         variant="outline"
-        disabled={config.prompts.length >= 30}
+        disabled={config.prompts.length >= maxPrompts}
         onClick={() =>
           update({
             prompts: [

@@ -111,6 +111,7 @@ export function PromptTrackingPage({ projectId }: { projectId: string }) {
         projectId={projectId}
         saved={state.data.configuration}
         providerConfigured={state.data.providerConfigured}
+        maxPrompts={state.data.maxPrompts}
       />
       {state.data.nextCheckAt ? (
         <p className="text-sm">

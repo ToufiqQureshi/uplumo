@@ -110,8 +110,14 @@ test("every AI visibility tab and button works, and only clicks buy", async ({
   expect(paidCalls(log)).toEqual([]);
   await page.goBack();
   await page.getByRole("button", { name: /best crm for small teams/u }).click();
+  // The ceiling shown is the server's; the plan is written in the market's language.
+  await expect(
+    page.getByText("Up to 12 credits, charged at actual cost").first(),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Make my action plan" }).click();
   await expect(page.getByText("Get listed on review.example.")).toBeVisible();
+  const plan = log.bodies.find((b) => b.action === "action_plan");
+  expect(plan?.language).toBe("es");
 
   // Sentiment: classify (one call).
   await nav.getByRole("link", { name: "Sentiment", exact: true }).click();
@@ -161,6 +167,10 @@ test("every AI visibility tab and button works, and only clicks buy", async ({
   await expect(
     page.getByRole("textbox", { name: /Question 3/u }),
   ).toBeVisible();
+  // The server's limit (3 in this workspace) stops the list from growing.
+  await expect(
+    page.getByRole("button", { name: "Add question" }),
+  ).toBeDisabled();
   await page.getByRole("button", { name: "Remove question 3" }).click();
   await expect(page.getByRole("textbox", { name: /Question 3/u })).toBeHidden();
   await page.getByRole("button", { name: "Review cost" }).click();
@@ -215,6 +225,7 @@ test("a workspace without checks is sent to setup or a test question", async ({
         nextCheckAt: null,
         runs: [],
         providerConfigured: true,
+        maxPrompts: 30,
       },
     }),
   );

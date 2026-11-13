@@ -27,6 +27,7 @@ export function useLatestAnswers(projectId: string) {
     isPending: state.isPending || (Boolean(latest) && answers.isPending),
     isError: state.isError || answers.isError,
     configuration: state.data?.configuration ?? null,
+    maxPrompts: state.data?.maxPrompts ?? 0,
     run: latest ?? null,
     answers: answers.data ?? [],
   };

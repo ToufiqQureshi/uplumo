@@ -44,6 +44,7 @@ test("saved AI tracker reviews costs without collecting answers on load", async 
         nextCheckAt: null,
         runs: [],
         providerConfigured: true,
+        maxPrompts: 30,
       };
     else if (path.endsWith("/tracking/estimate"))
       body = { answers: 2, credits: 4, monthlyCredits: 18, ceiling: true };

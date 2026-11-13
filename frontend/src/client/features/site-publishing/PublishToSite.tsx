@@ -165,7 +165,7 @@ function PublishActions({
 
 function PublishedLine({ publication }: { publication: SitePublication }) {
   const when = publication.updatedAt
-    ? new Date(publication.updatedAt).toLocaleString("en-IN", {
+    ? new Date(publication.updatedAt).toLocaleString(undefined, {
         dateStyle: "medium",
         timeStyle: "short",
       })

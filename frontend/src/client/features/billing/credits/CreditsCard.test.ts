@@ -33,7 +33,13 @@ describe("CreditsCard", () => {
     expect(html).toContain("7,420");
     expect(html).toContain("credits left");
     expect(html).toContain("adds 10,000 credits every month");
-    expect(html).toContain("next refill 1 Nov");
+    // The viewer's own date format, on the UTC billing date.
+    const refill = new Intl.DateTimeFormat(undefined, {
+      day: "numeric",
+      month: "short",
+      timeZone: "UTC",
+    }).format(new Date("2026-11-01T00:00:00Z"));
+    expect(html).toContain(`next refill ${refill}`);
     expect(html).not.toContain("running low");
   });
 

@@ -14,8 +14,6 @@ import { AiAction, InsightCard } from "./AiAction";
 import { addPrompts, parsePromptIdeas, type PromptIdea } from "./promptIdeas";
 import { useLatestAnswers } from "./useLatestAnswers";
 
-const TRACKER_LIMIT = 30;
-
 /**
  * AI writes the questions customers ask assistants about a keyword; the
  * chosen ones join the AI Visibility Tracker. Saving them is free; each
@@ -28,9 +26,10 @@ export function PromptIdeasPage({ projectId }: { projectId: string }) {
   const [ideas, setIdeas] = useState<PromptIdea[]>([]);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const config = ai.configuration;
+  const trackerLimit = ai.maxPrompts;
   const track = useMutation({
     mutationFn: () => {
-      const next = addPrompts(config!.prompts, [...picked], TRACKER_LIMIT);
+      const next = addPrompts(config!.prompts, [...picked], trackerLimit);
       return trackingApi
         .save(projectId, { ...config!, prompts: next.prompts })
         .then(() => next.added);
@@ -40,7 +39,7 @@ export function PromptIdeasPage({ projectId }: { projectId: string }) {
       return client.invalidateQueries({ queryKey: trackingKey(projectId) });
     },
   });
-  const room = config ? TRACKER_LIMIT - config.prompts.length : 0;
+  const room = config ? trackerLimit - config.prompts.length : 0;
   const toggle = (q: string) =>
     setPicked((prev) => {
       const next = new Set(prev);
@@ -58,7 +57,7 @@ export function PromptIdeasPage({ projectId }: { projectId: string }) {
       <InsightCard
         stamp={
           config
-            ? `Tracker: ${config.prompts.length} of ${TRACKER_LIMIT} questions used`
+            ? `Tracker: ${config.prompts.length} of ${trackerLimit} questions used`
             : "AI Visibility Tracker not set up yet"
         }
         headline={

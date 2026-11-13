@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -294,6 +295,18 @@ func TestTrackingDurableCollectionAndTenantIsolation(t *testing.T) {
 	state, err := svc.State(ctx, org, project)
 	if err != nil || len(state.Runs) != 1 || state.Runs[0].Mentioned != 2 || state.Runs[0].Status != "completed" {
 		t.Fatalf("state=%+v err=%v", state, err)
+	}
+	// The screen reads the question limit from here, and saving enforces it.
+	if state.MaxPrompts != MaxTrackedPrompts {
+		t.Fatalf("maxPrompts = %d, want %d", state.MaxPrompts, MaxTrackedPrompts)
+	}
+	tooMany := c
+	tooMany.Prompts = nil
+	for i := range MaxTrackedPrompts + 1 {
+		tooMany.Prompts = append(tooMany.Prompts, TrackedPrompt{Text: fmt.Sprintf("question %d", i), Topic: "General"})
+	}
+	if err = svc.Save(ctx, org, project, tooMany); err == nil {
+		t.Fatal("saved more questions than the limit")
 	}
 	c.Prompts[0].Text = "Edited question"
 	if err = svc.Save(ctx, org, project, c); err != nil {

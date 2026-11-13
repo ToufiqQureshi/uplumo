@@ -14,7 +14,7 @@ import {
   type BillingUsage,
 } from "@/client/features/billing/usageApi";
 
-const refillDate = new Intl.DateTimeFormat("en-IN", {
+const refillDate = new Intl.DateTimeFormat(undefined, {
   day: "numeric",
   month: "short",
   // Billing periods are UTC calendar dates; avoid a previous-day refill west of UTC.

@@ -188,7 +188,7 @@ export function buildNextActions(input: {
       effort: "30 min",
       gainClicks: q.gain,
       source: "Search Console · 28 days",
-      why: `${q.impressions.toLocaleString("en-IN")} impressions, ${(q.ctr * 100).toFixed(1)}% clicked. Around #5 a result typically gets ${Math.round(expectedCtr(5) * 100)}% of clicks.`,
+      why: `${q.impressions.toLocaleString()} impressions, ${(q.ctr * 100).toFixed(1)}% clicked. Around #5 a result typically gets ${Math.round(expectedCtr(5) * 100)}% of clicks.`,
       ai: {
         action: "faq",
         label: "Write an FAQ for this search",

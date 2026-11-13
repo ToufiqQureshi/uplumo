@@ -1,4 +1,4 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Button } from "@/client/components/ui/button";
@@ -7,11 +7,21 @@ import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { Markdown } from "@/client/components/Markdown";
 import {
   generateWritingSuggestion,
+  writerStatusQueryOptions,
   type WriterAction,
 } from "@/client/features/content-editor/contentEditorApi";
+import { projectsQueryOptions } from "@/client/features/projects/projectQueries";
 
-/** The most one AI action can charge (the writer's per-action ceiling). */
-export const MAX_AI_ACTION_CREDITS = 15;
+/** "Up to N credits": the writer's per-action ceiling, as the server sets it. */
+export function MaxAiCredits({ suffix }: { suffix: string }) {
+  const status = useQuery(writerStatusQueryOptions());
+  if (!status.data) return null;
+  return (
+    <span className="font-mono text-xs text-muted-foreground">
+      Up to {status.data.maxCreditsPerAction} credits{suffix}
+    </span>
+  );
+}
 
 type AiActionInput = {
   action: WriterAction;
@@ -46,6 +56,10 @@ export function AiAction({
   children?: (text: string) => ReactNode;
 }) {
   const [result, setResult] = useState("");
+  const projects = useQuery(projectsQueryOptions());
+  // The project's market language; empty lets the writer follow the input.
+  const language =
+    projects.data?.find((p) => p.id === projectId)?.languageCode ?? "";
   const mutation = useMutation({
     retry: false,
     mutationFn: () =>
@@ -57,7 +71,7 @@ export function AiAction({
           title: input.title ?? "",
           targetKeyword: input.targetKeyword ?? "",
           content: input.content ?? "",
-          language: "English",
+          language,
           instructions: input.instructions ?? "",
           brief: (input.brief ?? "").slice(0, 8_000),
           idempotencyKey: crypto.randomUUID(),
@@ -75,9 +89,7 @@ export function AiAction({
           <Sparkles aria-hidden />
           {mutation.isPending ? "Working…" : result ? "Regenerate" : label}
         </Button>
-        <span className="font-mono text-xs text-muted-foreground">
-          Up to {MAX_AI_ACTION_CREDITS} credits, charged at actual cost
-        </span>
+        <MaxAiCredits suffix=", charged at actual cost" />
       </div>
       {mutation.isError ? (
         <p role="alert" className="text-sm text-destructive">

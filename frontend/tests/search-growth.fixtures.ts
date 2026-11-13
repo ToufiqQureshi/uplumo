@@ -349,6 +349,7 @@ export async function installGrowthFixtures(page: Page) {
         nextCheckAt: null,
         runs: [],
         providerConfigured: true,
+        maxPrompts: 30,
       };
     else if (path.endsWith("/sam/sessions/list"))
       body = [

@@ -82,7 +82,7 @@ const change = (now: number, before: number) =>
   before > 0 ? (now - before) / before : 0;
 const pct = (fraction: number) => `${Math.round(fraction * 100)}%`;
 const count = (value: number) =>
-  new Intl.NumberFormat("en-IN").format(Math.round(value));
+  new Intl.NumberFormat().format(Math.round(value));
 
 /** What to do about one losing page, by why it lost clicks. */
 export const PAGE_REASON = {

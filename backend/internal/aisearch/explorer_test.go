@@ -96,8 +96,8 @@ func TestExplorePromptPreflightsAllModelsAndDoesNotHoldOnCacheHit(t *testing.T) 
 			paidHolds = append(paidHolds, request)
 		}
 	}
-	if want := 4 * dataforseo.AIResponseCeilingUSD; len(paidHolds) != 1 || paidHolds[0].EstimateUSD != want {
-		t.Fatalf("paid holds = %+v; want one hold of four $0.10 answer ceilings", paidHolds)
+	if want := 2 * dataforseo.AIResponseCeilingUSD; len(paidHolds) != 1 || paidHolds[0].EstimateUSD != want {
+		t.Fatalf("paid holds = %+v; want one hold of two $0.10 answer ceilings, one per model", paidHolds)
 	}
 	calls := api.total()
 	settlements := len(guard.Settled())
@@ -113,63 +113,46 @@ func TestExplorePromptPreflightsAllModelsAndDoesNotHoldOnCacheHit(t *testing.T) 
 	}
 }
 
-func TestExplorePromptRetriesOnceWhenTheModelAnsweredFromMemory(t *testing.T) {
+// A paid answer is never bought twice: an answer that did not search is
+// shown as it is, and a failed call is not repeated.
+func TestExplorePromptBuysEachAnswerOnce(t *testing.T) {
 	tests := []struct {
 		name       string
-		replies    []taskReply
-		wantCalls  int
+		reply      taskReply
 		wantSearch bool
 		wantText   string
 	}{
-		{
-			name:       "uses the retry when it searched",
-			replies:    []taskReply{okReply(answer(false, "from memory")), okReply(answer(true, "searched", "https://example.com/post"))},
-			wantCalls:  2,
-			wantSearch: true,
-			wantText:   "searched",
-		},
-		{
-			name:       "does not retry when the first answer searched",
-			replies:    []taskReply{okReply(answer(true, "searched", "https://example.com/post"))},
-			wantCalls:  1,
-			wantSearch: true,
-			wantText:   "searched",
-		},
-		{
-			name:       "keeps the first answer when the retry did not search either",
-			replies:    []taskReply{okReply(answer(false, "first")), okReply(answer(false, "second"))},
-			wantCalls:  2,
-			wantSearch: false,
-			wantText:   "first",
-		},
-		{
-			name:       "keeps the paid first answer when the retry fails",
-			replies:    []taskReply{okReply(answer(false, "first")), failReply(50000, "Internal Error.")},
-			wantCalls:  2,
-			wantSearch: false,
-			wantText:   "first",
-		},
+		{name: "answer from memory is kept", reply: okReply(answer(false, "from memory")), wantText: "from memory"},
+		{name: "searched answer is kept", reply: okReply(answer(true, "searched", "https://example.com/post")), wantSearch: true, wantText: "searched"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			api := newFakeAPI(t)
-			api.on(chatGPTResponsePath, func(call int, _ string) taskReply { return tt.replies[call-1] })
+			api.on(chatGPTResponsePath, func(int, string) taskReply { return tt.reply })
 			svc := newTestService(t, api)
 
 			result, err := svc.ExplorePrompt(context.Background(), newOrg(), "p", promptInput(modelChatGPT))
 			if err != nil {
 				t.Fatal(err)
 			}
-
 			got := firstSuccess(t, result, 0)
-			if calls := len(api.requestsTo(chatGPTResponsePath)); calls != tt.wantCalls {
-				t.Errorf("model calls = %d, want %d", calls, tt.wantCalls)
+			if calls := len(api.requestsTo(chatGPTResponsePath)); calls != 1 {
+				t.Errorf("model calls = %d, want 1", calls)
 			}
 			if got.WebSearch != tt.wantSearch || got.Text != tt.wantText {
 				t.Errorf("answer = webSearch %v %q, want %v %q", got.WebSearch, got.Text, tt.wantSearch, tt.wantText)
 			}
 		})
 	}
+	t.Run("failed answer is not bought again", func(t *testing.T) {
+		api := newFakeAPI(t)
+		api.on(chatGPTResponsePath, func(int, string) taskReply { return failReply(50000, "Internal Error.") })
+		svc := newTestService(t, api)
+		_, _ = svc.ExplorePrompt(context.Background(), newOrg(), "p", promptInput(modelChatGPT))
+		if calls := len(api.requestsTo(chatGPTResponsePath)); calls != 1 {
+			t.Errorf("model calls = %d, want 1", calls)
+		}
+	})
 }
 
 func TestExplorePromptDoesNotRetryWhenWebSearchIsOff(t *testing.T) {

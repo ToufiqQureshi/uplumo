@@ -4,7 +4,7 @@
   Market research buy only after a submit in the same page load; an opened
   URL, reload or redirect fills the form and waits. Why: an expired cache
   plus an old bookmark used to buy a lookup with no click.
-- **No automatic retries in the browser.** Paid queries set `retry: false`
+- **No automatic retries, in the browser or the server.** A Prompt Explorer answer that did not search the web is shown as it is, not bought again. Paid queries set `retry: false`
   and ignore window focus and reconnect.
 - **Cost before the click.** The tracker shows the estimate before saving or
   running; the run sends the approved credits and the server refuses a run

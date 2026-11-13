@@ -5,7 +5,7 @@ import { Button } from "@/client/components/ui/button";
 import { Textarea } from "@/client/components/ui/textarea";
 import {
   generateWritingSuggestion,
-  getContentWriterStatus,
+  writerStatusQueryOptions,
 } from "./contentEditorApi";
 import { taskInstructions } from "./editor-actions";
 import type { ScoreCheck } from "./scoring";
@@ -50,11 +50,7 @@ export function WriterAssistant({
   const [error, setError] = useState("");
   const [target, setTarget] = useState<WriterTarget | null>(null);
   const requestPending = useRef(false);
-  const availability = useQuery({
-    queryKey: ["contentWriterStatus"],
-    queryFn: getContentWriterStatus,
-    staleTime: 60_000,
-  });
+  const availability = useQuery(writerStatusQueryOptions());
   const writerDisabled =
     availability.isPending ||
     availability.isError ||

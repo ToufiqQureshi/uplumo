@@ -121,7 +121,7 @@ export function NextActionsPage({ projectId }: { projectId: string }) {
               <>
                 Do the top {Math.min(3, todo.length)} this week for an estimated{" "}
                 <span className="text-primary">
-                  +{gain.toLocaleString("en-IN")} clicks a month
+                  +{gain.toLocaleString()} clicks a month
                 </span>
                 .
               </>
@@ -240,7 +240,7 @@ export function NextActionsPage({ projectId }: { projectId: string }) {
                   </button>
                   {a.gainClicks ? (
                     <span className="rounded-full border border-primary/40 px-2.5 py-0.5 font-mono text-xs text-primary">
-                      ≈ +{a.gainClicks.toLocaleString("en-IN")} clicks/mo
+                      ≈ +{a.gainClicks.toLocaleString()} clicks/mo
                     </span>
                   ) : null}
                 </div>
