@@ -83,7 +83,7 @@ func newImportFixture(ctx context.Context, t *testing.T, timeout time.Duration) 
 	if _, err := pool.Exec(ctx, `INSERT INTO organization (id, name, slug, created_at) VALUES ($1,$1,$1,now())`, org); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _, _ = pool.Exec(context.Background(), `DELETE FROM organization WHERE id=$1`, org) })
+	t.Cleanup(func() { _, _ = pool.Exec(context.WithoutCancel(ctx), `DELETE FROM organization WHERE id=$1`, org) })
 	f := importFixture{site: newImportSite(t), repo: Repository{DB: pool}, projectID: "import-p-" + suffix, noDomain: "import-nd-" + suffix}
 	if _, err := pool.Exec(ctx, `INSERT INTO projects (id, organization_id, name, domain) VALUES ($1,$2,$1,'example.test'),($3,$2,$3,NULL)`, f.projectID, org, f.noDomain); err != nil {
 		t.Fatal(err)
@@ -102,7 +102,7 @@ func newImportFixture(ctx context.Context, t *testing.T, timeout time.Duration) 
 func (f importFixture) post(t *testing.T, project, pageURL string) (int, Draft, string) {
 	t.Helper()
 	body, _ := json.Marshal(map[string]string{"url": pageURL})
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/"+project+"/content/drafts/import", bytes.NewReader(body))
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/projects/"+project+"/content/drafts/import", bytes.NewReader(body))
 	rec := httptest.NewRecorder()
 	f.mux.ServeHTTP(rec, req)
 	var draft Draft
@@ -171,7 +171,7 @@ func TestImportPageRefusesAndExplains(t *testing.T) {
 		_, _ = w.Write([]byte("%PDF"))
 	}
 	f.site.pages["example.test/empty"] = html200("<html><body><nav>Only navigation</nav></body></html>")
-	f.site.pages["example.test/slow"] = func(w http.ResponseWriter, r *http.Request) {
+	f.site.pages["example.test/slow"] = func(_ http.ResponseWriter, r *http.Request) {
 		select {
 		case <-time.After(2 * time.Second):
 		case <-r.Context().Done():
