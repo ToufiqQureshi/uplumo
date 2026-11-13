@@ -3,6 +3,7 @@ package contenteditor
 import (
 	"context"
 	"encoding/json"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -52,7 +53,7 @@ func TestReviewCacheCoalescesAndIsolatesWorkspaces(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	pool := contentTestPool(ctx, t)
-	cache := PostgresAnalysisCache{DB: pool}
+	cache := &PostgresAnalysisCache{DB: pool}
 	suffix := time.Now().Format("150405.000000000")
 	orgs := []string{"review-a-" + suffix, "review-b-" + suffix}
 	for _, org := range orgs {
@@ -149,5 +150,72 @@ func TestAnalyzeUsesCacheAndNeverRewrites(t *testing.T) {
 	}
 	if !strings.Contains(llm.request.Messages[0].Content, "not replacement article text") {
 		t.Fatal("review prompt lost its read-only contract")
+	}
+}
+
+func reviewTestOrg(ctx context.Context, t *testing.T, pool *pgxpool.Pool, name string) string {
+	t.Helper()
+	org := name + "-" + time.Now().Format("150405.000000000")
+	if _, err := pool.Exec(ctx, `INSERT INTO organization(id,name,slug,created_at) VALUES($1,$1,$1,now())`, org); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _, _ = pool.Exec(context.Background(), `DELETE FROM organization WHERE id=$1`, org) })
+	return org
+}
+
+// The build holds credits through the same pool, so waiting duplicates must
+// not hold every connection while the first review needs one.
+func TestReviewCacheWaitersDoNotStarveTheBuild(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	base := contentTestPool(ctx, t)
+	cfg := base.Config().Copy()
+	cfg.MaxConns = 2
+	pool, err := pgxpool.NewWithConfig(ctx, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(pool.Close)
+	org := reviewTestOrg(ctx, t, base, "review-pool")
+	cache := &PostgresAnalysisCache{DB: pool}
+	var calls atomic.Int32
+	build := func() (WriterOutput, error) {
+		calls.Add(1)
+		time.Sleep(50 * time.Millisecond)
+		// Stands in for the credit hold and settlement in WriterAgent.generate.
+		if _, err := pool.Exec(ctx, `SELECT 1`); err != nil {
+			return WriterOutput{}, err
+		}
+		return WriterOutput{Content: "report"}, nil
+	}
+	reqCtx, reqCancel := context.WithTimeout(ctx, 5*time.Second)
+	defer reqCancel()
+	var wg sync.WaitGroup
+	for range 6 {
+		wg.Go(func() {
+			if out, err := cache.GetOrBuild(reqCtx, org, strings.Repeat("e", 64), build); err != nil || out.Content != "report" {
+				t.Errorf("%+v %v", out, err)
+			}
+		})
+	}
+	wg.Wait()
+	if calls.Load() != 1 {
+		t.Fatalf("paid reviews=%d, want 1", calls.Load())
+	}
+}
+
+// A billed report is delivered even when it cannot be cached.
+func TestReviewCacheDeliversReportWhenSaveFails(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	pool := contentTestPool(ctx, t)
+	org := reviewTestOrg(ctx, t, pool, "review-save")
+	cache := &PostgresAnalysisCache{DB: pool}
+	// PostgreSQL text cannot hold NUL, so this insert fails after the build.
+	out, err := cache.GetOrBuild(ctx, org, strings.Repeat("f", 64), func() (WriterOutput, error) {
+		return WriterOutput{Content: "paid\x00report"}, nil
+	})
+	if err != nil || out.Content != "paid\x00report" {
+		t.Fatalf("lost the billed report: %+v %v", out, err)
 	}
 }

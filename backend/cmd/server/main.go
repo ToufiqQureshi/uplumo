@@ -568,7 +568,7 @@ func buildContentWriter(cfg config.Config, logger *slog.Logger, meter contentedi
 		Meter:   meter,
 		Plans:   plans,
 		Logger:  logger,
-		Reviews: contenteditor.PostgresAnalysisCache{DB: db},
+		Reviews: &contenteditor.PostgresAnalysisCache{DB: db, Logger: logger},
 	}
 }
 

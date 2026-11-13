@@ -70,9 +70,11 @@ const (
 	ContentBriefSERPDepth = 30
 	// ContentBriefReadPageLimit is the maximum page reads included in a brief.
 	ContentBriefReadPageLimit = 8
-	// Attempts include unreadable pages; every attempt may be billed.
+	// ContentBriefParseAttempts is the most page reads a brief may try,
+	// unreadable pages included: every attempt may be billed.
 	ContentBriefParseAttempts = 16
-	ContentBriefKeywordLimit  = 20
+	// ContentBriefKeywordLimit is the most keyword suggestions a brief buys.
+	ContentBriefKeywordLimit = 20
 )
 
 // ContentBriefMaxUSD keeps the quote and provider hold on the published rates.
