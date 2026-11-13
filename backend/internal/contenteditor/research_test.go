@@ -3,13 +3,13 @@ package contenteditor
 import (
 	"context"
 	"encoding/json"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/toufiqqureshi/uplumo/backend/internal/billing"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/openrouter"
 )
@@ -159,7 +159,7 @@ func reviewTestOrg(ctx context.Context, t *testing.T, pool *pgxpool.Pool, name s
 	if _, err := pool.Exec(ctx, `INSERT INTO organization(id,name,slug,created_at) VALUES($1,$1,$1,now())`, org); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _, _ = pool.Exec(context.Background(), `DELETE FROM organization WHERE id=$1`, org) })
+	t.Cleanup(func() { _, _ = pool.Exec(context.WithoutCancel(ctx), `DELETE FROM organization WHERE id=$1`, org) })
 	return org
 }
 
