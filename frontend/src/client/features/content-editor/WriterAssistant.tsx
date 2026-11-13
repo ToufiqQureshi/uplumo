@@ -76,18 +76,22 @@ export function WriterAssistant({
           mode,
           title: draft.title,
           targetKeyword: draft.targetKeyword,
-          content: writerContext(
-            requestedTarget.document,
-            requestedTarget.selected,
-            requestedTarget.currentBlock,
-          ),
+          content:
+            action === "analyze"
+              ? requestedTarget.document
+              : writerContext(
+                  requestedTarget.document,
+                  requestedTarget.selected,
+                  requestedTarget.currentBlock,
+                ),
           language,
           instructions: taskInstructions(task, instructions),
-          brief: brief.slice(0, 2_000),
+          brief: brief.slice(0, 6_000),
           idempotencyKey,
         },
       });
     },
+    retry: false,
     onSuccess: (suggestion, variables) => {
       setResult(suggestion.content);
       setTarget(variables.target);
@@ -110,6 +114,15 @@ export function WriterAssistant({
     if (!requestedTarget) {
       setError(
         "Select text within one paragraph (up to 5,000 characters, no images), then try again.",
+      );
+      return;
+    }
+    if (
+      action === "analyze" &&
+      requestedTarget.document.length + brief.slice(0, 6_000).length > 20_000
+    ) {
+      setError(
+        "Full-draft review supports 20,000 characters including research. Shorten the draft or use focused section actions; nothing was sent or charged.",
       );
       return;
     }
@@ -172,21 +185,7 @@ export function WriterAssistant({
         AI only suggests; nothing changes in your article until you press Insert
         or Replace. Check every fact before you publish.
       </p>
-      {task ? (
-        <div className="space-y-2 rounded-lg border bg-muted p-3 text-sm">
-          <h3 className="font-medium">Focused task: {task.label}</h3>
-          <p className="text-xs leading-5 text-muted-foreground">
-            {task.detail}
-          </p>
-          <p className="text-xs">
-            Select the relevant passage, then choose an action below. Preparing
-            this task has not generated or changed any text.
-          </p>
-          <Button variant="ghost" size="sm" onClick={onClearTask}>
-            Clear focused task
-          </Button>
-        </div>
-      ) : null}
+      {task ? <FocusedTask task={task} onClear={onClearTask} /> : null}
       {writerDisabled ? (
         <p
           role="status"
@@ -244,9 +243,8 @@ export function WriterAssistant({
       </details>
       {availability.data ? (
         <p className="text-xs text-muted-foreground">
-          Each action usually uses 1–5 credits, never more than{" "}
-          {availability.data.maxCreditsPerAction}. You pay only for what the AI
-          actually wrote.
+          Each action uses up to {availability.data.maxCreditsPerAction}{" "}
+          credits. You pay only for what the AI actually wrote.
         </p>
       ) : null}
       {error ? (
@@ -254,14 +252,22 @@ export function WriterAssistant({
           {error}
         </p>
       ) : null}
-      {result ? (
+      {result && target?.scope === scope ? (
         <div className="space-y-2 border-t pt-3">
           <label
             htmlFor="content-ai-suggestion"
             className="text-sm font-medium"
           >
-            AI suggestion · review before using
+            {target?.action === "analyze"
+              ? "Editorial review · verify findings"
+              : "AI suggestion · review before using"}
           </label>
+          {target?.document !== draft.content ? (
+            <p role="status" className="text-xs text-warning">
+              The draft changed after this result. Review it against the current
+              text before applying any advice.
+            </p>
+          ) : null}
           <Textarea
             id="content-ai-suggestion"
             value={result}
@@ -337,5 +343,27 @@ export function WriterAssistant({
         </div>
       ) : null}
     </section>
+  );
+}
+
+function FocusedTask({
+  task,
+  onClear,
+}: {
+  task: Pick<ScoreCheck, "label" | "detail">;
+  onClear?: () => void;
+}) {
+  return (
+    <div className="space-y-2 rounded-lg border bg-muted p-3 text-sm">
+      <h3 className="font-medium">Focused task: {task.label}</h3>
+      <p className="text-xs leading-5 text-muted-foreground">{task.detail}</p>
+      <p className="text-xs">
+        Select the relevant passage, then choose an action below. Preparing this
+        task has not generated or changed any text.
+      </p>
+      <Button variant="ghost" size="sm" onClick={onClear}>
+        Clear focused task
+      </Button>
+    </div>
   );
 }

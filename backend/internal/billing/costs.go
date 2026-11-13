@@ -1,6 +1,8 @@
 package billing
 
 import (
+	"strconv"
+
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/dataforseo"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/spend"
 )
@@ -68,12 +70,18 @@ const (
 	ContentBriefSERPDepth = 30
 	// ContentBriefReadPageLimit is the maximum page reads included in a brief.
 	ContentBriefReadPageLimit = 8
+	// ContentBriefParseAttempts is the most page reads a brief may try,
+	// unreadable pages included: every attempt may be billed.
+	ContentBriefParseAttempts = 16
+	// ContentBriefKeywordLimit is the most keyword suggestions a brief buys.
+	ContentBriefKeywordLimit = 20
 )
 
 // ContentBriefMaxUSD keeps the quote and provider hold on the published rates.
 func ContentBriefMaxUSD() float64 {
 	return dataforseo.SerpCostUSD(ContentBriefSERPDepth, false) +
-		dataforseo.ContentParsingCostUSD(ContentBriefReadPageLimit)
+		dataforseo.ContentParsingCostUSD(ContentBriefParseAttempts) +
+		dataforseo.EstimateUSD("/v3/dataforseo_labs/google/keyword_suggestions/live", []byte(`[{"limit":`+strconv.Itoa(ContentBriefKeywordLimit+1)+`}]`))
 }
 
 // ActionCosts lists the typical cost of every feature that spends credits.

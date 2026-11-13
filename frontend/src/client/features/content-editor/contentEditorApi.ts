@@ -84,6 +84,7 @@ export function getContentWriterStatus() {
 export type ContentDraftSummary = z.infer<typeof draftSummarySchema>;
 
 export type WriterAction =
+  | "analyze"
   | "outline"
   | "draft"
   | "improve"
@@ -122,6 +123,20 @@ const searchBriefSchema = z.object({
   locationCode: z.number().int(),
   languageCode: z.string(),
   fetchedAt: z.string(),
+  researchStatus: z
+    .enum(["available", "no_data", "unsupported_market", "unavailable"])
+    .optional(),
+  keywords: z
+    .array(
+      z.object({
+        keyword: z.string(),
+        searchVolume: z.number().int().nonnegative().nullable(),
+        difficulty: z.number().min(0).max(100).nullable(),
+        intent: z.string(),
+        updatedAt: z.string().optional(),
+      }),
+    )
+    .optional(),
   questions: z
     .array(z.string())
     .nullable()

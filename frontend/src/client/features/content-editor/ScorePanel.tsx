@@ -13,7 +13,7 @@ type Score = {
 
 const verdictFor = (score: number) =>
   score >= 80
-    ? "Ready to publish"
+    ? "Strong writing checks"
     : score >= 50
       ? "Getting there"
       : "Needs work";
@@ -94,7 +94,7 @@ export function ScorePanel({
             <p className="font-semibold">{verdictFor(active.score)}</p>
             <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
               {active.hasBrief
-                ? "Compared with the pages that rank for your topic."
+                ? "Research-backed writing checks. Review intent, facts and originality with Analyze full draft before publishing."
                 : "Simple checks only: no search brief is loaded, so competitor terms and questions are not scored yet."}
             </p>
           </div>
@@ -159,7 +159,9 @@ export function ScorePanel({
             40, and Publish now is blocked
           </li>
           <li>
-            <strong className="text-foreground">Copied from a top page</strong>{" "}
+            <strong className="text-foreground">
+              Overlap with a sampled page
+            </strong>{" "}
             → max 30 (needs a search brief)
           </li>
           <li>
@@ -168,7 +170,9 @@ export function ScorePanel({
           </li>
         </ul>
         <p className="mt-3 text-[11px] text-muted-foreground">
-          Writing checks, not a Google ranking prediction.
+          Writing checks, not a Google ranking prediction. Source links and
+          formatting do not prove accuracy. Originality is checked only against
+          the sampled pages.
         </p>
       </section>
 

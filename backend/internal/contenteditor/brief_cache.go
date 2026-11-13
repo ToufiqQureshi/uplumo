@@ -22,6 +22,7 @@ func (c PostgresBriefCache) GetOrBuild(ctx context.Context, key string, refresh 
 	if c.DB == nil || len(key) != 64 || build == nil {
 		return ContentBrief{}, errors.New("content brief cache is unavailable")
 	}
+	requestedAt := time.Now().UTC()
 	conn, err := c.DB.Acquire(ctx)
 	if err != nil {
 		return ContentBrief{}, fmt.Errorf("acquire shared content brief cache connection: %w", err)
@@ -37,7 +38,8 @@ func (c PostgresBriefCache) GetOrBuild(ctx context.Context, key string, refresh 
 				unlockErr = errors.New("PostgreSQL content brief advisory lock was not held")
 			}
 			if unlockErr != nil {
-				conn.Hijack() // Never return a session with a possibly-held lock to the pool.
+				raw := conn.Hijack() // Never return a session with a possibly-held lock to the pool.
+				_ = raw.Close(unlockCtx)
 				retErr = errors.Join(retErr, fmt.Errorf("release content brief cache lock: %w", unlockErr))
 			} else {
 				conn.Release()
@@ -51,10 +53,12 @@ func (c PostgresBriefCache) GetOrBuild(ctx context.Context, key string, refresh 
 	}
 	locked = true
 	var cached []byte
-	err = pgx.ErrNoRows
-	if !refresh {
-		err = conn.QueryRow(ctx, `SELECT brief FROM go_content_brief_cache WHERE cache_key=$1 AND expires_at > now()`, key).Scan(&cached)
-	}
+	// A concurrent refresh consumes the newly-built result rather than buying
+	// it again. The short cooldown also coalesces double clicks arriving just
+	// after the first request completed (including another browser tab).
+	err = conn.QueryRow(ctx, `SELECT brief FROM go_content_brief_cache
+		WHERE cache_key=$1 AND expires_at > now()
+		AND (NOT $2 OR fetched_at >= $3::timestamptz - interval '1 minute')`, key, refresh, requestedAt).Scan(&cached)
 	if err == nil {
 		if decodeErr := json.Unmarshal(cached, &brief); decodeErr == nil && validateBriefResult(brief) == nil {
 			return brief, nil

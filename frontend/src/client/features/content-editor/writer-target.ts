@@ -1,6 +1,7 @@
 import type { Editor } from "@tiptap/react";
 
 export type WriterAction =
+  | "analyze"
   | "outline"
   | "write_section"
   | "fill_gap"
@@ -29,6 +30,7 @@ const replacementActions: ReadonlySet<WriterAction> = new Set([
   "tone_language",
 ]);
 const reviewActions: ReadonlySet<WriterAction> = new Set([
+  "analyze",
   "outline",
   "title_meta",
   "fact_check",

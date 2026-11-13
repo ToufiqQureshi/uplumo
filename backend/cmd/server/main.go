@@ -466,7 +466,7 @@ func run(logger *slog.Logger) (err error) {
 			LocalVisibility:     localVisibility,
 			SitePublish:         sitePublish,
 			IndexNow:            indexNowService,
-			ContentWriter:       buildContentWriter(cfg, logger, spendGuard.AIMeter(spend.AIWriting, "openrouter/"+contenteditor.WriterModel), billingRoutes.Gate(planCatalog.AIWriting)),
+			ContentWriter:       buildContentWriter(cfg, logger, spendGuard.AIMeter(spend.AIWriting, "openrouter/"+contenteditor.WriterModel), billingRoutes.Gate(planCatalog.AIWriting), db),
 			ContentBriefs:       buildContentBriefs(db, dfClient),
 			ProjectsRepo:        projects.Repository{DB: db},
 			ContentImages:       contentImages,
@@ -559,15 +559,16 @@ func buildSitePublish(cfg config.Config, db *pgxpool.Pool) (*sitepublish.Service
 	}, nil
 }
 
-func buildContentWriter(cfg config.Config, logger *slog.Logger, meter contenteditor.WriterMeter, plans contenteditor.WriterPlanAccess) contenteditor.WriterService {
+func buildContentWriter(cfg config.Config, logger *slog.Logger, meter contenteditor.WriterMeter, plans contenteditor.WriterPlanAccess, db *pgxpool.Pool) contenteditor.WriterService {
 	if strings.TrimSpace(cfg.OpenRouterAPIKey) == "" {
 		return nil
 	}
 	return &contenteditor.WriterAgent{
-		LLM:    &openrouter.Client{APIKey: cfg.OpenRouterAPIKey},
-		Meter:  meter,
-		Plans:  plans,
-		Logger: logger,
+		LLM:     &openrouter.Client{APIKey: cfg.OpenRouterAPIKey},
+		Meter:   meter,
+		Plans:   plans,
+		Logger:  logger,
+		Reviews: &contenteditor.PostgresAnalysisCache{DB: db, Logger: logger},
 	}
 }
 

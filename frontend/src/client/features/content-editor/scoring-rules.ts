@@ -137,8 +137,12 @@ function isInternalLink(url: string, siteDomain?: string) {
     const linkedHost = new URL(url).hostname
       .toLocaleLowerCase()
       .replace(/^www\./u, "");
-    const ownHost = siteDomain.toLocaleLowerCase().replace(/^www\./u, "");
-    return linkedHost === ownHost;
+    const ownHost = new URL(
+      siteDomain.includes("://") ? siteDomain : `https://${siteDomain}`,
+    ).hostname
+      .toLocaleLowerCase()
+      .replace(/^www\./u, "");
+    return linkedHost === ownHost || linkedHost.endsWith(`.${ownHost}`);
   } catch {
     return false;
   }
@@ -156,21 +160,20 @@ export function briefSeo(
     denom = terms.reduce((s, t) => s + Math.max(1, t.domains), 0),
     covered = terms.reduce((s, t) => {
       const n = phraseCount(body, t.term);
-      const coverage =
-        t.max <= 0
-          ? n
-            ? 0
-            : 1
-          : n < t.min
-            ? Math.max(0, n / Math.max(1, t.min))
-            : 1;
+      // Presence is a useful coverage signal; repeating a term never earns
+      // extra points. Meaning and answer quality are reviewed separately.
+      const coverage = n > 0 ? 1 : 0;
       return s + Math.max(1, t.domains) * coverage;
     }, 0),
     over = terms.filter((t) => phraseCount(body, t.term) > t.max).length;
   const h2 = headingsAtLevel(body, 2),
-    sh = brief.subtopics.filter((t) => h2.some((h) => has(h, t))).length;
+    sh = brief.subtopics.filter((t) =>
+      h2.some((h) => has(h, t) && sectionHasExplanation(body, h)),
+    ).length;
   const lengths = sortBy(
-      brief.competitorTexts.map(count).filter((n) => n > 0),
+      (brief.competitorWordCounts ?? brief.competitorTexts.map(count)).filter(
+        (n) => n > 0,
+      ),
       (value) => value,
     ),
     lo = lengths.length
@@ -180,26 +183,21 @@ export function briefSeo(
       ? lengths[Math.ceil((lengths.length - 1) * 0.75)]
       : 1800,
     n = count(body),
-    depth =
-      n >= lo && n <= hi
-        ? 10
-        : n < lo
-          ? (10 * n) / Math.max(1, lo)
-          : (10 * hi) / n;
+    depth = n >= lo ? 10 : (10 * n) / Math.max(1, lo);
   return [
     check(
       "term-coverage",
       "Important term coverage",
       terms.length + " brief terms weighted by competitor prevalence.",
-      30,
-      denom ? (30 * covered) / denom : 0,
+      terms.length ? 15 : 0,
+      denom ? (15 * covered) / denom : 0,
     ),
     check(
       "term-ranges",
       "Terms within suggested ranges",
       over + " of " + terms.length + " terms exceed their range.",
-      10,
-      terms.length ? (10 * (terms.length - over)) / terms.length : 10,
+      terms.length ? 5 : 0,
+      terms.length ? (5 * (terms.length - over)) / terms.length : 0,
     ),
     topicPlacement(d, body),
     check(
@@ -218,10 +216,10 @@ export function briefSeo(
     ),
     check(
       "subtopics",
-      "Brief subtopics in H2s",
+      "Brief subtopics with explanations",
       sh + "/" + brief.subtopics.length + " subtopics covered.",
-      10,
-      brief.subtopics.length ? (10 * sh) / brief.subtopics.length : 10,
+      brief.subtopics.length ? 30 : 0,
+      brief.subtopics.length ? (30 * sh) / brief.subtopics.length : 0,
     ),
   ];
 }
@@ -230,6 +228,7 @@ export function aeo(
   d: ContentDraftInput,
   body: string,
   brief?: ContentBrief,
+  siteDomain?: string,
 ): ScoreCheck[] {
   const first = paras(body)[0] ?? "",
     opening = count(first),
@@ -250,7 +249,7 @@ export function aeo(
     return count(answer) >= 15;
   }).length;
   const external = linkTargets(body).some(
-      (url) => !isInternalLink(url, brief?.siteDomain),
+      (url) => !isInternalLink(url, brief?.siteDomain ?? siteDomain),
     ),
     entities = new Set(
       body
@@ -314,9 +313,9 @@ export function aeo(
     ),
     check(
       "sources",
-      "Support factual claims",
+      "Source links present",
       external
-        ? "Links to sources readers can check. Images do not count."
+        ? "Source links present; relevance and factual support still need editorial review."
         : "Link a reliable source for facts readers may want to check.",
       15,
       external ? 15 : 0,
@@ -352,4 +351,17 @@ export function aeo(
       freshness.passed ? freshness.weight : 0,
     ),
   ];
+}
+
+// A heading alone is not topic coverage. This measures presence of prose,
+// not correctness: semantic review handles whether it answers the question.
+function sectionHasExplanation(body: string, heading: string) {
+  const section = body.split(/\n(?=#{1,6}\s)/u).find(
+    (part) =>
+      part
+        .split("\n")[0]
+        ?.replace(/^#+\s*/u, "")
+        .trim() === heading,
+  );
+  return count((section ?? "").split("\n").slice(1).join(" ")) >= 15;
 }

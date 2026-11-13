@@ -47,7 +47,12 @@ export function freshnessCheck(
 // through the same day of the twelfth month, and a day after expires.
 export function freshWithinTwelveMonths(reviewed: string, now: Date): boolean {
   const parsed = new Date(`${reviewed}T00:00:00Z`);
-  if (Number.isNaN(parsed.getTime())) return false;
+  if (
+    Number.isNaN(parsed.getTime()) ||
+    parsed.toISOString().slice(0, 10) !== reviewed ||
+    parsed.getTime() > now.getTime()
+  )
+    return false;
   const ageMonths =
     (now.getUTCFullYear() - parsed.getUTCFullYear()) * 12 +
     (now.getUTCMonth() - parsed.getUTCMonth());

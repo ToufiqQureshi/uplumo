@@ -23,6 +23,7 @@ export type ContentBrief = {
   subtopics: string[];
   questions: string[];
   competitorTexts: string[];
+  competitorWordCounts?: number[];
 };
 type ContentScore = {
   score: number;
@@ -36,6 +37,7 @@ export function scoreContent(
   mode: EditorMode,
   draft: ContentDraftInput,
   brief?: ContentBrief,
+  siteDomain?: string,
 ): ContentScore {
   const body = draft.content.slice(0, 150000);
   let checks =
@@ -53,8 +55,8 @@ export function scoreContent(
               ].includes(c.id),
             ),
           ]
-        : staticSeo(draft, body)
-      : aeo(draft, body, brief);
+        : staticSeo(draft, body, siteDomain)
+      : aeo(draft, body, brief, siteDomain);
   // Checks that do not apply yet (no images, no brief questions) carry no
   // weight, and the score is scaled to the points that do apply.
   let score = Math.round(
@@ -75,12 +77,7 @@ export function scoreContent(
     checks = checks.map((c) => ({ ...c, earned: 0, passed: false }));
     return { score: 0, checks, blocksPublish: false, hasBrief: !!brief };
   }
-  scoreCap = seoScoreCap(
-    body,
-    draft.targetKeyword.trim(),
-    brief,
-    mode === "seo",
-  );
+  scoreCap = seoScoreCap(body, draft.targetKeyword.trim(), brief, true);
   if (scoreCap.cap !== undefined) {
     score = Math.min(score, scoreCap.cap);
   }

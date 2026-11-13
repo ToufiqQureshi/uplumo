@@ -4,6 +4,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { BillingUsage } from "@/client/features/billing/usageApi";
+import { FreeSeoEditorProvider } from "./FreeSeoEditorContext";
 import { BriefPanel } from "./BriefPanel";
 import { fetchSearchBrief, type SearchBrief } from "./contentEditorApi";
 import { EditorSessionProvider } from "./editor-session";
@@ -64,13 +65,15 @@ beforeEach(async () => {
     root.render(
       <QueryClientProvider client={client}>
         <EditorSessionProvider>
-          <BriefPanel
-            projectId="project-1"
-            keyword="seo"
-            content=""
-            brief={brief}
-            onBrief={() => {}}
-          />
+          <FreeSeoEditorProvider onDraftFieldChange={() => {}}>
+            <BriefPanel
+              projectId="project-1"
+              keyword="seo"
+              content=""
+              brief={brief}
+              onBrief={() => {}}
+            />
+          </FreeSeoEditorProvider>
         </EditorSessionProvider>
       </QueryClientProvider>,
     );

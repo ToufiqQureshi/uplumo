@@ -147,6 +147,8 @@ func (c *fakeBudgetClient) DoBudgeted(_ context.Context, organizationID string, 
 				return nil, fmt.Errorf("unexpected SERP request %s", body)
 			}
 			return c.serp, nil
+		case "/v3/dataforseo_labs/google/keyword_suggestions/live":
+			return []byte(`{"status_code":20000,"tasks":[{"status_code":20000,"result":[{"items":[]}]}]}`), nil
 		case "/v3/on_page/content_parsing/live":
 			link, _ := tasks[0]["url"].(string)
 			if payload, ok := c.pages[link]; ok {
@@ -192,7 +194,7 @@ func TestDataForSEOBriefProviderParsesEachPageSeparatelyAndBuildsTerms(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	if client.org != "org-9" || client.feature != spend.KeywordResearch || client.ceiling != billing.ContentBriefMaxUSD() || client.requestCount != 1+briefParses {
+	if client.org != "org-9" || client.feature != spend.KeywordResearch || client.ceiling != billing.ContentBriefMaxUSD() || client.requestCount != 2+briefParses {
 		t.Fatalf("provider budget = %+v", client)
 	}
 	if len(brief.Competitors) != briefParses || len(brief.Questions) != 1 || brief.Competitors[0].Headings[0] != "Crawl budget basics" {
@@ -241,7 +243,7 @@ func TestDataForSEOBriefProviderReadsPastUnreadableTopResults(t *testing.T) {
 	if err != nil || len(brief.Competitors) != 3 {
 		t.Fatalf("Fetch = %d competitors, err %v; want the 3 readable pages after 9 unreadable ones", len(brief.Competitors), err)
 	}
-	if want := 1 + briefParseAttempts; client.requestCount != want {
+	if want := 2 + briefParseAttempts; client.requestCount != want {
 		t.Fatalf("requests = %d, want %d: never more than %d parses", client.requestCount, want, briefParseAttempts)
 	}
 	if client.ceiling != billing.ContentBriefMaxUSD() {
@@ -257,8 +259,8 @@ func TestDataForSEOBriefProviderStopsAtEightReadablePages(t *testing.T) {
 	if _, err := (DataForSEOBriefProvider{Client: client}).Fetch(context.Background(), "org", BriefInput{Keyword: "saree", LocationCode: 2356, LanguageCode: "en"}); err != nil {
 		t.Fatal(err)
 	}
-	if client.requestCount != 1+briefParses {
-		t.Fatalf("requests = %d, want %d: stop parsing once %d pages are read", client.requestCount, 1+briefParses, briefParses)
+	if client.requestCount != 2+briefParses {
+		t.Fatalf("requests = %d, want %d: stop parsing once %d pages are read", client.requestCount, 2+briefParses, briefParses)
 	}
 }
 
