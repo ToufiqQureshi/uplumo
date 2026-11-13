@@ -15,9 +15,16 @@ export function briefMatchesTopic(brief: SearchBrief, topic: string) {
 }
 
 /** The shape the scoring engine reads (scoring.ts `ContentBrief`). */
-export function toScoringBrief(brief: SearchBrief): ContentBrief {
+export function toScoringBrief(
+  brief: SearchBrief,
+  siteDomain?: string,
+): ContentBrief {
   return {
     collectedAt: brief.fetchedAt,
+    siteDomain,
+    competitorWordCounts: brief.competitors.map(
+      (competitor) => competitor.wordCount,
+    ),
     terms: brief.terms,
     subtopics: brief.subtopics,
     questions: brief.questions,
@@ -54,14 +61,23 @@ export function briefForWriter(brief: SearchBrief | null): string {
   if (!brief) return "";
   const lines = [
     `Search brief for "${brief.keyword}" (top Google results).`,
-    "Terms and how often top pages use them:",
+    `Market: ${brief.locationCode}; language: ${brief.languageCode}; collected: ${brief.fetchedAt}.`,
+    "Keyword research (estimated monthly searches; difficulty 0–100; intent):",
+    ...(brief.keywords ?? [])
+      .slice(0, 8)
+      .map(
+        (item) =>
+          `- ${item.keyword}: ${item.searchVolume ?? "unknown"}; ${item.difficulty ?? "unknown"}; ${item.intent || "unknown"}`,
+      ),
+    "Terms and competitor frequency references (not required repetition counts):",
     ...brief.terms.map((term) => `- ${term.term}: ${term.min}-${term.max}`),
     "Questions people ask:",
     ...brief.questions.slice(0, 15).map((question) => `- ${question}`),
-    "Competitor headings:",
-    ...brief.competitors.flatMap((competitor) =>
-      competitor.headings.slice(0, 12).map((heading) => `- ${heading}`),
-    ),
+    "Source URLs and headings (not verified factual evidence):",
+    ...brief.competitors.flatMap((competitor) => [
+      `Source: ${competitor.url}`,
+      ...competitor.headings.slice(0, 5).map((heading) => `- ${heading}`),
+    ]),
   ];
   const text = lines.join("\n");
   return text.length > MAX_WRITER_BRIEF_CHARACTERS

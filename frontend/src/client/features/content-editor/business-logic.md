@@ -9,3 +9,11 @@
 - A blog theme is CSS only, at most 100 KB (`MaxThemeCSS`; the database checks it too), one per project. A `<` is rejected because the CSS sits inside a `<style>` tag in the preview frame and in exported files, where it could close the tag. The preview frame runs no scripts, so the CSS never styles or controls the app.
 - Exported .html escapes the title, description, CSS and JSON-LD so none of them can break out of their tags. Structured data is included only when the draft has no unsaved edits, so it always matches the exported text.
 - SEO and AEO scores do not award points for first-person wording because text alone cannot verify that an experience is real.
+
+## Evidence and score boundaries
+
+- Keyword metrics come from the selected market; missing metrics stay unknown, including a distinction between zero volume and missing volume. Research failure does not fabricate estimates.
+- Term coverage rewards presence once, not repeated keyword use. Competitor frequency is descriptive guidance. Subtopic checks require prose below a matching heading, but do not prove semantic completeness. Missing research checks contribute no available points.
+- Competitor depth uses original page word counts, not truncated excerpts. Own-site pages are excluded before deriving terms and headings.
+- SEO and AEO both check overlap against sampled competitor excerpts. This is not an internet-wide plagiarism or AI detector. Future and impossible dates do not satisfy freshness.
+- Editorial review supplies priorities, supporting passages, suggested edits and uncertainty. It cannot guarantee rankings or AI citations. Publishing still requires human fact checking.

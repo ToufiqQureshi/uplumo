@@ -8,6 +8,11 @@ export const writerActions: Array<{
   hint: string;
 }> = [
   {
+    id: "analyze",
+    label: "Analyze full draft",
+    hint: "Intent, missing answers, evidence and next edits",
+  },
+  {
     id: "write_section",
     label: "Write this section",
     hint: "Writes the part your cursor is in",
@@ -20,7 +25,7 @@ export const writerActions: Array<{
   {
     id: "tone_language",
     label: "Change tone or language",
-    hint: "Select text first · English, Hindi or Hinglish",
+    hint: "Select text first · your chosen language",
   },
   {
     id: "fact_check",
@@ -54,4 +59,4 @@ export const writerActions: Array<{
     hint: "Select text first",
   },
 ];
-export const PRIMARY_ACTIONS = 4;
+export const PRIMARY_ACTIONS = 5;

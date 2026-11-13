@@ -8,3 +8,5 @@
 6. Not on WordPress? In the Publish tab, copy the article as HTML for your site's editor, or download it as an .html page (upload it with your host's file manager) or a Markdown file.
 7. Paste or upload your blog's CSS under **My blog theme**. The preview can then show the article in your own design, and the .html download can carry that design.
 8. Edits autosave after a short pause. You can also use **Save draft**. WordPress publishing uses the last saved version and requires an existing site connection.
+
+Use the brief's keyword research to compare volume, difficulty and intent in your project market. Add relevant suggestions to your target topics; do not add unrelated high-volume terms. **Analyze full draft** reviews intent, missing answers and evidence without replacing the article. Revise the highest-priority findings, then review again only when needed. If published content does not gain visibility, check indexing and query/page performance in the existing search tools before buying another brief; the writing score is not a ranking measurement.

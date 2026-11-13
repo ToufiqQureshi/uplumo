@@ -1,3 +1,6 @@
+import { useRef } from "react";
+import { toast } from "sonner";
+import { ResearchInsights } from "./ResearchInsights";
 import { useMutation } from "@tanstack/react-query";
 import { RefreshCw, Search } from "lucide-react";
 import { cn } from "cn";
@@ -27,12 +30,14 @@ export function BriefPanel({
   projectId,
   keyword,
   content,
+  targetTopics,
   brief,
   onBrief,
 }: {
   projectId: string;
   keyword: string;
   content: string;
+  targetTopics?: string;
   brief: SearchBrief | null;
   onBrief: (brief: SearchBrief) => void;
 }) {
@@ -61,6 +66,7 @@ export function BriefPanel({
         ? `Up to ${formatCredits(maxCredits)} credits for a new brief · ${formatCredits(billingUsage.data.balanceCredits)} left.`
         : "Credit quote unavailable; brief actions are disabled.";
   const confirm = useConfirm();
+  const pending = useRef(false);
   const mutation = useMutation({
     mutationFn: (refresh: boolean) =>
       fetchSearchBrief({ data: { projectId, keyword: topic, refresh } }),
@@ -68,6 +74,15 @@ export function BriefPanel({
     onSuccess: onBrief,
     meta: { errorToast: false },
   });
+  const run = (refresh: boolean) => {
+    if (pending.current) return;
+    pending.current = true;
+    mutation.mutate(refresh, {
+      onSettled: () => {
+        pending.current = false;
+      },
+    });
+  };
   const current = brief && briefMatchesTopic(brief, topic) ? brief : null;
   const usage = current ? termUsage(current, content) : [];
   const articleHeadings = new Set(headings(content).map(normalizeText));
@@ -101,7 +116,7 @@ export function BriefPanel({
         <Button
           className="w-full"
           disabled={!topic || mutation.isPending || !creditQuoteReady}
-          onClick={() => mutation.mutate(false)}
+          onClick={() => run(false)}
         >
           <Search aria-hidden />
           {mutation.isPending ? "Reading the top pages…" : "Get search brief"}
@@ -159,7 +174,7 @@ export function BriefPanel({
                 ? `This reads the current top results again and can use up to ${formatCredits(maxCredits)} credits.`
                 : "This reads the current top results again. No credits are charged to this workspace.",
               confirmLabel: "Refresh brief",
-              onConfirm: () => mutation.mutate(true),
+              onConfirm: () => run(true),
             })
           }
         >
@@ -175,9 +190,13 @@ export function BriefPanel({
         </p>
       ) : null}
 
+      <ResearchInsights
+        brief={current}
+        targetTopics={targetTopics ?? keyword}
+      />
       <div>
         <h3 className="label-mono mb-2 text-muted-foreground">
-          Terms · used / range
+          Terms · used / competitor reference
         </h3>
         {usage.length ? (
           <ul className="flex flex-wrap gap-1.5">
@@ -191,7 +210,10 @@ export function BriefPanel({
                     usageTone[item.status],
                   )}
                   onClick={() => {
-                    if (!editor) return;
+                    if (!editor) {
+                      toast.info("Open the article editor to find this term.");
+                      return;
+                    }
                     let range: { from: number; to: number } | undefined;
                     editor.state.doc.descendants((node, position) => {
                       if (range || !node.isText || !node.text) return !range;
@@ -208,6 +230,10 @@ export function BriefPanel({
                     });
                     if (range) {
                       editor.chain().focus().setTextSelection(range).run();
+                    } else {
+                      toast.info(
+                        `“${item.term}” is not in the article. Add it only where it helps explain the topic.`,
+                      );
                     }
                   }}
                 >

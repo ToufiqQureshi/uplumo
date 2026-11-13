@@ -151,11 +151,11 @@ describe("content scoring fixtures", () => {
   });
 
   it.each([
-    ["below minimum", 1, 0.5],
+    ["present once", 1, 1],
     ["at minimum", 2, 1],
     ["within range", 5, 1],
     ["above maximum", 13, 1],
-  ])("scores brief term coverage correctly %s", (_name, uses, expected) => {
+  ])("rewards term presence, not repetition %s", (_name, uses, expected) => {
     const termBrief: ContentBrief = {
       ...brief,
       terms: [{ term: "crawlability", min: 2, max: 5, domains: 1 }],
@@ -170,10 +170,10 @@ describe("content scoring fixtures", () => {
     );
     expect(
       result.checks.find((item) => item.id === "term-coverage")?.earned,
-    ).toBe(30 * expected);
+    ).toBe(15 * expected);
     expect(
       result.checks.find((item) => item.id === "term-ranges")?.earned,
-    ).toBe(uses > 5 ? 0 : 10);
+    ).toBe(uses > 5 ? 0 : 5);
   });
 
   it("applies stuffing and short-draft caps to AEO too", () => {

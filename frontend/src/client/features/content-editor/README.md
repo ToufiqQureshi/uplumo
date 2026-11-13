@@ -22,3 +22,5 @@ The Content Editor manages project-scoped writing drafts, scores SEO and answer-
 - Brief, AI, and image routes: `POST /api/v1/projects/{projectId}/content/brief`, `POST /api/v1/projects/{projectId}/content/assistant/generate`, and `POST /api/v1/projects/{projectId}/content/images/upload`.
 - Blog theme routes: `POST /api/v1/projects/{projectId}/content/theme/get` and `/content/theme/save`.
 - Publishing routes: `POST /api/v1/projects/{projectId}/content/drafts/{draftId}/schema-preview`, `/publish`, and `/publication/get`.
+
+Keyword metrics and intent live in `ResearchInsights.tsx`; `evidence-scoring.test.ts` covers scoring regressions. Backend `brief_keywords.go` makes the single optional Labs request; `analysis_cache.go` stores private, coalesced full-draft reviews. Migration 00061 is required before serving review requests. Research can be partial when Labs does not support the market or the optional lookup fails.

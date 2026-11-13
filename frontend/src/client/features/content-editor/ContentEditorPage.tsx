@@ -94,6 +94,7 @@ export function ContentEditorPage({
     blankDraftForKeyword(initialKeyword),
   );
   const [draftId, setDraftId] = useState<string>();
+  const [editorSession, setEditorSession] = useState(0);
   const [savedSnapshot, setSavedSnapshot] = useState<ContentDraftInput>(() =>
     blankDraftForKeyword(initialKeyword),
   );
@@ -116,16 +117,17 @@ export function ContentEditorPage({
     [scoredDraft, scoredTopic],
   );
   const scoringBrief = useMemo(
-    () => (activeBrief ? toScoringBrief(activeBrief) : undefined),
-    [activeBrief],
+    () =>
+      activeBrief ? toScoringBrief(activeBrief, projectDomain) : undefined,
+    [activeBrief, projectDomain],
   );
   const seo = useMemo(
-    () => scoreContent("seo", scoreDraft, scoringBrief),
-    [scoreDraft, scoringBrief],
+    () => scoreContent("seo", scoreDraft, scoringBrief, projectDomain),
+    [scoreDraft, scoringBrief, projectDomain],
   );
   const aeo = useMemo(
-    () => scoreContent("aeo", scoreDraft, scoringBrief),
-    [scoreDraft, scoringBrief],
+    () => scoreContent("aeo", scoreDraft, scoringBrief, projectDomain),
+    [scoreDraft, scoringBrief, projectDomain],
   );
 
   useEffect(() => {
@@ -136,6 +138,7 @@ export function ContentEditorPage({
   const restoreDraft = useCallback(
     (saved?: ContentDraft, sent?: ContentDraftInput) => {
       const snapshot = saved ? asInput(saved) : blankDraft;
+      if (!sent) setEditorSession((session) => session + 1);
       setDraftId(saved?.id);
       setSavedSnapshot(snapshot);
       setDraft((now) => (!sent || sameDraft(now, sent) ? snapshot : now));
@@ -357,6 +360,7 @@ export function ContentEditorPage({
           </section>
 
           <ContentEditorSidePanel
+            editorSession={editorSession}
             className="order-1 xl:order-2"
             projectId={projectId}
             draft={draft}
@@ -364,7 +368,7 @@ export function ContentEditorPage({
             dirty={dirty}
             mode={mode}
             onModeChange={setMode}
-            brief={brief}
+            brief={activeBrief}
             onBrief={setBrief}
             tab={tab}
             onTabChange={setTab}

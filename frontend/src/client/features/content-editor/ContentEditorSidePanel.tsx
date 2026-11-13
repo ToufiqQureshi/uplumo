@@ -14,6 +14,7 @@ export type EditorTab = "score" | "brief" | "outline" | "ai" | "publish";
 
 export function ContentEditorSidePanel({
   className,
+  editorSession,
   projectId,
   draft,
   draftId,
@@ -35,6 +36,7 @@ export function ContentEditorSidePanel({
   onDeleteDraft,
 }: {
   className?: string;
+  editorSession: number;
   projectId: string;
   draft: ContentDraftInput;
   draftId?: string;
@@ -67,7 +69,7 @@ export function ContentEditorSidePanel({
   onSelectDraft: (draft: ContentDraftSummary) => void;
   onDeleteDraft: (draft: ContentDraftSummary) => void;
 }) {
-  const taskScope = `${projectId}:${draftId ?? "new"}:${draft.targetKeyword}`;
+  const taskScope = `${projectId}:${editorSession}:${draft.targetKeyword}`;
   const [writingTask, setWritingTask] = useState<{
     id: string;
     scope: string;
@@ -138,6 +140,7 @@ export function ContentEditorSidePanel({
             projectId={projectId}
             keyword={primaryTargetTopic(draft.targetKeyword)}
             content={draft.content}
+            targetTopics={draft.targetKeyword}
             brief={brief}
             onBrief={onBrief}
           />
@@ -167,26 +170,28 @@ export function ContentEditorSidePanel({
             )}
           </section>
         ) : null}
-        {tab === "ai" ? (
-          <section className="space-y-3 rounded-xl border bg-card p-4">
-            <div>
-              <h2 className="font-medium">AI writing help</h2>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Optional; AI actions use workspace credits.
-              </p>
-            </div>
-            <WriterAssistant
-              projectId={projectId}
-              draft={draft}
-              mode={task && writingTask ? writingTask.mode : mode}
-              task={task}
-              onClearTask={() => setWritingTask(null)}
-              brief={briefForWriter(brief)}
-              disabled={editorBusy}
-              scope={taskScope}
-            />
-          </section>
-        ) : null}
+        <section
+          hidden={tab !== "ai"}
+          className="space-y-3 rounded-xl border bg-card p-4"
+        >
+          <div>
+            <h2 className="font-medium">AI writing help</h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Optional; AI actions use workspace credits.
+            </p>
+          </div>
+          <WriterAssistant
+            key={taskScope}
+            projectId={projectId}
+            draft={draft}
+            mode={task && writingTask ? writingTask.mode : mode}
+            task={task}
+            onClearTask={() => setWritingTask(null)}
+            brief={briefForWriter(brief)}
+            disabled={editorBusy}
+            scope={taskScope}
+          />
+        </section>
         {tab === "publish" ? (
           <PublishTabPanel
             projectId={projectId}

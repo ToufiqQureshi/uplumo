@@ -9,7 +9,7 @@
 ## Paid actions
 
 - Each explicit AI action click sends one `POST /content/assistant/generate` with an idempotency key. The backend spend guard settles the provider cost, capped at 15 credits per action; the response reports credits used for the toast. The suggestion changes the draft only after the writer chooses Insert or Replace.
-- Search briefs require an eligible paid plan; a matching cached brief uses no extra credits. A cache miss or confirmed Refresh sends one `POST /content/brief`, which makes one depth-30 DataForSEO SERP call and parses up to 16 candidate pages to find 8 readable pages. The displayed maximum and provider hold use the same billing catalog entry; extra parse attempts are covered by Uplumo. The shared brief cache lasts 30 days.
+- Search briefs require an eligible paid plan; a matching cached brief uses no extra credits. A cache miss or confirmed Refresh sends one `POST /content/brief`, which makes one depth-30 DataForSEO SERP call and parses up to 16 candidate pages to find 8 readable pages. The displayed maximum and provider hold use the same billing catalog entry; all 16 parse attempts are included in the ceiling. For supported Labs markets, one keyword-suggestions call (20 suggestions plus seed) supplies volume, difficulty and intent together; there is no separate intent call. The shared brief cache lasts 30 days. Concurrent refreshes and refreshes within one minute reuse the same result. Maximum external calls per fresh brief: 1 SERP + 16 page parses + 1 keyword lookup = 18; parsing stops at 8 usable pages. Unsupported markets skip the keyword lookup.
 - Neither action is triggered by page load, tab change, focus, or rerender. Failed paid requests are not retried automatically.
 
 ## Export and blog theme
@@ -23,3 +23,7 @@ All of this is free: no provider call, no credits.
 ## WordPress
 
 The Publish tab reads connection and publication status. After a WordPress connection exists and the draft is saved, the writer explicitly chooses **Send as draft** or **Publish now**. `sitepublish.Service.Publish` copies each unique article image when needed, renders the article, saves the post, then adds supported schema. A matching leading body H1 is omitted from preview and publish output; the saved Markdown remains unchanged.
+
+## Full-draft review
+
+Analyze full draft sends the full document and up to 6,000 characters of brief evidence. Oversized inputs are refused before the provider call. Reports are read-only and must be checked by the writer. Identical workspace, document, research and instructions reuse a private seven-day PostgreSQL report; concurrent requests acquire one advisory lock before any model call or credit hold. Different workspaces never share reports. Switching tools or completing the first autosave preserves the displayed result. Opening another draft clears it.

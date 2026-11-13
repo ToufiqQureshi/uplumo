@@ -28,7 +28,7 @@ const (
 	briefCacheTTL        = 30 * 24 * time.Hour
 	briefDepth           = billing.ContentBriefSERPDepth
 	briefParses          = billing.ContentBriefReadPageLimit
-	briefParseAttempts   = 16
+	briefParseAttempts   = billing.ContentBriefParseAttempts
 	briefMinParsed       = 3
 	briefMaxQuestions    = 100
 	briefMaxHeadings     = 100
@@ -54,14 +54,16 @@ type BriefInput struct {
 
 // ContentBrief contains provider evidence used by the editor and writer.
 type ContentBrief struct {
-	Keyword      string            `json:"keyword"`
-	LocationCode int               `json:"locationCode"`
-	LanguageCode string            `json:"languageCode"`
-	FetchedAt    time.Time         `json:"fetchedAt"`
-	Questions    []string          `json:"questions"`
-	Competitors  []BriefCompetitor `json:"competitors"`
-	Terms        []BriefTerm       `json:"terms"`
-	Subtopics    []string          `json:"subtopics"`
+	Keyword        string            `json:"keyword"`
+	LocationCode   int               `json:"locationCode"`
+	LanguageCode   string            `json:"languageCode"`
+	FetchedAt      time.Time         `json:"fetchedAt"`
+	Questions      []string          `json:"questions"`
+	Competitors    []BriefCompetitor `json:"competitors"`
+	Terms          []BriefTerm       `json:"terms"`
+	Subtopics      []string          `json:"subtopics"`
+	Keywords       []BriefKeyword    `json:"keywords,omitempty"`
+	ResearchStatus string            `json:"researchStatus,omitempty"`
 }
 
 // BriefTerm is a phrase most competitor pages use, with the per-page use
@@ -136,6 +138,9 @@ func (s BriefService) Get(ctx context.Context, organizationID string, input Brie
 	brief.Competitors = slices.DeleteFunc(slices.Clone(brief.Competitors), func(item BriefCompetitor) bool {
 		return ownDomain != "" && sameOrSubdomain(hostFromURL(item.URL), ownDomain)
 	})
+	// Recompute prevalence after filtering the customer's own pages.
+	brief.Terms = briefTerms(brief.Competitors)
+	brief.Subtopics = briefSubtopics(brief.Competitors)
 	return brief, nil
 }
 
@@ -159,7 +164,7 @@ func validateBriefInput(input BriefInput) (BriefInput, string, string, error) {
 		return BriefInput{}, "", "", &ValidationError{Message: "Enter a valid website domain."}
 	}
 	clean := BriefInput{Keyword: keyword, LocationCode: input.LocationCode, LanguageCode: language, OwnDomain: ownDomain}
-	keyBytes, _ := json.Marshal([]any{strings.ToLower(keyword), input.LocationCode, language})
+	keyBytes, _ := json.Marshal([]any{"brief-v2", strings.ToLower(keyword), input.LocationCode, language})
 	digest := sha256.Sum256(keyBytes)
 	return clean, hex.EncodeToString(digest[:]), ownDomain, nil
 }
@@ -196,6 +201,14 @@ func sameOrSubdomain(host, domain string) bool {
 }
 
 func validateBriefResult(result ContentBrief) error {
+	if len(result.Keywords) > billing.ContentBriefKeywordLimit+1 {
+		return errors.New("SERP brief returned too many keywords")
+	}
+	for _, keyword := range result.Keywords {
+		if strings.TrimSpace(keyword.Keyword) == "" || utf8.RuneCountInString(keyword.Keyword) > 500 {
+			return errors.New("SERP brief returned an invalid keyword")
+		}
+	}
 	if len(result.Questions) > briefMaxQuestions || len(result.Competitors) > briefParses || len(result.Terms) > briefMaxTerms || len(result.Subtopics) > briefMaxSubtopics {
 		return errors.New("SERP brief result exceeded the supported limits")
 	}
@@ -251,11 +264,14 @@ func (p DataForSEOBriefProvider) Fetch(ctx context.Context, organizationID strin
 		}
 		brief.Questions = extractBriefQuestions(serpResult)
 		urls := make([]string, 0, briefParseAttempts)
+		seenHosts := map[string]bool{}
 		for _, item := range extractOrganicItems(serpResult) {
 			link, _ := item["url"].(string)
-			if hostFromURL(link) == "" || slices.Contains(urls, link) {
+			host := hostFromURL(link)
+			if host == "" || seenHosts[host] {
 				continue
 			}
+			seenHosts[host] = true
 			urls = append(urls, link)
 			if len(urls) == briefParseAttempts {
 				break
@@ -287,6 +303,9 @@ func (p DataForSEOBriefProvider) Fetch(ctx context.Context, organizationID strin
 		}
 		brief.Terms = briefTerms(brief.Competitors)
 		brief.Subtopics = briefSubtopics(brief.Competitors)
+		// One bounded call supplies seed metrics, intent and long-tail suggestions.
+		// Failure is partial data, never a retry of the already-paid SERP.
+		brief.Keywords, brief.ResearchStatus = fetchBriefKeywords(ctx, request, input)
 		return nil
 	})
 	if recording, ok := errors.AsType[*dataforseo.CostRecordingError](err); ok && errors.Is(err, recording) && len(brief.Competitors) >= briefMinParsed {

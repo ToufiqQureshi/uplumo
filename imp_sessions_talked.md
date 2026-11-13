@@ -1,3 +1,9 @@
+## 2026-11-13 — Content editor evidence upgrade
+
+- Owner approved one PR: stronger SEO/AEO guidance, useful DataForSEO research, no unnecessary paid calls, functioning editor controls.
+- Added keyword metrics/intent, read-only cached full-draft reviews, score corrections, refresh coalescing and autosave result preservation.
+- No merge/deploy requested in this task. Browser verification remains gated by environment support; see PR validation.
+
 # Important session talks
 
 ## 12 Nov 2026: refocus on agencies, cut features, new UI
@@ -15,7 +21,7 @@
 - Owner: "nothing is accurate" on Analytics; then "pura accurate bana ... ek hi cheez bekkar nai honi chahiye ... phele qa test kar fir saare points cover kar".
 - Owner decisions: Uplumo's own tracker runs on public pages only, not the app (supersedes the 20 Oct app-wide tracking; GA4 stays on both). Delete Uplumo's own past app-path pageviews from its analytics site after deploy.
 - Built as PR #304 (tracker idle time, laptop-as-tablet, untied leads, "Not tracked" arrivals, ties, duplicate/empty cards removed). Not merged or deployed: waiting on owner.
-- Open: lead actions include subscription_checkout_agency/basic/business but not _pro; with app tracking off they stop arriving, owner may untick them.
+- Open: lead actions include subscription_checkout_agency/basic/business but not \_pro; with app tracking off they stop arriving, owner may untick them.
 
 What the owner (Toufiq) said to any AI agent: decisions, feelings,
 priorities, corrections, and what still waits on him. Read it after
@@ -112,6 +118,7 @@ priorities, corrections, and what still waits on him. Read it after
 - Owner: "pro plan me ab srif 3 sites allowed", "per site ka 999 for every plan", "free plan pe no addon", "bahar ke users ... koi nai chalara uplumo" (USD kept at $12), "bindaas change kar", new PR, then merge #277 and this PR, deploy and test from the UI.
 - Decisions: Pro 5 -> 3 websites. Pack `sites_1` = 1 website for ₹999 / $12 for 30 days, on Basic, Pro and Business; Free cannot buy. The Business 5-site pack is retired; running purchases keep their 30 days. Existing Pro workspaces keep up to 10 sites working (PauseAboveSites); only new sites stop at 3.
 - Paid calls: none; price shown = price charged (all copy reads the pack).
+
 ## 6 Nov 2026: Client site reports (one click, shareable link)
 
 - Owner: "ye to work hi nai karta", wants a Power BI-type A to Z site report the user builds and sends to a client as a clickable link; "user ko value dena ha", "UI ek dum mast".

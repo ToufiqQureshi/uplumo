@@ -16,7 +16,7 @@ test("a rapid AI writer double click sends one keyed request", async ({
   await page.getByLabel("Target topics", { exact: true }).fill("technical SEO");
   await page.getByLabel("Target topics", { exact: true }).press("Enter");
   await page.getByRole("tab", { name: "AI help" }).click();
-  await expect(page.getByText(/never more than 15/u)).toBeVisible();
+  await expect(page.getByText(/Each action uses up to 15/u)).toBeVisible();
   await page.locator("summary").filter({ hasText: "More AI actions" }).click();
   const outline = page.getByRole("button", { name: /^Make an outline/u });
   await expect(outline).toBeEnabled();
@@ -284,4 +284,35 @@ test("a refused autosave does not loop without a new edit or explicit retry", as
   await expect(title).toHaveValue("Corrected writing");
   expect(attempts).toHaveLength(2);
   expect(requests.filter((path) => paidEndpoints.test(path))).toEqual([]);
+});
+
+test("full draft review survives autosave and tool tabs without another paid call", async ({
+  page,
+}) => {
+  const requests: string[] = [];
+  const writerRequests: Record<string, unknown>[] = [];
+  await openEditor(page, requests, writerRequests);
+  await page.getByLabel(/Article title/).fill("A practical storage guide");
+  const article = page.locator('[contenteditable="true"]').first();
+  const content =
+    "Compare durability, recovery testing and costs before choosing storage.";
+  await article.fill(content);
+  await page.getByRole("tab", { name: "AI help" }).click();
+  await page.getByRole("button", { name: /^Analyze full draft/u }).click();
+  await expect(
+    page.getByLabel("Editorial review · verify findings"),
+  ).toHaveValue("## A useful outline");
+  await expect(page.getByText(/· Saved$/u)).toBeVisible();
+  await page.getByRole("tab", { name: "Score", exact: true }).click();
+  await page.getByRole("tab", { name: "AI help" }).click();
+  await expect(
+    page.getByLabel("Editorial review · verify findings"),
+  ).toHaveValue("## A useful outline");
+  await expect(
+    page.getByRole("button", { name: "Insert at saved cursor" }),
+  ).toBeDisabled();
+  await expect(article).toHaveText(content);
+  expect(writerRequests).toHaveLength(1);
+  expect(writerRequests[0]?.action).toBe("analyze");
+  expect(writerRequests[0]?.content).toContain(content);
 });
