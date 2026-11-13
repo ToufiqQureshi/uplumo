@@ -1,11 +1,18 @@
 import { expect, test } from "@playwright/test";
 import { installGrowthFixtures } from "./search-growth.fixtures";
+import { mockPageImport } from "./page-import.fixtures";
 
 test("search growth stays explicit and carries evidence through save, analyst and editor", async ({
   page,
 }, testInfo) => {
   const { requests, paid, chatModes, growthInputs } =
     await installGrowthFixtures(page);
+  await mockPageImport(page, {
+    id: "imported-guide",
+    projectId: "e2e-project",
+    title: "Booking guide",
+    content: "## Imported section\n\nText copied from the live page.",
+  });
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/p/e2e-project/search-performance?view=conversions");
   const analyze = page.getByRole("button", { name: "Find opportunities" });
@@ -127,6 +134,9 @@ test("search growth stays explicit and carries evidence through save, analyst an
     page.getByRole("heading", { name: "Improve an existing page" }),
   ).toBeVisible();
   await expect(page.getByText("Related queries: booking guide")).toBeVisible();
+  // The page's own text opened as a draft, not an empty editor.
+  await expect(page).toHaveURL(/draft=imported-guide/u);
+  await expect(page.getByText("Text copied from the live page.")).toBeVisible();
   expect(paid).toEqual([]);
   await page.goto("/p/e2e-project/search-performance?view=conversions");
   await page.getByRole("button", { name: "Find opportunities" }).click();

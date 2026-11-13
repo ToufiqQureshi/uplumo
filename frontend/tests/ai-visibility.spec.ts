@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { countBy } from "remeda";
 import { mockAiVisibility, paidCalls } from "./ai-visibility.fixtures";
+import { mockPageImport } from "./page-import.fixtures";
 
 const base = "/p/test-project/ai-visibility";
 
@@ -8,6 +9,12 @@ test("every AI visibility tab and button works, and only clicks buy", async ({
   page,
 }) => {
   const log = await mockAiVisibility(page);
+  await mockPageImport(page, {
+    id: "imported-pricing",
+    projectId: "test-project",
+    title: "Example pricing",
+    content: "## Plans\n\nPricing text from the live page.",
+  });
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto(base);
 
@@ -75,6 +82,19 @@ test("every AI visibility tab and button works, and only clicks buy", async ({
     await proof.getByRole("button", { name: "Close answer" }).click();
     await expect(proof).toBeHidden();
   }
+
+  // A page of the customer's own site in an answer opens in the editor.
+  const named = page.getByRole("button", { name: /^ChatGPT on "cheap crm"/u });
+  await named.click();
+  await page
+    .getByRole("region", { name: "Saved answer" })
+    .getByRole("button", { name: /Improve this page/u })
+    .click();
+  await expect(page).toHaveURL(/content-editor\?draft=imported-pricing/u);
+  await expect(
+    page.getByText("Pricing text from the live page."),
+  ).toBeVisible();
+  await page.goBack();
 
   // Opportunities: pick a gap, then the paid action plan (one call).
   await nav.getByRole("link", { name: "Opportunities", exact: true }).click();
