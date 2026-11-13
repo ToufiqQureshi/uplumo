@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -335,7 +336,22 @@ func TestClientDisconnectKeepsThePartialReply(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		resp := server.post(ctx, t, "chat", chatBody("session-1", "m1", "hello"))
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, server.URL+"/api/v1/projects/project-1/sam/sessions/chat", strings.NewReader(chatBody("session-1", "m1", "hello")))
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := http.DefaultClient.Do(req)
+		// The client may leave before or after the stream starts; both are
+		// a disconnect, and both must keep the partial reply.
+		if errors.Is(err, context.Canceled) {
+			return
+		}
+		if err != nil {
+			t.Error(err)
+			return
+		}
 		_, _ = io.Copy(io.Discard, resp.Body)
 		if err := resp.Body.Close(); err != nil {
 			t.Errorf("close SAM response: %v", err)

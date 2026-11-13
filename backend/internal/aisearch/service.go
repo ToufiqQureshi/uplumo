@@ -495,8 +495,7 @@ func (s *Service) loadPrompt(ctx context.Context, organizationID, projectID stri
 	}
 	uncachedInput := in
 	uncachedInput.Models = uncachedModels
-	// One bounded retry is made when a web-search answer did not search.
-	err := s.provider.client.DoBudgeted(ctx, organizationID, spend.AIVisibility, dataforseo.PromptExplorerCeilingUSD(len(uncachedModels), in.WebSearch), func(request dataforseo.DoBudgetedRequest) error {
+	err := s.provider.client.DoBudgeted(ctx, organizationID, spend.AIVisibility, dataforseo.PromptExplorerCeilingUSD(len(uncachedModels)), func(request dataforseo.DoBudgetedRequest) error {
 		var runErr error
 		var fresh PromptExplorerResult
 		fresh, runErr = s.explorePrompt(ctxWithBudget(ctx, request), organizationID, projectID, uncachedInput)
@@ -594,23 +593,8 @@ func (s *Service) runModel(ctx context.Context, organizationID, projectID, model
 	if err != nil {
 		return nil, err
 	}
-	// web_search only permits searching, and some models cannot be forced to:
-	// they often answer from memory with no citations. The browse decision is
-	// random per call, so one paid retry noticeably raises the odds of a cited
-	// answer. The retry is kept only if it searched; if it fails, the first
-	// answer, already paid for, stands.
-	if in.WebSearch && (response.WebSearch == nil || !*response.WebSearch) {
-		retried, err := s.provider.llmResponse(ctx, request)
-		switch {
-		case blocking(ctx, err):
-			return nil, err
-		case err != nil:
-			s.logger.WarnContext(ctx, "prompt explorer web search retry failed", "model", model, "err", err)
-		case retried.WebSearch != nil && *retried.WebSearch:
-			response = retried
-		}
-	}
-
+	// web_search only permits searching; a model may still answer from memory.
+	// That answer is shown as it is: a paid call is never repeated on its own.
 	shaped := shapeSuccess(model, response)
 	if country != "" {
 		shaped.WebSearchCountryCode = &country

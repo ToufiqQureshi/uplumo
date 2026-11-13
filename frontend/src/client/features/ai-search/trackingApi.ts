@@ -70,6 +70,7 @@ const trackingStateSchema = z.object({
   runs: z.array(run),
   providerConfigured: z.boolean(),
   visibility: visibilityMetricsSchema.nullable().default(null),
+  maxPrompts: z.number().int().positive(),
 });
 export const trackingEstimateSchema = z.object({
   answers: z.number(),

@@ -45,6 +45,7 @@ async function installAnalytics(page: Page, failClicks = false) {
             count: 0,
             visitors: 0,
             previousVisitors: 0,
+            untiedVisitors: 0,
             actions: [],
             pages: [],
           },
@@ -89,6 +90,7 @@ async function installAnalytics(page: Page, failClicks = false) {
                   clicks: 2,
                   visitorDays: 1,
                   arrivals: 0,
+                  destinationTracked: false,
                 }
               : {
                   page: "/services",
@@ -99,6 +101,7 @@ async function installAnalytics(page: Page, failClicks = false) {
                   clicks: 8,
                   visitorDays: 5,
                   arrivals: 0,
+                  destinationTracked: false,
                 },
           ],
           hasMore: !next,

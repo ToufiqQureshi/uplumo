@@ -135,6 +135,19 @@ export async function mockAiVisibility(page: Page): Promise<ApiLog> {
         languageCode: "en",
         createdAt: now,
       };
+    else if (path === "/api/v1/projects/list")
+      body = [
+        {
+          id: "test-project",
+          name: "Test site",
+          domain: "example.com",
+          locationCode: 2840,
+          languageCode: "es",
+          createdAt: now,
+        },
+      ];
+    else if (path === "/api/v1/config/content-writer-status")
+      body = { configured: true, message: "", maxCreditsPerAction: 12 };
     else if (path === "/api/v1/billing/credits")
       body = {
         plan: "business",
@@ -152,6 +165,7 @@ export async function mockAiVisibility(page: Page): Promise<ApiLog> {
         nextCheckAt: null,
         runs: [run("r2", 1), run("r1", 0)],
         providerConfigured: true,
+        maxPrompts: 3,
       };
     else if (path.endsWith("/tracking/save"))
       body = {
@@ -159,6 +173,7 @@ export async function mockAiVisibility(page: Page): Promise<ApiLog> {
         nextCheckAt: null,
         runs: [run("r2", 1), run("r1", 0)],
         providerConfigured: true,
+        maxPrompts: 3,
       };
     else if (path.endsWith("/tracking/estimate"))
       body = { answers: 4, credits: 4, monthlyCredits: 18, ceiling: true };

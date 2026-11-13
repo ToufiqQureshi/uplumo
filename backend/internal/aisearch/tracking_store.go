@@ -55,7 +55,7 @@ func (s *Tracking) Save(ctx context.Context, org, project string, c TrackingConf
 
 // State reads the owning workspace's configuration and recent run summaries.
 func (s *Tracking) State(ctx context.Context, org, project string) (TrackingState, error) {
-	out := TrackingState{Runs: []TrackingRun{}, ProviderConfigured: s.Search != nil}
+	out := TrackingState{Runs: []TrackingRun{}, ProviderConfigured: s.Search != nil, MaxPrompts: MaxTrackedPrompts}
 	var raw []byte
 	err := s.DB.QueryRow(ctx, `SELECT configuration,next_check_at FROM go_ai_trackers WHERE organization_id=$1 AND project_id=$2`, org, project).Scan(&raw, &out.NextCheckAt)
 	if errors.Is(err, pgx.ErrNoRows) {

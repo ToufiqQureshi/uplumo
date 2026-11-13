@@ -6,6 +6,12 @@
 
 # Important session talks
 
+## 13 Nov 2026 (later): #310 and #311 live; flagged issues fixed
+
+- Owner said "merge it bro" (#310), then merged #311 himself; both deployed and checked (readyz 200).
+- Owner: "fix all issue in one pr jaldi". Fixed in one PR: Prompt Explorer no longer buys a second answer when the first did not search (max shown halves); the writer's credit ceiling, the 30-question tracker limit and the market language come from the server, not the browser; "en-IN" number/date formats in customer screens follow the viewer's locale; 4 analytics-audience browser tests had stale fixtures; the SAM disconnect test was flaky.
+- Still waiting for owner: the cut list (site publishing, local, analytics).
+
 ## 13 Nov 2026: content editor stays; open any page in it
 
 - Owner: "content editor main features mese ek ha ... kahi se bhi content sidha one click sidha uska saaraa content editor me khulna chahiye isko nai hata sakte". Content editor is removed from the cut list.

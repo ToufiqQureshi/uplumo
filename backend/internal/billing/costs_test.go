@@ -42,7 +42,7 @@ func TestTypicalCostHintsAreNotBelowWhatALiveClickBilled(t *testing.T) {
 func TestPublishedMaximumsMatchTheirWorstCaseHolds(t *testing.T) {
 	want := map[string]int64{
 		ActionBrandLookup:    CreditsForUSD(dataforseo.BrandLookupCeilingUSD(2, true)),
-		ActionPromptExplorer: CreditsForUSD(dataforseo.PromptExplorerCeilingUSD(4, true)),
+		ActionPromptExplorer: CreditsForUSD(dataforseo.PromptExplorerCeilingUSD(4)),
 	}
 	for _, cost := range ActionCosts() {
 		if cost.Feature == spend.SiteAudit && cost.Action == ActionJavaScriptRender {

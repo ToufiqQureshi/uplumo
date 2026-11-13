@@ -1,3 +1,4 @@
+import { queryOptions } from "@tanstack/react-query";
 import { ApiError, apiRequest } from "@/client/lib/uplumoApi";
 import { z } from "zod";
 import type { ContentDraftInput } from "./scoring";
@@ -69,6 +70,14 @@ export function saveBlogTheme({
     { css },
   );
 }
+
+/** Whether AI writing is on, and the most one action can charge. */
+export const writerStatusQueryOptions = () =>
+  queryOptions({
+    queryKey: ["contentWriterStatus"],
+    queryFn: getContentWriterStatus,
+    staleTime: 60_000,
+  });
 
 export function getContentWriterStatus() {
   return apiRequest(

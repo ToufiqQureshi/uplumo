@@ -7,14 +7,16 @@ import { addQuestions, starterQuestions } from "../starterQuestions";
 /** Suggests local customer questions from what the business sells and where. */
 export function QuestionStarter({
   config,
+  maxPrompts,
   onChange,
 }: {
   config: TrackingConfig;
+  maxPrompts: number;
   onChange: (prompts: TrackingConfig["prompts"]) => void;
 }) {
   const [business, setBusiness] = useState("");
   const [city, setCity] = useState("");
-  const full = config.prompts.filter((p) => p.text.trim()).length >= 30;
+  const full = config.prompts.filter((p) => p.text.trim()).length >= maxPrompts;
   return (
     <div className="space-y-2 rounded-lg bg-muted p-3">
       <p className="text-sm font-medium">
@@ -48,6 +50,7 @@ export function QuestionStarter({
                   city,
                   competitors: config.competitors.map((c) => c.name),
                 }),
+                maxPrompts,
               ),
             )
           }

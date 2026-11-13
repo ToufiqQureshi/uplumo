@@ -123,10 +123,9 @@ export function KeywordAgentPage({ projectId }: { projectId: string }) {
 function CostNote() {
   return (
     <p className="text-xs text-muted-foreground">
-      Each answer costs at most {MAX_REPLY_CREDITS.toLocaleString("en-IN")}{" "}
-      credits, keyword data and AI together; you pay what it really uses,
-      usually far less. Questions about results you already have use no keyword
-      data.
+      Each answer costs at most {MAX_REPLY_CREDITS.toLocaleString()} credits,
+      keyword data and AI together; you pay what it really uses, usually far
+      less. Questions about results you already have use no keyword data.
     </p>
   );
 }

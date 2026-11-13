@@ -24,7 +24,7 @@ const CHANCE_STYLE: Record<ReportKeyword["chance"], string> = {
 };
 
 function formatNumber(value: number | null | undefined): string {
-  return value == null ? "—" : value.toLocaleString("en-IN");
+  return value == null ? "—" : value.toLocaleString();
 }
 
 export function KeywordReportView({

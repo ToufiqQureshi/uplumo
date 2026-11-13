@@ -129,7 +129,12 @@ type TrackingState struct {
 	Runs               []TrackingRun      `json:"runs"`
 	ProviderConfigured bool               `json:"providerConfigured"`
 	Visibility         *VisibilityMetrics `json:"visibility"`
+	// MaxPrompts is how many questions one project may track.
+	MaxPrompts int `json:"maxPrompts"`
 }
+
+// MaxTrackedPrompts is how many questions one project may track.
+const MaxTrackedPrompts = 30
 
 // Tracking reuses the existing project middleware, paid provider and jobs queue.
 type Tracking struct {
@@ -148,8 +153,8 @@ func (c *TrackingConfig) validate() error {
 		return badRequest("Enter a valid public website domain.")
 	}
 	c.Domain = target.Hostname
-	if len(c.Prompts) < 1 || len(c.Prompts) > 30 {
-		return badRequest("Save 1–30 questions per project.")
+	if len(c.Prompts) < 1 || len(c.Prompts) > MaxTrackedPrompts {
+		return badRequest(fmt.Sprintf("Save 1–%d questions per project.", MaxTrackedPrompts))
 	}
 	seen := map[string]bool{}
 	active := 0

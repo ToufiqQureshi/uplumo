@@ -59,15 +59,16 @@ describe("addQuestions", () => {
         addQuestions(
           [q(""), q("Best hotel")],
           [q("best hotel"), q("Cheap hotel")],
+          30,
         ),
       ),
     ).toEqual(["Best hotel", "Cheap hotel"]);
   });
 
   it("never goes over the tracker's question limit", () => {
-    const current = Array.from({ length: 29 }, (_, i) => q(`Question ${i}`));
-    const result = addQuestions(current, [q("New 1"), q("New 2")]);
-    expect(result).toHaveLength(30);
+    const current = Array.from({ length: 11 }, (_, i) => q(`Question ${i}`));
+    const result = addQuestions(current, [q("New 1"), q("New 2")], 12);
+    expect(result).toHaveLength(12);
     expect(result.at(-1)?.text).toBe("New 1");
   });
 });

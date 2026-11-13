@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Button } from "@/client/components/ui/button";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { trackingKey } from "@/client/features/ai-search/trackingApi";
-import { AiAction, InsightCard, MAX_AI_ACTION_CREDITS } from "./AiAction";
+import { AiAction, InsightCard, MaxAiCredits } from "./AiAction";
 import { insightsApi } from "./insightsApi";
 import { MOODS, sentimentSummary, topComplaint, type Mood } from "./sentiment";
 import { useLatestAnswers } from "./useLatestAnswers";
@@ -123,10 +123,7 @@ export function AiSentimentPage({ projectId }: { projectId: string }) {
               </Button>
             ) : null}
             {s.pending ? (
-              <span className="font-mono text-xs text-muted-foreground">
-                Up to {MAX_AI_ACTION_CREDITS} credits per click; answers that
-                don&rsquo;t name you are free
-              </span>
+              <MaxAiCredits suffix=" per click; answers that don’t name you are free" />
             ) : null}
           </div>
           {classify.isError ? (
