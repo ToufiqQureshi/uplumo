@@ -12,6 +12,7 @@ import {
 } from "./growthApi";
 import { takeAnalystDraft } from "@/client/features/sam/analystDraft";
 import { readSearchContext } from "@/client/features/content-editor/searchContext";
+import { importPageDraft } from "@/client/features/content-editor/contentEditorApi";
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -22,6 +23,13 @@ vi.mock("@tanstack/react-router", async (original) => ({
   Link: ({ children }: { children: ReactNode }) =>
     createElement("span", null, children),
 }));
+vi.mock(
+  "@/client/features/content-editor/contentEditorApi",
+  async (original) => ({
+    ...(await original<object>()),
+    importPageDraft: vi.fn(),
+  }),
+);
 vi.mock("./growthApi", async (original) => ({
   ...(await original<object>()),
   analyzeGrowth: vi.fn(),
@@ -123,6 +131,17 @@ beforeEach(() => {
   vi.mocked(analyzeGrowth).mockResolvedValue(fixture());
   vi.mocked(listGrowthActions).mockResolvedValue([]);
   vi.mocked(saveGrowthAction).mockResolvedValue({ id: "action-a" });
+  vi.mocked(importPageDraft).mockResolvedValue({
+    id: "draft-1",
+    projectId: "project-a",
+    title: "Guide",
+    targetKeyword: "",
+    slug: "guide",
+    metaDescription: "",
+    content: "Text",
+    createdAt: "2026-11-13T00:00:00Z",
+    updatedAt: "2026-11-13T00:00:00Z",
+  });
 });
 afterEach(async () => {
   if (root) await act(async () => root.unmount());
@@ -156,17 +175,23 @@ describe("Search growth action boundaries", () => {
     expect(takeAnalystDraft("project-b")).toBe("");
     expect(saveGrowthAction).not.toHaveBeenCalled();
   });
-  it("carries page and query evidence into the editor without modifying a draft", async () => {
+  it("opens the page's own draft in the editor with its query evidence", async () => {
     await mount();
     await click("Find opportunities");
     await click("Improve this page in editor");
     expect(readSearchContext("project-a")?.queries).toEqual(["booking guide"]);
     expect(readSearchContext("project-b")).toBeNull();
-    expect(navigate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        to: "/p/$projectId/content-editor",
-        search: { keyword: "booking guide", growth: "1" },
-      }),
+    expect(importPageDraft).toHaveBeenCalledWith(
+      "project-a",
+      "https://example.test/guide",
+    );
+    await vi.waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: "/p/$projectId/content-editor",
+          search: { draft: "draft-1", keyword: "booking guide", growth: "1" },
+        }),
+      ),
     );
   });
   it("keeps provider failure visible and does not retry the analysis", async () => {

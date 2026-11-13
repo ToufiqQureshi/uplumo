@@ -389,6 +389,12 @@ func NewHandler(d Deps) http.Handler {
 	projects.Mount(mux, projects.Deps{Logger: d.Logger, Service: d.Projects, WithSession: withSession, WithProjectAccess: func(next http.Handler) http.Handler { return requireProjectAccess(d.Logger, d.Auth, next) }})
 	if d.ContentEditor != nil {
 		contenteditor.Mount(mux, d.ContentEditor, d.ContentWriter, d.ContentImages, d.ContentImageLimiter, withSession, func(next http.Handler) http.Handler { return requireProjectAccess(d.Logger, d.Auth, next) })
+		contenteditor.MountImport(mux, &contenteditor.PageImporter{
+			Drafts: *d.ContentEditor,
+			// The SSRF guard refuses private and internal addresses at dial time.
+			Client: audit.NewGuard().NewClient(10 * time.Second),
+			Logger: d.Logger,
+		}, withSession, func(next http.Handler) http.Handler { return requireProjectAccess(d.Logger, d.Auth, next) })
 	}
 	var briefPlans contenteditor.BriefPlans
 	if d.Billing != nil {

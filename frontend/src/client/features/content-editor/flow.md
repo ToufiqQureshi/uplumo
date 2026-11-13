@@ -6,6 +6,10 @@
 2. Typing updates the local draft. After three seconds without an edit, one save request writes the current version; **Save draft** sends it immediately. These database requests do not use provider credits.
 3. Preview, score tabs, outline, metadata controls, and formatting run locally. Opening the page or changing tabs does not call a paid provider.
 
+## Open a live page: 0 paid calls
+
+"Edit in Content Editor" (Site Audit issues, AI visibility answer proof, Search Growth) → `POST .../content/drafts/import {url}` → `PageImporter`: the URL must be on the project's domain or its subdomains; a page already imported returns its draft unchanged and unfetched; otherwise the server fetches it through the audit SSRF guard (10 s, 2 MB, at most three redirects that stay on the site), keeps the title, meta description, headings, paragraphs, lists, quotes and links as Markdown (images, navigation, header and footer left out), saves a draft with `source_url`, and the browser opens `content-editor?draft=…`. Concurrent clicks share one fetch and one draft.
+
 ## Paid actions
 
 - Each explicit AI action click sends one `POST /content/assistant/generate` with an idempotency key. The backend spend guard settles the provider cost, capped at 15 credits per action; the response reports credits used for the toast. The suggestion changes the draft only after the writer chooses Insert or Replace.

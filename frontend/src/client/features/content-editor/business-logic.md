@@ -10,6 +10,13 @@
 - Exported .html escapes the title, description, CSS and JSON-LD so none of them can break out of their tags. Structured data is included only when the draft has no unsaved edits, so it always matches the exported text.
 - SEO and AEO scores do not award points for first-person wording because text alone cannot verify that an experience is real.
 
+## Opening live pages
+
+- Only the project's own domain and subdomains, so nobody copies another site's content into Uplumo; redirects off the site are refused.
+- Free: the server reads the page itself, through the same SSRF guard as the audit crawler (no private or internal addresses), with a 10 s timeout and a 2 MB limit.
+- One draft per page (`source_url` is unique per project): a second click never overwrites edits or creates copies, and counts toward the 100-draft limit only once.
+- Images are not copied, to avoid rights and size problems; text keeps its links.
+
 ## Evidence and score boundaries
 
 - Keyword metrics come from the selected market; missing metrics stay unknown, including a distinction between zero volume and missing volume. Research failure does not fabricate estimates.

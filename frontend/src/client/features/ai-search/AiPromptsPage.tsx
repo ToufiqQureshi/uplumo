@@ -14,6 +14,7 @@ import {
 } from "./aiVisibilityMetrics";
 import type { TrackingAnswer } from "./trackingApi";
 import { EngineName } from "./EngineName";
+import { EditPageButton } from "@/client/features/content-editor/EditPageButton";
 import { EngineLogo } from "@/client/components/BrandLogo";
 
 type Show = "all" | "gaps" | "named";
@@ -193,7 +194,11 @@ export function AiPromptsPage({
       </div>
 
       {selected ? (
-        <AnswerProof answer={selected} onClose={() => setOpen(null)} />
+        <AnswerProof
+          projectId={projectId}
+          answer={selected}
+          onClose={() => setOpen(null)}
+        />
       ) : null}
     </div>
   );
@@ -231,9 +236,11 @@ function Cell({
 
 /** The saved answer behind a cell: what AI said, who it named, what it cited. */
 function AnswerProof({
+  projectId,
   answer,
   onClose,
 }: {
+  projectId: string;
   answer: TrackingAnswer;
   onClose: () => void;
 }) {
@@ -322,20 +329,33 @@ function AnswerProof({
           <h3 className="text-sm font-semibold">Sources it trusted</h3>
           <ul className="flex flex-col gap-1 text-sm">
             {answer.citations.map((c) => (
-              <li key={c.url} className="min-w-0 truncate">
-                <a
-                  className="text-primary underline underline-offset-2"
-                  href={c.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {c.title ?? c.url}
-                </a>
-                <span className="text-muted-foreground">
-                  {" "}
-                  · {c.domain ?? c.source ?? ""}
-                  {c.matchedBrand ? " · your site" : ""}
+              <li
+                key={c.url}
+                className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1"
+              >
+                <span className="min-w-0 truncate">
+                  <a
+                    className="text-primary underline underline-offset-2"
+                    href={c.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {c.title ?? c.url}
+                  </a>
+                  <span className="text-muted-foreground">
+                    {" "}
+                    · {c.domain ?? c.source ?? ""}
+                    {c.matchedBrand ? " · your site" : ""}
+                  </span>
                 </span>
+                {c.matchedBrand ? (
+                  <EditPageButton
+                    projectId={projectId}
+                    url={c.url}
+                    variant="ghost"
+                    label="Improve this page"
+                  />
+                ) : null}
               </li>
             ))}
           </ul>

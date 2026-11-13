@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Button } from "@/client/components/ui/button";
 import { Input } from "@/client/components/ui/input";
@@ -8,6 +7,7 @@ import { Badge } from "@/client/components/ui/badge";
 import { QueryError } from "@/client/components/QueryState";
 import { safeHttpUrl } from "@/shared/safe-url";
 import { saveSearchContext } from "@/client/features/content-editor/searchContext";
+import { EditPageButton } from "@/client/features/content-editor/EditPageButton";
 import {
   saveGrowthAction,
   type GrowthPage,
@@ -31,8 +31,8 @@ export function GrowthPageCard({
 }) {
   const [note, setNote] = useState("");
   const [controlPage, setControlPage] = useState("");
-  const navigate = useNavigate();
-  function openEditor() {
+  // The editor's Search Growth panel reads this page's queries and reasons.
+  function saveContext() {
     try {
       saveSearchContext(projectId, {
         page: page.page,
@@ -43,17 +43,13 @@ export function GrowthPageCard({
         startDate: report.range.startDate,
         endDate: report.range.endDate,
       });
+      return true;
     } catch {
       toast.error(
         "Could not prepare this page's context. Allow tab storage and try again.",
       );
-      return;
+      return false;
     }
-    void navigate({
-      to: "/p/$projectId/content-editor",
-      params: { projectId },
-      search: { keyword: page.queries[0]?.query.slice(0, 200), growth: "1" },
-    });
   }
   const client = useQueryClient();
   const save = useMutation({
@@ -135,9 +131,17 @@ export function GrowthPageCard({
         <Button size="sm" variant="outline" onClick={onAnalyst}>
           Create AI improvement brief
         </Button>
-        <Button size="sm" variant="ghost" onClick={openEditor}>
-          Improve this page in editor
-        </Button>
+        {url ? (
+          <EditPageButton
+            projectId={projectId}
+            url={url}
+            growth
+            keyword={page.queries[0]?.query.slice(0, 200)}
+            variant="ghost"
+            label="Improve this page in editor"
+            onBeforeOpen={saveContext}
+          />
+        ) : null}
       </div>
       <GrowthClickDiagnosis projectId={projectId} report={report} page={page} />
       <details className="text-sm">

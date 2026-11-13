@@ -68,6 +68,16 @@ const answer = (
       title: "Best CRM 2026",
       matchedBrand: false,
     },
+    ...(own
+      ? [
+          {
+            url: "https://example.com/pricing",
+            domain: "example.com",
+            title: "Example pricing",
+            matchedBrand: true,
+          },
+        ]
+      : []),
   ],
   brands: brands(own, rival),
   recommended: rival ? [{ name: "Rival", position: 1 }] : [],

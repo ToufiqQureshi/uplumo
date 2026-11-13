@@ -211,6 +211,20 @@ export function getContentDraft({
   );
 }
 
+/**
+ * Opens a page of the project's own website as a draft: its title, headings,
+ * text and links. Free (the server reads the page itself); importing the
+ * same page again returns the existing draft with its edits.
+ */
+export function importPageDraft(projectId: string, url: string) {
+  return apiRequest(
+    `/api/v1/projects/${encodeURIComponent(projectId)}/content/drafts/import`,
+    draftSchema,
+    "POST",
+    { url },
+  );
+}
+
 export function saveContentDraft({
   data,
 }: {
