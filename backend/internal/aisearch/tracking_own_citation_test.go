@@ -21,17 +21,16 @@ func TestTrackingMarksOnlyTheCustomersOwnCitations(t *testing.T) {
 	if _, err := db.Exec(ctx, `INSERT INTO projects(id,organization_id,name) VALUES($1,$2,'Tracking')`, project, org); err != nil {
 		t.Fatal(err)
 	}
-	svc := &Tracking{DB: db, Plans: trackingPaidPlans{}}
+	svc := &Tracking{DB: db}
 	c := validTracking()
-	if err := svc.Save(ctx, org, project, c); err != nil {
+	run, answerID := "run-"+rand.Text(), "answer-"+rand.Text()
+	if _, err := db.Exec(ctx, `INSERT INTO go_ai_trackers(project_id,organization_id,configuration) VALUES($1,$2,'{"brand":"Acme","domain":"acme.com"}')`, project, org); err != nil {
 		t.Fatal(err)
 	}
-	run, err := svc.Start(ctx, org, project, "own-citation", false, 10)
-	if err != nil {
+	if _, err := db.Exec(ctx, `INSERT INTO go_ai_tracking_runs(id,project_id,organization_id,configuration,scope_key,trigger,status,request_key) VALUES($1,$2,$3,'{"brand":"Acme","domain":"acme.com"}','s','manual','running',$1)`, run, project, org); err != nil {
 		t.Fatal(err)
 	}
-	var answerID string
-	if err = db.QueryRow(ctx, `UPDATE go_ai_tracking_answers SET status='submitted' WHERE id=(SELECT id FROM go_ai_tracking_answers WHERE run_id=$1 LIMIT 1) RETURNING id`, run).Scan(&answerID); err != nil {
+	if _, err := db.Exec(ctx, `INSERT INTO go_ai_tracking_answers(id,run_id,prompt,topic,engine,status) VALUES($1,$2,'Which service?','General','chat_gpt','submitted')`, answerID, run); err != nil {
 		t.Fatal(err)
 	}
 	domain := func(s string) *string { return &s }
@@ -40,7 +39,7 @@ func TestTrackingMarksOnlyTheCustomersOwnCitations(t *testing.T) {
 		{URL: "https://other.com/", Domain: domain("other.com")},
 		{URL: "https://notacme.com/", Domain: domain("notacme.com")},
 	}
-	if err = svc.finishAnswer(ctx, answerID, c, "Acme and Other are good.", citations, nil, ""); err != nil {
+	if err := svc.finishAnswer(ctx, answerID, c, "Acme and Other are good.", citations, nil, ""); err != nil {
 		t.Fatal(err)
 	}
 	answers, err := svc.Answers(ctx, org, project, run)
