@@ -246,6 +246,14 @@ function AnswerProof({
 }) {
   const own = answer.brands[0];
   const rivals = answer.brands.slice(1).filter((b) => b.mentioned);
+  const ownSite = (own?.domain ?? "").toLowerCase().replace(/^www\./u, "");
+  const isOwnPage = (c: TrackingAnswer["citations"][number]) => {
+    const site = (c.domain ?? "").toLowerCase().replace(/^www\./u, "");
+    return (
+      c.matchedBrand ||
+      (ownSite !== "" && (site === ownSite || site.endsWith(`.${ownSite}`)))
+    );
+  };
   return (
     <section
       aria-label="Saved answer"
@@ -345,10 +353,10 @@ function AnswerProof({
                   <span className="text-muted-foreground">
                     {" "}
                     · {c.domain ?? c.source ?? ""}
-                    {c.matchedBrand ? " · your site" : ""}
+                    {isOwnPage(c) ? " · your site" : ""}
                   </span>
                 </span>
-                {c.matchedBrand ? (
+                {isOwnPage(c) ? (
                   <EditPageButton
                     projectId={projectId}
                     url={c.url}

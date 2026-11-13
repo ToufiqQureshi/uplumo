@@ -99,6 +99,17 @@ test("every AI visibility tab and button works, and only clicks buy", async ({
   // Opportunities: pick a gap, then the paid action plan (one call).
   await nav.getByRole("link", { name: "Opportunities", exact: true }).click();
   await page.getByRole("button", { name: /best crm for small teams/u }).click();
+  // Re-check carries the question and brand into the form, and buys nothing.
+  await page.getByText("Re-check in Prompt Explorer").click();
+  await expect(page.getByLabel("Prompt")).toHaveValue(
+    "best crm for small teams",
+  );
+  await expect(page.getByLabel("Highlight brand (optional)")).toHaveValue(
+    "Example",
+  );
+  expect(paidCalls(log)).toEqual([]);
+  await page.goBack();
+  await page.getByRole("button", { name: /best crm for small teams/u }).click();
   // The ceiling shown is the server's; the plan is written in the market's language.
   await expect(
     page.getByText("Up to 12 credits, charged at actual cost").first(),
@@ -181,6 +192,10 @@ test("every AI visibility tab and button works, and only clicks buy", async ({
   await expect
     .poll(() => log.calls.some((p) => p.endsWith("/tracking/runs/r1")))
     .toBe(true);
+  // The answers sit far below the table; the click brings them into view.
+  await expect(
+    page.getByRole("heading", { name: "Captured answers & citations" }),
+  ).toBeInViewport();
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export saved results" }).click();
   expect((await download).suggestedFilename()).toBe(

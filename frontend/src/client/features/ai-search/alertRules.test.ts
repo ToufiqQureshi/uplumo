@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { visibilityAlerts } from "./visibilityAlerts";
+import { visibilityAlerts } from "./alertRules";
 import type { TrackingAnswer } from "./trackingApi";
 
 function answer(

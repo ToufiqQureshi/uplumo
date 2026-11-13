@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { TrackingAnswer } from "@/client/features/ai-search/trackingApi";
 import { buildNextActions } from "./nextActions";
-import { promptGaps } from "./opportunities";
+import { excerptAround, promptGaps } from "./opportunities";
 import { addPrompts, parsePromptIdeas } from "./promptIdeas";
 import { sentimentSummary } from "./sentiment";
 
@@ -161,6 +161,20 @@ describe("promptGaps", () => {
     );
     expect(gaps).toHaveLength(1);
     expect(gaps[0].sources).toEqual(["zomato.com"]);
+  });
+
+  it("quotes whole lines from where the rival is named, never mid-word", () => {
+    const text = [
+      "Intro line that is long enough to push the rival past eighty characters.",
+      "### Prices",
+      "- **Rival School** – 3 000 zł, [offer](https://rival.example/?utm=x).",
+      "- Another line.",
+    ].join("\n");
+    expect(excerptAround(text, "Rival School")).toBe(
+      "- **Rival School** – 3 000 zł, [offer](https://rival.example/?utm=x).\n- Another line.",
+    );
+    expect(excerptAround("ść ".repeat(300), "nobody")).toMatch(/^ść.*…$/su);
+    expect(excerptAround("", "x")).toBe("");
   });
 });
 

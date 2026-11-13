@@ -155,7 +155,17 @@ export function PromptTrackingPage({ projectId }: { projectId: string }) {
                   <td>{pct(r.mentioned, r.answered)}</td>
                   <td>{pct(r.cited, r.answered)}</td>
                   <td>
-                    <Button variant="ghost" onClick={() => setSelected(r.id)}>
+                    <Button
+                      variant="ghost"
+                      aria-pressed={r.id === runId}
+                      onClick={() => {
+                        setSelected(r.id);
+                        // The answers render far below; take the reader there.
+                        document
+                          .getElementById("captured-answers")
+                          ?.scrollIntoView({ behavior: "smooth" });
+                      }}
+                    >
                       View answers
                     </Button>
                   </td>
@@ -182,7 +192,10 @@ export function PromptTrackingPage({ projectId }: { projectId: string }) {
         />
       ) : null}
       {runId ? (
-        <section className="space-y-4 rounded-xl border p-5">
+        <section
+          id="captured-answers"
+          className="scroll-mt-4 space-y-4 rounded-xl border p-5"
+        >
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">
               Captured answers & citations

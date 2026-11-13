@@ -207,6 +207,45 @@ func TestImportPageRefusesAndExplains(t *testing.T) {
 	}
 }
 
+// A project created without a domain (the signup "Default" project) still
+// knows its site from the AI tracker or its latest audit.
+func TestImportPageFallsBackToTheSiteTheProjectWorksOn(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	f := newImportFixture(ctx, t, 2*time.Second)
+	f.site.pages["example.test/guide"] = html200(importArticle)
+	f.site.pages["tracked.test/guide"] = html200(importArticle)
+	db := f.repo.DB
+
+	// No domain, no tracker, no audit: still refused.
+	if code, _, raw := f.post(t, f.noDomain, "http://example.test/guide"); code != 400 || !strings.HasPrefix(raw, "no_domain") {
+		t.Fatalf("bare project: %d %s", code, raw)
+	}
+	// An older audit of another site loses to the latest audit.
+	if _, err := db.Exec(ctx, `INSERT INTO go_audits(id,project_id,started_by_user_id,start_url,status,started_at) VALUES
+		($1||'-old',$1,'u','https://old.test/','completed',now()-interval '2 days'),
+		($1||'-new',$1,'u','https://www.example.test/','completed',now())`, f.noDomain); err != nil {
+		t.Fatal(err)
+	}
+	if code, draft, raw := f.post(t, f.noDomain, "http://example.test/guide"); code != 200 || draft.Title == "" {
+		t.Fatalf("audit fallback: %d %s", code, raw)
+	}
+	if code, _, raw := f.post(t, f.noDomain, "http://old.test/guide"); code != 400 || !strings.HasPrefix(raw, "other_site") {
+		t.Fatalf("older audit site accepted: %d %s", code, raw)
+	}
+	// The AI tracker's domain wins over audits.
+	var org string
+	if err := db.QueryRow(ctx, `SELECT organization_id FROM projects WHERE id=$1`, f.noDomain).Scan(&org); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(ctx, `INSERT INTO go_ai_trackers(project_id,organization_id,configuration) VALUES($1,$2,'{"domain":"tracked.test"}')`, f.noDomain, org); err != nil {
+		t.Fatal(err)
+	}
+	if code, _, raw := f.post(t, f.noDomain, "http://tracked.test/guide"); code != 200 {
+		t.Fatalf("tracker fallback: %d %s", code, raw)
+	}
+}
+
 func TestImportPageKeepsHugePagesWithinTheDraftLimit(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
