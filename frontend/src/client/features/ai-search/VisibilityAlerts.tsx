@@ -4,7 +4,7 @@ import { Button } from "@/client/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "cn";
 import { trackingApi, trackingKey, type TrackingAnswer } from "./trackingApi";
-import { visibilityAlerts, type VisibilityAlert } from "./visibilityAlerts";
+import { visibilityAlerts, type VisibilityAlert } from "./alertRules";
 import { EngineLogo } from "@/client/components/BrandLogo";
 
 const KIND: Record<

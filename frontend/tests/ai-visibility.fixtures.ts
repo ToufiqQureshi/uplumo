@@ -74,7 +74,8 @@ const answer = (
             url: "https://example.com/pricing",
             domain: "example.com",
             title: "Example pricing",
-            matchedBrand: true,
+            // Saved checks did not mark own pages; the domain must suffice.
+            matchedBrand: false,
           },
         ]
       : []),

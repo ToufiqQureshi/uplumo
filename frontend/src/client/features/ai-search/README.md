@@ -28,7 +28,7 @@ header and `AiVisibilityTabs.tsx`. The old addresses (`prompt-tracking`,
 - `aiVisibilityMetrics.ts`: verdict sentence, share of voice, per-engine
   rates, the question × engine matrix, cited domains. Pure functions over
   saved answers.
-- `visibilityAlerts.ts`, `VisibilityAlerts.tsx`: what changed since the
+- `alertRules.ts`, `VisibilityAlerts.tsx`: what changed since the
   previous comparable check, on the Overview.
 - `userRequestedRun.ts`: marks a search the customer submitted in this page
   load, so an opened URL never buys anything.
