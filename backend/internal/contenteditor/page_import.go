@@ -53,7 +53,15 @@ func (p *PageImporter) Import(ctx context.Context, projectID, rawURL string) (Dr
 		return Draft{}, ErrImportOtherSite
 	}
 	var domain *string
-	err := p.Drafts.DB.QueryRow(ctx, `SELECT domain FROM projects WHERE id=$1 AND archived_at IS NULL`, projectID).Scan(&domain)
+	// A project created without a domain (the signup "Default" project)
+	// still has a site: the AI tracker's domain, else the latest audit's host.
+	err := p.Drafts.DB.QueryRow(ctx, `
+SELECT COALESCE(
+  NULLIF(p.domain, ''),
+  NULLIF((SELECT t.configuration->>'domain' FROM go_ai_trackers t WHERE t.project_id = p.id), ''),
+  (SELECT substring(a.start_url FROM '^https?://([^/:?#]+)') FROM go_audits a
+    WHERE a.project_id = p.id ORDER BY a.started_at DESC LIMIT 1))
+FROM projects p WHERE p.id = $1 AND p.archived_at IS NULL`, projectID).Scan(&domain)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Draft{}, ErrNotFound
 	}
