@@ -137,6 +137,10 @@ test("search growth stays explicit and carries evidence through save, analyst an
   // The page's own text opened as a draft, not an empty editor.
   await expect(page).toHaveURL(/draft=imported-guide/u);
   await expect(page.getByText("Text copied from the live page.")).toBeVisible();
+  // The query the page ranks for becomes the draft's target topic, unsaved.
+  await expect(
+    page.getByRole("button", { name: "Remove booking guide" }),
+  ).toBeVisible();
   expect(paid).toEqual([]);
   await page.goto("/p/e2e-project/search-performance?view=conversions");
   await page.getByRole("button", { name: "Find opportunities" }).click();

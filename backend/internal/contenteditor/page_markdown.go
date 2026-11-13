@@ -89,40 +89,54 @@ func (w *markdownWriter) paragraph(s string) {
 	w.out.WriteString("\n\n")
 }
 
+// inlineAtoms are elements that sit inside a line of text.
+var inlineAtoms = map[atom.Atom]bool{
+	atom.A: true, atom.Abbr: true, atom.B: true, atom.Br: true, atom.Cite: true,
+	atom.Code: true, atom.Em: true, atom.I: true, atom.Label: true, atom.Mark: true,
+	atom.Q: true, atom.S: true, atom.Small: true, atom.Span: true, atom.Strong: true,
+	atom.Sub: true, atom.Sup: true, atom.Time: true, atom.U: true,
+}
+
 func (w *markdownWriter) block(n *html.Node) {
+	// run collects text and inline elements between blocks, so a <div> of
+	// text keeps its links and emphasis on one line.
+	var run []*html.Node
+	flush := func() {
+		w.paragraph(escapeLineStart(w.inlineNodes(run)))
+		run = run[:0]
+	}
 	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		if c.Type != html.ElementNode {
-			if c.Type == html.TextNode {
-				w.paragraph(collapse(c.Data))
-			}
+		if c.Type == html.TextNode || (c.Type == html.ElementNode && inlineAtoms[c.DataAtom]) {
+			run = append(run, c)
 			continue
 		}
-		if skipped[c.DataAtom] {
+		if c.Type != html.ElementNode || skipped[c.DataAtom] {
 			continue
 		}
+		flush()
 		switch c.DataAtom {
 		case atom.H1, atom.H2, atom.H3, atom.H4, atom.H5, atom.H6:
-			heading := w.inline(c)
-			if c.DataAtom == atom.H1 && !w.titleSkipped && heading == w.title {
+			if c.DataAtom == atom.H1 && !w.titleSkipped && text(c) == w.title {
 				w.titleSkipped = true
 				continue
 			}
 			level := int(c.DataAtom.String()[1] - '0')
 			// The draft's title is its H1, so body headings start at H2.
-			w.paragraph(strings.Repeat("#", max(level, 2)) + " " + heading)
+			w.paragraph(strings.Repeat("#", max(level, 2)) + " " + w.inline(c))
 		case atom.P:
-			w.paragraph(w.inline(c))
+			w.paragraph(escapeLineStart(w.inline(c)))
 		case atom.Ul, atom.Ol:
 			w.list(c, c.DataAtom == atom.Ol)
 		case atom.Blockquote:
 			if quote := w.inline(c); quote != "" {
 				w.paragraph("> " + quote)
 			}
-		case atom.Br, atom.Hr:
+		case atom.Hr:
 		default:
 			w.block(c)
 		}
 	}
+	flush()
 }
 
 func (w *markdownWriter) list(n *html.Node, ordered bool) {
@@ -149,42 +163,75 @@ func (w *markdownWriter) list(n *html.Node, ordered bool) {
 
 // inline renders a block's text with bold, italics and links kept.
 func (w *markdownWriter) inline(n *html.Node) string {
+	var nodes []*html.Node
+	for c := n.FirstChild; c != nil; c = c.NextSibling {
+		nodes = append(nodes, c)
+	}
+	return w.inlineNodes(nodes)
+}
+
+func (w *markdownWriter) inlineNodes(nodes []*html.Node) string {
 	var b strings.Builder
-	var visit func(*html.Node)
-	visit = func(n *html.Node) {
-		for c := n.FirstChild; c != nil; c = c.NextSibling {
-			switch {
-			case c.Type == html.TextNode:
-				b.WriteString(c.Data)
-			case c.Type != html.ElementNode || skipped[c.DataAtom]:
-			case c.DataAtom == atom.Br:
-				b.WriteString(" ")
-			case c.DataAtom == atom.Strong || c.DataAtom == atom.B:
-				if t := strings.TrimSpace(w.inline(c)); t != "" {
-					b.WriteString(" **" + t + "** ")
-				}
-			case c.DataAtom == atom.Em || c.DataAtom == atom.I:
-				if t := strings.TrimSpace(w.inline(c)); t != "" {
-					b.WriteString(" *" + t + "* ")
-				}
-			case c.DataAtom == atom.A:
-				t := strings.TrimSpace(w.inline(c))
-				href := w.link(attr(c, "href"))
-				if t != "" && href != "" {
-					b.WriteString(" [" + t + "](" + href + ") ")
-				} else {
-					b.WriteString(" " + t + " ")
-				}
-			case c.DataAtom == atom.Ul || c.DataAtom == atom.Ol:
-				// A nested list reads as part of its item.
-				b.WriteString(" " + w.inline(c) + " ")
-			default:
-				visit(c)
-			}
+	for _, c := range nodes {
+		w.writeInline(&b, c)
+	}
+	return collapse(b.String())
+}
+
+func (w *markdownWriter) writeInline(b *strings.Builder, c *html.Node) {
+	switch {
+	case c.Type == html.TextNode:
+		b.WriteString(markdownEscaper.Replace(c.Data))
+	case c.Type != html.ElementNode || skipped[c.DataAtom]:
+	case c.DataAtom == atom.Br:
+		b.WriteString(" ")
+	case c.DataAtom == atom.Strong || c.DataAtom == atom.B:
+		if t := strings.TrimSpace(w.inline(c)); t != "" {
+			b.WriteString(" **" + t + "** ")
+		}
+	case c.DataAtom == atom.Em || c.DataAtom == atom.I:
+		if t := strings.TrimSpace(w.inline(c)); t != "" {
+			b.WriteString(" *" + t + "* ")
+		}
+	case c.DataAtom == atom.A:
+		t := strings.TrimSpace(w.inline(c))
+		href := w.link(attr(c, "href"))
+		if t != "" && href != "" {
+			b.WriteString(" [" + t + "](" + href + ") ")
+		} else {
+			b.WriteString(" " + t + " ")
+		}
+	case c.DataAtom == atom.Ul || c.DataAtom == atom.Ol:
+		// A nested list reads as part of its item.
+		b.WriteString(" " + w.inline(c) + " ")
+	default:
+		for gc := c.FirstChild; gc != nil; gc = gc.NextSibling {
+			w.writeInline(b, gc)
 		}
 	}
-	visit(n)
-	return collapse(b.String())
+}
+
+// markdownEscaper keeps page text literal: a "*" or "<" the page shows must
+// not become emphasis or an HTML tag in the editor.
+var markdownEscaper = strings.NewReplacer(
+	`\`, `\\`, "`", "\\`", "*", `\*`, "_", `\_`, "[", `\[`, "]", `\]`, "<", `\<`, ">", `\>`,
+)
+
+// escapeLineStart stops a paragraph that starts like "# ", "- " or "1. "
+// from turning into a heading or list.
+func escapeLineStart(s string) string {
+	if s == "" {
+		return s
+	}
+	switch s[0] {
+	case '#', '-', '+', '=':
+		return `\` + s
+	}
+	digits := len(s) - len(strings.TrimLeft(s, "0123456789"))
+	if digits > 0 && digits < len(s) && (s[digits] == '.' || s[digits] == ')') {
+		return s[:digits] + `\` + s[digits:]
+	}
+	return s
 }
 
 // link makes an href absolute; non-web links are dropped.

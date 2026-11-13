@@ -13,4 +13,4 @@ Use the brief's keyword research to compare volume, difficulty and intent in you
 
 ## Edit a page that is already live
 
-Next to a page in Site Audit, in an AI answer that cites your site, or in Search Growth, press **Edit in Content Editor**. Uplumo copies that page's title, headings and text into a draft and opens it, so you can fix it right away. Press it again later and the same draft opens with your edits. Only pages of the project's own website can be opened this way, and it costs no credits.
+Next to a page in Site Audit, in an AI answer that cites your site, or in Search Growth, press **Edit in Content Editor**. Uplumo copies that page's title, headings and text into a draft and opens it, so you can fix it right away. From Search Growth, the query the page ranks for fills an empty target topic; save the draft to keep it. Text the page shows literally, such as `<strong>` or `*required*`, stays text. Press it again later and the same draft opens with your edits. Only pages of the project's own website can be opened this way, and it costs no credits.

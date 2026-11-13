@@ -16,13 +16,20 @@ export function useLinkedDraft({
   selectedDraftId,
   currentDraftId,
   dirty,
+  keyword,
   onRestore,
 }: {
   projectId: string;
   selectedDraftId?: string;
   currentDraftId?: string;
   dirty: boolean;
-  onRestore: (saved?: ContentDraft) => void;
+  /** Fills the opened draft's target keyword when it has none. */
+  keyword?: string;
+  onRestore: (
+    saved?: ContentDraft,
+    sent?: undefined,
+    keyword?: string,
+  ) => void;
 }) {
   const query = useQuery({
     queryKey: contentEditorQueryKeys.draft(projectId, selectedDraftId ?? ""),
@@ -33,8 +40,8 @@ export function useLinkedDraft({
   useEffect(() => {
     const saved = query.data;
     if (saved && saved.id === selectedDraftId && saved.id !== currentDraftId)
-      onRestore(saved);
-  }, [query.data, selectedDraftId, currentDraftId, onRestore]);
+      onRestore(saved, undefined, keyword);
+  }, [query.data, selectedDraftId, currentDraftId, keyword, onRestore]);
   const previous = useRef(selectedDraftId);
   useEffect(() => {
     if (previous.current === selectedDraftId) return;

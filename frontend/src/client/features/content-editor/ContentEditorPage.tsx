@@ -136,12 +136,17 @@ export function ContentEditorPage({
   }, [draftsQuery.data, draftsQuery.isPending, initialized]);
 
   const restoreDraft = useCallback(
-    (saved?: ContentDraft, sent?: ContentDraftInput) => {
+    (saved?: ContentDraft, sent?: ContentDraftInput, keyword?: string) => {
       const snapshot = saved ? asInput(saved) : blankDraft;
+      // A keyword from the link fills an empty target as an unsaved edit.
+      const shown =
+        keyword && !snapshot.targetKeyword
+          ? { ...snapshot, targetKeyword: keyword }
+          : snapshot;
       if (!sent) setEditorSession((session) => session + 1);
       setDraftId(saved?.id);
       setSavedSnapshot(snapshot);
-      setDraft((now) => (!sent || sameDraft(now, sent) ? snapshot : now));
+      setDraft((now) => (!sent || sameDraft(now, sent) ? shown : now));
       setSlugEdited(snapshot.slug !== slugFromTitle(snapshot.title));
     },
     [],
@@ -277,6 +282,7 @@ export function ContentEditorPage({
     selectedDraftId,
     currentDraftId: draftId,
     dirty,
+    keyword: initialKeyword,
     onRestore: restoreDraft,
   });
   const writingLocked =
