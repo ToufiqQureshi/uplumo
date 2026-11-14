@@ -357,6 +357,16 @@ func TestRepositoryUpdateProgressFencesWorkflow(t *testing.T) {
 	if err != nil || audit.PagesCrawled != 5 || audit.CurrentPhase == nil || *audit.CurrentPhase != "crawling" {
 		t.Fatalf("audit = %+v err = %v", audit, err)
 	}
+
+	if err := repo.FailAudit(ctx, auditID, auditID, ErrorInfo{ErrorCode: ErrorUnknown}, phase); err != nil {
+		t.Fatalf("fail audit: %v", err)
+	}
+	if err := repo.UpdateAuditProgress(ctx, auditID, auditID, ProgressUpdate{PagesCrawled: &pages}); !errors.Is(err, ErrAuditNotFound) {
+		t.Fatalf("progress after failure = %v, want ErrAuditNotFound", err)
+	}
+	if err := repo.CompleteAudit(ctx, auditID, auditID, pages, pages); !errors.Is(err, ErrAuditNotFound) {
+		t.Fatalf("completion after failure = %v, want ErrAuditNotFound", err)
+	}
 }
 
 func TestRepositoryGetLighthouseForProject(t *testing.T) {

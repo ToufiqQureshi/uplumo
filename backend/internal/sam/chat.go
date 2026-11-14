@@ -1,12 +1,14 @@
 package sam
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strings"
 	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/toufiqqureshi/uplumo/backend/internal/auth"
 	"github.com/toufiqqureshi/uplumo/backend/internal/platform/httpx"
 )
@@ -16,12 +18,17 @@ type Chat struct {
 	Agent    *Agent
 	Loader   SessionLoader
 	Messages MessageStore
-	turns    *turns
+	turns    turnCoordinator
+}
+
+type turnCoordinator interface {
+	begin(context.Context, string) (context.Context, func(), error)
+	rewind(context.Context, string) (func(), error)
 }
 
 // NewChat wires the conversation routes.
-func NewChat(agent *Agent, loader SessionLoader, messages MessageStore) *Chat {
-	return &Chat{Agent: agent, Loader: loader, Messages: messages, turns: newTurns()}
+func NewChat(agent *Agent, loader SessionLoader, messages MessageStore, db, locks *pgxpool.Pool) *Chat {
+	return &Chat{Agent: agent, Loader: loader, Messages: messages, turns: distributedTurns{db: db, locks: locks}}
 }
 
 type sessionRequest struct {
@@ -107,8 +114,12 @@ func (d Deps) chat(w http.ResponseWriter, r *http.Request) {
 	}
 	sc.SearchGrowth = in.Mode == "search_growth"
 	sc.Keywords = in.Mode == "keywords"
-	ctx, release, ok := d.Chat.turns.begin(r.Context(), sc.SessionID)
-	if !ok {
+	ctx, release, err := d.Chat.turns.begin(r.Context(), sc.SessionID)
+	if err != nil {
+		d.fail(w, r, "claim turn", err)
+		return
+	}
+	if release == nil {
 		httpx.WriteError(w, http.StatusConflict, "sam_turn_in_progress", "SAM is still answering. Wait for the reply or stop it first.")
 		return
 	}
@@ -148,10 +159,16 @@ func (d Deps) rewind(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if !d.Chat.turns.cancelAndWait(sc.SessionID, rewindWait) {
+	release, err := d.Chat.turns.rewind(r.Context(), sc.SessionID)
+	if err != nil && !errors.Is(err, context.DeadlineExceeded) {
+		d.fail(w, r, "claim rewind", err)
+		return
+	}
+	if release == nil {
 		httpx.WriteError(w, http.StatusConflict, "sam_turn_in_progress", "SAM is still stopping. Try again in a moment.")
 		return
 	}
+	defer release()
 	found, err := d.Chat.Messages.DeleteFrom(r.Context(), sc.SessionID, in.MessageID)
 	if err != nil {
 		d.fail(w, r, "rewind", err)

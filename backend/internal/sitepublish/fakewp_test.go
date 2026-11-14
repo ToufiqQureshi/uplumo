@@ -99,6 +99,14 @@ func (wp *fakeWordPress) serve(w http.ResponseWriter, r *http.Request) {
 		wp.media = append(wp.media, name)
 		wp.nextID++
 		writeJSON(w, http.StatusCreated, map[string]any{"id": wp.nextID, "source_url": wp.server.URL + "/uploads/" + strconv.FormatInt(wp.nextID, 10)})
+	case route == "/wp/v2/posts" && r.Method == http.MethodGet:
+		found := []map[string]any{}
+		for id, post := range wp.posts {
+			if post.Slug == r.URL.Query().Get("slug") && post.Status == r.URL.Query().Get("status") {
+				found = append(found, map[string]any{"id": id, "slug": post.Slug})
+			}
+		}
+		writeJSON(w, http.StatusOK, found)
 	case route == "/wp/v2/posts" && r.Method == http.MethodPost:
 		post, ok := decodePost(w, r)
 		if !ok {
