@@ -176,7 +176,7 @@ func TestSPAShellIsNotIndexed(t *testing.T) {
 			t.Errorf("%s X-Robots-Tag = %q, want noindex", target, got)
 		}
 	}
-	for _, target := range []string{"/", "/pricing", "/blog", "/about", "/ai-visibility-tracker", "/ai-referral-tracking", "/seo-audit-tool", "/keyword-rank-tracker"} {
+	for _, target := range []string{"/", "/pricing", "/blog", "/about", "/ai-visibility-tracker", "/ai-referral-tracking", "/seo-audit-tool", "/keyword-rank-tracker", "/keyword-research-tool", "/local-seo-tools"} {
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, httptest.NewRequestWithContext(context.Background(), http.MethodGet, target, nil))
 		if got := rec.Header().Get("X-Robots-Tag"); got != "" {
