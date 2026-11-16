@@ -65,11 +65,11 @@ Check Search Console for indexing issues and the queries you already appear for.
 
 ### Competitors rank for keywords you want
 
-Inspect the search results for a short list of buying queries. A keyword such as “emergency dentist” may bring up a local map and service pages. An informational query such as “what to do with a cracked tooth” can need a different page. Use the page formats in the results to decide which queries belong together. Then use a [Google keyword rank tracker](/keyword-rank-tracker) to monitor your chosen terms in the same market over time.
+Inspect the search results for a short list of buying queries. A keyword such as “emergency dentist” may bring up a local map and service pages. An informational query such as “what to do with a cracked tooth” can need a different page. Use the page formats in the results to decide which queries belong together. An [SEO keyword research tool](/keyword-research-tool) helps you compare demand by market before choosing the page to build. Then use a [Google keyword rank tracker](/keyword-rank-tracker) to monitor your chosen terms in the same market over time.
 
 ### Leads come from Maps or AI answers
 
-If nearby customers drive the business, prioritize local visibility across the areas you serve and check whether listing visits turn into calls or bookings. For AI discovery, measure two signals separately: sampled answers that cite your website, and visits you can identify as AI referrals. Our [AEO tools comparison](/blog/best-aeo-tools) covers tools for the first job. [AI referral tracking](/ai-referral-tracking) covers the second.
+If nearby customers drive the business, compare [local SEO tools](/local-seo-tools) by location coverage, Maps evidence, and listing information. Check whether listing visits turn into calls or bookings. For AI discovery, measure two signals separately: sampled answers that cite your website, and visits you can identify as AI referrals. Our [AEO tools comparison](/blog/best-aeo-tools) covers tools for the first job. [AI referral tracking](/ai-referral-tracking) covers the second.
 
 ## Test the tools on one page
 
@@ -87,7 +87,7 @@ A one-site business can begin with Google Search Console, free analytics, and a 
 
 ## Frequently asked questions
 
-### What is the best free SEO tool for a small business?
+### Which free SEO tools should a small business start with?
 
 Start with Google Search Console for your own indexing and Google search performance. Add free analytics for conversions and a starter crawler to inspect technical issues.
 

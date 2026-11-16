@@ -1,7 +1,8 @@
 ---
 title: "What Is AEO? Answer Engine Optimization Explained (2027)"
-description: "AEO (answer engine optimization) makes your page the answer AI Overviews, ChatGPT and Perplexity quote. See how it works, examples and a 5-step plan."
+description: "Learn what answer engine optimization (AEO) is, how to write clear answers, and how to measure mentions and citations in AI search."
 date: 2026-11-09
+updated: 2026-11-16
 author: James
 image: /site/blog/what-is-aeo-cover.webp
 related: seo-vs-aeo-vs-geo, how-to-get-website-cited-by-ai, best-aeo-tools

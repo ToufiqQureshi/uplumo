@@ -1,7 +1,8 @@
 ---
 title: "How to Rank in ChatGPT: Get Your Business Recommended (2027)"
-description: "How to rank in ChatGPT answers: allow OAI-SearchBot, make your business easy to describe, earn consistent third-party mentions and track recommendations."
+description: "Learn how ChatGPT SEO works. Check crawler access, improve pages customers ask about, and track brand recommendations, citations and referrals."
 date: 2026-11-09
+updated: 2026-11-16
 author: James
 image: /site/blog/rank-in-chatgpt-cover.webp
 related: chatgpt-recommends-competitors-not-my-business, how-to-get-website-cited-by-ai, how-to-track-competitors-in-ai-search

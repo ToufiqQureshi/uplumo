@@ -267,8 +267,8 @@ func build(publicURL *url.URL, blogFiles fs.FS) (*Site, error) {
 
 		pricing := data
 		pricing.Path = "/pricing"
-		pricing.Title = "Uplumo pricing: Free, Basic, Pro and Business plans"
-		pricing.Description = fmt.Sprintf("Start free. Basic is %s, Pro is %s and Business is %s a month. Buy extra credits when you need them, cancel in one click.", basic, pro, business)
+		pricing.Title = "SEO & AI Visibility Software Pricing | Uplumo"
+		pricing.Description = fmt.Sprintf("Compare Uplumo SEO and AI visibility plans. Start free. Basic is %s, Pro is %s and Business is %s per month.", basic, pro, business)
 		pricing.Canonical = origin + "/pricing"
 		pricing.FAQ = pricingFAQ(currency)
 		pricing.JSONLD = jsonLD(origin, pricing.Description, data.Plans, currency)
@@ -561,7 +561,7 @@ var infoPages = []struct {
 	path, file, title, description string
 }{
 	{"/about", "about.html", "About Uplumo",
-		"Uplumo is an SEO and AI search tool built in India for business owners and agencies who want one clear next step."},
+		"Learn how Uplumo helps businesses and agencies measure Google rankings, audit websites, and monitor visibility in AI search."},
 	{"/contact", "contact.html", "Contact Uplumo",
 		"Get help with your Uplumo account, billing or data. Write to us and a person replies."},
 	{"/terms", "terms.html", "Terms of Service | Uplumo",
@@ -573,13 +573,17 @@ var infoPages = []struct {
 	{"/shipping", "shipping.html", "Shipping and Delivery Policy | Uplumo",
 		"Uplumo is online software: nothing is shipped, and access starts as soon as you sign up or pay."},
 	{"/ai-visibility-tracker", "ai-visibility.html", "AI Visibility Tracker for ChatGPT & AI Search | Uplumo",
-		"Track brand mentions, website citations and competitors across sampled answers in ChatGPT, Gemini, Perplexity, Claude and Google AI Overviews."},
+		"Monitor AI search visibility, brand mentions, and citations in sampled ChatGPT, Gemini, Perplexity, Claude, and Google AI Overview answers."},
 	{"/ai-referral-tracking", "ai-referrals.html", "AI Referral Tracking for Websites | Uplumo",
 		"Measure identifiable visits from ChatGPT, Perplexity, Gemini and other supported AI sources. See which landing pages receive AI referral traffic."},
 	{"/seo-audit-tool", "seo-audit.html", "Website SEO Audit Tool | Uplumo",
-		"Crawl your website, review technical and on-page SEO issues, and prioritise fixes with page-level evidence and practical recommendations."},
+		"Run a free starter SEO audit to find technical and on-page issues. Review affected URLs and compare plans for full audit coverage."},
 	{"/keyword-rank-tracker", "rank-tracking.html", "Google Keyword Rank Tracker | Uplumo",
-		"Track Google keyword rankings over time, research new keywords by volume and difficulty, and monitor the search terms that matter to your website."},
+		"Track Google keyword rankings with scheduled checks. Follow position changes and use Search Console data to put ranking movements in context."},
+	{"/keyword-research-tool", "keyword-research.html", "SEO Keyword Research Tool | Uplumo",
+		"Find Google keyword ideas, compare estimated search volume and difficulty, and inspect search results before choosing which pages to build."},
+	{"/local-seo-tools", "local-seo.html", "Local SEO Tools for Google Maps & Business Profiles | Uplumo",
+		"Compare your Google Business Profile with leading Maps competitors. Review ratings, profile details and local search evidence with Uplumo."},
 }
 
 func plansFor(currency string) []Plan {

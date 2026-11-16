@@ -266,14 +266,14 @@ func TestPublishedBlogContent(t *testing.T) {
 	s := newSite(t, &url.URL{Scheme: "https", Host: "uplumo.com"})
 	posts := []struct{ slug, published, updated string }{
 		{"how-to-list-your-business-on-chatgpt", "2026-11-11", "2026-11-11"},
-		{"best-aeo-tools", "2026-11-09", "2026-11-09"},
+		{"best-aeo-tools", "2026-11-09", "2026-11-16"},
 		{"best-seo-tools-for-small-businesses", "2026-11-16", "2026-11-16"},
 		{"best-semrush-alternatives", "2026-11-09", "2026-11-09"},
-		{"how-to-rank-in-chatgpt", "2026-11-09", "2026-11-09"},
+		{"how-to-rank-in-chatgpt", "2026-11-09", "2026-11-16"},
 		{"peec-ai-alternatives", "2026-11-09", "2026-11-09"},
 		{"profound-alternatives", "2026-11-09", "2026-11-09"},
-		{"what-is-aeo", "2026-11-09", "2026-11-09"},
-		{"seo-vs-aeo-vs-geo", "2026-11-09", "2026-11-09"},
+		{"what-is-aeo", "2026-11-09", "2026-11-16"},
+		{"seo-vs-aeo-vs-geo", "2026-11-09", "2026-11-16"},
 		{"how-to-get-website-cited-by-ai", "2026-11-09", "2026-11-09"},
 		{"how-to-track-competitors-in-ai-search", "2026-11-09", "2026-11-09"},
 		{"why-website-not-ranking-google", "2026-11-08", "2026-11-10"},
