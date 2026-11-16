@@ -4,11 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"encoding/xml"
+	"html/template"
+	"io/fs"
 	"maps"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -53,19 +56,53 @@ func TestFormatINR(t *testing.T) {
 	}
 }
 
+type jsonLDNode struct {
+	Type   string `json:"@type"`
+	Name   string `json:"name"`
+	URL    string `json:"url"`
+	Logo   string `json:"logo"`
+	Offers []struct {
+		Name     string `json:"name"`
+		Price    string `json:"price"`
+		Currency string `json:"priceCurrency"`
+	} `json:"offers"`
+	MainEntity []struct {
+		Name           string `json:"name"`
+		AcceptedAnswer struct {
+			Text string `json:"text"`
+		} `json:"acceptedAnswer"`
+	} `json:"mainEntity"`
+	ItemListElement []struct {
+		Position int    `json:"position"`
+		Name     string `json:"name"`
+		Item     string `json:"item"`
+	} `json:"itemListElement"`
+}
+
 type jsonLDDoc struct {
-	Context string `json:"@context"`
-	Graph   []struct {
-		Type   string `json:"@type"`
-		Name   string `json:"name"`
-		URL    string `json:"url"`
-		Logo   string `json:"logo"`
-		Offers []struct {
-			Name     string `json:"name"`
-			Price    string `json:"price"`
-			Currency string `json:"priceCurrency"`
-		} `json:"offers"`
-	} `json:"@graph"`
+	Context string       `json:"@context"`
+	Graph   []jsonLDNode `json:"@graph"`
+}
+
+// node returns the graph's only node of type typ, failing when there is not
+// exactly one.
+func (d jsonLDDoc) node(t *testing.T, typ string) jsonLDNode {
+	t.Helper()
+	var found []jsonLDNode
+	for _, n := range d.Graph {
+		if n.Type == typ {
+			found = append(found, n)
+		}
+	}
+	if len(found) != 1 {
+		t.Fatalf("JSON-LD has %d %s nodes, want 1", len(found), typ)
+	}
+	return found[0]
+}
+
+// has reports whether the graph has a node of type typ.
+func (d jsonLDDoc) has(typ string) bool {
+	return slices.ContainsFunc(d.Graph, func(n jsonLDNode) bool { return n.Type == typ })
 }
 
 var jsonLDBlock = regexp.MustCompile(`(?s)<script type="application/ld\+json">(.*?)</script>`)
@@ -139,10 +176,18 @@ func TestPagesCarryTheirMetadata(t *testing.T) {
 			}
 
 			doc := parseJSONLD(t, body)
-			if doc.Context != "https://schema.org" || len(doc.Graph) != 2 {
-				t.Fatalf("JSON-LD = %+v, want a schema.org graph of two nodes", doc)
+			if doc.Context != "https://schema.org" {
+				t.Fatalf("JSON-LD = %+v, want a schema.org graph", doc)
 			}
-			org, app := doc.Graph[0], doc.Graph[1]
+			org, app := doc.node(t, "Organization"), doc.node(t, "SoftwareApplication")
+			if site := doc.node(t, "WebSite"); site.URL != "https://uplumo.com/" || site.Name != "Uplumo" {
+				t.Errorf("WebSite = %+v", site)
+			}
+			// The page's visible questions are its FAQPage, one for one.
+			faq := doc.node(t, "FAQPage").MainEntity
+			if n := strings.Count(body, "<summary>"); len(faq) == 0 || len(faq) != n {
+				t.Errorf("FAQPage has %d questions, page shows %d", len(faq), n)
+			}
 			if org.Type != "Organization" || org.URL != "https://uplumo.com/" || org.Logo != "https://uplumo.com/site/logo.svg" {
 				t.Errorf("Organization = %+v", org)
 			}
@@ -168,7 +213,7 @@ func TestSharedPagesDescribePlansInDollars(t *testing.T) {
 	}
 	want := plansFor(planCatalog.USD)
 	for path, rec := range pages {
-		offers := parseJSONLD(t, rec.Body.String()).Graph[1].Offers
+		offers := parseJSONLD(t, rec.Body.String()).node(t, "SoftwareApplication").Offers
 		if len(offers) != len(want) {
 			t.Fatalf("%s has %d offers, want %d", path, len(offers), len(want))
 		}
@@ -668,4 +713,133 @@ func TestFormatMoney(t *testing.T) {
 			t.Errorf("formatMoney(%d, %s) = %q, want %q", tc.amount, tc.currency, got, tc.want)
 		}
 	}
+}
+
+// A product page answers its questions on the page and repeats exactly those
+// questions as FAQPage data, under a Home > page breadcrumb. Policy pages
+// carry neither FAQ nor product questions.
+func TestProductPagesAnswerTheirQuestions(t *testing.T) {
+	s := newSite(t, &url.URL{Scheme: "https", Host: "uplumo.com"})
+	products := 0
+	for _, p := range infoPages {
+		t.Run(p.path, func(t *testing.T) {
+			body := get(s.ServeInfo, p.path, nil).Body.String()
+			doc := parseJSONLD(t, body)
+			crumbs := doc.node(t, "BreadcrumbList").ItemListElement
+			if len(crumbs) != 2 || crumbs[0].Item != "https://uplumo.com/" || crumbs[1].Item != "https://uplumo.com"+p.path || crumbs[1].Name != pageName(p.title) {
+				t.Errorf("breadcrumb = %+v", crumbs)
+			}
+			if !p.product {
+				if doc.has("FAQPage") || strings.Contains(body, "<summary>") {
+					t.Error("policy page carries FAQ questions")
+				}
+				return
+			}
+			products++
+			faq := doc.node(t, "FAQPage").MainEntity
+			if len(faq) < 4 || len(faq) != len(p.faq) {
+				t.Fatalf("FAQPage has %d questions, want the page's %d (at least 4)", len(faq), len(p.faq))
+			}
+			if n := strings.Count(body, "<summary>"); n != len(faq) {
+				t.Errorf("page shows %d questions, FAQPage has %d", n, len(faq))
+			}
+			for i, qa := range faq {
+				if qa.Name != p.faq[i].Question || qa.AcceptedAnswer.Text != p.faq[i].Answer || qa.AcceptedAnswer.Text == "" {
+					t.Errorf("question %d = %+v, want %+v", i, qa, p.faq[i])
+				}
+				if !strings.Contains(body, "<summary>"+template.HTMLEscapeString(qa.Name)+"</summary>") {
+					t.Errorf("page does not show question %q", qa.Name)
+				}
+			}
+			if !strings.Contains(body, `href="`+p.path+`"`) {
+				t.Errorf("footer does not link to %s", p.path)
+			}
+		})
+	}
+	if products < 8 {
+		t.Errorf("%d product pages, want at least 8", products)
+	}
+}
+
+// A page that says which plans include a feature names exactly the plans the
+// feature check allows.
+func TestPlansWithFollowsTheCatalog(t *testing.T) {
+	for _, feature := range []planCatalog.Feature{planCatalog.AIVisibility, planCatalog.WhiteLabel, planCatalog.Keywords, planCatalog.LocalVisibility, planCatalog.FullAudit} {
+		got := plansWith(feature)
+		for _, plan := range planCatalog.Catalog() {
+			if named := strings.Contains(got, plan.Name); named != plan.Allows(feature) {
+				t.Errorf("plansWith(%s) = %q: names %s = %v, plan allows it = %v", feature, got, plan.Name, named, plan.Allows(feature))
+			}
+		}
+	}
+	if got := plansWith("no_such_feature"); got != "" {
+		t.Errorf("plansWith(unknown) = %q, want empty", got)
+	}
+}
+
+func TestLLMsTxt(t *testing.T) {
+	s := newSite(t, &url.URL{Scheme: "https", Host: "uplumo.com"})
+	rec := get(s.ServeLLMs, "/llms.txt", nil)
+	if got := rec.Header().Get("Content-Type"); got != "text/plain; charset=utf-8" {
+		t.Errorf("Content-Type = %q", got)
+	}
+	body := rec.Body.String()
+	if !strings.HasPrefix(body, "# Uplumo\n\n> "+organizationDescription+"\n") {
+		t.Errorf("llms.txt starts %.120q, want the heading and summary", body)
+	}
+	product, optional := strings.Index(body, "## Product\n"), strings.Index(body, "## Optional\n")
+	if product < 0 || optional < product {
+		t.Fatalf("llms.txt sections out of order: Product at %d, Optional at %d", product, optional)
+	}
+	for _, p := range infoPages {
+		link := "](https://uplumo.com" + p.path + "): " + p.description + "\n"
+		at := strings.Index(body, link)
+		if at < 0 {
+			t.Errorf("llms.txt lacks %s", p.path)
+			continue
+		}
+		if p.product != (at < optional) {
+			t.Errorf("%s is in the wrong section", p.path)
+		}
+	}
+	// Until checkout bills in dollars, no dollar price shows.
+	for _, plan := range planCatalog.Catalog() {
+		want := "- " + plan.Name + ": " + formatMoney(int64(plan.Price(planCatalog.INR)), planCatalog.INR) + " a month. "
+		if !strings.Contains(body, want) {
+			t.Errorf("llms.txt lacks plan line %q", want)
+		}
+	}
+	if strings.Contains(body, "$") {
+		t.Error("llms.txt shows a dollar price before USD billing is on")
+	}
+	s.ShowUSD(func(*http.Request) string { return "US" })
+	usd := get(s.ServeLLMs, "/llms.txt", nil).Body.String()
+	for _, plan := range planCatalog.Catalog() {
+		want := "- " + plan.Name + ": " + formatMoney(int64(plan.Price(planCatalog.USD)), planCatalog.USD) + " a month (" +
+			formatMoney(int64(plan.Price(planCatalog.INR)), planCatalog.INR) + " in India)"
+		if !strings.Contains(usd, want) {
+			t.Errorf("llms.txt with USD billing lacks plan line %q", want)
+		}
+	}
+	posts, err := loadPosts(mustSub(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, post := range posts {
+		if !strings.Contains(body, "](https://uplumo.com/blog/"+post.Slug+"): ") {
+			t.Errorf("llms.txt lacks guide %s", post.Slug)
+		}
+	}
+	if strings.Contains(strings.ToLower(body), "openseo") {
+		t.Error("llms.txt mentions OpenSEO")
+	}
+}
+
+func mustSub(t *testing.T) fs.FS {
+	t.Helper()
+	files, err := fs.Sub(blogFS, "blog")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return files
 }

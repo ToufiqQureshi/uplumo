@@ -4,6 +4,13 @@
 - Added keyword metrics/intent, read-only cached full-draft reviews, score corrections, refresh coalescing and autosave result preservation.
 - No merge/deploy requested in this task. Browser verification remains gated by environment support; see PR validation.
 
+## 16 Nov 2026: full SEO/AEO pass on uplumo.com, owner asleep
+
+- Owner reviewed and asked to merge #317 (done). Then: "fully seo aeo optimise kar ... me list karunga uplumo ko ... pura issi pr me daal dena fir merge kardena ... dfs ha na dekh lena ... compitition research kar ... pr bannke baad merge and deploy ... kuch bg task mat rakhna".
+- He will list Uplumo on directories himself (G2, Product Hunt etc.); `sameAs` links wait until those profiles exist.
+- DataForSEO: uplumo.com ranked for no keyword yet. Low-difficulty gaps used: white label seo reports (KD 5), ai overview tracker (KD 6). Next candidates: ahrefs alternative (KD 2, 590/mo), cheap seo tools (KD 8, 590/mo).
+- Built in one PR: FAQ + FAQPage, BreadcrumbList, WebSite schema; /ai-overview-tracker and /white-label-seo-reports pages; /llms.txt.
+
 # Important session talks
 
 ## 13 Nov 2026 (later): #310 and #311 live; flagged issues fixed

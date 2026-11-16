@@ -248,6 +248,8 @@ func NewHandler(d Deps) http.Handler {
 	mux.HandleFunc("GET /blog/{slug}", d.Site.ServeBlogPost)
 	mux.HandleFunc("GET /robots.txt", d.Site.ServeRobots)
 	mux.HandleFunc("GET /sitemap.xml", d.Site.ServeSitemap)
+	mux.HandleFunc("GET /llms.txt", d.Site.ServeLLMs)
+
 	mux.HandleFunc("GET "+site.AssetsPrefix, d.Site.ServeAsset)
 
 	mux.HandleFunc("GET /t.js", serveTracker())
