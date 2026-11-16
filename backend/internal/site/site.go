@@ -256,8 +256,8 @@ func build(publicURL *url.URL, blogFiles fs.FS) (*Site, error) {
 
 		landing := data
 		landing.Path = "/"
-		landing.Title = "Uplumo: SEO and AI search analytics with honest pricing"
-		landing.Description = fmt.Sprintf("Track Google rankings, audit your site and see where AI assistants mention you and send visitors. Start free; paid plans from %s a month.", basic)
+		landing.Title = "AI Visibility Tracking & SEO Tools | Uplumo"
+		landing.Description = "Track brand mentions and citations in ChatGPT, Gemini and Perplexity. Measure AI referral traffic, monitor Google rankings and audit your site. Start free."
 		landing.Canonical = origin + "/"
 		landing.FAQ = landingFAQ()
 		landing.JSONLD = jsonLD(origin, landing.Description, data.Plans, currency)
