@@ -167,6 +167,22 @@ func TestSPAIndexCannotBeFramedByOtherSites(t *testing.T) {
 	}
 }
 
+// llms.txt is served by the site, not answered with the app shell.
+func TestLLMsTxtIsServed(t *testing.T) {
+	handler := newTestHandler(t, nil, healthy, healthy)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/llms.txt", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	if got := rec.Header().Get("Content-Type"); got != "text/plain; charset=utf-8" {
+		t.Errorf("Content-Type = %q", got)
+	}
+	if !strings.HasPrefix(rec.Body.String(), "# Uplumo\n") {
+		t.Errorf("body starts %.40q, want the llms.txt heading", rec.Body.String())
+	}
+}
+
 func TestSPAShellIsNotIndexed(t *testing.T) {
 	handler := newTestHandler(t, nil, healthy, healthy)
 	for _, target := range []string{"/dashboard", "/p/abc/keywords", "/no-such-page"} {
@@ -176,7 +192,7 @@ func TestSPAShellIsNotIndexed(t *testing.T) {
 			t.Errorf("%s X-Robots-Tag = %q, want noindex", target, got)
 		}
 	}
-	for _, target := range []string{"/", "/pricing", "/blog", "/about", "/ai-visibility-tracker", "/ai-referral-tracking", "/seo-audit-tool", "/keyword-rank-tracker", "/keyword-research-tool", "/local-seo-tools"} {
+	for _, target := range []string{"/", "/pricing", "/blog", "/about", "/ai-visibility-tracker", "/ai-referral-tracking", "/seo-audit-tool", "/keyword-rank-tracker", "/keyword-research-tool", "/local-seo-tools", "/ai-overview-tracker", "/white-label-seo-reports"} {
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, httptest.NewRequestWithContext(context.Background(), http.MethodGet, target, nil))
 		if got := rec.Header().Get("X-Robots-Tag"); got != "" {

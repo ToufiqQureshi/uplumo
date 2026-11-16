@@ -129,7 +129,10 @@ type Site struct {
 	// pages), keyed by URL path.
 	info            map[string]renderedPage
 	robots, sitemap []byte
-	static          fs.FS
+	// llms is llms.txt, a plain-text map of the site for AI assistants,
+	// keyed by whether it may show dollar prices.
+	llms   map[bool][]byte
+	static fs.FS
 	// versions maps each asset name to a hash of its content; asset URLs
 	// carry it as ?v=, so a changed file gets a new URL and an unchanged one
 	// can be cached forever.
@@ -239,12 +242,15 @@ func build(publicURL *url.URL, blogFiles fs.FS) (*Site, error) {
 		data.Title = p.title
 		data.Description = p.description
 		data.Canonical = origin + p.path
-		data.JSONLD = jsonLD(origin, p.description, usdPlans, planCatalog.USD)
+		data.FAQ = p.faq
+		data.JSONLD = jsonLD(origin, p.description, usdPlans, planCatalog.USD,
+			breadcrumbLD(origin, p), faqLD(origin+p.path, p.faq))
 		if s.info[p.path], err = render(tmpl, p.file, data); err != nil {
 			return nil, err
 		}
 	}
 	s.robots = robotsTxt(origin)
+	s.llms = map[bool][]byte{false: llmsTxt(origin, posts, false), true: llmsTxt(origin, posts, true)}
 	s.sitemap = sitemap(origin, posts)
 	for _, currency := range []string{planCatalog.INR, planCatalog.USD} {
 		data := base
@@ -260,7 +266,7 @@ func build(publicURL *url.URL, blogFiles fs.FS) (*Site, error) {
 		landing.Description = "Track brand mentions and citations in ChatGPT, Gemini and Perplexity. Measure AI referral traffic, monitor Google rankings and audit your site. Start free."
 		landing.Canonical = origin + "/"
 		landing.FAQ = landingFAQ()
-		landing.JSONLD = jsonLD(origin, landing.Description, data.Plans, currency)
+		landing.JSONLD = jsonLD(origin, landing.Description, data.Plans, currency, faqLD(landing.Canonical, landing.FAQ))
 		if s.landing[currency], err = render(tmpl, "landing.html", landing); err != nil {
 			return nil, err
 		}
@@ -271,7 +277,7 @@ func build(publicURL *url.URL, blogFiles fs.FS) (*Site, error) {
 		pricing.Description = fmt.Sprintf("Compare Uplumo SEO and AI visibility plans. Start free. Basic is %s, Pro is %s and Business is %s per month.", basic, pro, business)
 		pricing.Canonical = origin + "/pricing"
 		pricing.FAQ = pricingFAQ(currency)
-		pricing.JSONLD = jsonLD(origin, pricing.Description, data.Plans, currency)
+		pricing.JSONLD = jsonLD(origin, pricing.Description, data.Plans, currency, faqLD(pricing.Canonical, pricing.FAQ))
 		if s.pricing[currency], err = render(tmpl, "pricing.html", pricing); err != nil {
 			return nil, err
 		}
@@ -556,34 +562,54 @@ func formatNumber(number int64) string {
 	return s
 }
 
-// infoPages are the plain-text public pages. Each is one template file.
-var infoPages = []struct {
+// infoPage is one plain-text public page, rendered from one template file.
+// A product page describes a feature and carries its own questions, shown on
+// the page and repeated as FAQPage structured data.
+type infoPage struct {
 	path, file, title, description string
-}{
-	{"/about", "about.html", "About Uplumo",
-		"See how online stores, service businesses, software teams, publishers and agencies use Uplumo for SEO and AI search visibility."},
-	{"/contact", "contact.html", "Contact Uplumo",
-		"Get help with your Uplumo account, billing or data. Write to us and a person replies."},
-	{"/terms", "terms.html", "Terms of Service | Uplumo",
-		"The rules for using Uplumo: your account, plans and billing, acceptable use and our responsibilities."},
-	{"/privacy", "privacy.html", "Privacy Policy | Uplumo",
-		"What data Uplumo collects, how it uses Google account data, who processes it and how to delete it."},
-	{"/refunds", "refunds.html", "Cancellation and Refund Policy | Uplumo",
-		"How to cancel a paid Uplumo plan, what happens after you cancel and when we refund a payment."},
-	{"/shipping", "shipping.html", "Shipping and Delivery Policy | Uplumo",
-		"Uplumo is online software: nothing is shipped, and access starts as soon as you sign up or pay."},
-	{"/ai-visibility-tracker", "ai-visibility.html", "AI Visibility Tracker for ChatGPT & AI Search | Uplumo",
-		"Monitor AI search visibility, brand mentions, and citations in sampled ChatGPT, Gemini, Perplexity, Claude, and Google AI Overview answers."},
-	{"/ai-referral-tracking", "ai-referrals.html", "AI Referral Tracking for Websites | Uplumo",
-		"Measure identifiable visits from ChatGPT, Perplexity, Gemini and other supported AI sources. See which landing pages receive AI referral traffic."},
-	{"/seo-audit-tool", "seo-audit.html", "Website SEO Audit Tool | Uplumo",
-		"Run a free starter SEO audit to find technical and on-page issues. Review affected URLs and compare plans for full audit coverage."},
-	{"/keyword-rank-tracker", "rank-tracking.html", "Google Keyword Rank Tracker | Uplumo",
-		"Track Google keyword rankings with scheduled checks. Follow position changes and use Search Console data to put ranking movements in context."},
-	{"/keyword-research-tool", "keyword-research.html", "SEO Keyword Research Tool | Uplumo",
-		"Find Google keyword ideas, compare estimated search volume and difficulty, and inspect search results before choosing which pages to build."},
-	{"/local-seo-tools", "local-seo.html", "Local SEO Tools for Google Maps & Business Profiles | Uplumo",
-		"Compare your Google Business Profile with leading Maps competitors. Review ratings, profile details and local search evidence with Uplumo."},
+	product                        bool
+	faq                            []QA
+}
+
+// infoPages are the plain-text public pages: company and policy pages, then
+// one page per product feature.
+var infoPages = []infoPage{
+	{path: "/about", file: "about.html", title: "About Uplumo",
+		description: "See how online stores, service businesses, software teams, publishers and agencies use Uplumo for SEO and AI search visibility."},
+	{path: "/contact", file: "contact.html", title: "Contact Uplumo",
+		description: "Get help with your Uplumo account, billing or data. Write to us and a person replies."},
+	{path: "/terms", file: "terms.html", title: "Terms of Service | Uplumo",
+		description: "The rules for using Uplumo: your account, plans and billing, acceptable use and our responsibilities."},
+	{path: "/privacy", file: "privacy.html", title: "Privacy Policy | Uplumo",
+		description: "What data Uplumo collects, how it uses Google account data, who processes it and how to delete it."},
+	{path: "/refunds", file: "refunds.html", title: "Cancellation and Refund Policy | Uplumo",
+		description: "How to cancel a paid Uplumo plan, what happens after you cancel and when we refund a payment."},
+	{path: "/shipping", file: "shipping.html", title: "Shipping and Delivery Policy | Uplumo",
+		description: "Uplumo is online software: nothing is shipped, and access starts as soon as you sign up or pay."},
+	{path: "/ai-visibility-tracker", file: "ai-visibility.html", title: "AI Visibility Tracker for ChatGPT & AI Search | Uplumo",
+		description: "Monitor AI search visibility, brand mentions, and citations in sampled ChatGPT, Gemini, Perplexity, Claude, and Google AI Overview answers.",
+		product:     true, faq: aiVisibilityFAQ()},
+	{path: "/ai-overview-tracker", file: "ai-overview.html", title: "Google AI Overview Tracker | Uplumo",
+		description: "Track whether Google AI Overviews mention your brand or cite your pages for the searches you choose, in the market you sell to.",
+		product:     true, faq: aiOverviewFAQ()},
+	{path: "/ai-referral-tracking", file: "ai-referrals.html", title: "AI Referral Tracking for Websites | Uplumo",
+		description: "Measure identifiable visits from ChatGPT, Perplexity, Gemini and other supported AI sources. See which landing pages receive AI referral traffic.",
+		product:     true, faq: aiReferralFAQ()},
+	{path: "/seo-audit-tool", file: "seo-audit.html", title: "Website SEO Audit Tool | Uplumo",
+		description: "Run a free starter SEO audit to find technical and on-page issues. Review affected URLs and compare plans for full audit coverage.",
+		product:     true, faq: seoAuditFAQ()},
+	{path: "/keyword-rank-tracker", file: "rank-tracking.html", title: "Google Keyword Rank Tracker | Uplumo",
+		description: "Track Google keyword rankings with scheduled checks. Follow position changes and use Search Console data to put ranking movements in context.",
+		product:     true, faq: rankTrackerFAQ()},
+	{path: "/keyword-research-tool", file: "keyword-research.html", title: "SEO Keyword Research Tool | Uplumo",
+		description: "Find Google keyword ideas, compare estimated search volume and difficulty, and inspect search results before choosing which pages to build.",
+		product:     true, faq: keywordResearchFAQ()},
+	{path: "/local-seo-tools", file: "local-seo.html", title: "Local SEO Tools for Google Maps & Business Profiles | Uplumo",
+		description: "Compare your Google Business Profile with leading Maps competitors. Review ratings, profile details and local search evidence with Uplumo.",
+		product:     true, faq: localSEOFAQ()},
+	{path: "/white-label-seo-reports", file: "white-label-reports.html", title: "White Label SEO Reports for Agencies | Uplumo",
+		description: "Share client SEO reports under your agency's name, logo and colour, built from Search Console, Analytics, rankings, audits and backlinks.",
+		product:     true, faq: whiteLabelFAQ()},
 }
 
 func plansFor(currency string) []Plan {
@@ -839,9 +865,10 @@ func joinNames(names []string) string {
 	return strings.Join(names[:len(names)-1], ", ") + " and " + names[len(names)-1]
 }
 
-// jsonLD describes the organization and the product, with each plan as an
-// offer, for search engines.
-func jsonLD(origin, description string, plans []Plan, currency string) map[string]any {
+// jsonLD describes the organization, the website and the product, with each
+// plan as an offer, for search engines and AI assistants. extra nodes (a
+// breadcrumb, a FAQ) join the graph; nil ones are skipped.
+func jsonLD(origin, description string, plans []Plan, currency string, extra ...map[string]any) map[string]any {
 	offers := make([]map[string]any, 0, len(plans))
 	for _, p := range plans {
 		offers = append(offers, map[string]any{
@@ -853,26 +880,38 @@ func jsonLD(origin, description string, plans []Plan, currency string) map[strin
 		})
 	}
 	orgID := origin + "/#organization"
-	return map[string]any{
-		"@context": "https://schema.org",
-		"@graph": []map[string]any{
-			{
-				"@type": "Organization",
-				"@id":   orgID,
-				"name":  name,
-				"url":   origin + "/",
-				"logo":  origin + AssetsPrefix + "logo.svg",
-			},
-			{
-				"@type":               "SoftwareApplication",
-				"name":                name,
-				"url":                 origin + "/",
-				"description":         description,
-				"applicationCategory": "BusinessApplication",
-				"operatingSystem":     "Web",
-				"publisher":           map[string]string{"@id": orgID},
-				"offers":              offers,
-			},
+	graph := []map[string]any{
+		{
+			"@type":       "Organization",
+			"@id":         orgID,
+			"name":        name,
+			"url":         origin + "/",
+			"logo":        origin + AssetsPrefix + "logo.svg",
+			"description": organizationDescription,
+		},
+		{
+			"@type":      "WebSite",
+			"@id":        origin + "/#website",
+			"name":       name,
+			"url":        origin + "/",
+			"inLanguage": "en",
+			"publisher":  map[string]string{"@id": orgID},
+		},
+		{
+			"@type":               "SoftwareApplication",
+			"name":                name,
+			"url":                 origin + "/",
+			"description":         description,
+			"applicationCategory": "BusinessApplication",
+			"operatingSystem":     "Web",
+			"publisher":           map[string]string{"@id": orgID},
+			"offers":              offers,
 		},
 	}
+	for _, node := range extra {
+		if node != nil {
+			graph = append(graph, node)
+		}
+	}
+	return map[string]any{"@context": "https://schema.org", "@graph": graph}
 }
