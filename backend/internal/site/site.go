@@ -561,7 +561,7 @@ var infoPages = []struct {
 	path, file, title, description string
 }{
 	{"/about", "about.html", "About Uplumo",
-		"Learn how Uplumo helps businesses and agencies measure Google rankings, audit websites, and monitor visibility in AI search."},
+		"See how online stores, service businesses, software teams, publishers and agencies use Uplumo for SEO and AI search visibility."},
 	{"/contact", "contact.html", "Contact Uplumo",
 		"Get help with your Uplumo account, billing or data. Write to us and a person replies."},
 	{"/terms", "terms.html", "Terms of Service | Uplumo",
