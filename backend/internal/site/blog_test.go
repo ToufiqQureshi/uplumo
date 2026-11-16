@@ -267,6 +267,7 @@ func TestPublishedBlogContent(t *testing.T) {
 	posts := []struct{ slug, published, updated string }{
 		{"how-to-list-your-business-on-chatgpt", "2026-11-11", "2026-11-11"},
 		{"best-aeo-tools", "2026-11-09", "2026-11-09"},
+		{"best-seo-tools-for-small-businesses", "2026-11-16", "2026-11-16"},
 		{"best-semrush-alternatives", "2026-11-09", "2026-11-09"},
 		{"how-to-rank-in-chatgpt", "2026-11-09", "2026-11-09"},
 		{"peec-ai-alternatives", "2026-11-09", "2026-11-09"},
@@ -331,6 +332,7 @@ func TestGuideNavigationAndImages(t *testing.T) {
 		{"how-to-list-your-business-on-chatgpt", 7, 8},
 		{"seo-vs-aeo-vs-geo", 10, 5},
 		{"best-aeo-tools", 7, 4},
+		{"best-seo-tools-for-small-businesses", 5, 3},
 		{"best-semrush-alternatives", 5, 4},
 		{"how-to-rank-in-chatgpt", 5, 3},
 		{"peec-ai-alternatives", 5, 4},

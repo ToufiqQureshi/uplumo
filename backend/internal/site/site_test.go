@@ -334,6 +334,10 @@ func TestPagesHaveNoDeadLinks(t *testing.T) {
 		"www.hubspot.com":       true,
 		"www.tryprofound.com":   true,
 		"moz.com":               true,
+
+		"www.bing.com":            true,
+		"www.brightlocal.com":     true,
+		"www.screamingfrog.co.uk": true,
 	}
 	// The privacy policy must point at Google's own policy and at the page
 	// where a user removes our access. Any other outside link is a mistake.
