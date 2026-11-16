@@ -572,6 +572,14 @@ var infoPages = []struct {
 		"How to cancel a paid Uplumo plan, what happens after you cancel and when we refund a payment."},
 	{"/shipping", "shipping.html", "Shipping and Delivery Policy | Uplumo",
 		"Uplumo is online software: nothing is shipped, and access starts as soon as you sign up or pay."},
+	{"/ai-visibility-tracker", "ai-visibility.html", "AI Visibility Tracker for ChatGPT & AI Search | Uplumo",
+		"Track brand mentions, website citations and competitors across sampled answers in ChatGPT, Gemini, Perplexity, Claude and Google AI Overviews."},
+	{"/ai-referral-tracking", "ai-referrals.html", "AI Referral Tracking for Websites | Uplumo",
+		"Measure identifiable visits from ChatGPT, Perplexity, Gemini and other supported AI sources. See which landing pages receive AI referral traffic."},
+	{"/seo-audit-tool", "seo-audit.html", "Website SEO Audit Tool | Uplumo",
+		"Crawl your website, review technical and on-page SEO issues, and prioritise fixes with page-level evidence and practical recommendations."},
+	{"/keyword-rank-tracker", "rank-tracking.html", "Google Keyword Rank Tracker | Uplumo",
+		"Track Google keyword rankings over time, research new keywords by volume and difficulty, and monitor the search terms that matter to your website."},
 }
 
 func plansFor(currency string) []Plan {

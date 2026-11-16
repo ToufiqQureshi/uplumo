@@ -140,7 +140,7 @@ Instead, create a small work record:
 
 *Keep a small change log so you can compare like-for-like periods after an edit.*
 
-Use Uplumo's Rank Tracking to follow selected keyword positions with a consistent location and device setup. Review Search Growth alongside it, and use Analytics or connected GA4 to check the outcomes you have configured.
+Use Uplumo's [Google keyword rank tracker](/keyword-rank-tracker) to follow selected keyword positions with a consistent location and device setup. Review Search Growth alongside it, and use Analytics or connected GA4 to check the outcomes you have configured.
 
 Rankings help explain visibility. Enquiries help you assess whether the visitors are useful to the business. Neither should replace the other.
 
@@ -156,7 +156,7 @@ Google's [traffic-drop guidance](https://developers.google.com/search/docs/monit
 
 Choose one service, product or room page that matters to your business. Decide whether its main problem is visibility, clicks or enquiries, then investigate that stage first.
 
-[Create your free Uplumo account](https://uplumo.com/sign-up) and start with a starter site audit. If you install Analytics, choose the actual events that count as leads for your business. Your first task is simple: find one important page issue, make a useful change and record what you will measure.
+[Create your free Uplumo account](https://uplumo.com/sign-up) and run a [starter website SEO audit](/seo-audit-tool). If you install Analytics, choose the actual events that count as leads for your business. Your first task is simple: find one important page issue, make a useful change and record what you will measure.
 
 When you need connected Google data, keyword research or scheduled ranking checks, [compare Uplumo's plans](https://uplumo.com/pricing). Those tools depend on plan access, and paid research and AI actions use credits. You can start with the basics and add the workflow your diagnosis calls for.
 

@@ -100,6 +100,8 @@ A big prompt database helps you **discover** a category. A small tracked set tel
 
 ## What Uplumo does in practice
 
+Explore the [AI Visibility Tracker](/ai-visibility-tracker) if you want to inspect sampled answers and their citations. If your buying decision starts with Google rankings and audits, see our [SEO tools comparison for small businesses](/blog/best-seo-tools-for-small-businesses).
+
 Say you run a software business and a customer asks, “Which booking systems let a small hotel take payments on its own website?” A useful AEO workflow starts with that question and ends with a decision about a real page.
 
 1. **Capture the evidence.** Use **Brand Lookup** for available category data. In **Prompt Explorer**, run the question across supported models. Save important questions for repeat checks and record the cited URLs. An answer may mention your company while linking to a third-party directory. That calls for a different fix than a citation to your own page.

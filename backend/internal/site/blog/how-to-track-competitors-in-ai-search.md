@@ -62,7 +62,7 @@ Avoid adding overlapping volumes for near-identical keywords and calling the res
 
 ## Measure answers with a fixed panel
 
-In Uplumo, start with **Brand Lookup** to see available category evidence, then compare your chosen questions in **Prompt Explorer**. Save the core questions in **AI Visibility Tracker**, which offers daily, weekly and monthly scheduling. Start with a cadence your plan and credits can support. Record the prompt text, engine, date and market or country hint where supported. If the provider sends a location hint rather than using a verified search location, label it that way.
+In Uplumo, start with **Brand Lookup** to see available category evidence, then compare your chosen questions in **Prompt Explorer**. Save the core questions in the [AI Visibility Tracker](/ai-visibility-tracker), which offers daily, weekly and monthly scheduling. Start with a cadence your plan and credits can support. Record the prompt text, engine, date and market or country hint where supported. If the provider sends a location hint rather than using a verified search location, label it that way.
 
 ![Uplumo AI Visibility interface showing example visibility, mentions and citations](/site/product/ai-visibility.webp)
 

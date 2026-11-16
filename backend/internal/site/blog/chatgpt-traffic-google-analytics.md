@@ -195,7 +195,7 @@ For this article's workflow, start in your analytics reports. A connector is opt
 
 ## Monitor AI referrals in Uplumo
 
-If you want to check recognised AI referrals alongside your site's other traffic, [Uplumo Analytics](https://uplumo.com/) offers a tracking script that identifies supported AI referrers and campaign tags. You can review the landing pages and select recorded events that your business counts as leads.
+If you want to check recognised AI referrals alongside your site's other traffic, [Uplumo Analytics](/ai-referral-tracking) offers a tracking script that identifies supported AI referrers and campaign tags. You can review the landing pages and select recorded events that your business counts as leads.
 
 The practical workflow is straightforward:
 

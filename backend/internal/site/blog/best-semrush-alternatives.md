@@ -118,3 +118,5 @@ SE Ranking sells an AI visibility add-on, Ahrefs sells Brand Radar, and Uplumo i
 Pick the job you pay Semrush for most often, run it in one alternative's trial with the same keywords, and compare the time to a decision.
 
 [Start free with Uplumo](https://uplumo.com/sign-up) · [Compare current plans](https://uplumo.com/pricing)
+
+For a wider comparison that includes free and specialist options, see our [best SEO tools for small businesses](/blog/best-seo-tools-for-small-businesses) guide.
