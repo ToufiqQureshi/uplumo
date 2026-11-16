@@ -170,3 +170,23 @@ test("a reload buys nothing again", async ({ page }) => {
   expect(research).toEqual([]);
   expect(serp).toEqual([]);
 });
+
+// Two clicks in the same task land before React shows the button as pending,
+// the way a fast double click can on a slow device.
+test("a double click before the button re-renders buys top results once", async ({
+  page,
+}) => {
+  const { research, serp } = await openPage(page);
+  await page.getByRole("textbox", { name: "Keyword" }).fill("seo audit tool");
+  await page.getByRole("button", { name: "Search", exact: true }).click();
+  const top = page.getByRole("button", { name: "Show top results" });
+  await expect(top).toBeVisible();
+  await top.evaluate((button: HTMLElement) => {
+    button.click();
+    button.click();
+  });
+  await expect(page.getByText("audit.example").first()).toBeVisible();
+  await page.waitForLoadState("networkidle");
+  expect(research).toHaveLength(1);
+  expect(serp).toHaveLength(1);
+});

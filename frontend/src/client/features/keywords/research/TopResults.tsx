@@ -1,4 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
+import { useRef } from "react";
 import { ErrorState } from "@/client/components/ErrorState";
 import { SafeExternalLink } from "@/client/components/SafeExternalLink";
 import { Button } from "@/client/components/ui/button";
@@ -56,6 +57,18 @@ export function TopResults({
     // A second attempt would buy the same results again.
     retry: false,
   });
+  // isPending only shows on the next render, so a fast double click would
+  // otherwise start two purchases. A failed lookup may be asked for again.
+  const asked = useRef(false);
+  const ask = () => {
+    if (asked.current) return;
+    asked.current = true;
+    serp.mutate(undefined, {
+      onError: () => {
+        asked.current = false;
+      },
+    });
+  };
 
   // Only the numbers this lookup returned get a column.
   const columns = SERP_COLUMNS.filter((c) =>
@@ -74,11 +87,7 @@ export function TopResults({
             </p>
           </div>
           {serp.data ? null : (
-            <Button
-              variant="outline"
-              pending={serp.isPending}
-              onClick={() => serp.mutate()}
-            >
+            <Button variant="outline" pending={serp.isPending} onClick={ask}>
               Show top results
             </Button>
           )}
