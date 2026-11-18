@@ -6,6 +6,8 @@ import {
 } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
+import { ErrorState } from "@/client/components/ErrorState";
+import { ApiError } from "@/client/lib/uplumoApi";
 import { setLastProjectId } from "@/client/lib/active-project";
 import { getErrorCode } from "@/client/lib/error-messages";
 import {
@@ -31,16 +33,20 @@ function useProjectAccessRedirect(projectId: string) {
   const access = useQuery({
     queryKey: ["projectAccess", projectId],
     queryFn: () => getProjectAccess({ data: { projectId } }),
-    // A failed check redirects away — retrying would just delay it.
+    meta: { errorToast: false },
     retry: false,
     // One check per project per tab; a revoked project still dead-ends at
     // every data call, so there's nothing to re-validate here.
     staleTime: Infinity,
   });
   const error = access.error;
+  const signedOut = getErrorCode(error) === "UNAUTHENTICATED";
+  const projectMissing =
+    error instanceof ApiError &&
+    error.status === 404 &&
+    ["PROJECT_NOT_FOUND", "NOT_FOUND"].includes(error.code.toUpperCase());
   useEffect(() => {
-    if (!error) return;
-    if (getErrorCode(error) === "UNAUTHENTICATED") {
+    if (signedOut) {
       void navigate({
         to: "/sign-in",
         search: getSignInSearch(
@@ -50,13 +56,17 @@ function useProjectAccessRedirect(projectId: string) {
       });
       return;
     }
-    void navigate({ to: "/", replace: true });
-  }, [error, navigate]);
+    if (projectMissing) void navigate({ to: "/", replace: true });
+  }, [signedOut, projectMissing, navigate]);
+  return {
+    access,
+    retryableError: Boolean(error) && !signedOut && !projectMissing,
+  };
 }
 
 function ProjectLayout() {
   const { projectId } = Route.useParams();
-  useProjectAccessRedirect(projectId);
+  const { access, retryableError } = useProjectAccessRedirect(projectId);
 
   // Remember this as the last-visited project for the landing redirect.
   // Settings and its sub-pages are excluded: editing another project's
@@ -70,9 +80,20 @@ function ProjectLayout() {
       select: () => true,
     }) ?? false;
   useEffect(() => {
-    if (isSettingsPage) return;
+    if (isSettingsPage || !access.isSuccess) return;
     setLastProjectId(projectId);
-  }, [projectId, isSettingsPage]);
+  }, [projectId, isSettingsPage, access.isSuccess]);
 
+  if (retryableError) {
+    return (
+      <ErrorState
+        variant="page"
+        title="Could not open this project"
+        message="We couldn't check project access. Try again to stay on this page."
+        onRetry={() => void access.refetch()}
+        isRetrying={access.isFetching}
+      />
+    );
+  }
   return <Outlet />;
 }

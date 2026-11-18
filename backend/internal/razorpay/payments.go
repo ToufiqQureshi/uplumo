@@ -23,6 +23,18 @@ type Payment struct {
 	Captured bool   `json:"captured"`
 }
 
+// FetchPayment checks the status of a payment after an ambiguous refund response.
+func (c *Client) FetchPayment(ctx context.Context, id string) (Payment, error) {
+	var payment Payment
+	if err := c.get(ctx, "/payments/"+url.PathEscape(id), &payment); err != nil {
+		return Payment{}, fmt.Errorf("fetch payment %s: %w", id, err)
+	}
+	if payment.ID != id {
+		return Payment{}, fmt.Errorf("payment response does not match requested ID")
+	}
+	return payment, nil
+}
+
 // PaymentAttempt is one payment attempt as Razorpay lists it, failed ones
 // included, for the staff console.
 type PaymentAttempt struct {

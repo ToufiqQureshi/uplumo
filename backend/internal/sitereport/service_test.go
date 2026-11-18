@@ -153,7 +153,9 @@ type fakeStore struct {
 }
 
 func (f fakeStore) Project(context.Context, string, string) (Project, error) { return f.project, f.err }
-func (f fakeStore) LatestAudit(context.Context, string) (*Audit, error)      { return f.audit, f.auditErr }
+func (f fakeStore) LatestAudit(context.Context, string, string) (*Audit, error) {
+	return f.audit, f.auditErr
+}
 func (f fakeStore) LatestBacklinks(context.Context, string, string) (*Backlinks, error) {
 	return f.links, nil
 }
@@ -388,5 +390,34 @@ func TestHandler(t *testing.T) {
 	mux.ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/projects/p1/reports/generate", strings.NewReader(`{"title":"B","periodDays":7,"sections":["audit"]}`)))
 	if rec.Code != 400 || !strings.Contains(rec.Body.String(), "already exists") {
 		t.Fatalf("duplicate title = %d %s", rec.Code, rec.Body)
+	}
+}
+
+func TestGenerateDoesNotMergeSameTitleWithDifferentInputs(t *testing.T) {
+	search := &fakeSearch{data: fullSearch(), gate: make(chan struct{})}
+	svc := newService(search, &fakeSaver{})
+	type outcome struct {
+		report Result
+		err    error
+	}
+	results := make(chan outcome, 2)
+	var wg sync.WaitGroup
+	for _, days := range []int{7, 90} {
+		wg.Go(func() {
+			input := validInput()
+			input.PeriodDays = days
+			report, err := svc.Generate(t.Context(), "org", "proj", Author{}, input)
+			results <- outcome{report, err}
+		})
+	}
+	deadline := time.Now().Add(2 * time.Second)
+	for search.calls.Load() < 2 && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	close(search.gate)
+	wg.Wait()
+	first, second := <-results, <-results
+	if first.err != nil || second.err != nil || first.report.ReportID == second.report.ReportID {
+		t.Fatalf("different date windows returned %+v and %+v", first, second)
 	}
 }

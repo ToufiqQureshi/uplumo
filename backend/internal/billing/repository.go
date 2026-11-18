@@ -43,6 +43,11 @@ func (r repository) planUsage(ctx context.Context, orgID string) (planUsage, err
 	return usage, nil
 }
 
+type billingConnection interface {
+	querier
+	execer
+}
+
 // querier is a pool, a connection or a transaction.
 type querier interface {
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
@@ -64,27 +69,22 @@ type subscription struct {
 	EventAt time.Time
 }
 
-// lockCheckout serializes checkouts of orgID across server instances, with a
-// session advisory lock on a connection of its own, so no transaction stays
-// open across the Razorpay calls. unlock must be called; a lost connection
-// releases the lock by itself.
-//
-// The checkout's own reads and writes go through the returned connection, so
-// the lock holder never waits for a second pool connection while other
-// checkouts of the workspace hold theirs waiting for the lock.
-func (r repository) lockCheckout(ctx context.Context, orgID string) (q querier, unlock func(), err error) {
+// lockBillingOperation serializes provider operations across server instances.
+// Its reads and writes use the returned connection. Unlock releases the session
+// advisory lock without holding a transaction open across provider calls.
+func (r repository) lockBillingOperation(ctx context.Context, key string) (q billingConnection, unlock func(), err error) {
 	conn, err := r.db.Acquire(ctx)
 	if err != nil {
-		return nil, nil, fmt.Errorf("acquire checkout lock connection: %w", err)
+		return nil, nil, fmt.Errorf("acquire billing lock connection: %w", err)
 	}
-	if _, err := conn.Exec(ctx, `SELECT pg_advisory_lock(hashtextextended('checkout:' || $1, 0))`, orgID); err != nil {
+	if _, err := conn.Exec(ctx, `SELECT pg_advisory_lock(hashtextextended($1, 0))`, key); err != nil {
 		conn.Release()
-		return nil, nil, fmt.Errorf("lock checkout: %w", err)
+		return nil, nil, fmt.Errorf("lock billing operation: %w", err)
 	}
 	return conn, func() {
 		unlockCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer cancel()
-		if _, err := conn.Exec(unlockCtx, `SELECT pg_advisory_unlock(hashtextextended('checkout:' || $1, 0))`, orgID); err != nil {
+		if _, err := conn.Exec(unlockCtx, `SELECT pg_advisory_unlock(hashtextextended($1, 0))`, key); err != nil {
 			// Closing the connection releases the lock.
 			_ = conn.Conn().Close(unlockCtx)
 		}
@@ -214,8 +214,7 @@ const (
 	// eventDuplicateDelivery: the event id was seen before.
 	eventDuplicateDelivery
 	// eventSecondLiveSubscription: the workspace already has another live
-	// subscription. Nothing was recorded or granted, so a redelivery is
-	// handled the same way until the caller has stopped this one.
+	// subscription. The rejected subscription can never earn credits.
 	eventSecondLiveSubscription
 )
 
@@ -229,16 +228,28 @@ const (
 func (r repository) applyEvent(ctx context.Context, eventID string, s subscription, liveStatuses []string, grantCredits int64, grantIdentities []string) (eventOutcome, error) {
 	outcome := eventApplied
 	err := pgdb.InTx(ctx, r.db, func(tx pgx.Tx) error {
-		var seen bool
-		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM go_billing_webhook_events WHERE event_id = $1)`, eventID).Scan(&seen); err != nil {
-			return fmt.Errorf("look up event: %w", err)
+		if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended('billing-webhook:' || $1, 0))`, s.OrganizationID); err != nil {
+			return fmt.Errorf("lock subscription webhook: %w", err)
+		}
+		rejectedKey := "duplicate-subscription:" + s.OrganizationID + ":" + s.ID
+		rejected, err := eventRecorded(ctx, tx, rejectedKey)
+		if err != nil {
+			return err
+		}
+		if rejected {
+			outcome = eventSecondLiveSubscription
+			return nil
+		}
+		seen, err := eventRecorded(ctx, tx, eventID)
+		if err != nil {
+			return err
 		}
 		if seen {
 			outcome = eventDuplicateDelivery
 			return nil
 		}
 		var storedID, storedStatus string
-		err := tx.QueryRow(ctx, `
+		err = tx.QueryRow(ctx, `
 		SELECT razorpay_subscription_id, status FROM go_billing_subscriptions
 		WHERE organization_id = $1 FOR UPDATE`, s.OrganizationID,
 		).Scan(&storedID, &storedStatus)
@@ -247,7 +258,7 @@ func (r repository) applyEvent(ctx context.Context, eventID string, s subscripti
 		}
 		if storedID != "" && storedID != s.ID && slices.Contains(liveStatuses, storedStatus) && slices.Contains(liveStatuses, s.Status) {
 			outcome = eventSecondLiveSubscription
-			return nil
+			return recordEvent(ctx, tx, rejectedKey)
 		}
 
 		tag, err := tx.Exec(ctx, `
@@ -311,9 +322,18 @@ func (r repository) applyEvent(ctx context.Context, eventID string, s subscripti
 	return outcome, nil
 }
 
-// recordEvent marks eventID handled without applying it.
-func (r repository) recordEvent(ctx context.Context, eventID string) error {
-	if _, err := r.db.Exec(ctx, `INSERT INTO go_billing_webhook_events (event_id) VALUES ($1) ON CONFLICT DO NOTHING`, eventID); err != nil {
+func eventRecorded(ctx context.Context, q querier, eventID string) (bool, error) {
+	var seen bool
+	err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM go_billing_webhook_events WHERE event_id=$1)`, eventID).Scan(&seen)
+	if err != nil {
+		return false, fmt.Errorf("look up event: %w", err)
+	}
+	return seen, nil
+}
+
+// recordEvent marks an event or a recovery step handled.
+func recordEvent(ctx context.Context, q execer, eventID string) error {
+	if _, err := q.Exec(ctx, `INSERT INTO go_billing_webhook_events (event_id) VALUES ($1) ON CONFLICT DO NOTHING`, eventID); err != nil {
 		return fmt.Errorf("record event: %w", err)
 	}
 	return nil

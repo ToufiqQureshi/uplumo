@@ -239,3 +239,33 @@ for (const width of [320, 390]) {
     expect(paid).toEqual([]);
   });
 }
+
+test("a temporary project access failure can be retried on the same page", async ({
+  page,
+}) => {
+  await installGrowthFixtures(page);
+  let checks = 0;
+  await page.route("**/api/v1/projects/e2e-project/get", async (route) => {
+    checks += 1;
+    if (checks > 1) {
+      await route.fallback();
+      return;
+    }
+    await route.fulfill({
+      status: 502,
+      json: { error: { code: "internal", message: "Temporary failure." } },
+    });
+  });
+  await page.goto("/p/e2e-project/search-performance?view=conversions");
+  await expect(
+    page.getByRole("alert").getByText("Could not open this project"),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Try again" }).click();
+  await expect(
+    page.getByRole("button", { name: "Find opportunities" }),
+  ).toBeVisible();
+  await expect(page).toHaveURL(
+    /\/p\/e2e-project\/search-performance\?view=conversions$/,
+  );
+  expect(checks).toBe(2);
+});

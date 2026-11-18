@@ -41,6 +41,8 @@ var (
 	errTooManyRequests     = &apiError{http.StatusTooManyRequests, "TOO_MANY_REQUESTS", "Too many requests. Please try again later."}
 	errInternal            = &apiError{http.StatusInternalServerError, "INTERNAL_SERVER_ERROR", "Internal server error"}
 
+	errSignupEmailUnavailable = &apiError{http.StatusServiceUnavailable, "SIGNUP_EMAIL_UNAVAILABLE", "Email signup is temporarily unavailable. Please try again later."}
+
 	errCaptchaMissing = &apiError{http.StatusBadRequest, "MISSING_RESPONSE", "Missing CAPTCHA response"}
 	errCaptchaFailed  = &apiError{http.StatusForbidden, "VERIFICATION_FAILED", "Captcha verification failed"}
 	errCaptchaUnknown = &apiError{http.StatusInternalServerError, "UNKNOWN_ERROR", "Something went wrong"}

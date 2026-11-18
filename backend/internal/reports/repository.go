@@ -6,11 +6,12 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 // Store defines report and report template persistence operations.
 type Store interface {
+	WithSaveLock(context.Context, string, func(Store) (SaveResult, error)) (SaveResult, error)
 	List(context.Context, string, int, int) ([]Metadata, error)
 	Count(context.Context, string) (int, error)
 	Get(context.Context, string, string) (Metadata, error)
@@ -31,7 +32,31 @@ type Store interface {
 }
 
 // Repository stores reports and templates in Postgres.
-type Repository struct{ DB *pgxpool.Pool }
+type Repository struct{ DB reportDB }
+
+type reportDB interface {
+	Begin(context.Context) (pgx.Tx, error)
+	Query(context.Context, string, ...any) (pgx.Rows, error)
+	QueryRow(context.Context, string, ...any) pgx.Row
+	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
+}
+
+// WithSaveLock serializes title and storage checks with each workspace's saves.
+func (r Repository) WithSaveLock(ctx context.Context, orgID string, save func(Store) (SaveResult, error)) (SaveResult, error) {
+	var result SaveResult
+	err := pgx.BeginFunc(ctx, r.DB, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended('reports:' || $1, 0))`, orgID); err != nil {
+			return fmt.Errorf("lock report saves: %w", err)
+		}
+		var err error
+		result, err = save(Repository{DB: tx})
+		return err
+	})
+	if err != nil {
+		return SaveResult{}, err
+	}
+	return result, nil
+}
 
 const metadataColumns = `id, project_id, title, summary, skill, template_id, created_by, created_by_user_id, size_bytes, share_token, shared_at, created_at, updated_at`
 
