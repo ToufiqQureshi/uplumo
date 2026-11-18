@@ -3,6 +3,7 @@ package audit
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -62,6 +63,11 @@ func RunnerHandler(runner *Runner) jobs.Handler {
 		if payload.AuditID == "" {
 			return fmt.Errorf("audit job %d has no audit id", job.ID)
 		}
-		return runner.Run(ctx, payload)
+		err := runner.runAttempt(ctx, payload, job.Attempts >= job.MaxAttempts)
+		if errors.Is(err, ErrAuditNotFound) {
+			// A replay for a deleted or terminal audit has no work left.
+			return nil
+		}
+		return err
 	}
 }

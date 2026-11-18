@@ -2,6 +2,7 @@ package audit
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 	"slices"
@@ -94,20 +95,26 @@ const (
 	persistTimeout = 30 * time.Second
 )
 
-// Run executes the audit. A returned error means the audit failed and was
-// marked failed; a nil error means it completed (possibly with partial data).
+// Run executes an audit without queue retries.
 func (r *Runner) Run(ctx context.Context, job JobPayload) error {
+	return r.runAttempt(ctx, job, true)
+}
+
+func (r *Runner) runAttempt(ctx context.Context, job JobPayload, finalAttempt bool) error {
 	runCtx, cancel := context.WithTimeout(ctx, auditDeadline)
 	defer cancel()
 
-	if err := r.setPhase(runCtx, job, "discovery"); err != nil {
+	err := r.setPhase(runCtx, job, "discovery")
+	if errors.Is(err, ErrAuditNotFound) {
 		return err
 	}
-	if err := r.run(runCtx, ctx, job); err != nil {
+	if err == nil {
+		err = r.run(runCtx, ctx, job)
+	}
+	if err != nil && finalAttempt {
 		r.failAudit(ctx, job, err)
-		return err
 	}
-	return nil
+	return err
 }
 
 // run performs the phases and completes the audit. ctx bounds the crawl;

@@ -4,6 +4,7 @@ package sitepublish
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"net/url"
@@ -29,6 +30,7 @@ var (
 	ErrBadCredentials    = errors.New("WordPress refused the username or application password")
 	ErrAuthHeaderDropped = errors.New("the website's hosting removed the login header")
 	ErrMissingPermission = errors.New("this WordPress user cannot publish posts and upload images")
+	ErrPublishInProgress = errors.New("this draft is already being sent to WordPress")
 	ErrRemoteMissing     = errors.New("the published post no longer exists on the site")
 	ErrKeywordStuffing   = errors.New("the draft repeats its target topic too often to publish")
 )
@@ -45,6 +47,7 @@ const WordPressPlatform = "wordpress"
 const (
 	StatusDraft   = "draft"
 	StatusPublish = "publish"
+	statusStaged  = "uplumo_staged"
 )
 
 // Connection is a project's website, with the secret still encrypted.
@@ -80,6 +83,7 @@ type Store interface {
 	DeleteConnection(ctx context.Context, projectID string) error
 	Publication(ctx context.Context, projectID, draftID string) (Publication, error)
 	SavePublication(ctx context.Context, publication Publication) error
+	LockPublication(ctx context.Context, projectID, draftID string) (func(), error)
 }
 
 // Drafts reads content-editor drafts. contenteditor.Repository satisfies it.
@@ -183,7 +187,11 @@ func (s *Service) Disconnect(ctx context.Context, projectID string) error {
 
 // Publication returns where a draft was published, or ErrNotFound.
 func (s *Service) Publication(ctx context.Context, projectID, draftID string) (Publication, error) {
-	return s.Store.Publication(ctx, projectID, draftID)
+	publication, err := s.Store.Publication(ctx, projectID, draftID)
+	if err == nil && publication.staged() {
+		return Publication{}, ErrNotFound
+	}
+	return publication, err
 }
 
 // Publish sends a draft to the project's website as a post with the given
@@ -194,6 +202,11 @@ func (s *Service) Publish(ctx context.Context, projectID, draftID, status string
 	if status != StatusDraft && status != StatusPublish {
 		return Publication{}, PublicationSchema{}, &ValidationError{Message: "Choose draft or publish."}
 	}
+	release, err := s.Store.LockPublication(ctx, projectID, draftID)
+	if err != nil {
+		return Publication{}, PublicationSchema{}, err
+	}
+	defer release()
 	connection, err := s.Store.Connection(ctx, projectID)
 	if err != nil {
 		return Publication{}, PublicationSchema{}, err
@@ -246,19 +259,25 @@ func (s *Service) Publish(ctx context.Context, projectID, draftID, status string
 		Title: strings.TrimSpace(draft.Title), Content: markup, Excerpt: strings.TrimSpace(draft.MetaDescription),
 		Slug: strings.TrimSpace(draft.Slug), Status: status, FeaturedMedia: featured,
 	}
-	saved, err := s.WordPress.SavePost(ctx, creds, previous.RemoteID, post)
-	if errors.Is(err, ErrRemoteMissing) {
-		// Deleted on the site: publish it as a new post.
-		saved, err = s.WordPress.SavePost(ctx, creds, "", post)
+	publication := Publication{DraftID: draftID, ProjectID: projectID, SiteURL: connection.SiteURL, Media: media}
+	var saved Saved
+	if previous.RemoteID != "" {
+		post.clearSlug = previous.staged()
+		saved, err = s.WordPress.SavePost(ctx, creds, previous.RemoteID, post)
+	}
+	if previous.RemoteID == "" || errors.Is(err, ErrRemoteMissing) {
+		staged, stageErr := s.stagePost(ctx, creds, publication, post)
+		if stageErr != nil {
+			return Publication{}, PublicationSchema{}, stageErr
+		}
+		post.clearSlug = true
+		saved, err = s.WordPress.SavePost(ctx, creds, staged.ID, post)
 	}
 	if err != nil {
 		return Publication{}, PublicationSchema{}, err
 	}
 	schemaInfo := s.addSchema(ctx, creds, saved, post, markup, schema)
-	publication := Publication{
-		DraftID: draftID, ProjectID: projectID, SiteURL: connection.SiteURL,
-		RemoteID: saved.ID, RemoteURL: saved.Link, RemoteStatus: saved.Status, Media: media,
-	}
+	publication.RemoteID, publication.RemoteURL, publication.RemoteStatus = saved.ID, saved.Link, saved.Status
 	if err := s.Store.SavePublication(ctx, publication); err != nil {
 		return Publication{}, PublicationSchema{}, err
 	}
@@ -267,6 +286,33 @@ func (s *Service) Publish(ctx context.Context, projectID, draftID, status string
 		return Publication{}, PublicationSchema{}, err
 	}
 	return final, schemaInfo, nil
+}
+
+// A staged publication is a local checkpoint for retrying the final update by ID.
+func (p Publication) staged() bool {
+	return p.RemoteStatus == statusStaged
+}
+
+func (s *Service) stagePost(ctx context.Context, creds Credentials, publication Publication, post Post) (Saved, error) {
+	digest := sha256.Sum256([]byte(publication.ProjectID + ":" + publication.DraftID))
+	post.Slug = fmt.Sprintf("uplumo-stage-%x", digest[:])
+	post.Status = StatusDraft
+	saved, err := s.WordPress.findStagedPost(ctx, creds, post.Slug)
+	if err != nil {
+		return Saved{}, err
+	}
+	if saved.ID == "" {
+		saved, err = s.WordPress.SavePost(ctx, creds, "", post)
+		if err != nil {
+			return Saved{}, err
+		}
+	}
+	// Keep the recovery slug on the remote draft until its ID is durable.
+	publication.RemoteID, publication.RemoteStatus = saved.ID, statusStaged
+	if err := s.Store.SavePublication(ctx, publication); err != nil {
+		return Saved{}, err
+	}
+	return saved, nil
 }
 
 // PublicationSchema reports what a publish did with the requested JSON-LD.

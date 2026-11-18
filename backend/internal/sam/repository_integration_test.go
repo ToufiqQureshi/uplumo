@@ -313,3 +313,52 @@ func TestSetTitleAndTouchKeepTheLegacyTimestampFormat(t *testing.T) {
 		t.Fatalf("touch must move a session to the top: %s < %s", s2, s1)
 	}
 }
+
+func TestDistributedTurnsCoordinateAcrossPools(t *testing.T) {
+	db := openSamTestDB(t)
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+	other, err := pgxpool.NewWithConfig(ctx, db.Config())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer other.Close()
+	first := distributedTurns{db: db, locks: db}
+	second := distributedTurns{db: other, locks: other}
+	sessionID := fmt.Sprintf("distributed-test-%d", time.Now().UnixNano())
+
+	turn, release, err := first.begin(ctx, sessionID)
+	if err != nil || release == nil {
+		t.Fatalf("claim first turn: %v", err)
+	}
+	// Simulate the original handler releasing the lock only after its final
+	// transcript writes finish, even though cancellation has been delivered.
+	finished := make(chan struct{})
+	go func() {
+		defer close(finished)
+		<-turn.Done()
+		release()
+	}()
+	defer func() {
+		cancel()
+		<-finished
+	}()
+	if _, duplicate, err := second.begin(ctx, sessionID); err != nil || duplicate != nil {
+		if duplicate != nil {
+			duplicate()
+		}
+		t.Fatalf("second replica claimed active session: %v", err)
+	}
+	rewindRelease, err := second.rewind(ctx, sessionID)
+	if err != nil || rewindRelease == nil {
+		t.Fatalf("cross-replica rewind: %v", err)
+	}
+	defer rewindRelease()
+	<-finished
+	if _, duringRewind, err := first.begin(ctx, sessionID); err != nil || duringRewind != nil {
+		if duringRewind != nil {
+			duringRewind()
+		}
+		t.Fatalf("started turn during rewind: %v", err)
+	}
+}

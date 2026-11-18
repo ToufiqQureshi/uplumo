@@ -191,6 +191,7 @@ type Post struct {
 	Slug          string `json:"slug,omitempty"`
 	Status        string `json:"status"`
 	FeaturedMedia int64  `json:"featured_media,omitempty"`
+	clearSlug     bool
 }
 
 // Saved is a post as the site stored it.
@@ -203,6 +204,25 @@ type Saved struct {
 	DateGMT string
 }
 
+// findStagedPost recovers a draft created before its local ID was saved.
+func (w WordPress) findStagedPost(ctx context.Context, creds Credentials, slug string) (Saved, error) {
+	query := url.Values{"slug": {slug}, "status": {StatusDraft}, "context": {"edit"}, "per_page": {"2"}, "_fields": {"id,slug"}}
+	var posts []struct {
+		ID   int64  `json:"id"`
+		Slug string `json:"slug"`
+	}
+	if err := w.call(ctx, creds, http.MethodGet, "/wp/v2/posts", query, nil, "", nil, &posts); err != nil {
+		return Saved{}, err
+	}
+	if len(posts) == 0 {
+		return Saved{}, nil
+	}
+	if len(posts) != 1 || posts[0].ID <= 0 || posts[0].Slug != slug {
+		return Saved{}, errors.New("WordPress returned an ambiguous staged post")
+	}
+	return Saved{ID: strconv.FormatInt(posts[0].ID, 10)}, nil
+}
+
 // SavePost creates a post, or updates the post remoteID when it is set. It
 // returns ErrRemoteMissing when that post no longer exists.
 func (w WordPress) SavePost(ctx context.Context, creds Credentials, remoteID string, post Post) (Saved, error) {
@@ -210,7 +230,16 @@ func (w WordPress) SavePost(ctx context.Context, creds Credentials, remoteID str
 	if remoteID != "" {
 		route += "/" + url.PathEscape(remoteID)
 	}
-	body, err := json.Marshal(post)
+	var payload any = post
+	if post.clearSlug && post.Slug == "" {
+		// An explicit empty slug lets WordPress derive it from the title
+		// instead of retaining the temporary recovery slug.
+		payload = struct {
+			Post
+			Slug string `json:"slug"`
+		}{Post: post}
+	}
+	body, err := json.Marshal(payload)
 	if err != nil {
 		return Saved{}, fmt.Errorf("encode post: %w", err)
 	}
