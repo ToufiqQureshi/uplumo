@@ -168,6 +168,10 @@ func (s *Service) SignUp(ctx context.Context, in SignUpInput) (AuthResult, error
 		return AuthResult{}, errDisposableEmail
 	}
 
+	if s.emailRequired() && s.Mailer == nil {
+		return AuthResult{}, errSignupEmailUnavailable
+	}
+
 	now := s.Now()
 	_, exists, err := userByEmail(ctx, s.DB, email)
 	if err != nil {

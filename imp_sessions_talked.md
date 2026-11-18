@@ -1,3 +1,8 @@
+## 2026-11-18 · SaaS audit follow-up
+
+- Owner approved one change set for duplicate-payment refund recovery, report date and domain correctness, signup without a configured mailer, and retrying project access in place.
+- Verify with local Postgres and Redis, fake Razorpay and browser tests. No live payment, merge or deployment was part of the approved work.
+
 ## 18 Nov 2026: marketing suite vision (Instagram, email, WhatsApp, ads)
 
 - Owner: "email marketing and WhatsApp marketing and google ads and meta ads sab mere platform se chale ye me chahta hu bhai". Also Instagram: creators post from Uplumo, IG SEO, video editing.

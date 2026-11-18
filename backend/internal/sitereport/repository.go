@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -35,23 +37,45 @@ func (r Repository) Project(ctx context.Context, organizationID, projectID strin
 	return out, nil
 }
 
-// LatestAudit returns the newest completed audit, or nil when none finished.
-func (r Repository) LatestAudit(ctx context.Context, projectID string) (*Audit, error) {
-	var auditID string
-	var completedAt *time.Time
-	var startedAt time.Time
-	out := Audit{}
-	err := r.DB.QueryRow(ctx, `SELECT id, pages_crawled, started_at, completed_at FROM go_audits
-		WHERE project_id=$1 AND status='completed' ORDER BY started_at DESC, id DESC LIMIT 1`, projectID).Scan(&auditID, &out.PagesCrawled, &startedAt, &completedAt)
-	if errors.Is(err, pgx.ErrNoRows) {
+// LatestAudit returns the newest completed audit for the report's domain.
+func (r Repository) LatestAudit(ctx context.Context, projectID, domain string) (*Audit, error) {
+	if domain == "" {
 		return nil, nil
 	}
+	audits, err := r.DB.Query(ctx, `SELECT id, start_url, pages_crawled, started_at, completed_at FROM go_audits
+        WHERE project_id=$1 AND status='completed' ORDER BY started_at DESC, id DESC`, projectID)
 	if err != nil {
 		return nil, fmt.Errorf("load latest audit: %w", err)
 	}
-	out.CompletedAt = startedAt
-	if completedAt != nil {
-		out.CompletedAt = *completedAt
+	defer audits.Close()
+	domain = strings.TrimPrefix(strings.ToLower(domain), "www.")
+	var auditID string
+	out := Audit{}
+	for audits.Next() {
+		var id, startURL string
+		var completedAt *time.Time
+		var startedAt time.Time
+		var pages int
+		if err := audits.Scan(&id, &startURL, &pages, &startedAt, &completedAt); err != nil {
+			return nil, fmt.Errorf("read audit: %w", err)
+		}
+		parsed, err := url.Parse(startURL)
+		if err != nil || strings.TrimPrefix(strings.ToLower(parsed.Hostname()), "www.") != domain {
+			continue
+		}
+		auditID, out.PagesCrawled = id, pages
+		out.CompletedAt = startedAt
+		if completedAt != nil {
+			out.CompletedAt = *completedAt
+		}
+		break
+	}
+	audits.Close()
+	if err := audits.Err(); err != nil {
+		return nil, fmt.Errorf("iterate audits: %w", err)
+	}
+	if auditID == "" {
+		return nil, nil
 	}
 	rows, err := r.DB.Query(ctx, `SELECT issue_type, severity, count(DISTINCT page_url)::int,
 		(array_agg(DISTINCT page_url ORDER BY page_url))[1:$2]

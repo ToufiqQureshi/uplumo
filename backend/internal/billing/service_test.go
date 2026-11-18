@@ -1002,3 +1002,54 @@ func TestASecondLiveSubscriptionsPaymentIsRefunded(t *testing.T) {
 		t.Fatalf("balance = %d, %v; want one Pro grant", got, err)
 	}
 }
+
+func TestDuplicateSubscriptionRefundResumesWithoutCancellingAgain(t *testing.T) {
+	ctx := t.Context()
+	f := newFixture(ctx, t)
+	f.deliver(ctx, t, f.event("subscription.charged", "sub_kept", "active", t1))
+	var refunds, cancellations atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.HasSuffix(r.URL.Path, "/refund"):
+			if refunds.Add(1) == 1 {
+				http.Error(w, "simulated refund failure", http.StatusBadGateway)
+				return
+			}
+			_, _ = fmt.Fprint(w, `{"id":"refund_recovered"}`)
+		case strings.HasSuffix(r.URL.Path, "/cancel"):
+			cancellations.Add(1)
+			_, _ = fmt.Fprint(w, `{"id":"sub_duplicate","status":"cancelled"}`)
+		default:
+			_, _ = fmt.Fprint(w, `{"id":"pay_duplicate","status":"captured"}`)
+		}
+	}))
+	defer server.Close()
+	f.svc.razorpay = razorpay.NewClient(server.URL, "local-test", "local-test")
+	var event map[string]any
+	if err := json.Unmarshal(f.event("subscription.charged", "sub_duplicate", "active", t1.Add(time.Minute)), &event); err != nil {
+		t.Fatal(err)
+	}
+	event["payload"].(map[string]any)["payment"] = map[string]any{"entity": map[string]any{"id": "pay_duplicate"}}
+	body, err := json.Marshal(event)
+	if err != nil {
+		t.Fatal(err)
+	}
+	eventID := "evt_" + rand.Text()
+	first, firstErr := f.svc.HandleWebhook(ctx, body, sign(body), eventID)
+	if first != "" || !errors.Is(firstErr, ErrPaymentProvider) {
+		t.Fatalf("first delivery = %q %v, want provider error", first, firstErr)
+	}
+	f.deliver(ctx, t, f.event("subscription.completed", "sub_kept", "completed", t1.Add(2*time.Minute)))
+	if got := f.deliverAs(ctx, t, eventID, body); got != WebhookProcessed {
+		t.Fatalf("recovery = %q, want processed", got)
+	}
+	if got := f.deliverAs(ctx, t, eventID, body); got != WebhookDuplicate {
+		t.Fatalf("third delivery = %q, want duplicate", got)
+	}
+	if cancellations.Load() != 1 || refunds.Load() != 2 {
+		t.Fatalf("cancellations = %d, refunds = %d", cancellations.Load(), refunds.Load())
+	}
+	if got := f.storedSubscriptionID(ctx, t); got != "sub_kept" {
+		t.Fatalf("rejected subscription replaced %q", got)
+	}
+}

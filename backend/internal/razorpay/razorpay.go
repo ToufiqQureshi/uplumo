@@ -114,6 +114,27 @@ func (c *Client) CreateSubscription(ctx context.Context, planID string, totalCou
 	return sub, nil
 }
 
+// FetchSubscription checks the outcome of a cancellation with an ambiguous response.
+func (c *Client) FetchSubscription(ctx context.Context, id string) (Subscription, error) {
+	var sub Subscription
+	if err := c.get(ctx, "/subscriptions/"+url.PathEscape(id), &sub); err != nil {
+		return Subscription{}, fmt.Errorf("fetch subscription %s: %w", id, err)
+	}
+	if sub.ID != id {
+		return Subscription{}, fmt.Errorf("subscription response does not match requested ID")
+	}
+	return sub, nil
+}
+
+func (c *Client) get(ctx context.Context, path string, dst any) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+path, nil)
+	if err != nil {
+		return fmt.Errorf("build request: %w", err)
+	}
+	req.SetBasicAuth(c.keyID, c.keySecret)
+	return c.do(req, dst)
+}
+
 // CancelSubscription cancels subscription id. With atCycleEnd the customer
 // keeps the plan until the paid cycle ends and is not charged again;
 // Razorpay accepts that only for a subscription with a running cycle.

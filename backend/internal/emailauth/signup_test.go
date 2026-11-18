@@ -210,6 +210,18 @@ func TestSignUpCaptcha(t *testing.T) {
 	}
 }
 
+func TestSignUpWithoutRequiredMailerLeavesNoAccount(t *testing.T) {
+	e := newAuthEnv(t, envOptions{noMailer: true})
+	const address = "no-mailer@example.com"
+	resp := e.request(http.MethodPost, "/api/auth/sign-up/email", signUpBody(address), originHeaders())
+	if resp.StatusCode != http.StatusServiceUnavailable || resp.errCode() != "SIGNUP_EMAIL_UNAVAILABLE" {
+		t.Fatalf("signup without mailer = %d %s", resp.StatusCode, resp.raw)
+	}
+	if count := e.count(`SELECT count(*) FROM "user" WHERE email=$1`, address); count != 0 {
+		t.Fatalf("signup saved %d users without verification email", count)
+	}
+}
+
 func TestSignUpFailsVisiblyWhenTheEmailCannotBeSent(t *testing.T) {
 	e := newAuthEnv(t, envOptions{})
 	e.mailer.fail = errBoom

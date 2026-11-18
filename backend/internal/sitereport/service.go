@@ -2,6 +2,7 @@ package sitereport
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -23,7 +24,7 @@ const generateTimeout = 60 * time.Second
 // Store reads the stored project, audit and backlink rows.
 type Store interface {
 	Project(ctx context.Context, organizationID, projectID string) (Project, error)
-	LatestAudit(ctx context.Context, projectID string) (*Audit, error)
+	LatestAudit(ctx context.Context, projectID, domain string) (*Audit, error)
 	LatestBacklinks(ctx context.Context, projectID, domain string) (*Backlinks, error)
 }
 
@@ -67,7 +68,7 @@ type Author struct{ UserID, Name string }
 var hexColor = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
 
 // Generate collects every chosen section, renders one document and saves it.
-// A double click with the same title shares one run instead of saving twice.
+// A double click with identical inputs shares one run instead of saving twice.
 func (s *Service) Generate(ctx context.Context, organizationID, projectID string, author Author, in Input) (Result, error) {
 	if s == nil || s.Store == nil || s.Reports == nil {
 		return Result{}, &Error{Code: "reports_unavailable", Message: "Site reports are not available on this server."}
@@ -76,8 +77,15 @@ func (s *Service) Generate(ctx context.Context, organizationID, projectID string
 	if err != nil {
 		return Result{}, err
 	}
-	key := organizationID + "\x00" + projectID + "\x00" + strings.ToLower(in.Title)
-	out, err, _ := s.flight.Do(key, func() (any, error) {
+	key, err := json.Marshal(struct {
+		OrganizationID, ProjectID string
+		Author                    Author
+		Input                     Input
+	}{organizationID, projectID, author, in})
+	if err != nil {
+		return Result{}, fmt.Errorf("encode report generation key: %w", err)
+	}
+	out, err, _ := s.flight.Do(string(key), func() (any, error) {
 		run, cancel := context.WithTimeout(context.WithoutCancel(ctx), generateTimeout)
 		defer cancel()
 		return s.generate(run, organizationID, projectID, author, in)
@@ -195,12 +203,12 @@ func (s *Service) collect(ctx context.Context, organizationID, projectID string,
 			})
 		case SectionAudit:
 			wg.Go(func() {
-				data, err := s.Store.LatestAudit(ctx, projectID)
+				data, err := s.Store.LatestAudit(ctx, projectID, snap.Project.Domain)
 				switch {
 				case err != nil:
 					fail(section, "site audit", err)
 				case data == nil:
-					skip(section, "No site audit has finished yet. Run one from Site Audit first.")
+					skip(section, "No site audit has finished for this domain. Run one from Site Audit first.")
 				default:
 					snap.Audit = data
 				}

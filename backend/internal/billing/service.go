@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 	"slices"
 	"strings"
 	"time"
@@ -516,7 +515,7 @@ func (s *Service) CheckoutPlan(ctx context.Context, orgID, plan, currency string
 	if planID == "" || (currency == plans.USD && !s.sellsUSD) {
 		return Checkout{}, ErrPlanUnavailable
 	}
-	q, unlock, err := s.repo.lockCheckout(ctx, orgID)
+	q, unlock, err := s.repo.lockBillingOperation(ctx, "checkout:"+orgID)
 	if err != nil {
 		return Checkout{}, fmt.Errorf("checkout for organization %s: %w", orgID, err)
 	}
@@ -635,8 +634,8 @@ func (s *Service) HandleWebhook(ctx context.Context, body []byte, signature, eve
 	if !slices.Contains(handledEvents, event.Event) {
 		return WebhookIgnored, nil
 	}
-	if eventID == "" {
-		return "", fmt.Errorf("%w: no event id", ErrInvalidEvent)
+	if eventID == "" || strings.HasPrefix(eventID, "duplicate-") {
+		return "", fmt.Errorf("%w: missing or invalid event id", ErrInvalidEvent)
 	}
 	if event.Payload.Subscription == nil {
 		return "", fmt.Errorf("%w: %s has no subscription", ErrInvalidEvent, event.Event)
@@ -702,33 +701,66 @@ func (s *Service) HandleWebhook(ctx context.Context, body []byte, signature, eve
 		if event.Payload.Payment != nil {
 			paymentID = event.Payload.Payment.Entity.ID
 		}
-		return s.stopSecondSubscription(ctx, orgID, sub.ID, paymentID, event.Event, eventID)
+		return s.stopSecondSubscription(ctx, orgID, sub.ID, paymentID, eventID)
 	}
 	return WebhookProcessed, nil
 }
 
-// stopSecondSubscription handles a workspace that went live on a second
-// subscription while another is live: it earns no credits and is cancelled
-// now, so it cannot charge again, and the payment the event carries is
-// refunded in full, so the customer is not charged twice. A failed refund
-// is logged as an error (it reaches Sentry) to refund by hand; Razorpay
-// refuses to refund more than was paid, so a redelivery cannot refund
-// twice. The event is recorded only once the cancel succeeded; until then
-// Razorpay's redelivery retries it.
-func (s *Service) stopSecondSubscription(ctx context.Context, orgID, subID, paymentID, eventName, eventID string) (WebhookResult, error) {
-	if _, err := s.razorpay.CancelSubscription(ctx, subID, false); err != nil {
-		return "", fmt.Errorf("cancel second live subscription %s of organization %s: %w: %w", subID, orgID, ErrPaymentProvider, err)
+// stopSecondSubscription resumes cancellation and refund independently on redelivery.
+func (s *Service) stopSecondSubscription(ctx context.Context, orgID, subID, paymentID, eventID string) (WebhookResult, error) {
+	q, unlock, err := s.repo.lockBillingOperation(ctx, "duplicate-subscription:"+orgID+":"+subID)
+	if err != nil {
+		return "", err
 	}
-	if paymentID != "" {
-		if err := s.razorpay.RefundPayment(ctx, paymentID); err != nil {
-			slog.ErrorContext(ctx, "cancelled a second live subscription; refund its payment by hand",
-				"organization", orgID, "subscription", subID, "payment", paymentID, "event", eventName, "err", err)
-		} else {
-			slog.WarnContext(ctx, "cancelled a second live subscription and refunded its payment",
-				"organization", orgID, "subscription", subID, "payment", paymentID, "event", eventName)
+	defer unlock()
+
+	seen, err := eventRecorded(ctx, q, eventID)
+	if err != nil {
+		return "", err
+	}
+	if seen {
+		return WebhookDuplicate, nil
+	}
+
+	cancelledKey := "duplicate-cancelled:" + orgID + ":" + subID
+	cancelled, err := eventRecorded(ctx, q, cancelledKey)
+	if err != nil {
+		return "", err
+	}
+	if !cancelled {
+		sub, cancelErr := s.razorpay.CancelSubscription(ctx, subID, false)
+		if cancelErr != nil {
+			sub, err = s.razorpay.FetchSubscription(ctx, subID)
+			if err != nil {
+				return "", fmt.Errorf("cancel second live subscription %s of organization %s: %w: %w", subID, orgID, ErrPaymentProvider, cancelErr)
+			}
+		}
+		if !slices.Contains([]string{"cancelled", "completed", "expired"}, sub.Status) {
+			return "", fmt.Errorf("second subscription %s has status %q after cancellation: %w", subID, sub.Status, ErrPaymentProvider)
+		}
+		if err := recordEvent(ctx, q, cancelledKey); err != nil {
+			return "", err
 		}
 	}
-	if err := s.repo.recordEvent(ctx, eventID); err != nil {
+
+	if paymentID != "" {
+		refundedKey := "duplicate-refunded:" + orgID + ":" + paymentID
+		refunded, err := eventRecorded(ctx, q, refundedKey)
+		if err != nil {
+			return "", err
+		}
+		if !refunded {
+			if err := s.razorpay.RefundPayment(ctx, paymentID); err != nil {
+				if payment, fetchErr := s.razorpay.FetchPayment(ctx, paymentID); fetchErr != nil || payment.Status != "refunded" {
+					return "", fmt.Errorf("refund second subscription payment %s: %w: %w", paymentID, ErrPaymentProvider, err)
+				}
+			}
+			if err := recordEvent(ctx, q, refundedKey); err != nil {
+				return "", err
+			}
+		}
+	}
+	if err := recordEvent(ctx, q, eventID); err != nil {
 		return "", err
 	}
 	return WebhookProcessed, nil

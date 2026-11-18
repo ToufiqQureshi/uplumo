@@ -73,8 +73,14 @@ func (s *Service) Save(ctx context.Context, in SaveInput) (SaveResult, error) {
 	if !strings.Contains(trimmed, "<html") || !strings.HasSuffix(trimmed, "</html>") {
 		return SaveResult{}, fail("VALIDATION_ERROR", "The HTML is incomplete; it must end with </html>. Save was refused to preserve the existing report.")
 	}
+	return s.Store.WithSaveLock(ctx, in.OrganizationID, func(store Store) (SaveResult, error) {
+		return s.save(ctx, store, in, size)
+	})
+}
+
+func (s *Service) save(ctx context.Context, store Store, in SaveInput, size int) (SaveResult, error) {
 	if in.TemplateID != nil && *in.TemplateID != "" {
-		if _, err := s.Store.GetTemplate(ctx, in.ProjectID, *in.TemplateID); err != nil {
+		if _, err := store.GetTemplate(ctx, in.ProjectID, *in.TemplateID); err != nil {
 			if errors.Is(err, ErrNotFound) {
 				return SaveResult{}, fail("NOT_FOUND", "Report template does not exist in this project.")
 			}
@@ -83,7 +89,7 @@ func (s *Service) Save(ctx context.Context, in SaveInput) (SaveResult, error) {
 	}
 	var existing Metadata
 	if in.ReportID != "" {
-		row, err := s.Store.Get(ctx, in.ProjectID, in.ReportID)
+		row, err := store.Get(ctx, in.ProjectID, in.ReportID)
 		if err != nil {
 			if errors.Is(err, ErrNotFound) {
 				return SaveResult{}, fail("NOT_FOUND", "Report does not exist in this project. List reports or omit reportId to create a new one.")
@@ -92,7 +98,7 @@ func (s *Service) Save(ctx context.Context, in SaveInput) (SaveResult, error) {
 		}
 		existing = row
 	}
-	clash, err := s.Store.FindTitle(ctx, in.ProjectID, in.Title)
+	clash, err := store.FindTitle(ctx, in.ProjectID, in.Title)
 	if err != nil {
 		return SaveResult{}, err
 	}
@@ -100,7 +106,7 @@ func (s *Service) Save(ctx context.Context, in SaveInput) (SaveResult, error) {
 		return SaveResult{}, fail("VALIDATION_ERROR", "A report with this title already exists in the project. Pass its reportId to replace it, or use another title.")
 	}
 	if existing.ID == "" {
-		count, err := s.Store.Count(ctx, in.ProjectID)
+		count, err := store.Count(ctx, in.ProjectID)
 		if err != nil {
 			return SaveResult{}, err
 		}
@@ -108,7 +114,7 @@ func (s *Service) Save(ctx context.Context, in SaveInput) (SaveResult, error) {
 			return SaveResult{}, fail("VALIDATION_ERROR", "This project has reached the report limit. Delete an older report first.")
 		}
 	}
-	orgBytes, err := s.Store.OrganizationBytes(ctx, in.OrganizationID)
+	orgBytes, err := store.OrganizationBytes(ctx, in.OrganizationID)
 	if err != nil {
 		return SaveResult{}, err
 	}
@@ -127,7 +133,7 @@ func (s *Service) Save(ctx context.Context, in SaveInput) (SaveResult, error) {
 		if in.TemplateID != nil {
 			existing.TemplateID = in.TemplateID
 		}
-		if err := s.Store.Update(ctx, existing, in.HTML); err != nil {
+		if err := store.Update(ctx, existing, in.HTML); err != nil {
 			return SaveResult{}, err
 		}
 		return SaveResult{ReportID: existing.ID, Title: existing.Title, Created: false, HTMLBytes: size}, nil
@@ -137,7 +143,7 @@ func (s *Service) Save(ctx context.Context, in SaveInput) (SaveResult, error) {
 		return SaveResult{}, fmt.Errorf("create report id: %w", err)
 	}
 	item := Metadata{ID: id, ProjectID: in.ProjectID, Title: in.Title, Summary: in.Summary, Skill: in.Skill, TemplateID: in.TemplateID, CreatedBy: in.CreatedBy, CreatedByUserID: in.CreatedByUserID, SizeBytes: size, CreatedAt: now, UpdatedAt: now}
-	if err := s.Store.Insert(ctx, item, in.HTML); err != nil {
+	if err := store.Insert(ctx, item, in.HTML); err != nil {
 		return SaveResult{}, err
 	}
 	return SaveResult{ReportID: id, Title: in.Title, Created: true, HTMLBytes: size}, nil

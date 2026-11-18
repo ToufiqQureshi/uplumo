@@ -5,10 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/toufiqqureshi/uplumo/backend/internal/reports"
 )
 
 func reportDB(t *testing.T) *pgxpool.Pool {
@@ -44,15 +46,16 @@ func reportDB(t *testing.T) *pgxpool.Pool {
 	t.Cleanup(db.Close)
 	for _, sql := range []string{
 		`CREATE TABLE projects(id text, organization_id text, name text, domain text, archived_at timestamptz)`,
-		`CREATE TABLE go_audits(id text PRIMARY KEY, project_id text, status text, pages_crawled int, started_at timestamptz, completed_at timestamptz)`,
+		`CREATE TABLE go_audits(id text PRIMARY KEY, project_id text, start_url text, status text, pages_crawled int, started_at timestamptz, completed_at timestamptz)`,
 		`CREATE TABLE go_audit_issues(id text PRIMARY KEY, audit_id text, page_url text, issue_type text, severity text)`,
 		`CREATE TABLE go_audit_lighthouse_results(id text PRIMARY KEY, audit_id text, strategy text, performance_score int, accessibility_score int, best_practices_score int, seo_score int, lcp_ms double precision, cls double precision, inp_ms double precision, error_message text)`,
 		`CREATE TABLE backlink_snapshots(id serial, project_id text, domain text, rank int, backlinks int, referring_domains int, new_backlinks int, lost_backlinks int, new_referring_domains int, lost_referring_domains int, captured_at text)`,
 		`INSERT INTO projects VALUES ('p','o','Acme','example.com',NULL), ('gone','o','Old','old.com',now()), ('nodomain','o','No domain',NULL,NULL)`,
 		`INSERT INTO go_audits VALUES
-			('done','p','completed',40,'2026-11-01T10:00:00Z','2026-11-01T10:20:00Z'),
-			('running','p','running',3,'2026-11-05T10:00:00Z',NULL),
-			('other','p2','completed',9,'2026-11-06T10:00:00Z',NULL)`,
+			('done','p','https://www.example.com/path','completed',40,'2026-11-01T10:00:00Z','2026-11-01T10:20:00Z'),
+			('wrong-domain','p','https://example.org','completed',173,'2026-11-08T10:00:00Z',NULL),
+			('running','p','https://www.example.com/path','running',3,'2026-11-05T10:00:00Z',NULL),
+			('other','p2','https://www.example.com/path','completed',9,'2026-11-06T10:00:00Z',NULL)`,
 		`INSERT INTO go_audit_issues VALUES
 			('1','done','https://example.com/f','broken-page','critical'),
 			('2','done','https://example.com/a','broken-page','critical'),
@@ -99,7 +102,7 @@ func TestRepositoryReadsOnlyThisProjectsFinishedData(t *testing.T) {
 		t.Errorf("no-domain project = %+v, %v", p, err)
 	}
 
-	audit, err := repo.LatestAudit(ctx, "p")
+	audit, err := repo.LatestAudit(ctx, "p", "example.com")
 	if err != nil || audit == nil {
 		t.Fatalf("audit = %+v, %v", audit, err)
 	}
@@ -120,7 +123,7 @@ func TestRepositoryReadsOnlyThisProjectsFinishedData(t *testing.T) {
 	if lh == nil || lh.Pages != 2 || *lh.Performance != 76 || *lh.SEO != 86 || *lh.LCPMillis != 2500 {
 		t.Errorf("lighthouse = %+v", lh)
 	}
-	if none, err := repo.LatestAudit(ctx, "nobody"); err != nil || none != nil {
+	if none, err := repo.LatestAudit(ctx, "p", "new-domain.example"); err != nil || none != nil {
 		t.Errorf("no audit = %+v, %v", none, err)
 	}
 
@@ -130,5 +133,53 @@ func TestRepositoryReadsOnlyThisProjectsFinishedData(t *testing.T) {
 	}
 	if none, err := repo.LatestBacklinks(ctx, "p", "missing.com"); err != nil || none != nil {
 		t.Errorf("missing domain = %+v, %v", none, err)
+	}
+}
+
+func TestConcurrentReportsWithSameTitleSaveOnlyOne(t *testing.T) {
+	db := reportDB(t)
+	ctx := t.Context()
+	_, err := db.Exec(ctx, `CREATE TABLE reports(
+        id text PRIMARY KEY, project_id text, title text, summary text, html text,
+        skill text, template_id text, created_by text, created_by_user_id text,
+        size_bytes int, share_token text, shared_at text, created_at text, updated_at text
+    )`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	results := make(chan error, 2)
+	var workers sync.WaitGroup
+	start := make(chan struct{})
+	for _, summary := range []string{"Seven days", "Ninety days"} {
+		workers.Go(func() {
+			<-start
+			// Separate services model requests sent to different replicas.
+			service := reports.Service{Store: reports.Repository{DB: db}}
+			_, err := service.Save(ctx, reports.SaveInput{
+				ProjectID: "p", OrganizationID: "o", Title: "Monthly report",
+				Summary: summary, HTML: "<html><body>Results</body></html>",
+			})
+			results <- err
+		})
+	}
+	close(start)
+	workers.Wait()
+	close(results)
+
+	saved, conflicts := 0, 0
+	for err := range results {
+		var reportErr *reports.Error
+		switch {
+		case err == nil:
+			saved++
+		case errors.As(err, &reportErr) && reportErr.Code == "VALIDATION_ERROR":
+			conflicts++
+		default:
+			t.Fatal(err)
+		}
+	}
+	if saved != 1 || conflicts != 1 {
+		t.Fatalf("saved %d reports and refused %d duplicate titles", saved, conflicts)
 	}
 }

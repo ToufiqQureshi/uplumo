@@ -21,6 +21,10 @@ type memoryStore struct {
 func newMemoryStore() *memoryStore {
 	return &memoryStore{items: map[string]Metadata{}, html: map[string]string{}, templates: map[string]Template{}, shareCreated: true}
 }
+func (m *memoryStore) WithSaveLock(_ context.Context, _ string, save func(Store) (SaveResult, error)) (SaveResult, error) {
+	return save(m)
+}
+
 func (m *memoryStore) List(_ context.Context, project string, _ int, _ int) ([]Metadata, error) {
 	out := []Metadata{}
 	for _, v := range m.items {
