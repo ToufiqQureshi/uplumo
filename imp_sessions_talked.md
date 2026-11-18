@@ -1,3 +1,13 @@
+## 18 Nov 2026: marketing suite vision (Instagram, email, WhatsApp, ads)
+
+- Owner: "email marketing and WhatsApp marketing and google ads and meta ads sab mere platform se chale ye me chahta hu bhai". Also Instagram: creators post from Uplumo, IG SEO, video editing.
+- Video editing engine: github.com/Vibha-Ramprakash/claude-video-effects (MIT, Python + ffmpeg + mediapipe), run as a **separate Python worker**, never inside the Go server. Keep its licence notice. It hard-codes "Claude" in some effects (comment-box, checklist, tier-list); rebrand before use. Its `fx.py` execs `fx_private.py` if present; never ship that file.
+- Agreed facts: all are official APIs (IG Graph API: Business/Creator accounts only, 100 API posts/24h; WhatsApp Cloud API: paid per message, templates need approval; Google Ads API: developer token approval; Meta Marketing API: app review). Meta/Google approvals take 2-8 weeks.
+- Money risk: ads and WhatsApp spend the **customer's** real money; render needs CPU + video storage, so charge credits.
+- Agent's recommended order (owner not yet confirmed): 1) Instagram v1 (connect, insights, caption/hashtag SEO, schedule post) 2) Email 3) WhatsApp 4) Google + Meta Ads. Effects render worker after IG v1 works.
+- Nothing built yet. Each one is its own PR, with the CLAUDE.md §3 "haan" first.
+- Waiting for owner: confirm the order; start Meta developer app + Business Verification and the Google Ads developer token himself (only he can).
+
 ## 2026-11-13 — Content editor evidence upgrade
 
 - Owner approved one PR: stronger SEO/AEO guidance, useful DataForSEO research, no unnecessary paid calls, functioning editor controls.
