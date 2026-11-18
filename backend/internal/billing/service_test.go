@@ -1015,12 +1015,12 @@ func TestDuplicateSubscriptionRefundResumesWithoutCancellingAgain(t *testing.T) 
 				http.Error(w, "simulated refund failure", http.StatusBadGateway)
 				return
 			}
-			fmt.Fprint(w, `{"id":"refund_recovered"}`)
+			_, _ = fmt.Fprint(w, `{"id":"refund_recovered"}`)
 		case strings.HasSuffix(r.URL.Path, "/cancel"):
 			cancellations.Add(1)
-			fmt.Fprint(w, `{"id":"sub_duplicate","status":"cancelled"}`)
+			_, _ = fmt.Fprint(w, `{"id":"sub_duplicate","status":"cancelled"}`)
 		default:
-			fmt.Fprint(w, `{"id":"pay_duplicate","status":"captured"}`)
+			_, _ = fmt.Fprint(w, `{"id":"pay_duplicate","status":"captured"}`)
 		}
 	}))
 	defer server.Close()
