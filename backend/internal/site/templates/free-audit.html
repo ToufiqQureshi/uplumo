@@ -1,0 +1,52 @@
+{{template "head" .}}
+{{template "nav" .}}
+<main id="main">
+<div class="dots">
+<div class="wrap hero fa-hero">
+<span class="sticker">Free · no sign-up</span>
+<h1>Free SEO &amp; <em>AEO audit</em></h1>
+<p class="lead">Check any page for Google and AI search in about 10 seconds. See your score, what is wrong, why it matters and exactly how to fix it.</p>
+{{template "audit-form" .}}
+</div>
+</div>
+
+<div class="wrap narrow">
+<div id="audit-progress" class="fa-progress" hidden>
+<p class="eyebrow">Checking <span id="audit-progress-host" class="mono"></span></p>
+<ol>
+<li>Reading the page HTML</li>
+<li>Checking titles, headings and links</li>
+<li>Reading robots.txt, sitemap and llms.txt</li>
+<li>Checking AI crawler access and schema</li>
+<li>Scoring and writing your fixes</li>
+</ol>
+</div>
+<div id="audit-result" class="fa-result" aria-live="polite"></div>
+<noscript><p class="note center">The audit needs JavaScript to show its report.</p></noscript>
+</div>
+
+<section class="band" aria-labelledby="checks">
+<div class="wrap narrow stack">
+<div class="section-head">
+<p class="eyebrow">What the audit checks</p>
+<h2 id="checks">Checks for Google and AI search, explained.</h2>
+<p>Every check shows what we found on your page, why it matters and the fix. Nothing is guessed: if we cannot read something, we say so.</p>
+</div>
+<div class="row">
+<article class="card"><p class="eyebrow">On-page SEO</p><h3>What Google reads first.</h3><p>Title, meta description, H1 and heading order, canonical, noindex, social preview tags and image alt text.</p></article>
+<article class="card lime"><p class="eyebrow ink">AI search (AEO)</p><h3>Can ChatGPT read and quote you?</h3><p>AI crawler access in robots.txt, business schema, question-and-answer content, direct answers, quotable facts, author and date, content without JavaScript and llms.txt.</p></article>
+<article class="card"><p class="eyebrow">Technical</p><h3>The basics that block everything else.</h3><p>HTTPS, server response time, mobile viewport, page language, robots.txt, XML sitemap, insecure forms and links, image dimensions.</p></article>
+<article class="card"><p class="eyebrow">Content</p><h3>Enough to rank and be cited.</h3><p>Amount of text, links to your other pages, and lists or tables that people and AI can skim.</p></article>
+</div>
+</div>
+</section>
+
+<section class="band" aria-labelledby="faq">
+<div class="wrap narrow stack">
+<div class="section-head"><p class="eyebrow">Questions</p><h2 id="faq">About the free audit.</h2></div>
+{{template "faq" .}}
+<p>Want the whole site, not one page? <a href="/seo-audit-tool">See the full website SEO audit</a> or <a href="/ai-visibility-tracker">track your brand in AI answers</a>.</p>
+</div>
+</section>
+<script defer src="{{asset "free-audit.js"}}"></script>
+{{template "footer" .}}

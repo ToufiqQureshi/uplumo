@@ -1,3 +1,10 @@
+## 19 Nov 2026: free SEO + AEO audit on the home page
+
+- Owner: "paise kamane ke 1000 raste ... nai kama paara". Agent's advice: stop new features for 30 days, pitch 20 people a day, first 10 paying customers. Open ask: how many paying users now, how many pitched last week.
+- Owner wants a free SEO and AEO audit: URL box on the home page -> audit page; upsell content editor, rank tracking, AI visibility ("subscribe karo"); "ui achha useful ... sab details dikhey"; "hum pe utna load nai aana chahiye".
+- Built (one PR): `/free-seo-audit` + landing form; 28 checks, 0 paid calls; 24 h cache per page; 10 fresh checks/day per IP, 600/hour overall, 4 at once. Full report free, no email gate (agent read "sab details dikhey" that way). Turnstile not added.
+- Waiting for owner: review and merge (merge = production deploy); whether to gate any part behind sign-up or email later.
+
 ## 2026-11-18 · SaaS audit follow-up
 
 - Owner approved one change set for duplicate-payment refund recovery, report date and domain correctness, signup without a configured mailer, and retrying project access in place.
