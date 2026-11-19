@@ -48,11 +48,12 @@ const (
 	supportPhone    = ""
 	contentType     = "text/html; charset=utf-8"
 	// Run only same-origin code and Google's analytics loader. No inline
-	// executable script is needed; JSON-LD remains a data block.
+	// executable script is needed; JSON-LD remains a data block. Forms may
+	// submit only to this site (the free audit form).
 	contentSecurityPolicy = "default-src 'none'; script-src 'self' https://www.googletagmanager.com; " +
 		"connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com; " +
 		"style-src 'unsafe-inline'; img-src 'self' https://*.google-analytics.com; font-src 'self'; " +
-		"base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+		"base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
 )
 
 var (
@@ -133,6 +134,8 @@ type Site struct {
 	// keyed by whether it may show dollar prices.
 	llms   map[bool][]byte
 	static fs.FS
+	// tmpl renders the free audit report fragments on request.
+	tmpl *template.Template
 	// versions maps each asset name to a hash of its content; asset URLs
 	// carry it as ?v=, so a changed file gets a new URL and an unchanged one
 	// can be cached forever.
@@ -196,7 +199,7 @@ func build(publicURL *url.URL, blogFiles fs.FS) (*Site, error) {
 		return nil, err
 	}
 	s := &Site{
-		static: static, versions: versions, info: map[string]renderedPage{}, posts: map[string]renderedPage{},
+		static: static, versions: versions, tmpl: tmpl, info: map[string]renderedPage{}, posts: map[string]renderedPage{},
 		landing: map[string]renderedPage{}, pricing: map[string]renderedPage{},
 	}
 	blog := base
@@ -586,6 +589,9 @@ var infoPages = []infoPage{
 		description: "How to cancel a paid Uplumo plan, what happens after you cancel and when we refund a payment."},
 	{path: "/shipping", file: "shipping.html", title: "Shipping and Delivery Policy | Uplumo",
 		description: "Uplumo is online software: nothing is shipped, and access starts as soon as you sign up or pay."},
+	{path: FreeAuditPath, file: "free-audit.html", title: "Free SEO & AEO Audit: Check Your Website for Google and AI Search | Uplumo",
+		description: "Free website audit for SEO and AI search. Enter a URL to check titles, headings, schema, AI crawler access, speed and content, with a fix for every issue.",
+		product:     true, faq: freeAuditFAQ()},
 	{path: "/ai-visibility-tracker", file: "ai-visibility.html", title: "AI Visibility Tracker for ChatGPT & AI Search | Uplumo",
 		description: "Monitor AI search visibility, brand mentions, and citations in sampled ChatGPT, Gemini, Perplexity, Claude, and Google AI Overview answers.",
 		product:     true, faq: aiVisibilityFAQ()},

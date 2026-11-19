@@ -39,6 +39,7 @@ import (
 	"github.com/toufiqqureshi/uplumo/backend/internal/domain"
 	"github.com/toufiqqureshi/uplumo/backend/internal/email"
 	"github.com/toufiqqureshi/uplumo/backend/internal/emailauth"
+	"github.com/toufiqqureshi/uplumo/backend/internal/freeaudit"
 	"github.com/toufiqqureshi/uplumo/backend/internal/ga4"
 	"github.com/toufiqqureshi/uplumo/backend/internal/google"
 	"github.com/toufiqqureshi/uplumo/backend/internal/gsc"
@@ -498,6 +499,7 @@ func run(logger *slog.Logger) (err error) {
 			ProjectContext:          projectContextSvc,
 			KeywordResearch:         keywordResearch,
 			Site:                    pages,
+			FreeAudit:               freeaudit.New(audit.NewPageChecker(audit.NewGuard()), rdb, emailauth.RedisLimiter{Client: rdb}, logger),
 			Country:                 country,
 			StaticDir:               cfg.StaticDir,
 		}),

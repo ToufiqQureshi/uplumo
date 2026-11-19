@@ -1,0 +1,93 @@
+{{define "audit-form"}}
+<form id="audit-form" class="fa-form" action="/free-seo-audit" method="get" role="search" aria-label="Free SEO and AEO audit">
+<label class="skip" for="audit-url">Website address</label>
+<input id="audit-url" name="url" type="text" inputmode="url" autocomplete="url" spellcheck="false" maxlength="2048" required placeholder="yourwebsite.com">
+<button class="btn" type="submit" data-uplumo-event="free_audit_run">Run free audit →</button>
+</form>
+<p class="note">One page · about 10 seconds · no sign-up, no card</p>
+{{end}}
+
+{{define "audit-status"}}<span class="fa-pill {{.}}">{{if eq . "fail"}}Fix{{else if eq . "warn"}}Improve{{else if eq . "pass"}}Good{{else}}Note{{end}}</span>{{end}}
+
+{{define "audit-error"}}
+<div class="fa-card fa-error" role="alert">
+<p class="eyebrow pink">Could not run the audit</p>
+<p>{{.}}</p>
+</div>
+{{end}}
+
+{{define "audit-report"}}
+{{if not .Report.Reachable}}
+<div class="fa-card fa-error" role="alert">
+<p class="eyebrow pink">We could not check {{.Host}}</p>
+<p>{{.Report.Problem}}</p>
+<p class="note">Checked {{.Report.URL}}{{if .Report.StatusCode}} · HTTP {{.Report.StatusCode}}{{end}}</p>
+</div>
+{{else}}
+<article class="fa-card fa-summary" aria-labelledby="fa-title">
+<div class="fa-score {{.Tone}}">
+<svg viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="52" class="track"/><circle cx="60" cy="60" r="52" class="value" stroke-dasharray="{{.Dash}} {{.Gap}}" transform="rotate(-90 60 60)"/></svg>
+<p><strong>{{.Report.Score}}</strong><span>/100</span></p>
+</div>
+<div class="fa-head">
+<p class="eyebrow">{{.Grade}}</p>
+<h2 id="fa-title">{{.Host}}</h2>
+<p class="fa-url mono">{{.Report.URL}}</p>
+<p class="fa-counts"><span class="fail">{{.Fails}} to fix</span><span class="warn">{{.Warns}} to improve</span><span class="pass">{{.Passes}} passed</span></p>
+<p class="note">Checked {{.Report.CheckedAt.Format "2 Jan 2006, 15:04 UTC"}} · HTTP {{.Report.StatusCode}} · {{.Report.WordCount}} words · {{.Report.ResponseMs}} ms</p>
+</div>
+<ul class="fa-bars">
+{{range .Groups}}<li><a href="#fa-{{.ID}}"><span>{{.Name}}</span><span class="mono">{{.Score}}</span></a><i><b class="{{.Tone}}" style="width:{{.Score}}%"></b></i></li>{{end}}
+</ul>
+</article>
+
+{{if .Priorities}}
+<section class="fa-card" aria-labelledby="fa-first">
+<p class="eyebrow">Start here</p>
+<h3 id="fa-first">Fix these first</h3>
+<ol class="fa-first">
+{{range .Priorities}}<li>{{template "audit-status" .Status}}<div><strong>{{.Title}}</strong><p>{{.Found}}</p>{{if .Fix}}<p class="fa-fix"><b>Fix:</b> {{.Fix}}</p>{{end}}</div></li>{{end}}
+</ol>
+</section>
+{{end}}
+
+<section class="fa-offers" aria-labelledby="fa-more">
+<div class="section-head"><p class="eyebrow">Go further</p><h3 id="fa-more">Tools that fix and track what this audit found</h3></div>
+<div class="fa-offer-grid">
+{{range .Offers}}
+<article class="card fa-offer">
+<p class="eyebrow faint">{{.Eyebrow}}</p>
+<h4>{{.Title}}</h4>
+<p>{{.Body}}</p>
+<p class="fa-price">{{.Price}}</p>
+<div class="fa-offer-cta"><a class="btn btn-sm" href="{{$.SignUp}}" data-uplumo-event="{{.Event}}">Start free</a><a class="link-more" href="{{.Learn}}">Learn more</a></div>
+</article>
+{{end}}
+</div>
+</section>
+
+{{range .Groups}}
+<section class="fa-card fa-group" id="fa-{{.ID}}" aria-labelledby="fa-h-{{.ID}}">
+<div class="fa-group-head"><h3 id="fa-h-{{.ID}}">{{.Name}}</h3><span class="fa-group-score {{.Tone}} mono">{{.Score}}/100</span></div>
+<p class="note">{{.Passed}} passed · {{.Issues}} to fix or improve</p>
+<div class="fa-checks">
+{{range .Checks}}
+<details class="fa-check"{{if eq .Status "fail"}} open{{end}}>
+<summary>{{template "audit-status" .Status}}<span class="fa-check-title">{{.Title}}</span><span class="fa-found">{{.Found}}</span></summary>
+<div class="fa-check-body">
+<p><b>Why it matters:</b> {{.Why}}</p>
+{{if .Fix}}<p class="fa-fix"><b>How to fix:</b> {{.Fix}}</p>{{end}}
+</div>
+</details>
+{{end}}
+</div>
+</section>
+{{end}}
+
+<div class="fa-card fa-end">
+<h3>Fixed something? Check again tomorrow, or audit another page.</h3>
+<p>Results are kept for 24 hours. Create a free account to audit your site, track AI answers and rankings in one place.</p>
+<div class="cta-row"><a class="btn" href="{{.SignUp}}" data-uplumo-event="free_audit_signup">Create free account →</a><a class="btn btn-ghost" href="#audit-form">Audit another page</a></div>
+</div>
+{{end}}
+{{end}}

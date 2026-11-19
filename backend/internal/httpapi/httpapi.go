@@ -31,6 +31,7 @@ import (
 	"github.com/toufiqqureshi/uplumo/backend/internal/dashboardoverview"
 	"github.com/toufiqqureshi/uplumo/backend/internal/domain"
 	"github.com/toufiqqureshi/uplumo/backend/internal/emailauth"
+	"github.com/toufiqqureshi/uplumo/backend/internal/freeaudit"
 	"github.com/toufiqqureshi/uplumo/backend/internal/ga4"
 	"github.com/toufiqqureshi/uplumo/backend/internal/google"
 	"github.com/toufiqqureshi/uplumo/backend/internal/gsc"
@@ -183,6 +184,9 @@ type Deps struct {
 	MCP *mcp.Deps
 	// Site is the public landing and pricing pages.
 	Site *site.Site
+	// FreeAudit runs the public one-page SEO and AEO audit; nil leaves its
+	// report route unanswered.
+	FreeAudit *freeaudit.Service
 	// Country is the ISO country code of a request's trusted client address,
 	// or "" when unknown. It picks the currency prices are shown and billed
 	// in. Nil shows and bills rupees to everyone.
@@ -251,6 +255,12 @@ func NewHandler(d Deps) http.Handler {
 	mux.HandleFunc("GET /llms.txt", d.Site.ServeLLMs)
 
 	mux.HandleFunc("GET "+site.AssetsPrefix, d.Site.ServeAsset)
+	if d.FreeAudit != nil {
+		freeaudit.Mount(mux, freeaudit.Deps{
+			Service: d.FreeAudit, Pages: d.Site, Logger: d.Logger,
+			ClientIP: func(r *http.Request) string { return httpx.ClientIP(r, d.TrustedProxyCIDRs) },
+		})
+	}
 
 	mux.HandleFunc("GET /t.js", serveTracker())
 	mux.HandleFunc("GET /.well-known/openai-apps-challenge", func(w http.ResponseWriter, r *http.Request) {
