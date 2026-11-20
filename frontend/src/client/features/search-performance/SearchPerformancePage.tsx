@@ -1,8 +1,3 @@
-import { SearchGrowthPanel } from "./SearchGrowthPanel";
-import { ExploreView } from "./ExploreView";
-import { FixView, GrowView, OverviewView } from "./GrowthViews";
-import { useBrandNames } from "./brandNames";
-import { insightsQueryOptions } from "./insightsApi";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
@@ -17,9 +12,13 @@ import { ExportMenu } from "@/client/components/ExportMenu";
 import { Badge } from "@/client/components/ui/badge";
 import { Button } from "@/client/components/ui/button";
 import { Spinner } from "@/client/components/ui/spinner";
-import { ViewTabs } from "./ViewTabs";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/client/components/ui/tabs";
 import { GoogleConnectionCard } from "@/client/features/integrations/GoogleConnectionCard";
-import { IndexNowCard } from "@/client/features/indexnow/IndexNowCard";
 import { SectionHeader } from "@/client/components/PageHeader";
 import { SearchPerformanceSelects } from "@/client/features/search-performance/SearchPerformanceSelects";
 import { SearchPerformanceLoadingState } from "@/client/features/search-performance/SearchPerformanceLoadingState";
@@ -32,31 +31,30 @@ import {
   type TextFilters,
 } from "@/client/features/search-performance/SearchPerformanceTextFilters";
 import {
-  exportContentRefreshQueue,
   exportDimensionRows,
-  exportStriking,
+  DimensionTable,
   type ExportTarget,
 } from "@/client/features/search-performance/SearchPerformanceParts";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
-import { SearchPerformanceIndexing } from "@/client/features/search-performance/SearchPerformanceIndexing";
-import { buildContentRefreshQueue } from "@/client/features/search-performance/contentRefreshQueue";
 import {
   exportSearchPerformanceTable,
   getSearchPerformanceReport,
 } from "@/client/features/search-performance/searchPerformanceApi";
+import { buildSearchInsights } from "@/client/features/search-performance/searchInsights";
+import { SearchPerformanceTotals } from "@/client/features/search-performance/SearchPerformanceTotals";
+import { SearchPerformanceTrend } from "@/client/features/search-performance/SearchPerformanceTrend";
+import {
+  buildDimensionColumns,
+  type Report,
+  formatCount,
+  formatCtr,
+  formatPosition,
+} from "@/client/features/search-performance/SearchPerformanceColumns";
 import {
   SEARCH_PERFORMANCE_DEFAULT_PAGE_SIZE,
-  type SearchGrowthView,
   type SearchPerformanceSearch,
-  type SearchPerformanceTab,
   type SearchPerformanceTableDimension,
 } from "@/types/schemas/search-performance";
-
-function tabDimension(
-  tab: SearchPerformanceTab,
-): SearchPerformanceTableDimension {
-  return tab === "pages" ? "page" : "query";
-}
 
 function activeFilterCount(
   search: SearchPerformanceSearch,
@@ -83,6 +81,188 @@ function buildFilterInput(search: SearchPerformanceSearch): FilterInput {
     ...(search.device ? { device: search.device } : {}),
     ...(search.country ? { country: search.country } : {}),
   };
+}
+
+/** Render a table for a dimension (query or page). */
+function DimensionTableWrapper({
+  dimension,
+  report,
+  search,
+  page,
+  pageSize,
+  onPageChange,
+  onPageSizeChange,
+  onSearchChange,
+  tableQuery,
+  isExporting,
+  onExport,
+}: {
+  dimension: SearchPerformanceTableDimension;
+  report: Report;
+  search: SearchPerformanceSearch;
+  page: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+  onSearchChange: (update: Partial<SearchPerformanceSearch>) => void;
+  tableQuery: ReturnType<typeof useQuery>;
+  isExporting: boolean;
+  onExport: (target: ExportTarget) => void;
+}) {
+  const isPage = dimension === "page";
+  const keyLabel = isPage ? "Page" : "Query";
+
+  if (tableQuery.isPending) {
+    return <SearchPerformanceLoadingState />;
+  }
+  if (tableQuery.isError) {
+    return (
+      <QueryError
+        error={tableQuery.error}
+        fallback="Failed to load table"
+        onRetry={() => void tableQuery.refetch()}
+        isRetrying={tableQuery.isFetching}
+      />
+    );
+  }
+  if (!tableQuery.data?.connected || tableQuery.data.connected === false)
+    return null;
+
+  const data = tableQuery.data as Extract<typeof tableQuery.data, { connected: true }>;
+  const rows = data.rows;
+  const hasNextPage = data.hasNextPage;
+  const totalCount = data.totalCount;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-muted-foreground">
+          {totalCount != null
+            ? `${totalCount} total ${isPage ? "pages" : "queries"}`
+            : ""}
+        </div>
+        <ExportMenu
+          actions={["sheets", "csv"]}
+          onExport={onExport}
+          busy={isExporting}
+          disabled={rows.length === 0}
+        />
+      </div>
+      <DimensionTable
+        rows={rows}
+        keyLabel={keyLabel}
+        isFiltered={Boolean(search.queryText || search.pageText)}
+        isPastEnd={!hasNextPage && rows.length > 0}
+        onClearFilters={() =>
+          onSearchChange({
+            page: undefined,
+            queryText: undefined,
+            pageText: undefined,
+          })
+        }
+        onFirstPage={() => onSearchChange({ page: 1 })}
+      />
+      <div className="flex items-center justify-between">
+        <div />
+        {(hasNextPage || page > 1) && (
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page === 1 || tableQuery.isFetching}
+              onClick={() => onPageChange(page - 1)}
+            >
+              Previous
+            </Button>
+            <span className="text-sm text-muted-foreground">Page {page}</span>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!hasNextPage || tableQuery.isFetching}
+              onClick={() => onPageChange(page + 1)}
+            >
+              Next
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Render countries or devices table (non-paginated, from report data). */
+function StaticDimensionTable({
+  dimension,
+  rows,
+  search,
+  onSearchChange,
+}: {
+  dimension: "country" | "device";
+  rows: Array<{
+    key: string;
+    clicks: number;
+    impressions: number;
+    ctr: number;
+    position: number;
+  }>;
+  search: SearchPerformanceSearch;
+  onSearchChange: (update: Partial<SearchPerformanceSearch>) => void;
+}) {
+  const columns = useMemo(
+    () => buildDimensionColumns(dimension === "country" ? "Country" : "Device"),
+    [dimension],
+  );
+
+  return (
+    <div className="rounded-lg border border-border overflow-hidden">
+      <table className="w-full">
+        <thead>
+          <tr className="border-b bg-muted/50">
+            {columns.map((col) => (
+              <th
+                key={col.id}
+                className={`px-4 py-3 text-sm font-medium text-left ${col.meta?.headerClassName || ""}`}
+              >
+                {typeof col.header === "string"
+                  ? col.header
+                  : typeof col.header === "function"
+                    ? col.header({ column: col, header: col } as any)
+                    : null}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr
+              key={row.key}
+              className="border-b hover:bg-muted/50 cursor-pointer transition-colors"
+              onClick={() => {
+                onSearchChange({
+                  page: undefined,
+                  [dimension]: row.key.toUpperCase(),
+                });
+              }}
+            >
+              <td className="px-4 py-3 text-sm font-medium">{row.key}</td>
+              <td className="px-4 py-3 text-sm text-right tabular-nums">
+                {formatCount(row.clicks)}
+              </td>
+              <td className="px-4 py-3 text-sm text-right tabular-nums">
+                {formatCount(row.impressions)}
+              </td>
+              <td className="px-4 py-3 text-sm text-right tabular-nums">
+                {formatCtr(row.ctr)}
+              </td>
+              <td className="px-4 py-3 text-sm text-right tabular-nums">
+                {formatPosition(row.position)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 export function SearchPerformancePage({
@@ -115,11 +295,9 @@ export function SearchPerformancePage({
   const [showFilters, setShowFilters] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const filterCount = activeFilterCount(search, textFilters);
-  const tab = search.tab ?? "striking";
+  const tab = search.tab ?? "queries";
   const page = search.page ?? 1;
   const pageSize = search.size ?? SEARCH_PERFORMANCE_DEFAULT_PAGE_SIZE;
-  const view = search.view ?? "overview";
-  const brands = useBrandNames(projectId);
 
   const filterInput = {
     ...buildFilterInput(search),
@@ -133,23 +311,13 @@ export function SearchPerformancePage({
     placeholderData: keepPreviousData,
   });
   const report = reportQuery.data;
-  // Only the screens that use the analysis read for it, and the analysis is
-  // kept for five minutes, so moving between screens never re-reads Google.
-  const insightsQuery = useQuery({
-    ...insightsQueryOptions(projectId, filterInput, brands.names),
-    enabled:
-      report?.connected === true &&
-      !reportQuery.isPlaceholderData &&
-      (view === "overview" || view === "fix" || view === "grow"),
-    placeholderData: keepPreviousData,
-  });
+
   const isTableTab = tab === "queries" || tab === "pages";
-  const dimension = tabDimension(tab);
+  const dimension: SearchPerformanceTableDimension =
+    tab === "pages" ? "page" : "query";
   const tableQuery = useQuery({
     ...tableQueryOptions(projectId, dimension, page, pageSize, filterInput),
     enabled: report?.connected === true && isTableTab,
-    // Hold the current rows while paging or filtering, but not across a tab
-    // or project change: Query rows must not render under the Pages header.
     placeholderData: (previous, previousQuery) =>
       previousQuery?.queryKey[1] === projectId &&
       previousQuery.queryKey[2] === dimension
@@ -157,8 +325,7 @@ export function SearchPerformancePage({
         : undefined,
   });
 
-  // Warm the Queries tab (first page) as soon as the report connects so the tab
-  // opens instantly instead of showing a spinner. Free first-party GSC data.
+  // Warm the Queries tab as soon as the report connects
   useEffect(() => {
     if (report?.connected !== true) return;
     void queryClient.prefetchQuery(
@@ -177,18 +344,6 @@ export function SearchPerformancePage({
       return;
     setIsExporting(true);
     try {
-      if (tab === "striking") {
-        await exportStriking(report, target);
-        return;
-      }
-      if (tab === "refresh") {
-        await exportContentRefreshQueue(
-          buildContentRefreshQueue(report.strikingDistance),
-          report.range,
-          target,
-        );
-        return;
-      }
       const data = await exportSearchPerformanceTable({
         data: { projectId, dimension, ...filterInput },
       });
@@ -226,7 +381,6 @@ export function SearchPerformancePage({
 
   const filtersPanel = (
     <SearchPerformanceTextFilters
-      // Remount on URL changes (back/forward) so the draft matches.
       key={JSON.stringify(textFilters)}
       value={textFilters}
       activeFilterCount={filterCount}
@@ -243,30 +397,17 @@ export function SearchPerformancePage({
     />
   );
 
-  const openView = (next: SearchGrowthView) =>
-    onSearchChange({ view: next, page: undefined });
-
-  const showControls =
-    view === "overview" ||
-    view === "fix" ||
-    view === "grow" ||
-    view === "explore";
-
-  const indexNowSection = (
-    <section id="indexnow" className="max-w-2xl space-y-3 pt-4">
-      <SectionHeader title="Request indexing on Bing and other engines (IndexNow)" />
-      <IndexNowCard projectId={projectId} />
-    </section>
-  );
+  const insights = report?.connected ? buildSearchInsights(report) : [];
 
   return (
     <div className="overflow-auto px-4 py-4 pb-24 md:px-6 md:py-6 md:pb-8">
       <div className="mx-auto max-w-7xl space-y-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold">Search Growth</h1>
+            <h1 className="text-2xl font-semibold">Google Search</h1>
             <p className="text-sm text-muted-foreground">
-              What changed in Google search, why, and what to do next.
+              Clicks, keywords, pages and countries from your Google Search
+              Console.
             </p>
           </div>
           {report?.connected ? (
@@ -288,114 +429,163 @@ export function SearchPerformancePage({
             {reportError}
           </>
         ) : !report.connected ? (
-          <>
-            <div className="max-w-2xl">
-              <GoogleConnectionCard provider="gsc" projectId={projectId} />
-            </div>
-            {/* IndexNow needs no Search Console connection and works on any
-                website, so it shows whether or not Google is connected. */}
-            {indexNowSection}
-          </>
+          <div className="max-w-2xl">
+            <GoogleConnectionCard provider="gsc" projectId={projectId} />
+          </div>
         ) : (
           <>
             {reportQuery.isError ? reportError : null}
-            <ViewTabs value={view} onChange={openView} />
 
-            {showControls ? (
-              <>
-                <div className="flex flex-col gap-2 rounded-xl border bg-card px-3 py-2 sm:flex-row sm:items-start">
-                  <Button
-                    type="button"
-                    variant={showFilters ? "secondary" : "ghost"}
-                    size="sm"
-                    aria-expanded={showFilters}
-                    aria-controls="search-performance-filters"
-                    onClick={() => setShowFilters((current) => !current)}
-                    title="Filter by page or search, including regular expressions"
-                  >
-                    <SlidersHorizontal data-icon="inline-start" />
-                    Filters
-                    {filterCount > 0 ? (
-                      <Badge size="sm">{filterCount}</Badge>
-                    ) : null}
-                  </Button>
-                  {reportQuery.isFetching && !reportQuery.isPending ? (
-                    <Spinner className="size-4 text-muted-foreground" />
-                  ) : null}
-                  <SearchPerformanceSelects
-                    search={search}
-                    countries={report.countries}
-                    reportRange={report.range}
-                    onSearchChange={onSearchChange}
-                  />
-                </div>
-                {showFilters ? (
-                  <div className="overflow-hidden rounded-xl border border-border">
-                    {filtersPanel}
-                  </div>
+            {/* Filter bar */}
+            <div className="flex flex-col gap-2 rounded-xl border bg-card px-3 py-2 sm:flex-row sm:items-start">
+              <Button
+                type="button"
+                variant={showFilters ? "secondary" : "ghost"}
+                size="sm"
+                aria-expanded={showFilters}
+                aria-controls="search-performance-filters"
+                onClick={() => setShowFilters((current) => !current)}
+                title="Filter by page or search, including regular expressions"
+              >
+                <SlidersHorizontal data-icon="inline-start" />
+                Filters
+                {filterCount > 0 ? (
+                  <Badge size="sm">{filterCount}</Badge>
                 ) : null}
-              </>
+              </Button>
+              {reportQuery.isFetching && !reportQuery.isPending ? (
+                <Spinner className="size-4 text-muted-foreground" />
+              ) : null}
+              <SearchPerformanceSelects
+                search={search}
+                countries={report.countries}
+                reportRange={report.range}
+                onSearchChange={onSearchChange}
+              />
+            </div>
+            {showFilters ? (
+              <div className="overflow-hidden rounded-xl border border-border">
+                {filtersPanel}
+              </div>
             ) : null}
 
-            {reportQuery.isPlaceholderData && showControls ? (
+            {/* KPI row */}
+            {reportQuery.isPlaceholderData ? (
               <SearchPerformanceLoadingState />
-            ) : view === "overview" ? (
-              <OverviewView
-                projectId={projectId}
-                report={report}
-                query={insightsQuery}
-                brandText={brands.text}
-                onSaveBrands={brands.save}
-                onOpen={openView}
-              />
-            ) : view === "fix" ? (
-              <FixView
-                projectId={projectId}
-                report={report}
-                query={insightsQuery}
-              />
-            ) : view === "grow" ? (
-              <GrowView
-                projectId={projectId}
-                report={report}
-                query={insightsQuery}
-              />
-            ) : view === "explore" ? (
-              <ExploreView
-                projectId={projectId}
-                report={report}
-                tab={tab}
-                onTabChange={(next) =>
-                  onSearchChange({ tab: next, page: undefined })
-                }
-                exportMenu={
-                  <ExportMenu
-                    actions={["sheets", "csv"]}
-                    onExport={(target) => void handleExport(target)}
-                    busy={isExporting}
-                    disabled={reportQuery.isPlaceholderData}
-                  />
-                }
-                tableQuery={tableQuery}
-                page={page}
-                pageSize={pageSize}
-                onPageChange={(nextPage) => onSearchChange({ page: nextPage })}
-                onPageSizeChange={(size) =>
-                  onSearchChange({ page: undefined, size })
-                }
-                isFiltered={filterCount > 0}
-                onClearFilters={resetFilters}
-              />
-            ) : view === "indexing" ? (
-              <>
-                <SearchPerformanceIndexing
-                  projectId={projectId}
-                  strikingDistance={report.strikingDistance}
-                />
-                {indexNowSection}
-              </>
             ) : (
-              <SearchGrowthPanel key={projectId} projectId={projectId} />
+              <>
+                <SearchPerformanceTotals report={report} />
+
+                {/* Trend chart */}
+                <SearchPerformanceTrend report={report} />
+
+                {/* What changed card */}
+                {insights.length > 0 && (
+                  <div className="rounded-lg border bg-card p-4 space-y-3">
+                    <SectionHeader
+                      title="What changed"
+                      hint="Your biggest wins and losses"
+                    />
+                    <ul className="space-y-2">
+                      {insights.map((insight, idx) => (
+                        <li key={idx} className="text-sm">
+                          {insight.link && (
+                            <button
+                              onClick={() =>
+                                onSearchChange({
+                                  page: undefined,
+                                  [insight.link!.param]: insight.link!.value,
+                                })
+                              }
+                              className="text-left hover:underline text-blue-600 dark:text-blue-400"
+                            >
+                              {insight.text}
+                            </button>
+                          )}
+                          {!insight.link && <span>{insight.text}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Data tabs */}
+                <Tabs
+                  value={tab}
+                  onValueChange={(value) =>
+                    onSearchChange({
+                      tab: value as typeof tab,
+                      page: undefined,
+                    })
+                  }
+                  className="space-y-4"
+                >
+                  <TabsList>
+                    <TabsTrigger value="queries">Keywords</TabsTrigger>
+                    <TabsTrigger value="pages">Pages</TabsTrigger>
+                    <TabsTrigger value="countries">Countries</TabsTrigger>
+                    <TabsTrigger value="devices">Devices</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="queries" className="space-y-4">
+                    <DimensionTableWrapper
+                      dimension="query"
+                      report={report}
+                      search={search}
+                      page={page}
+                      pageSize={pageSize}
+                      onPageChange={(nextPage) =>
+                        onSearchChange({ page: nextPage })
+                      }
+                      onPageSizeChange={(size) =>
+                        onSearchChange({ page: undefined, size })
+                      }
+                      onSearchChange={onSearchChange}
+                      tableQuery={tableQuery}
+                      isExporting={isExporting}
+                      onExport={(target) => void handleExport(target)}
+                    />
+                  </TabsContent>
+
+                  <TabsContent value="pages" className="space-y-4">
+                    <DimensionTableWrapper
+                      dimension="page"
+                      report={report}
+                      search={search}
+                      page={page}
+                      pageSize={pageSize}
+                      onPageChange={(nextPage) =>
+                        onSearchChange({ page: nextPage })
+                      }
+                      onPageSizeChange={(size) =>
+                        onSearchChange({ page: undefined, size })
+                      }
+                      onSearchChange={onSearchChange}
+                      tableQuery={tableQuery}
+                      isExporting={isExporting}
+                      onExport={(target) => void handleExport(target)}
+                    />
+                  </TabsContent>
+
+                  <TabsContent value="countries">
+                    <StaticDimensionTable
+                      dimension="country"
+                      rows={report.countries}
+                      search={search}
+                      onSearchChange={onSearchChange}
+                    />
+                  </TabsContent>
+
+                  <TabsContent value="devices">
+                    <StaticDimensionTable
+                      dimension="device"
+                      rows={report.devices}
+                      search={search}
+                      onSearchChange={onSearchChange}
+                    />
+                  </TabsContent>
+                </Tabs>
+              </>
             )}
           </>
         )}

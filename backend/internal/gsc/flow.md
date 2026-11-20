@@ -5,10 +5,9 @@ money is called anywhere in this package, so nothing here is spend-guarded.
 
 | Screen | Route | Search Console reads |
 | --- | --- | --- |
-| Search Growth, any screen | `report` | up to 8 in parallel (daily, previous daily, pages and queries for both periods, query+page, countries); 4 when the previous period is outside Google's 16 months |
-| Overview, Fix, Grow | `insights` | up to 6 in parallel: query+page (10,000 rows), pages and queries for the current and previous period (5,000 each), pages for the period before that (5,000) |
-| Explore tables | `table` | 1 per page turn |
-| Explore export | `export` | 1 |
+| Search Console Page | `report` | up to 9 in parallel (daily, previous daily, pages and queries for both periods, query+page, countries, devices); 5 when the previous period is outside Google's 16 months |
+| Tables | `table` | 1 per page turn |
+| Export | `export` | 1 |
 
 ## Insights flow
 

@@ -5,6 +5,7 @@ import {
   type SearchPerformanceDevice,
   type SearchPerformanceSearch,
   type GscSearchType,
+  SEARCH_PERFORMANCE_RANGES,
 } from "@/types/schemas/search-performance";
 import {
   Select,
@@ -51,7 +52,7 @@ function formatDate(value: Date): string {
   return value.toISOString().slice(0, 10);
 }
 
-function subtractUTCMonths(value: Date, months: number): Date {
+export function subtractUTCMonths(value: Date, months: number): Date {
   const first = new Date(
     Date.UTC(value.getUTCFullYear(), value.getUTCMonth() - months, 1),
   );
@@ -65,6 +66,115 @@ function subtractUTCMonths(value: Date, months: number): Date {
       Math.min(value.getUTCDate(), lastDay),
     ),
   );
+}
+
+/** Get the start of the calendar month for a given date (UTC). */
+function startOfMonth(value: Date): Date {
+  return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), 1));
+}
+
+/** Get the end of the calendar month for a given date (UTC). */
+function endOfMonth(value: Date): Date {
+  return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth() + 1, 0));
+}
+
+/** Preset range definitions for quick selection. */
+type PresetRange = {
+  value: string;
+  label: string;
+  compute: (today: Date) => { startDate: string; endDate: string };
+};
+
+const PRESET_RANGES: PresetRange[] = [
+  {
+    value: "last_7_days",
+    label: "Last 7 days",
+    compute: (today: Date) => {
+      const start = new Date(today);
+      start.setUTCDate(start.getUTCDate() - 7);
+      return {
+        startDate: formatDate(start),
+        endDate: formatDate(today),
+      };
+    },
+  },
+  {
+    value: "last_28_days",
+    label: "Last 28 days",
+    compute: (today: Date) => {
+      const start = new Date(today);
+      start.setUTCDate(start.getUTCDate() - 28);
+      return {
+        startDate: formatDate(start),
+        endDate: formatDate(today),
+      };
+    },
+  },
+  {
+    value: "last_3_months",
+    label: "Last 3 months",
+    compute: (today: Date) => {
+      const start = subtractUTCMonths(today, 3);
+      return {
+        startDate: formatDate(start),
+        endDate: formatDate(today),
+      };
+    },
+  },
+  {
+    value: "this_month",
+    label: "This month",
+    compute: (today: Date) => {
+      const start = startOfMonth(today);
+      return {
+        startDate: formatDate(start),
+        endDate: formatDate(today),
+      };
+    },
+  },
+  {
+    value: "last_month",
+    label: "Last month",
+    compute: (today: Date) => {
+      const prevMonth = subtractUTCMonths(today, 1);
+      const start = startOfMonth(prevMonth);
+      const end = endOfMonth(prevMonth);
+      return {
+        startDate: formatDate(start),
+        endDate: formatDate(end),
+      };
+    },
+  },
+  {
+    value: "last_12_months",
+    label: "Last 12 months",
+    compute: (today: Date) => {
+      const start = subtractUTCMonths(today, 12);
+      return {
+        startDate: formatDate(start),
+        endDate: formatDate(today),
+      };
+    },
+  },
+  {
+    value: "last_16_months",
+    label: "Last 16 months",
+    compute: (today: Date) => {
+      const start = subtractUTCMonths(today, 16);
+      return {
+        startDate: formatDate(start),
+        endDate: formatDate(today),
+      };
+    },
+  },
+];
+
+/** Determine which preset is currently selected, if any. */
+function getCurrentPreset(search: SearchPerformanceSearch): string {
+  if (search.startDate || search.endDate) {
+    return "custom";
+  }
+  return search.range ?? "last_28_days";
 }
 
 function SearchPerformanceDateRange({
@@ -100,8 +210,52 @@ function SearchPerformanceDateRange({
     endDate <= maxDate &&
     (startDate !== appliedStart || endDate !== appliedEnd);
 
+  const currentPreset = getCurrentPreset(search);
+  const presetLabel =
+    currentPreset === "custom"
+      ? "Custom"
+      : PRESET_RANGES.find((p) => p.value === currentPreset)?.label || "Custom";
+
+  const handlePresetChange = (preset: string | null) => {
+    if (!preset || preset === "custom") return;
+    onSearchChange({
+      page: undefined,
+      range: preset as (typeof SEARCH_PERFORMANCE_RANGES)[number],
+      startDate: undefined,
+      endDate: undefined,
+    });
+  };
+
   return (
     <div className="flex flex-wrap items-end gap-2">
+      <Select
+        items={PRESET_RANGES.concat([
+          {
+            value: "custom",
+            label: "Custom",
+            compute: () => ({ startDate: "", endDate: "" }),
+          },
+        ])}
+        value={currentPreset}
+        onValueChange={handlePresetChange}
+      >
+        <SelectTrigger
+          size="sm"
+          className="w-40"
+          aria-label="Date range preset"
+        >
+          <SelectValue>{presetLabel}</SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          {PRESET_RANGES.map((preset) => (
+            <SelectItem key={preset.value} value={preset.value}>
+              {preset.label}
+            </SelectItem>
+          ))}
+          <SelectItem value="custom">Custom</SelectItem>
+        </SelectContent>
+      </Select>
+
       <label className="grid gap-1 text-[11px] text-muted-foreground">
         From
         <Input

@@ -206,6 +206,54 @@ func TestGetTableUsesOneExtraRowAndKeepsUnknownTotalWhenPastEnd(t *testing.T) {
 	}
 }
 
+func TestGetPerformanceIncludesDevicesBuildRequestWithoutDeviceFilter(t *testing.T) {
+	client := &performanceClientStub{rows: []SearchRow{
+		{Keys: []string{"DESKTOP"}, Clicks: 50, Impressions: 200, CTR: 0.25, Position: 5},
+		{Keys: []string{"MOBILE"}, Clicks: 30, Impressions: 100, CTR: 0.3, Position: 6},
+	}}
+	service := &Service{
+		Connections: performanceConnectionStub{connection: Connection{SiteURL: "https://example.test/", ConnectedByUserID: "user"}},
+		NewClient:   func(string, string) SearchClient { return client },
+		Now:         func() time.Time { return time.Date(2026, time.May, 28, 12, 0, 0, 0, time.UTC) },
+	}
+	result, err := service.GetPerformance(context.Background(), "org", "project", PerformanceInput{DateRange: last7Days, Device: "MOBILE"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	requests := client.requestSnapshot()
+	// date, page and query (now, before each), query+page, country, device. All are
+	// free Search Console reads.
+	if len(requests) != 9 {
+		t.Fatalf("got %d provider requests, want 9", len(requests))
+	}
+	// Find and verify the device request
+	deviceFound := false
+	for _, request := range requests {
+		if len(request.Dimensions) == 1 && request.Dimensions[0] == "device" {
+			deviceFound = true
+			// Verify device request has no device filter even though user filtered by device
+			if len(request.DimensionFilterGroups) != 0 {
+				t.Fatalf("device request must have no device filter but got: %+v", request.DimensionFilterGroups)
+			}
+		}
+	}
+	if !deviceFound {
+		t.Fatalf("device request was not sent; requests = %+v", requests)
+	}
+	// Verify devices are in the report
+	devices := result["devices"]
+	if devices == nil {
+		t.Fatal("report must include devices")
+	}
+	deviceRows, ok := devices.([]DimensionRow)
+	if !ok {
+		t.Fatalf("devices is not []DimensionRow: %T", devices)
+	}
+	if len(deviceRows) != 2 {
+		t.Fatalf("devices = %d rows, want 2", len(deviceRows))
+	}
+}
+
 func TestGetPerformanceBuildsLegacyReportAndOmitsCountryFilterForCountryRows(t *testing.T) {
 	client := &performanceClientStub{rows: []SearchRow{{Keys: []string{"term", "https://example.test/"}, Clicks: 2, Impressions: 10, CTR: .2, Position: 6}}}
 	service := &Service{
@@ -218,10 +266,10 @@ func TestGetPerformanceBuildsLegacyReportAndOmitsCountryFilterForCountryRows(t *
 		t.Fatal(err)
 	}
 	requests := client.requestSnapshot()
-	// date, page and query (now, before each), query+page, country. All are
+	// date, page and query (now, before each), query+page, country, device. All are
 	// free Search Console reads.
-	if len(requests) != 8 {
-		t.Fatalf("got %d provider requests, want 8", len(requests))
+	if len(requests) != 9 {
+		t.Fatalf("got %d provider requests, want 9", len(requests))
 	}
 	for _, dimension := range []string{"page", "query"} {
 		periods := map[string]bool{}

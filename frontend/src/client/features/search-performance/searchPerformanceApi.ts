@@ -98,6 +98,7 @@ const reportSchema = z.discriminatedUnion("connected", [
     // are not listed; the totals include them).
     queryLosses: z.array(lossSchema.extend({ query: z.string() })).default([]),
     queryGains: z.array(changeSchema.extend({ query: z.string() })).default([]),
+    devices: z.array(dimensionRowSchema).default([]),
   }),
 ]);
 
@@ -116,21 +117,6 @@ const tableSchema = z.discriminatedUnion("connected", [
 
 function reportPath(projectId: string, suffix: string) {
   return `/api/v1/projects/${encodeURIComponent(projectId)}/gsc/search-performance/${suffix}`;
-}
-
-export async function inspectSearchConsoleUrls({
-  projectId,
-  urls,
-}: {
-  projectId: string;
-  urls: string[];
-}) {
-  return apiRequest(
-    `/api/v1/projects/${encodeURIComponent(projectId)}/gsc/url-inspection/inspect`,
-    urlInspectionResponseSchema,
-    "POST",
-    { urls },
-  );
 }
 
 export async function getSearchPerformanceReport({

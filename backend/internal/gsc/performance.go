@@ -268,6 +268,7 @@ func (s *Service) GetPerformance(ctx context.Context, organizationID, projectID 
 	currentInput.EndDate = window.EndDate
 	currentInput.DateRange = ""
 	nonCountry := withoutCountry(currentInput)
+	nonDevice := withoutDevice(currentInput)
 	filtersRequest, err := BuildSearchAnalyticsRequest(currentInput, []string{"date"}, dailyRowLimit, 0, now)
 	if err != nil {
 		return nil, err
@@ -277,6 +278,10 @@ func (s *Service) GetPerformance(ctx context.Context, organizationID, projectID 
 		return nil, err
 	}
 	countryRequest, err := BuildSearchAnalyticsRequest(nonCountry, []string{"country"}, countryRowLimit, 0, now)
+	if err != nil {
+		return nil, err
+	}
+	deviceRequest, err := BuildSearchAnalyticsRequest(nonDevice, []string{"device"}, 10, 0, now)
 	if err != nil {
 		return nil, err
 	}
@@ -310,7 +315,7 @@ func (s *Service) GetPerformance(ctx context.Context, organizationID, projectID 
 		requests = append(requests, currentPages, previousPages, currentQueries, previousQueries)
 	}
 	queryPagesIndex := len(requests)
-	requests = append(requests, queryPages, countryRequest)
+	requests = append(requests, queryPages, countryRequest, deviceRequest)
 	rowsByRequest, err := s.fetchSearchAnalyticsRows(ctx, client, connection.SiteURL, requests...)
 	if err != nil {
 		mapped := mapProviderError(err)
@@ -330,8 +335,8 @@ func (s *Service) GetPerformance(ctx context.Context, organizationID, projectID 
 	} else {
 		previous = dateWindow{}
 	}
-	queryRows, countryRows := rowsByRequest[queryPagesIndex], rowsByRequest[queryPagesIndex+1]
-	return map[string]any{"connected": true, "range": map[string]any{"startDate": window.StartDate, "endDate": window.EndDate, "prevStartDate": previous.StartDate, "prevEndDate": previous.EndDate, "comparisonAvailable": comparisonAvailable}, "totals": sumSearchTotals(currentRows), "prevTotals": sumSearchTotals(previousRows), "daily": toDailyRows(currentRows), "strikingDistance": buildStrikingDistanceRows(queryRows, strikingDistanceLimit), "countries": toDimensionRows(countryRows), "pageChanges": pageChanges, "queryLosses": queryLosses, "queryGains": queryGains}, nil
+	queryRows, countryRows, deviceRows := rowsByRequest[queryPagesIndex], rowsByRequest[queryPagesIndex+1], rowsByRequest[queryPagesIndex+2]
+	return map[string]any{"connected": true, "range": map[string]any{"startDate": window.StartDate, "endDate": window.EndDate, "prevStartDate": previous.StartDate, "prevEndDate": previous.EndDate, "comparisonAvailable": comparisonAvailable}, "totals": sumSearchTotals(currentRows), "prevTotals": sumSearchTotals(previousRows), "daily": toDailyRows(currentRows), "strikingDistance": buildStrikingDistanceRows(queryRows, strikingDistanceLimit), "countries": toDimensionRows(countryRows), "devices": toDimensionRows(deviceRows), "pageChanges": pageChanges, "queryLosses": queryLosses, "queryGains": queryGains}, nil
 }
 
 func toDailyRows(rows []SearchRow) []map[string]any {
@@ -602,6 +607,7 @@ func (s *Service) now() time.Time {
 	return time.Now().UTC()
 }
 func withoutCountry(input PerformanceInput) PerformanceInput { input.Country = ""; return input }
+func withoutDevice(input PerformanceInput) PerformanceInput { input.Device = ""; return input }
 func previousPeriod(startDate, endDate string) (dateWindow, error) {
 	start, ok1 := parseDate(startDate)
 	end, ok2 := parseDate(endDate)

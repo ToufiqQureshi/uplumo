@@ -25,7 +25,7 @@ function positionDelta(current: number, previous: number): Delta {
   };
 }
 
-export function TotalsCards({ report }: { report: Report }) {
+export function SearchPerformanceTotals({ report }: { report: Report }) {
   const { totals, prevTotals, range } = report;
   const deltaTitle = `vs ${range.prevStartDate} to ${range.prevEndDate}`;
   const getDelta = (current: number, previous: number) =>
