@@ -131,14 +131,15 @@ type analyzerState struct {
 	openH1       []string
 
 	// AI readiness signals (aireadiness.go).
-	inLDJSON         bool
-	ldJSONParts      []string
-	ldJSONBytes      int
-	schemaTypes      []string
-	businessProps    *businessProps
-	openQuestion     []string
-	questionHeadings int
-	phones           []string
+	inLDJSON           bool
+	ldJSONParts        []string
+	ldJSONBytes        int
+	schemaTypes        []string
+	businessProps      *businessProps
+	ldBlocks, ldBroken int
+	openQuestion       []string
+	questionHeadings   int
+	phones             []string
 	// Citation signals: who wrote it, when, and how the answer is shaped.
 	chromeDepth int
 	author      bool
@@ -426,6 +427,10 @@ func (s *analyzerState) onText(text string) {
 func (s *analyzerState) onCloseTag(name string) {
 	if name == "script" && s.inLDJSON {
 		facts := jsonLDFacts(strings.Join(s.ldJSONParts, ""))
+		s.ldBlocks++
+		if facts.invalid {
+			s.ldBroken++
+		}
 		s.schemaTypes = append(s.schemaTypes, facts.types...)
 		s.author = s.author || facts.author
 		if facts.business != nil && (s.businessProps == nil || len(facts.business.fields) > len(s.businessProps.fields)) {
@@ -527,6 +532,7 @@ func (s *analyzerState) result(statusCode int, responseTimeMs int64, redirectURL
 			SchemaTypes: s.schemaTypes, QuestionHeadings: s.questionHeadings, Phones: s.phones,
 			Author: s.author, Published: s.published, Modified: s.modified, LeadWords: s.leadWords,
 			BusinessFields: businessFieldsOf(s.businessProps), SameAs: sameAsOf(s.businessProps),
+			BusinessName: businessNameOf(s.businessProps), LDJSONBlocks: s.ldBlocks, LDJSONBroken: s.ldBroken,
 			Lists: s.lists, Tables: s.tables, Quotes: s.quotes, Statistics: countStatistics(bodyText),
 		},
 	}
@@ -584,6 +590,14 @@ func businessFieldsOf(props *businessProps) []string {
 }
 
 // sameAsOf returns the sameAs count of the page's best business node.
+// businessNameOf is the name the business node declares, "" when none.
+func businessNameOf(props *businessProps) string {
+	if props == nil {
+		return ""
+	}
+	return props.name
+}
+
 func sameAsOf(props *businessProps) int {
 	if props == nil {
 		return 0

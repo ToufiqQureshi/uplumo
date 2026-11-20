@@ -28,6 +28,14 @@ type TechnicalSignals struct {
 	InsecureForms     []string
 	ImagesWithoutSize int
 	Hreflangs         []HreflangTarget
+	// RenderBlockingScripts counts classic scripts in the head with neither
+	// async nor defer; they stop the page from showing until they load.
+	RenderBlockingScripts int
+	// EagerImagesBelowFold counts images after the first three that do not
+	// say loading="lazy".
+	EagerImagesBelowFold int
+	// SiteName is og:site_name, the brand a social share names.
+	SiteName string
 }
 
 func hstsEnabled(value string) bool {
@@ -44,6 +52,7 @@ func hstsEnabled(value string) bool {
 type technicalAccumulator struct {
 	pageURL   string
 	headDepth int
+	images    int
 	signals   TechnicalSignals
 }
 
@@ -77,6 +86,20 @@ func (a *technicalAccumulator) open(name string, attrs map[string]string) {
 	if name == "img" && (strings.TrimSpace(attrs["width"]) == "" || strings.TrimSpace(attrs["height"]) == "") {
 		a.signals.ImagesWithoutSize++
 	}
+	if name == "img" {
+		a.images++
+		loading, hasLoading := attrs["loading"]
+		lazy := hasLoading && strings.EqualFold(strings.TrimSpace(loading), "lazy")
+		if a.images > freeLazyFreeImages && !lazy {
+			a.signals.EagerImagesBelowFold++
+		}
+	}
+	if name == "script" && a.headDepth > 0 && strings.TrimSpace(attrs["src"]) != "" && renderBlocking(attrs) {
+		a.signals.RenderBlockingScripts++
+	}
+	if name == "meta" && strings.EqualFold(strings.TrimSpace(attrs["property"]), "og:site_name") && a.signals.SiteName == "" {
+		a.signals.SiteName = strings.TrimSpace(attrs["content"])
+	}
 	if name == "form" && attrs["action"] != "" && len(a.signals.InsecureForms) < 20 {
 		base, baseErr := url.Parse(a.pageURL)
 		action, actionErr := url.Parse(strings.TrimSpace(attrs["action"]))
@@ -93,6 +116,22 @@ func (a *technicalAccumulator) close(name string) {
 	if name == "head" && a.headDepth > 0 {
 		a.headDepth--
 	}
+}
+
+// renderBlocking reports whether a script with a src stops rendering: a
+// classic script with neither async nor defer. Modules and data blocks do not.
+func renderBlocking(attrs map[string]string) bool {
+	if _, ok := attrs["async"]; ok {
+		return false
+	}
+	if _, ok := attrs["defer"]; ok {
+		return false
+	}
+	switch strings.ToLower(strings.TrimSpace(attrs["type"])) {
+	case "", "text/javascript", "application/javascript":
+		return true
+	}
+	return false
 }
 
 func validHTMLLanguage(value string) bool {

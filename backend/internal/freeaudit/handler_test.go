@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/toufiqqureshi/uplumo/backend/internal/audit"
 	"github.com/toufiqqureshi/uplumo/backend/internal/site"
 )
 
@@ -61,7 +62,7 @@ func TestDocxRouteServesOnlyCachedReports(t *testing.T) {
 	}
 
 	// A check fills the cache; the Word file then comes from it.
-	if _, err := svc.Run(context.Background(), "example.com", "203.0.113.7"); err != nil {
+	if _, err := svc.Run(context.Background(), "example.com", "203.0.113.7", audit.KindSEO); err != nil {
 		t.Fatal(err)
 	}
 	if checker.checks.Load() != 1 {
@@ -74,7 +75,7 @@ func TestDocxRouteServesOnlyCachedReports(t *testing.T) {
 	if got := rec.Header().Get("Content-Type"); got != docxContentType {
 		t.Fatalf("content type = %q", got)
 	}
-	if got := rec.Header().Get("Content-Disposition"); got != `attachment; filename="uplumo-audit-example.com.docx"` {
+	if got := rec.Header().Get("Content-Disposition"); got != `attachment; filename="uplumo-seo-audit-example.com.docx"` {
 		t.Fatalf("content disposition = %q", got)
 	}
 	reader, err := zip.NewReader(bytes.NewReader(rec.Body.Bytes()), int64(rec.Body.Len()))
@@ -108,5 +109,66 @@ func TestDocxRouteRefusesBadAddresses(t *testing.T) {
 	}
 	if checker.checks.Load() != 0 {
 		t.Fatalf("checks = %d, want 0", checker.checks.Load())
+	}
+}
+
+func TestToggleReadsTheCacheAndNeverChecks(t *testing.T) {
+	checker := &fakeChecker{reachable: true}
+	svc := newService(t, checker)
+	pages, err := site.New(&url.URL{Scheme: "https", Host: "uplumo.com"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	mux := http.NewServeMux()
+	Mount(mux, Deps{Service: svc, Pages: pages, Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+		ClientIP: func(*http.Request) string { return "203.0.113.8" }})
+	get := func(query string) *httptest.ResponseRecorder {
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequestWithContext(context.Background(), http.MethodGet, ReportPath+query, nil))
+		return rec
+	}
+	// Nothing cached yet: a cached-only request is refused and checks nothing.
+	if rec := get("?url=example.com&type=aeo&cached=1"); rec.Code != http.StatusNotFound {
+		t.Fatalf("uncached toggle status = %d, want 404", rec.Code)
+	}
+	if checker.checks.Load() != 0 {
+		t.Fatalf("toggle ran %d checks, want 0", checker.checks.Load())
+	}
+	if rec := get("?url=example.com&type=seo"); rec.Code != http.StatusOK {
+		t.Fatalf("SEO report status = %d", rec.Code)
+	}
+	// The AEO toggle now comes from the cache.
+	rec := get("?url=example.com&type=aeo&cached=1")
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "AEO score") {
+		t.Fatalf("cached AEO toggle: status %d body %.120s", rec.Code, rec.Body.String())
+	}
+	if checker.checks.Load() != 1 || checker.probes.Load() != 1 {
+		t.Fatalf("checks = %d, probes = %d after the toggle: want 1 and 1 (no request to the site)", checker.checks.Load(), checker.probes.Load())
+	}
+}
+
+func TestDocxRouteNamesTheReportKind(t *testing.T) {
+	checker := &fakeChecker{reachable: true}
+	svc := newService(t, checker)
+	mux := docxRouteMux(t, svc)
+	if _, err := svc.Run(context.Background(), "example.com", "203.0.113.7", audit.KindAEO); err != nil {
+		t.Fatal(err)
+	}
+	rec := getDocx(t, mux, "?url="+url.QueryEscape("example.com")+"&type=aeo")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("AEO docx status = %d: %s", rec.Code, rec.Body.String())
+	}
+	if got := rec.Header().Get("Content-Disposition"); got != `attachment; filename="uplumo-aeo-audit-example.com.docx"` {
+		t.Fatalf("content disposition = %q", got)
+	}
+	parts := unzipDocx(t, rec.Body.Bytes())
+	if !strings.Contains(string(parts["word/document.xml"]), "AEO audit report") {
+		t.Fatalf("AEO docx does not say AEO audit report")
+	}
+	if rec := getDocx(t, mux, "?url=example.com&type=nope"); rec.Code != http.StatusBadRequest {
+		t.Fatalf("bad type status = %d, want 400", rec.Code)
+	}
+	if checker.checks.Load() != 1 {
+		t.Fatalf("checks = %d, want 1", checker.checks.Load())
 	}
 }

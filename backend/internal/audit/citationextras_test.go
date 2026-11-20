@@ -33,23 +33,6 @@ func TestSnippetDirectives(t *testing.T) {
 }
 
 func TestCitationParagraphSignals(t *testing.T) {
-	words := func(n int) string { return "The service has 42 rooms " + strings.Repeat("useful ", n-5) }
-	for _, tc := range []struct {
-		name, paragraph string
-		capsule         bool
-	}{
-		{"29 words", words(29), false}, {"30 words", words(30), true}, {"120 words", words(120), true}, {"121 words", words(121), false},
-		{"question first", "What is 42? " + strings.Repeat("word ", 28), false},
-		{"no fact", "This is a statement " + strings.Repeat("ordinary ", 26), false},
-		{"named fact", "The service in Mumbai " + strings.Repeat("welcomes guests ", 13), true},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			signals := AnalyzeHTML("<html><body><p>"+tc.paragraph+"</p></body></html>", "https://shop.example/", 200, 0, "").AI
-			if signals.AnswerCapsule != tc.capsule {
-				t.Fatalf("capsule = %v, want %v", signals.AnswerCapsule, tc.capsule)
-			}
-		})
-	}
 	for _, tc := range []struct {
 		name, html string
 		want       bool

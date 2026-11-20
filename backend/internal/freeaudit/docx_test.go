@@ -57,9 +57,9 @@ func reportWithUntrustedText() audit.PageReport {
 	return audit.PageReport{
 		URL: "https://shop.test/", CheckedAt: time.Date(2026, 11, 20, 9, 0, 0, 0, time.UTC),
 		Reachable: true, Score: 59, Caps: []string{"Score capped at 59 because a critical check failed (HTTPS)."},
-		Categories: []audit.CategoryScore{{ID: audit.CategorySEO, Name: "On-page SEO", Score: 40, Issues: 1}},
+		Categories: []audit.CategoryScore{{ID: audit.CategoryOnPage, Name: "On-page SEO", Score: 40, Issues: 1}},
 		Checks: []audit.PageCheck{{
-			ID: "title", Category: audit.CategorySEO, Status: audit.CheckFail, Severity: "high", Weight: 5,
+			ID: "title", Category: audit.CategoryOnPage, Status: audit.CheckFail, Severity: "high", Weight: 5,
 			Title: "Page title", Found: `"<script>alert(1)</script> & Co" (33 characters).`,
 			Why: "Titles matter.", Fix: "Write a clear title & a brand.",
 		}},
@@ -91,7 +91,7 @@ func TestBuildDocxWritesAValidPackageWithEscapedPageText(t *testing.T) {
 	if strings.Contains(document, "<script>") {
 		t.Fatalf("page markup reached the document unescaped")
 	}
-	for _, want := range []string{"&lt;script&gt;alert(1)&lt;/script&gt; &amp; Co", "Write a clear title &amp; a brand.", "Prepared by Uplumo", "SEO &amp; AEO audit report"} {
+	for _, want := range []string{"&lt;script&gt;alert(1)&lt;/script&gt; &amp; Co", "Write a clear title &amp; a brand.", "Prepared by Uplumo", "SEO audit report"} {
 		if !strings.Contains(document, want) {
 			t.Errorf("document does not contain %q", want)
 		}
