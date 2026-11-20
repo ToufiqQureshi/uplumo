@@ -274,14 +274,33 @@ footer .legal{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--bord
 .fa-print-head p{margin:0}
 @media print{
 .fa-print-head{display:flex}
-.print-only.fa-print-foot{display:block;margin-top:1.5rem;font-size:10pt}
-header,footer,.dots,.band,.fa-hero,.fa-form,#audit-progress,.no-print,.fa-bars,.fa-check summary::after{display:none!important}
+.print-only.fa-print-foot{display:block;margin-top:.4rem;font-size:9pt}
+@page{margin:14mm}
+header,footer,.dots,.band,.fa-hero,.fa-form,#audit-progress,.no-print,.fa-check summary::after{display:none!important}
 *{background:#fff!important;color:#111!important;box-shadow:none!important;text-shadow:none!important}
-.fa-card,.fa-check,.fa-summary{border:1px solid #bbb!important;break-inside:avoid}
-.fa-check-body{display:block!important;padding:.5rem .75rem}
+.fa-card{border:1px solid #bbb!important}
+.fa-check,.fa-first li,.fa-offer{break-inside:avoid}
+.fa-group-head,.fa-head h2,.fa-check summary{break-after:avoid}
+body{font-size:9pt!important}
+.wrap{max-width:none!important;padding:0!important}
+.fa-card{padding:.5rem .7rem!important;margin:0 0 .3rem!important}
+.fa-score{width:4.5rem!important;height:4.5rem!important}
+.fa-score svg{width:4.5rem!important;height:4.5rem!important}
+.fa-print-head{margin-bottom:.4rem!important}
+.fa-summary{gap:.6rem!important}
+.fa-checks{gap:.15rem!important;margin-top:.2rem!important}
+.fa-check{margin:0!important}
+.fa-check summary{padding:.3rem .5rem!important;row-gap:0!important}
+.fa-check-body{display:block!important;padding:.1rem .5rem .35rem!important;gap:.15rem!important}
+.fa-check-body p,.fa-found{font-size:8.5pt!important;line-height:1.25}
+.fa-first{gap:.4rem!important}
 .fa-pill,.fa-counts span{border:1px solid #888;background:#fff!important}
-.fa-score .track{stroke:#ddd}
-.fa-score .value{stroke:#111}
+.fa-score,.fa-bars,.fa-bars *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.fa-score p{background:transparent!important}
+.fa-score .track{stroke:#ccc!important}
+.fa-score .value{stroke:#111!important}
+.fa-bars i{display:block;height:.5rem;background:#e2e2e2!important;border-radius:4px}
+.fa-bars b{display:block;height:100%;background:#333!important;border-radius:4px}
 a{text-decoration:none}
 a[href]::after{content:none!important}
 }

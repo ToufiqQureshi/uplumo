@@ -136,8 +136,19 @@ func (s *Service) check(ctx context.Context, pageURL string) (audit.PageReport, 
 	if !report.Reachable {
 		ttl = failedCacheTTL
 	}
-	if body, err := json.Marshal(report); err == nil {
-		if err := s.redis.Set(checkCtx, cacheKey(pageURL), body, ttl).Err(); err != nil {
+	body, err := json.Marshal(report)
+	if err != nil {
+		return report, nil
+	}
+	// The report's URL is the page after the site's redirects. The Word link
+	// is built from it, so the same report is cached under that address too
+	// when the redirect was not caught by the normalizing probe.
+	keys := []string{cacheKey(pageURL)}
+	if report.URL != "" && report.URL != pageURL {
+		keys = append(keys, cacheKey(report.URL))
+	}
+	for _, key := range keys {
+		if err := s.redis.Set(checkCtx, key, body, ttl).Err(); err != nil {
 			s.logger.WarnContext(ctx, "cache free audit", "err", err)
 		}
 	}
