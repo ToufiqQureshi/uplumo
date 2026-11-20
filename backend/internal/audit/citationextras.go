@@ -58,7 +58,9 @@ type citationAccumulator struct {
 	sectionOpen                          bool
 	sectionWords, sections, chunkReady   int
 	textWords, noSnippetWords            int
-	capsule, defined, snippetBlocked     bool
+	defined, snippetBlocked              bool
+	capsules, inlineQuotes               int
+	awaitingQuestion, paragraphAfterQ    bool
 	authorityLinks                       int
 	headings                             []string
 	topicLinks                           []string
@@ -157,6 +159,11 @@ func (c *citationAccumulator) open(name string, attributes map[string]string, se
 		c.paragraphOpen = true
 		c.paragraphAfterHeading = c.awaitingParagraph
 		c.awaitingParagraph = false
+		c.paragraphAfterQ = c.awaitingQuestion
+		c.awaitingQuestion = false
+	}
+	if active && name == "q" {
+		c.inlineQuotes++
 	}
 	if active {
 		if level, ok := headingLevels[name]; ok {
@@ -166,6 +173,7 @@ func (c *citationAccumulator) open(name string, attributes map[string]string, se
 			c.heading.Reset()
 			c.headingLevel = level
 			c.awaitingParagraph = level <= 2
+			c.awaitingQuestion = false
 		}
 	}
 	if !selfClosing && !voidHTMLTag(name) {
@@ -271,6 +279,9 @@ func (c *citationAccumulator) close(name string) {
 		c.closeParagraph()
 	}
 	if level, ok := headingLevels[name]; ok && level == c.headingLevel {
+		if level == 2 || level == 3 {
+			c.awaitingQuestion = isQuestionHeading(strings.TrimSpace(collapseWhitespace(c.heading.String())))
+		}
 		if level <= 2 && len(c.headings) < maxTopicHeadings {
 			value := truncateChars(strings.TrimSpace(collapseWhitespace(c.heading.String())), maxEvidenceChars)
 			if value != "" {
@@ -296,8 +307,11 @@ func (c *citationAccumulator) closeParagraph() {
 		c.defined = true
 	}
 	words := strings.Fields(text)
-	if len(words) >= 30 && len(words) <= 120 && startsWithStatement(text) && hasConcreteFact(words) {
-		c.capsule = true
+	if c.paragraphAfterQ {
+		if len(words) >= aeoCapsuleMinWords && len(words) <= aeoCapsuleMaxWords && startsWithStatement(text) {
+			c.capsules++
+		}
+		c.paragraphAfterQ = false
 	}
 	if injectionText.MatchString(text) {
 		c.addEvidence("Instruction in page text", text)
@@ -323,22 +337,6 @@ func startsWithStatement(text string) bool {
 		first = text[:i+1]
 	}
 	return !strings.Contains(first, "?") && !isQuestionHeading(first)
-}
-
-func hasConcreteFact(words []string) bool {
-	for i, word := range words {
-		if strings.IndexFunc(word, unicode.IsDigit) >= 0 {
-			return true
-		}
-		word = strings.TrimLeftFunc(word, func(r rune) bool { return !unicode.IsLetter(r) })
-		if i > 0 && word != "" {
-			r, _ := utf8.DecodeRuneInString(word)
-			if unicode.IsUpper(r) {
-				return true
-			}
-		}
-	}
-	return false
 }
 
 func authoritativeSource(raw, pageURL string) bool {
@@ -375,7 +373,8 @@ func (c *citationAccumulator) finish(signals *AIPageSignals, bodyText string) {
 	signals.Version = CitationSignalsVersion
 	signals.SnippetBlocked = c.snippetBlocked
 	signals.SnippetTextWords, signals.NoSnippetWords = c.textWords, c.noSnippetWords
-	signals.AnswerCapsule, signals.DefinitionAfterHeading = c.capsule, c.defined
+	signals.AnswerCapsules, signals.DefinitionAfterHeading = c.capsules, c.defined
+	signals.Quotes += c.inlineQuotes
 	signals.Sections, signals.ChunkReadySections = c.sections, c.chunkReady
 	signals.AuthorityLinks = c.authorityLinks
 	signals.InjectionEvidence, signals.TopicHeadings, signals.TopicLinks = c.evidence, c.headings, c.topicLinks

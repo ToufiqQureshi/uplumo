@@ -42,7 +42,7 @@ var docxStatus = map[audit.CheckStatus]struct{ label, color string }{
 func BuildDocx(report audit.PageReport, logo []byte) ([]byte, error) {
 	document := &docxBody{}
 	document.brand(logo)
-	document.heading1("SEO & AEO audit report")
+	document.heading1(audit.KindName(report.Kind) + " audit report")
 	document.paragraph(run{text: report.URL, mono: true})
 	document.paragraph(run{text: "Checked " + report.CheckedAt.UTC().Format("2 January 2006, 15:04 UTC")})
 	if !report.Reachable {
@@ -50,8 +50,8 @@ func BuildDocx(report audit.PageReport, logo []byte) ([]byte, error) {
 		document.paragraph(run{text: report.Problem})
 		return writeDocx(document, logo)
 	}
-	document.heading2(fmt.Sprintf("Page readiness score: %d/100 (%s)", report.Score, audit.GradeLabel(report.Score)))
-	document.paragraph(run{text: "Checks how ready this page is for Google and AI search. It does not measure rankings, backlinks or whether AI assistants mention you."})
+	document.heading2(fmt.Sprintf("%s score: %d/100 (%s)", audit.KindName(report.Kind), report.Score, audit.GradeLabel(report.Score)))
+	document.paragraph(run{text: audit.KindHonest(report.Kind)})
 	for _, cap := range report.Caps {
 		document.bullet(cap)
 	}
@@ -69,7 +69,11 @@ func BuildDocx(report audit.PageReport, logo []byte) ([]byte, error) {
 		document.heading2(fmt.Sprintf("%s (%d/100)", category.Name, category.Score))
 		document.checkTable(report.Checks, category.ID)
 	}
-	document.paragraph(run{text: "Prepared by Uplumo · https://uplumo.com — free audit at uplumo.com/free-seo-audit", muted: true})
+	page := "/free-seo-audit"
+	if report.Kind == audit.KindAEO {
+		page = "/free-aeo-audit"
+	}
+	document.paragraph(run{text: "Prepared by Uplumo · https://uplumo.com — free audit at uplumo.com" + page, muted: true})
 	return writeDocx(document, logo)
 }
 

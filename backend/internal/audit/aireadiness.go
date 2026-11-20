@@ -45,11 +45,13 @@ type AIPageSignals struct {
 	Tables int `json:"tables"`
 	Quotes int `json:"quotes"`
 	// Statistics counts percent, currency and lakh/crore figures in the body.
-	Statistics             int                `json:"statistics"`
-	SnippetBlocked         bool               `json:"snippetBlocked"`
-	SnippetTextWords       int                `json:"snippetTextWords"`
-	NoSnippetWords         int                `json:"noSnippetWords"`
-	AnswerCapsule          bool               `json:"answerCapsule"`
+	Statistics       int  `json:"statistics"`
+	SnippetBlocked   bool `json:"snippetBlocked"`
+	SnippetTextWords int  `json:"snippetTextWords"`
+	NoSnippetWords   int  `json:"noSnippetWords"`
+	// AnswerCapsules counts paragraphs of 25-80 words that answer a question
+	// heading with a statement.
+	AnswerCapsules         int                `json:"answerCapsules"`
 	DefinitionAfterHeading bool               `json:"definitionAfterHeading"`
 	Sections               int                `json:"sections"`
 	ChunkReadySections     int                `json:"chunkReadySections"`
@@ -67,6 +69,11 @@ type AIPageSignals struct {
 	// best such node.
 	BusinessFields []string `json:"businessFields,omitempty"`
 	SameAs         int      `json:"sameAs,omitempty"`
+	// BusinessName is the name property of the best business node.
+	BusinessName string `json:"businessName,omitempty"`
+	// LDJSONBlocks counts JSON-LD script blocks; LDJSONBroken those that do not parse.
+	LDJSONBlocks int `json:"ldJsonBlocks"`
+	LDJSONBroken int `json:"ldJsonBroken"`
 }
 
 // CitationSignalsVersion changes whenever stored facts gain new checks.
@@ -121,12 +128,15 @@ type ldFacts struct {
 	// business holds the business properties of the most complete business
 	// node in the block; nil when no node has a business type.
 	business *businessProps
+	// invalid is true when the block is not valid JSON.
+	invalid bool
 }
 
 // businessProps are the properties one business node declares.
 type businessProps struct {
 	fields []string
 	sameAs int
+	name   string
 }
 
 // businessFieldNames are the properties a business node should declare, in
@@ -136,6 +146,9 @@ var businessFieldNames = []string{"name", "logo", "url", "telephone", "contactPo
 // businessNodeProps reads one node with a business @type.
 func businessNodeProps(node map[string]any) *businessProps {
 	props := &businessProps{}
+	if name, ok := node["name"].(string); ok {
+		props.name = strings.TrimSpace(name)
+	}
 	for _, field := range businessFieldNames {
 		if value, ok := node[field]; ok && value != nil && value != "" {
 			props.fields = append(props.fields, field)
@@ -175,7 +188,7 @@ func isBusinessNode(t any) bool {
 func jsonLDFacts(block string) ldFacts {
 	var value any
 	if err := json.Unmarshal([]byte(block), &value); err != nil {
-		return ldFacts{}
+		return ldFacts{invalid: true}
 	}
 	var facts ldFacts
 	var walk func(any)

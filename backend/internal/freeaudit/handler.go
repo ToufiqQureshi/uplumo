@@ -11,7 +11,9 @@ import (
 	"github.com/toufiqqureshi/uplumo/backend/internal/audit"
 )
 
-// ReportPath answers the free audit page's request for a report.
+// ReportPath answers the free audit page's request for a report. It takes
+// url, type=seo|aeo (default seo) and cached=1; cached=1 only reads the cache,
+// so switching between the two reports never runs a check.
 const ReportPath = "/free-seo-audit/report"
 
 // DocxPath serves a cached report as a Word file. It never runs a check.
@@ -48,7 +50,25 @@ func Mount(mux *http.ServeMux, d Deps) {
 			d.Pages.ServeAuditError(w, http.StatusBadRequest, "Enter a website address, like example.com.")
 			return
 		}
-		report, err := d.Service.Run(r.Context(), input, d.ClientIP(r))
+		kind, ok := ParseKind(r.URL.Query().Get("type"))
+		if !ok {
+			d.Pages.ServeAuditError(w, http.StatusBadRequest, "Choose the SEO audit or the AEO audit.")
+			return
+		}
+		if r.URL.Query().Get("cached") == "1" {
+			report, found, err := d.Service.Cached(r.Context(), input, d.ClientIP(r), kind)
+			if err != nil {
+				d.writeError(w, r, err)
+				return
+			}
+			if !found {
+				d.Pages.ServeAuditError(w, http.StatusNotFound, "This report is no longer kept. Run the audit again to see it.")
+				return
+			}
+			d.Pages.ServeAuditReport(w, r, report)
+			return
+		}
+		report, err := d.Service.Run(r.Context(), input, d.ClientIP(r), kind)
 		if err != nil {
 			d.writeError(w, r, err)
 			return
@@ -61,7 +81,12 @@ func Mount(mux *http.ServeMux, d Deps) {
 			d.Pages.ServeAuditError(w, http.StatusBadRequest, "Enter a website address, like example.com.")
 			return
 		}
-		report, ok, err := d.Service.Cached(r.Context(), input, d.ClientIP(r))
+		kind, ok := ParseKind(r.URL.Query().Get("type"))
+		if !ok {
+			d.Pages.ServeAuditError(w, http.StatusBadRequest, "Choose the SEO audit or the AEO audit.")
+			return
+		}
+		report, ok, err := d.Service.Cached(r.Context(), input, d.ClientIP(r), kind)
 		if err != nil {
 			d.writeError(w, r, err)
 			return
@@ -78,7 +103,7 @@ func Mount(mux *http.ServeMux, d Deps) {
 		}
 		h := w.Header()
 		h.Set("Content-Type", docxContentType)
-		h.Set("Content-Disposition", `attachment; filename="uplumo-audit-`+fileHost(report.URL)+`.docx"`)
+		h.Set("Content-Disposition", `attachment; filename="uplumo-`+kind+`-audit-`+fileHost(report.URL)+`.docx"`)
 		h.Set("Cache-Control", "private, no-store")
 		h.Set("X-Content-Type-Options", "nosniff")
 		h.Set("X-Robots-Tag", "noindex")
