@@ -24,22 +24,44 @@
 <p class="note">Checked {{.Report.URL}}{{if .Report.StatusCode}} · HTTP {{.Report.StatusCode}}{{end}}</p>
 </div>
 {{else}}
+<div class="print-only fa-print-head">
+<img src="{{.Logo}}" alt="" width="36" height="36">
+<div>
+<p><strong>Uplumo</strong> · SEO &amp; AEO audit report</p>
+<p class="mono">{{.Report.URL}}</p>
+<p>Checked {{.Report.CheckedAt.Format "2 Jan 2006, 15:04 UTC"}}</p>
+</div>
+</div>
 <article class="fa-card fa-summary" aria-labelledby="fa-title">
 <div class="fa-score {{.Tone}}">
 <svg viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="52" class="track"/><circle cx="60" cy="60" r="52" class="value" stroke-dasharray="{{.Dash}} {{.Gap}}" transform="rotate(-90 60 60)"/></svg>
 <p><strong>{{.Report.Score}}</strong><span>/100</span></p>
 </div>
 <div class="fa-head">
-<p class="eyebrow">{{.Grade}}</p>
+<p class="eyebrow">Page readiness score: {{.Grade}}</p>
 <h2 id="fa-title">{{.Host}}</h2>
 <p class="fa-url mono">{{.Report.URL}}</p>
 <p class="fa-counts"><span class="fail">{{.Fails}} to fix</span><span class="warn">{{.Warns}} to improve</span><span class="pass">{{.Passes}} passed</span></p>
+<p class="note fa-honest">Checks how ready this page is for Google and AI search. It does not measure rankings, backlinks or whether AI assistants mention you.</p>
 <p class="note">Checked {{.Report.CheckedAt.Format "2 Jan 2006, 15:04 UTC"}} · HTTP {{.Report.StatusCode}} · {{.Report.WordCount}} words · {{.Report.ResponseMs}} ms</p>
 </div>
 <ul class="fa-bars">
 {{range .Groups}}<li><a href="#fa-{{.ID}}"><span>{{.Name}}</span><span class="mono">{{.Score}}</span></a><i><b class="{{.Tone}}" style="width:{{.Score}}%"></b></i></li>{{end}}
 </ul>
 </article>
+
+{{if .Report.Caps}}
+<div class="fa-card fa-caps" role="note">
+<p class="eyebrow">Why the score is limited</p>
+<ul>{{range .Report.Caps}}<li>{{.}}</li>{{end}}</ul>
+</div>
+{{end}}
+
+<div class="fa-actions no-print">
+<button type="button" class="btn btn-ghost" data-print-report>Download PDF</button>
+<a class="btn btn-ghost" href="{{.DocxHref}}" download>Download Word (.docx)</a>
+<p class="note">PDF opens your browser's print window: choose "Save as PDF".</p>
+</div>
 
 {{if .Priorities}}
 <section class="fa-card" aria-labelledby="fa-first">
@@ -51,7 +73,7 @@
 </section>
 {{end}}
 
-<section class="fa-offers" aria-labelledby="fa-more">
+<section class="fa-offers no-print" aria-labelledby="fa-more">
 <div class="section-head"><p class="eyebrow">Go further</p><h3 id="fa-more">Tools that fix and track what this audit found</h3></div>
 <div class="fa-offer-grid">
 {{range .Offers}}
@@ -84,10 +106,11 @@
 </section>
 {{end}}
 
-<div class="fa-card fa-end">
+<div class="fa-card fa-end no-print">
 <h3>Fixed something? Check again tomorrow, or audit another page.</h3>
 <p>Results are kept for 24 hours. Create a free account to audit your site, track AI answers and rankings in one place.</p>
 <div class="cta-row"><a class="btn" href="{{.SignUp}}" data-uplumo-event="free_audit_signup">Create free account →</a><a class="btn btn-ghost" href="#audit-form">Audit another page</a></div>
 </div>
+<p class="print-only fa-print-foot">Prepared by Uplumo · uplumo.com</p>
 {{end}}
 {{end}}

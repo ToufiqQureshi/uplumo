@@ -3,7 +3,16 @@
 - Owner: "paise kamane ke 1000 raste ... nai kama paara". Agent's advice: stop new features for 30 days, pitch 20 people a day, first 10 paying customers. Open ask: how many paying users now, how many pitched last week.
 - Owner wants a free SEO and AEO audit: URL box on the home page -> audit page; upsell content editor, rank tracking, AI visibility ("subscribe karo"); "ui achha useful ... sab details dikhey"; "hum pe utna load nai aana chahiye".
 - Built (one PR): `/free-seo-audit` + landing form; 28 checks, 0 paid calls; 24 h cache per page; 10 fresh checks/day per IP, 600/hour overall, 4 at once. Full report free, no email gate (agent read "sab details dikhey" that way). Turnstile not added.
-- Waiting for owner: review and merge (merge = production deploy); whether to gate any part behind sign-up or email later.
+- Owner said "merge kar ... deploy b kar": #321 merged and live (readyz 200).
+- Owner ran it on revmerito.com: 96/100, "worst seo and aeo audit tool". Cause: checks measure page setup (WordPress + Yoast pass by default), not rankings, authority or AI mentions; checks and scoring too lenient.
+- Agent proposed: A) free: rename to "Page readiness" with an honest note, stricter schema/FAQ/OG checks, stricter scoring, free Google PageSpeed; B) paid reality check: 1 DataForSEO domain call per new domain, cached 30 days, ~$0.01-0.02 each, cap 200 domains/day (~$3/day).
+- Waiting for owner: "sochna padega" on A and B; also whether to add an email gate. Nothing built yet.
+
+## 20 Nov 2026: free audit stricter scoring + branded PDF/DOCX
+
+- Owner chose A (stricter free checks: page readiness wording, stricter schema, FAQ, OG, scoring caps, free CrUX field data) and a branded PDF (print) and DOCX download on 20 Nov. B (paid reality check, DataForSEO domain call) not chosen.
+- Built on branch `ccr-2279284f-qy1mek` (PR #322, draft). 0 paid calls. Not merged, not deployed.
+- Open for owner: whether the "Page readiness" wording and caps are right; a site scoring 58 with no caps line shows no "why capped" note because the raw score is already below the caps.
 
 ## 2026-11-18 · SaaS audit follow-up
 

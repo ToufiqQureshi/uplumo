@@ -1,6 +1,31 @@
 // The free SEO and AEO audit page: runs the check for ?url= (set by this
 // page's form or the landing page's) and shows the server-rendered report.
 (function () {
+  // Download PDF prints the report. Every check is opened first so the
+  // printed page has the details, and closed again afterwards.
+  var opened = [];
+  window.addEventListener("beforeprint", function () {
+    opened = [];
+    document.querySelectorAll("#audit-result details").forEach(function (detail) {
+      if (!detail.open) {
+        detail.open = true;
+        opened.push(detail);
+      }
+    });
+  });
+  window.addEventListener("afterprint", function () {
+    opened.forEach(function (detail) {
+      detail.open = false;
+    });
+    opened = [];
+  });
+  document.addEventListener("click", function (event) {
+    var target = event.target;
+    if (target && target.closest && target.closest("[data-print-report]")) {
+      window.print();
+    }
+  });
+
   var form = document.getElementById("audit-form");
   var input = document.getElementById("audit-url");
   var progress = document.getElementById("audit-progress");

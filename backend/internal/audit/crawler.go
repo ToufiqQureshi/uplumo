@@ -59,18 +59,25 @@ type CrawlResult struct {
 // when the body is HTML, so the report can explain it. The returned result is
 // always usable: a transport failure becomes an error-class page.
 func (c *Crawler) FetchPage(ctx context.Context, rawURL string) CrawlResult {
+	result, _ := c.fetchAnalyzed(ctx, rawURL)
+	return result
+}
+
+// fetchAnalyzed is FetchPage that also returns the full HTML analysis (headings
+// text and body text, which CrawledPageResult does not keep). It is nil for
+// responses that are not HTML.
+func (c *Crawler) fetchAnalyzed(ctx context.Context, rawURL string) (CrawlResult, *PageAnalysis) {
 	started := time.Now()
 	result := CrawlResult{CrawledPageResult: CrawledPageResult{URL: rawURL, FetchClass: FetchError}}
 
 	if !isCrawlableURL(rawURL) {
-		result.HTMLBytesRead = 0
-		return result
+		return result, nil
 	}
 	requestCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	request, err := http.NewRequestWithContext(requestCtx, http.MethodGet, rawURL, nil)
 	if err != nil {
-		return result
+		return result, nil
 	}
 	request.Header.Set("User-Agent", auditUserAgent)
 	request.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
@@ -82,7 +89,7 @@ func (c *Crawler) FetchPage(ctx context.Context, rawURL string) CrawlResult {
 	response, err := c.client.Do(request)
 	if err != nil {
 		result.ResponseTimeMs = time.Since(started).Milliseconds()
-		return result
+		return result, nil
 	}
 	defer func() { _ = response.Body.Close() }()
 
@@ -101,7 +108,7 @@ func (c *Crawler) FetchPage(ctx context.Context, rawURL string) CrawlResult {
 
 	body, err := ReadTextUpTo(response, c.maxHTMLBytes)
 	if err != nil && body == "" {
-		return result
+		return result, nil
 	}
 	result.HTMLBytesRead = len(body)
 	mitigated := strings.TrimSpace(response.Header.Get("Cf-Mitigated")) != ""
@@ -111,13 +118,13 @@ func (c *Crawler) FetchPage(ctx context.Context, rawURL string) CrawlResult {
 	isHTML := strings.Contains(contentType, "html") || looksLikeHTML(body)
 	if !isHTML {
 		result.IsHTML = false
-		return result
+		return result, nil
 	}
 	result.IsHTML = true
 
 	analysis := AnalyzeHTML(body, rawURL, response.StatusCode, result.ResponseTimeMs, result.RedirectURL)
 	applyAnalysis(&result.CrawledPageResult, analysis, response.Header)
-	return result
+	return result, &analysis
 }
 
 // applyAnalysis folds a PageAnalysis and the response headers into a page row.

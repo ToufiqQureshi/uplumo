@@ -413,6 +413,12 @@ func run(logger *slog.Logger) (err error) {
 		Store: sitereport.Repository{DB: db}, Search: sitereport.GSC{Service: gscService}, Traffic: sitereport.GA4{Service: ga4Svc},
 		Rankings: sitereport.RankTracking{Service: rankTrackingService}, Reports: reportsSvc, Branding: brandingSvc.Get, Logger: logger,
 	}
+	// The free audit reads Chrome field data only when a CrUX key is set;
+	// without one its Core Web Vitals check reports "not measured".
+	freeChecker := audit.NewPageChecker(audit.NewGuard())
+	if cfg.CrUXAPIKey != "" {
+		freeChecker.WithFieldData(audit.NewCrUXProvider(cfg.CrUXAPIKey, audit.RedisFieldDataCache{Client: rdb}, logger))
+	}
 	mcpDeps := &mcp.Deps{
 		Logger: logger, DB: db, Redis: rdb, Auth: authService, Billing: gateSvc,
 		Credits:   credits,
@@ -499,7 +505,8 @@ func run(logger *slog.Logger) (err error) {
 			ProjectContext:          projectContextSvc,
 			KeywordResearch:         keywordResearch,
 			Site:                    pages,
-			FreeAudit:               freeaudit.New(audit.NewPageChecker(audit.NewGuard()), rdb, emailauth.RedisLimiter{Client: rdb}, logger),
+			FreeAudit:               freeaudit.New(freeChecker, rdb, emailauth.RedisLimiter{Client: rdb}, logger),
+			FreeAuditLogo:           site.ReportLogoPNG(),
 			Country:                 country,
 			StaticDir:               cfg.StaticDir,
 		}),

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"cmp"
 	"fmt"
+	"io/fs"
 	"math"
 	"net/http"
 	"net/url"
@@ -12,6 +13,25 @@ import (
 	"github.com/toufiqqureshi/uplumo/backend/internal/audit"
 	planCatalog "github.com/toufiqqureshi/uplumo/backend/internal/plans"
 )
+
+// freeAuditDocxPath is the route freeaudit serves the cached report on as a
+// Word file. It is repeated here because freeaudit's tests import this
+// package; freeaudit's tests check the route is mounted at this path.
+const freeAuditDocxPath = "/free-seo-audit/report.docx"
+
+// reportLogoFile is the logo drawn at the top of the Word report: logo.svg
+// rasterized to 256 pixels.
+const reportLogoFile = "static/logo-report.png"
+
+// ReportLogoPNG returns the PNG logo for the Word report, or nil when the
+// embedded file is missing.
+func ReportLogoPNG() []byte {
+	data, err := fs.ReadFile(embedded, reportLogoFile)
+	if err != nil {
+		return nil
+	}
+	return data
+}
 
 // FreeAuditPath is the public free SEO and AEO audit page. Its report is
 // rendered by ServeAuditReport and loaded into the page by free-audit.js.
@@ -26,8 +46,12 @@ var scoreRing = 2 * math.Pi * 52
 
 // auditView is what the report fragment template receives.
 type auditView struct {
-	Report     audit.PageReport
-	Host       string
+	Report audit.PageReport
+	Host   string
+	// Logo is the URL of the logo shown in the printed report.
+	Logo string
+	// DocxHref downloads this report as a Word file from the cache.
+	DocxHref   string
 	Grade      string
 	Tone       string
 	Dash       string
@@ -56,7 +80,9 @@ type auditOffer struct {
 // free audit page. It is never cached by shared caches: prices follow the
 // visitor's country.
 func (s *Site) ServeAuditReport(w http.ResponseWriter, r *http.Request, report audit.PageReport) {
-	s.serveFragment(w, http.StatusOK, "audit-report", auditViewOf(report, s.currency(r)))
+	view := auditViewOf(report, s.currency(r))
+	view.Logo = AssetsPrefix + "logo.svg?v=" + s.versions["logo.svg"]
+	s.serveFragment(w, http.StatusOK, "audit-report", view)
 }
 
 // ServeAuditError writes a free audit failure as an HTML fragment.
@@ -85,6 +111,7 @@ func auditViewOf(report audit.PageReport, currency string) auditView {
 	if parsed, err := url.Parse(report.URL); err == nil {
 		view.Host = parsed.Host
 	}
+	view.DocxHref = freeAuditDocxPath + "?url=" + url.QueryEscape(report.URL)
 	if !report.Reachable {
 		return view
 	}
@@ -130,15 +157,14 @@ func auditViewOf(report audit.PageReport, currency string) auditView {
 }
 
 func grade(score int) (label, tone string) {
-	switch {
-	case score >= 90:
-		return "Excellent", "good"
-	case score >= passingScore:
-		return "Good", "good"
-	case score >= 50:
-		return "Needs work", "warn"
+	label = audit.GradeLabel(score)
+	switch label {
+	case "Excellent", "Good":
+		return label, "good"
+	case "Needs work":
+		return label, "warn"
 	}
-	return "Poor", "bad"
+	return label, "bad"
 }
 
 // auditOffers suggests the paid tools that fix what the report found, with

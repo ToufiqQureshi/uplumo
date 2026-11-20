@@ -29,13 +29,20 @@ type fakeChecker struct {
 	delay     time.Duration
 	reachable bool
 	err       error
+	// finalURL, when set, is the address the report says the page ended at
+	// after redirects.
+	finalURL string
 }
 
 func (f *fakeChecker) NormalizeURL(_ context.Context, input string) (string, error) {
 	if f.err != nil {
 		return "", f.err
 	}
-	return "https://" + strings.TrimPrefix(input, "https://") + "/", nil
+	normalized := "https://" + strings.TrimPrefix(input, "https://")
+	if !strings.HasSuffix(normalized, "/") {
+		normalized += "/"
+	}
+	return normalized, nil
 }
 
 func (f *fakeChecker) Check(_ context.Context, pageURL string) audit.PageReport {
@@ -45,6 +52,9 @@ func (f *fakeChecker) Check(_ context.Context, pageURL string) audit.PageReport 
 		Categories: []audit.CategoryScore{{ID: audit.CategorySEO, Name: "On-page SEO", Score: 90}, {ID: audit.CategoryAI, Name: "AI search (AEO)", Score: 40}},
 		Checks: []audit.PageCheck{{ID: "title", Category: audit.CategorySEO, Status: audit.CheckWarn, Title: "Page title",
 			Found: `"<script>alert(1)</script>" (33 characters).`, Why: "why", Fix: "fix", Weight: 1}}}
+	if f.finalURL != "" {
+		report.URL = f.finalURL
+	}
 	if !f.reachable {
 		report.Problem = "We could not connect to this website."
 	}
@@ -215,6 +225,31 @@ func TestReportRouteRendersEscapedHTML(t *testing.T) {
 		if rec.Header().Get("Cache-Control") != "private, no-store" {
 			t.Errorf("cache-control = %q", rec.Header().Get("Cache-Control"))
 		}
+	}
+	if checker.checks.Load() != 1 {
+		t.Fatalf("checks = %d, want 1", checker.checks.Load())
+	}
+}
+
+func TestCachedFindsTheReportUnderItsFinalURL(t *testing.T) {
+	// The probe saw example.com; the page redirected on to /final/, so the
+	// report's URL is the final address. The Word link uses that address.
+	checker := &fakeChecker{reachable: true, finalURL: "https://example.com/final/"}
+	svc := newService(t, checker)
+	ctx := context.Background()
+	report, err := svc.Run(ctx, "example.com", "203.0.113.9")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.URL != "https://example.com/final/" {
+		t.Fatalf("report URL = %q", report.URL)
+	}
+	found, ok, err := svc.Cached(ctx, report.URL, "203.0.113.9")
+	if err != nil || !ok {
+		t.Fatalf("Cached(final URL) ok=%v err=%v, want the cached report", ok, err)
+	}
+	if found.URL != report.URL {
+		t.Fatalf("cached URL = %q", found.URL)
 	}
 	if checker.checks.Load() != 1 {
 		t.Fatalf("checks = %d, want 1", checker.checks.Load())
