@@ -47,7 +47,7 @@ change to the thresholds.
 
 - SEO: 2026 technical and on-page SEO audit guides (crawlability first; Core Web Vitals LCP under 2.5 s, INP under 200 ms, CLS under 0.1; on-page match to intent; structured data; content quality).
 - AEO checklists: AirOps' 48-factor AEO checklist, RankPrompt, AI Rank Lab, Answerly.
-- Citation studies: Profound's 30 million citation study; Ahrefs' brand-mention study; GEO research on definitions, statistics, quotations and citations (clear "X is ..." definitions cited about twice as often; figures, quotes and sources raise visibility).
+- Citation studies named in the brief, figures not re-verified: Profound's citation study; Ahrefs' brand-mention study; GEO research on clear definitions, statistics, quotations and citations.
 - llms.txt is treated as a weak signal: few assistants read it yet.
 
 ## Other rules

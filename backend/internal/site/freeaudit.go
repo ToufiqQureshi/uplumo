@@ -242,7 +242,7 @@ func freeSEOAuditFAQ() []QA {
 		{"What does the SEO audit check?", "How well Google can crawl, index, read and rank the page: HTTPS, noindex, Googlebot access in robots.txt, redirects, canonical and hreflang tags, the sitemap, titles, headings, links, speed for real visitors, structured data and content length."},
 		{"Which page is checked?", "The address you enter, after following its redirects. Enter your home page or any important page; each page gets its own report."},
 		{"Does a good score mean I will rank?", "No. The audit checks what you control on the page. Rankings also depend on competition, links and the search the visitor makes."},
-		{"How often can I run it?", "A page's report is kept for 24 hours, so running it again shows the same result. Switching between the SEO and AEO report does not run a new check."},
+		{"How often can I run it?", "A page's report is kept for 24 hours, so running it again shows the same result. Switching between SEO and AEO uses the same check, so it does not fetch the page again while the report is kept (24 hours)."},
 		{"Why did the check fail?", "Usually the site's firewall or bot protection blocked our checker (user agent \"" + audit.UserAgent + "\"), the site was down, or the address is not a web page."},
 	}
 }

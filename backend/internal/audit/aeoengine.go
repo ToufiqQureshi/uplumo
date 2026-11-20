@@ -13,7 +13,7 @@ import (
 //
 // It follows the answer-engine checklists and citation studies of 2026:
 // crawler access first, then answers a model can lift (question headings,
-// 40-60 word answer capsules, clear definitions, lists and tables), then
+// short answer capsules under question headings, clear definitions, lists and tables), then
 // evidence (figures, authoritative sources, quotes, author and date) and
 // entity clarity (who the business is, schema). llms.txt is a weak signal and
 // weighs little.
@@ -203,7 +203,7 @@ func questionHeadingsCheck(ai AIPageSignals) PageCheck {
 func answerCapsulesCheck(ai AIPageSignals) PageCheck {
 	c := newCheck("answer-capsules", aeoAnswer, sevMedium, "Direct answers under questions",
 		"A short paragraph that answers the question in its heading, in one statement, is the piece AI assistants quote most.")
-	const fix = "Under each question heading, write a 40-60 word paragraph that starts with the answer and includes one fact (a price, a time, a number)."
+	const fix = "Under each question heading, write a short paragraph that starts with the answer and includes one fact (a price, a time, a number)."
 	switch n := ai.AnswerCapsules; {
 	case n >= aeoCapsuleGood:
 		c.set(CheckPass, fmt.Sprintf("%d questions have a direct answer under the heading.", n), "")
@@ -218,7 +218,7 @@ func answerCapsulesCheck(ai AIPageSignals) PageCheck {
 // definitionCheck passes when a heading is followed by a "X is ..." definition.
 func definitionCheck(ai AIPageSignals) PageCheck {
 	c := newCheck("definition", aeoAnswer, sevMedium, "Clear definitions",
-		"Definitions in the form \"X is ...\" right under a heading are cited about twice as often as vague openings in GEO research.")
+		"AI answers often lift a clear definition (\"X is ...\") placed right under a heading.")
 	if ai.DefinitionAfterHeading {
 		c.set(CheckPass, "A heading is followed by a clear definition (\"X is ...\").", "")
 		return c
