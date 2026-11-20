@@ -8,6 +8,12 @@
 - Agent proposed: A) free: rename to "Page readiness" with an honest note, stricter schema/FAQ/OG checks, stricter scoring, free Google PageSpeed; B) paid reality check: 1 DataForSEO domain call per new domain, cached 30 days, ~$0.01-0.02 each, cap 200 domains/day (~$3/day).
 - Waiting for owner: "sochna padega" on A and B; also whether to add an email gate. Nothing built yet.
 
+## 20 Nov 2026: free audit stricter scoring + branded PDF/DOCX
+
+- Owner chose A (stricter free checks: page readiness wording, stricter schema, FAQ, OG, scoring caps, free CrUX field data) and a branded PDF (print) and DOCX download on 20 Nov. B (paid reality check, DataForSEO domain call) not chosen.
+- Built on branch `ccr-2279284f-qy1mek` (PR #322, draft). 0 paid calls. Not merged, not deployed.
+- Open for owner: whether the "Page readiness" wording and caps are right; a site scoring 58 with no caps line shows no "why capped" note because the raw score is already below the caps.
+
 ## 2026-11-18 · SaaS audit follow-up
 
 - Owner approved one change set for duplicate-payment refund recovery, report date and domain correctness, signup without a configured mailer, and retrying project access in place.

@@ -187,6 +187,8 @@ type Deps struct {
 	// FreeAudit runs the public one-page SEO and AEO audit; nil leaves its
 	// report route unanswered.
 	FreeAudit *freeaudit.Service
+	// FreeAuditLogo is the PNG drawn at the top of the free audit's Word file.
+	FreeAuditLogo []byte
 	// Country is the ISO country code of a request's trusted client address,
 	// or "" when unknown. It picks the currency prices are shown and billed
 	// in. Nil shows and bills rupees to everyone.
@@ -257,7 +259,7 @@ func NewHandler(d Deps) http.Handler {
 	mux.HandleFunc("GET "+site.AssetsPrefix, d.Site.ServeAsset)
 	if d.FreeAudit != nil {
 		freeaudit.Mount(mux, freeaudit.Deps{
-			Service: d.FreeAudit, Pages: d.Site, Logger: d.Logger,
+			Service: d.FreeAudit, Pages: d.Site, Logger: d.Logger, Logo: d.FreeAuditLogo,
 			ClientIP: func(r *http.Request) string { return httpx.ClientIP(r, d.TrustedProxyCIDRs) },
 		})
 	}

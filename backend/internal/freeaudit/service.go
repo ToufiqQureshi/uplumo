@@ -144,6 +144,25 @@ func (s *Service) check(ctx context.Context, pageURL string) (audit.PageReport, 
 	return report, nil
 }
 
+// Cached returns the report of input's page when a check of it ran in the
+// last day. It never runs a fresh check and does not count toward fresh
+// checks; it reads the same per-visitor lookup limit as Run. ok is false when
+// the page has no cached report.
+func (s *Service) Cached(ctx context.Context, input, ip string) (report audit.PageReport, ok bool, err error) {
+	if err := s.allow(ctx, "lookup:"+ip, lookupsPerHour, time.Hour); err != nil {
+		return audit.PageReport{}, false, err
+	}
+	pageURL, err := s.checker.NormalizeURL(ctx, input)
+	switch {
+	case errors.Is(err, audit.ErrCrawlTargetBlocked):
+		return audit.PageReport{}, false, ErrBlocked
+	case err != nil:
+		return audit.PageReport{}, false, fmt.Errorf("%w: %w", ErrInvalidURL, err)
+	}
+	report, ok = s.cached(ctx, pageURL)
+	return report, ok, nil
+}
+
 func (s *Service) cached(ctx context.Context, pageURL string) (audit.PageReport, bool) {
 	body, err := s.redis.Get(ctx, cacheKey(pageURL)).Bytes()
 	if err != nil {
@@ -175,5 +194,5 @@ func (s *Service) allow(ctx context.Context, key string, limit int, window time.
 
 func cacheKey(pageURL string) string {
 	sum := sha256.Sum256([]byte(pageURL))
-	return "free-audit:v1:" + hex.EncodeToString(sum[:16])
+	return "free-audit:v2:" + hex.EncodeToString(sum[:16])
 }

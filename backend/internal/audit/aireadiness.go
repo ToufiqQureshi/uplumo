@@ -61,6 +61,12 @@ type AIPageSignals struct {
 	TopicLinks             []string           `json:"topicLinks"`
 	HreflangTargets        []HreflangTarget   `json:"hreflangTargets"`
 	HSTS                   *bool              `json:"hsts"`
+	// BusinessFields are the properties present on the business node (the
+	// first JSON-LD node of a business type that names them): any of name, logo,
+	// url, telephone, contactPoint, address. SameAs counts sameAs links on the
+	// best such node.
+	BusinessFields []string `json:"businessFields,omitempty"`
+	SameAs         int      `json:"sameAs,omitempty"`
 }
 
 // CitationSignalsVersion changes whenever stored facts gain new checks.
@@ -112,6 +118,55 @@ type ldFacts struct {
 	author    bool
 	published string
 	modified  string
+	// business holds the business properties of the most complete business
+	// node in the block; nil when no node has a business type.
+	business *businessProps
+}
+
+// businessProps are the properties one business node declares.
+type businessProps struct {
+	fields []string
+	sameAs int
+}
+
+// businessFieldNames are the properties a business node should declare, in
+// the order the report lists them.
+var businessFieldNames = []string{"name", "logo", "url", "telephone", "contactPoint", "address"}
+
+// businessNodeProps reads one node with a business @type.
+func businessNodeProps(node map[string]any) *businessProps {
+	props := &businessProps{}
+	for _, field := range businessFieldNames {
+		if value, ok := node[field]; ok && value != nil && value != "" {
+			props.fields = append(props.fields, field)
+		}
+	}
+	switch same := node["sameAs"].(type) {
+	case string:
+		props.sameAs = 1
+	case []any:
+		for _, item := range same {
+			if s, ok := item.(string); ok && s != "" {
+				props.sameAs++
+			}
+		}
+	}
+	return props
+}
+
+// isBusinessNode reports whether a node's @type names a business type.
+func isBusinessNode(t any) bool {
+	switch v := t.(type) {
+	case string:
+		return businessTypes[strings.ToLower(v)]
+	case []any:
+		for _, item := range v {
+			if s, ok := item.(string); ok && businessTypes[strings.ToLower(s)] {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // jsonLDFacts reads every @type, any author and the first publish and update
@@ -143,6 +198,14 @@ func jsonLDFacts(block string) ldFacts {
 			}
 			if author, ok := v["author"]; ok && author != nil && author != "" {
 				facts.author = true
+			}
+			if isBusinessNode(v["@type"]) {
+				props := businessNodeProps(v)
+				// The most complete node describes the business best.
+				if facts.business == nil || len(props.fields) > len(facts.business.fields) ||
+					(len(props.fields) == len(facts.business.fields) && props.sameAs > facts.business.sameAs) {
+					facts.business = props
+				}
 			}
 			if date, ok := v["datePublished"].(string); ok && facts.published == "" {
 				facts.published = truncateChars(strings.TrimSpace(date), maxDateChars)

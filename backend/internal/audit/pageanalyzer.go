@@ -135,6 +135,7 @@ type analyzerState struct {
 	ldJSONParts      []string
 	ldJSONBytes      int
 	schemaTypes      []string
+	businessProps    *businessProps
 	openQuestion     []string
 	questionHeadings int
 	phones           []string
@@ -427,6 +428,9 @@ func (s *analyzerState) onCloseTag(name string) {
 		facts := jsonLDFacts(strings.Join(s.ldJSONParts, ""))
 		s.schemaTypes = append(s.schemaTypes, facts.types...)
 		s.author = s.author || facts.author
+		if facts.business != nil && (s.businessProps == nil || len(facts.business.fields) > len(s.businessProps.fields)) {
+			s.businessProps = facts.business
+		}
 		s.setPublished(facts.published)
 		s.setModified(facts.modified)
 		s.inLDJSON = false
@@ -522,6 +526,7 @@ func (s *analyzerState) result(statusCode int, responseTimeMs int64, redirectURL
 		AI: AIPageSignals{
 			SchemaTypes: s.schemaTypes, QuestionHeadings: s.questionHeadings, Phones: s.phones,
 			Author: s.author, Published: s.published, Modified: s.modified, LeadWords: s.leadWords,
+			BusinessFields: businessFieldsOf(s.businessProps), SameAs: sameAsOf(s.businessProps),
 			Lists: s.lists, Tables: s.tables, Quotes: s.quotes, Statistics: countStatistics(bodyText),
 		},
 	}
@@ -567,4 +572,21 @@ func derefString(value *string) string {
 		return ""
 	}
 	return *value
+}
+
+// businessFieldsOf lists the business properties the page's best business node
+// declares; nil when there is none.
+func businessFieldsOf(props *businessProps) []string {
+	if props == nil {
+		return nil
+	}
+	return props.fields
+}
+
+// sameAsOf returns the sameAs count of the page's best business node.
+func sameAsOf(props *businessProps) int {
+	if props == nil {
+		return 0
+	}
+	return props.sameAs
 }
