@@ -179,6 +179,7 @@ func (t *Traffic) hasData() bool {
 	return t.HasOrganic() || len(t.Channels)+len(t.LandingPages)+len(t.Events) > 0
 }
 
+// HasOrganic reports whether either period has organic sessions.
 func (t *Traffic) HasOrganic() bool {
 	return positive(t.Sessions.Value) || positive(t.Sessions.Previous)
 }

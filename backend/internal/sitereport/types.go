@@ -228,6 +228,7 @@ type RankRow struct {
 	CheckedAt   *time.Time
 }
 
+// CompetitorRank is one competing organic result from a saved keyword check.
 type CompetitorRank struct {
 	Rank        int
 	Domain, URL string

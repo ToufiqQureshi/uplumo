@@ -29,6 +29,7 @@ type AnalyticsSnapshot struct {
 	LeadsConfigured                                 bool
 }
 
+// UplumoAnalytics reads the same project aggregates as the Analytics screen.
 type UplumoAnalytics struct{ Service *analytics.Service }
 
 func (a UplumoAnalytics) Read(ctx context.Context, projectID string, p Period) (*AnalyticsSnapshot, error) {
@@ -63,6 +64,7 @@ type AIVisibility struct {
 	Evidence        []AIAnswer
 }
 
+// AIAnswer shows a saved response excerpt and its cited pages.
 type AIAnswer struct {
 	Prompt, Engine, Excerpt string
 	CheckedAt               *time.Time
@@ -70,12 +72,14 @@ type AIAnswer struct {
 	SourceCount             int
 }
 
+// AISource identifies a cited page at its position in the saved source list.
 type AISource struct {
 	Position           int
 	Brand, Domain, URL string
 	Owned              bool
 }
 
+// AITracking reads evidence from completed AI visibility checks.
 type AITracking struct{ Service *aisearch.Tracking }
 
 func (a AITracking) Read(ctx context.Context, org, projectID string) (*AIVisibility, error) {
@@ -202,12 +206,12 @@ func reportPath(path string) string {
 	return path
 }
 
-func excerpt(value string, max int) string {
+func excerpt(value string, limit int) string {
 	runes := []rune(strings.TrimSpace(value))
-	if len(runes) <= max {
+	if len(runes) <= limit {
 		return string(runes)
 	}
-	return strings.TrimSpace(string(runes[:max])) + "…"
+	return strings.TrimSpace(string(runes[:limit])) + "…"
 }
 
 // LocalVisibility contains finished Google Maps, profile and review checks.
@@ -221,6 +225,7 @@ type LocalVisibility struct {
 	PreviousReviewsAt          time.Time
 }
 
+// LocalSnapshots reads saved checks for the project's current business listing.
 type LocalSnapshots struct {
 	Store localvisibility.Store
 	Plans localvisibility.PaidPlans

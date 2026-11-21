@@ -61,6 +61,7 @@ type CheckResult struct {
 
 const missingMapsResults = "Google Maps results"
 
+// MapsAvailable distinguishes a completed search from unavailable results.
 func (c CheckResult) MapsAvailable() bool {
 	return !slices.Contains(c.Missing, missingMapsResults)
 }
