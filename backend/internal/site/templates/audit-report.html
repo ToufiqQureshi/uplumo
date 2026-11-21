@@ -1,10 +1,34 @@
+{{define "audit-tabs"}}
+<div class="fa-tabs" role="tablist" aria-label="Which audit to run">
+<a role="tab" id="tab-seo" class="fa-tab" href="/free-seo-audit" data-kind="seo" aria-selected="{{if eq . "seo"}}true{{else}}false{{end}}" aria-controls="audit-result">SEO audit</a>
+<a role="tab" id="tab-aeo" class="fa-tab" href="/free-aeo-audit" data-kind="aeo" aria-selected="{{if eq . "aeo"}}true{{else}}false{{end}}" aria-controls="audit-result">AEO audit</a>
+</div>
+<p class="note fa-tabs-note">{{if eq . "aeo"}}AEO checks how ready this page is for AI assistants to read, trust and quote.{{else}}SEO checks how well Google can crawl, index and read this page.{{end}}</p>
+{{end}}
+
 {{define "audit-form"}}
-<form id="audit-form" class="fa-form" action="/free-seo-audit" method="get" role="search" aria-label="Free SEO and AEO audit">
+{{$kind := "seo"}}{{if eq .Path "/free-aeo-audit"}}{{$kind = "aeo"}}{{end}}
+<div class="fa-audit-start" data-default-kind="{{$kind}}">
+{{template "audit-tabs" $kind}}
+<form id="audit-form" class="fa-form" action="{{if eq $kind "aeo"}}/free-aeo-audit{{else}}/free-seo-audit{{end}}" method="get" role="search" aria-label="Free website audit">
 <label class="skip" for="audit-url">Website address</label>
 <input id="audit-url" name="url" type="text" inputmode="url" autocomplete="url" spellcheck="false" maxlength="2048" required placeholder="yourwebsite.com">
-<button class="btn" type="submit" data-uplumo-event="free_audit_run">Run free audit →</button>
+<button class="btn" type="submit" data-uplumo-event="free_audit_run">Run {{if eq $kind "aeo"}}AEO{{else}}SEO{{end}} audit →</button>
 </form>
 <p class="note">One page · about 10 seconds · no sign-up, no card</p>
+</div>
+{{end}}
+
+{{define "audit-start"}}
+<form id="audit-start" class="fa-form" action="/free-seo-audit" method="get" role="search" aria-label="Free SEO or AEO audit">
+<label class="skip" for="audit-url">Website address</label>
+<input id="audit-url" name="url" type="text" inputmode="url" autocomplete="url" spellcheck="false" maxlength="2048" required placeholder="yourwebsite.com">
+<div class="fa-start" role="group" aria-label="Which audit to run">
+<button class="btn" type="submit" formaction="/free-seo-audit" data-uplumo-event="free_audit_run_seo">SEO audit →</button>
+<button class="btn btn-ghost" type="submit" formaction="/free-aeo-audit" data-uplumo-event="free_audit_run_aeo">AEO audit →</button>
+</div>
+</form>
+<p class="note">SEO: how Google reads the page. AEO: how ChatGPT and AI Overviews read and quote it. One page · no sign-up</p>
 {{end}}
 
 {{define "audit-status"}}<span class="fa-pill {{.}}">{{if eq . "fail"}}Fix{{else if eq . "warn"}}Improve{{else if eq . "pass"}}Good{{else}}Note{{end}}</span>{{end}}
@@ -27,7 +51,7 @@
 <div class="print-only fa-print-head">
 <img src="{{.Logo}}" alt="" width="36" height="36">
 <div>
-<p><strong>Uplumo</strong> · SEO &amp; AEO audit report</p>
+<p><strong>Uplumo</strong> · {{.KindName}} audit report</p>
 <p class="mono">{{.Report.URL}}</p>
 <p>Checked {{.Report.CheckedAt.Format "2 Jan 2006, 15:04 UTC"}}</p>
 </div>
@@ -38,11 +62,11 @@
 <p><strong>{{.Report.Score}}</strong><span>/100</span></p>
 </div>
 <div class="fa-head">
-<p class="eyebrow">Page readiness score: {{.Grade}}</p>
+<p class="eyebrow">{{.KindName}} score: {{.Grade}}</p>
 <h2 id="fa-title">{{.Host}}</h2>
 <p class="fa-url mono">{{.Report.URL}}</p>
 <p class="fa-counts"><span class="fail">{{.Fails}} to fix</span><span class="warn">{{.Warns}} to improve</span><span class="pass">{{.Passes}} passed</span></p>
-<p class="note fa-honest">Checks how ready this page is for Google and AI search. It does not measure rankings, backlinks or whether AI assistants mention you.</p>
+<p class="note fa-honest">{{.Honest}}</p>
 <p class="note">Checked {{.Report.CheckedAt.Format "2 Jan 2006, 15:04 UTC"}} · HTTP {{.Report.StatusCode}} · {{.Report.WordCount}} words · {{.Report.ResponseMs}} ms</p>
 </div>
 <ul class="fa-bars">

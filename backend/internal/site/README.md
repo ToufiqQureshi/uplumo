@@ -17,7 +17,7 @@ templates and served with ETags. No page makes a paid provider call.
 ## Routes (registered in `httpapi`)
 
 `/`, `/pricing`, every `InfoPaths()` page, `/blog`, `/blog/{slug}`,
-`/robots.txt`, `/sitemap.xml`, `/llms.txt`, `/site/*` assets, and `/free-seo-audit` with its report fragment (`freeaudit.go`, see `internal/freeaudit`).
+`/robots.txt`, `/sitemap.xml`, `/llms.txt`, `/site/*` assets, and `/free-seo-audit` and `/free-aeo-audit` with their report fragments (`freeaudit.go`, see `internal/freeaudit`).
 
 ## Rules
 

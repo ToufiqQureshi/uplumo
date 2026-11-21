@@ -16,8 +16,11 @@ import (
 // provider: no DataForSEO, no PageSpeed, no AI model. The only outside data
 // is Chrome's field data from the free CrUX API, when a key is configured.
 //
-// The score says how ready the page is for search and AI crawlers. It does
-// not measure rankings, links or AI mentions, and the report says so.
+// One fetch feeds two independent engines: ScoreSEO (seoengine.go, how well
+// Google can crawl, index and rank the page) and ScoreAEO (aeoengine.go, how
+// ready the page is for AI assistants to read, trust and quote). Each has its
+// own checks, categories, weights and caps. Neither measures rankings, links
+// or AI mentions, and the report says so.
 
 // CheckStatus is how one check came out.
 type CheckStatus string
@@ -30,24 +33,39 @@ const (
 	CheckInfo CheckStatus = "info"
 )
 
-// Check categories, in the order the report shows them.
+// Report kinds: the two engines of the free audit.
 const (
-	CategorySEO       = "seo"
-	CategoryAI        = "ai"
-	CategoryTechnical = "technical"
-	CategoryContent   = "content"
+	KindSEO = "seo"
+	KindAEO = "aeo"
 )
 
-// categoryNames are what the report calls each category.
-var categoryNames = map[string]string{
-	CategorySEO:       "On-page SEO",
-	CategoryAI:        "AI search (AEO)",
-	CategoryTechnical: "Technical",
-	CategoryContent:   "Content",
+// Category IDs the upgrade offers of the report read.
+const (
+	CategoryOnPage  = seoOnPage
+	CategoryContent = seoContent
+	CategoryAnswers = aeoAnswer
+	CategoryTrust   = aeoTrust
+)
+
+// KindName is the short name of a report kind: "SEO" or "AEO".
+func KindName(kind string) string {
+	if kind == KindAEO {
+		return "AEO"
+	}
+	return "SEO"
 }
 
-// GradeLabel names a page readiness score in words. Only 90 and above is
-// "Excellent", which a capped score cannot reach with a serious failure.
+// KindHonest is the line each report carries: what the engine checks and what
+// it does not measure.
+func KindHonest(kind string) string {
+	if kind == KindAEO {
+		return "Checks how ready this page is to be read, trusted and quoted by AI assistants. It does not measure whether ChatGPT or other assistants mention you today."
+	}
+	return "Checks how well this page is built for Google. It does not measure rankings or backlinks."
+}
+
+// GradeLabel names a page score in words. Only 90 and above is "Excellent",
+// which a capped score cannot reach with a serious failure.
 func GradeLabel(score int) string {
 	switch {
 	case score >= 90:
@@ -58,14 +76,6 @@ func GradeLabel(score int) string {
 		return "Needs work"
 	}
 	return "Poor"
-}
-
-// categoryWeights are each category's share of the page score.
-var categoryWeights = map[string]int{
-	CategorySEO:       30,
-	CategoryAI:        30,
-	CategoryTechnical: 20,
-	CategoryContent:   20,
 }
 
 // Severities say how much a failed check hurts the page. The weight of a
@@ -84,16 +94,15 @@ var severityWeights = map[string]int{
 	sevLow:      1,
 }
 
-// Scoring rules. A warning earns warnCredit of its weight; a pass earns all
-// of it; a fail earns nothing. The caps keep serious problems visible: a page
-// with a critical failure can never look "Excellent".
+// Scoring rules shared by both engines. A warning earns warnCredit of its
+// weight; a pass earns all of it; a fail earns nothing. A critical failure
+// caps the score at the engine's own limit; the other caps are shared.
 const (
 	warnCredit  = 0.35
-	capCritical = 59
 	capHigh     = 79
 	capManyWarn = 89
 	// manyWarns is how many warnings cap the score at capManyWarn.
-	manyWarns = 5
+	manyWarns = 6
 )
 
 // PageCheck is one check of the free audit, written for a site owner: what
@@ -121,8 +130,10 @@ type CategoryScore struct {
 	Issues int    `json:"issues"`
 }
 
-// PageReport is the free audit's result for one page.
+// PageReport is one engine's result for one page.
 type PageReport struct {
+	// Kind is KindSEO or KindAEO.
+	Kind      string    `json:"kind"`
 	URL       string    `json:"url"`
 	CheckedAt time.Time `json:"checkedAt"`
 	// Reachable is false when no HTML page could be read; Problem then says
@@ -136,9 +147,38 @@ type PageReport struct {
 	Score      int             `json:"score"`
 	Categories []CategoryScore `json:"categories"`
 	// Caps lists why the score is lower than the checks alone would give, one
-	// sentence each ("Score capped at 59 because ...").
+	// sentence each ("Score capped at 49 because ...").
 	Caps   []string    `json:"caps,omitempty"`
 	Checks []PageCheck `json:"checks"`
+}
+
+// PageSnapshot is one fetch of a page and its site's files. Both engines
+// score the same snapshot, so one visitor check costs one fetch.
+type PageSnapshot struct {
+	// URL is the page after the site's redirects.
+	URL        string
+	CheckedAt  time.Time
+	StatusCode int
+	ResponseMs int64
+	// Redirects is how many redirects the page fetch followed.
+	Redirects int
+	// Reachable is false when no HTML page could be read; Problem says why.
+	Reachable bool
+	Problem   string
+	// Page and Analysis are the crawled HTML of the page (zero when unreachable).
+	Page     CrawledPageResult
+	Analysis PageAnalysis
+	// HTMLBytes is how much HTML was read.
+	HTMLBytes int
+	Origin    string
+	// Robots is the robots.txt text; nil when there is none.
+	Robots *string
+	// LLMs is true when /llms.txt exists.
+	LLMs bool
+	// Sitemap is the XML sitemap's URL; "" when none was found.
+	Sitemap string
+	// Field is Chrome's field data for the page; nil when no source is set.
+	Field *StoredFieldData
 }
 
 // PageChecker runs the free one-page audit.
@@ -182,6 +222,13 @@ func (c *PageChecker) WithFieldData(provider FieldDataProvider) *PageChecker {
 	return c
 }
 
+// ValidateURL validates a visitor's input and returns the start address a
+// check would begin from. It makes no request to the site (DNS only), so a
+// cache lookup can use it without fetching the page.
+func (c *PageChecker) ValidateURL(ctx context.Context, input string) (string, error) {
+	return c.guard.NormalizeAndValidateStartURL(ctx, input)
+}
+
 // NormalizeURL validates a visitor's input and returns the page URL the
 // check reads after the site's own redirects. Errors are ErrStartURLInvalid
 // or ErrCrawlTargetBlocked (wrapped) for input the checker refuses.
@@ -198,58 +245,51 @@ func (c *PageChecker) NormalizeURL(ctx context.Context, input string) (string, e
 }
 
 // Check reads pageURL (from NormalizeURL) and its site's robots.txt,
-// llms.txt and sitemap, then scores the page. It makes at most
-// maxPageCheckRedirects+4 requests to the visitor's site, and at most one
-// field data lookup.
-func (c *PageChecker) Check(ctx context.Context, pageURL string) PageReport {
-	report := PageReport{URL: pageURL, CheckedAt: c.now().UTC()}
+// llms.txt and sitemap. It makes at most maxPageCheckRedirects+4 requests to
+// the visitor's site, and at most one field data lookup. It scores nothing:
+// ScoreSEO and ScoreAEO score the snapshot.
+func (c *PageChecker) Check(ctx context.Context, pageURL string) PageSnapshot {
+	snap := PageSnapshot{URL: pageURL, CheckedAt: c.now().UTC()}
 	origin, err := originOf(pageURL)
 	if err != nil {
-		report.Problem = "That address is not a website we can check."
-		return report
+		snap.Problem = "That address is not a website we can check."
+		return snap
 	}
+	snap.Origin = origin
 
 	var (
-		wg       sync.WaitGroup
-		page     CrawlResult
-		analysis *PageAnalysis
-		robots   *string
-		llms     bool
+		wg        sync.WaitGroup
+		page      CrawlResult
+		analysis  *PageAnalysis
+		redirects int
+		robots    *string
+		llms      bool
 	)
-	wg.Go(func() { page, analysis = c.fetchPage(ctx, pageURL) })
+	wg.Go(func() { page, analysis, redirects = c.fetchPage(ctx, pageURL) })
 	wg.Go(func() { robots = c.finder.fetchRobotsTxtText(ctx, origin) })
 	wg.Go(func() { llms = c.finder.hasLLMsTxt(ctx, origin) })
 	wg.Wait()
 
-	report.URL = page.URL
-	report.StatusCode = page.StatusCode
-	report.ResponseMs = page.ResponseTimeMs
+	snap.URL = page.URL
+	snap.StatusCode = page.StatusCode
+	snap.ResponseMs = page.ResponseTimeMs
+	snap.Redirects = redirects
 	if problem := unreachable(page); problem != "" || analysis == nil {
 		if problem == "" {
 			problem = "We could not read this page's HTML."
 		}
-		report.Problem = problem
-		return report
+		snap.Problem = problem
+		return snap
 	}
-	sitemap := c.findSitemap(ctx, origin, robots)
-	field := c.fieldDataFor(ctx, page.URL)
-
-	report.Reachable = true
-	report.Title = page.Title
-	report.WordCount = page.WordCount
-	report.Checks = pageChecks(pageInputs{
-		page:      page.CrawledPageResult,
-		analysis:  *analysis,
-		htmlBytes: page.HTMLBytesRead,
-		origin:    origin,
-		robots:    robots,
-		llms:      llms,
-		sitemap:   sitemap,
-		field:     field,
-		now:       c.now().UTC(),
-	})
-	report.Categories, report.Score, report.Caps = scoreChecks(report.Checks)
-	return report
+	snap.Reachable = true
+	snap.Page = page.CrawledPageResult
+	snap.Analysis = *analysis
+	snap.HTMLBytes = page.HTMLBytesRead
+	snap.Robots = robots
+	snap.LLMs = llms
+	snap.Sitemap = c.findSitemap(ctx, origin, robots)
+	snap.Field = c.fieldDataFor(ctx, page.URL)
+	return snap
 }
 
 // fieldDataFor asks the field data source for the page's phone metrics, or
@@ -266,9 +306,11 @@ func (c *PageChecker) fieldDataFor(ctx context.Context, pageURL string) *StoredF
 
 // fetchPage fetches the page, following up to maxPageCheckRedirects
 // redirects, each revalidated against the SSRF policy. The analysis is from
-// the last response and nil when that response is not HTML.
-func (c *PageChecker) fetchPage(ctx context.Context, pageURL string) (CrawlResult, *PageAnalysis) {
+// the last response and nil when that response is not HTML. It returns how
+// many redirects were followed.
+func (c *PageChecker) fetchPage(ctx context.Context, pageURL string) (CrawlResult, *PageAnalysis, int) {
 	page, analysis := c.crawler.fetchAnalyzed(ctx, pageURL)
+	hops := 0
 	for range maxPageCheckRedirects {
 		if page.StatusCode < 300 || page.StatusCode >= 400 || page.RedirectURL == "" {
 			break
@@ -277,9 +319,10 @@ func (c *PageChecker) fetchPage(ctx context.Context, pageURL string) (CrawlResul
 		if err != nil {
 			break
 		}
+		hops++
 		page, analysis = c.crawler.fetchAnalyzed(ctx, next)
 	}
-	return page, analysis
+	return page, analysis, hops
 }
 
 // findSitemap returns the first sitemap robots.txt names, or /sitemap.xml,
@@ -323,7 +366,7 @@ func unreachable(page CrawlResult) string {
 	switch {
 	case page.FetchClass == FetchBlocked:
 		return "Your website's firewall or bot protection blocked our checker. Search engines and AI assistants may be blocked too. " +
-			"If you use Cloudflare or a similar service, allow the \"" + auditUserAgent + "\" user agent and run the check again."
+			"If you use Cloudflare or a similar service, allow the \"" + UserAgent + "\" user agent and run the check again."
 	case page.FetchClass == FetchRateLimited:
 		return "Your website asked us to slow down (HTTP 429). Wait a minute and run the check again."
 	case page.StatusCode == 0:
@@ -340,18 +383,42 @@ func unreachable(page CrawlResult) string {
 	return ""
 }
 
+// categoryDef is one category of an engine: its report name and its share of
+// the score.
+type categoryDef struct {
+	ID     string
+	Name   string
+	Weight int
+}
+
+// scoreEngine builds one engine's report from a snapshot. An unreachable page
+// gets no checks and no score, only the problem.
+func scoreEngine(snap PageSnapshot, kind string, categories []categoryDef, severeMax int, checks func(PageSnapshot) []PageCheck) PageReport {
+	report := PageReport{Kind: kind, URL: snap.URL, CheckedAt: snap.CheckedAt, Problem: snap.Problem,
+		StatusCode: snap.StatusCode, ResponseMs: snap.ResponseMs}
+	if !snap.Reachable {
+		return report
+	}
+	report.Reachable = true
+	report.Title = snap.Page.Title
+	report.WordCount = snap.Page.WordCount
+	report.Checks = checks(snap)
+	report.Categories, report.Score, report.Caps = scoreChecks(report.Checks, categories, severeMax)
+	return report
+}
+
 // scoreChecks scores each category from its checks (a pass earns the full
 // weight, a warning warnCredit of it, a fail nothing; info is not scored),
-// averages the categories with categoryWeights, then applies the caps. It
-// returns the categories, the final score and the caps that lowered it.
-func scoreChecks(checks []PageCheck) ([]CategoryScore, int, []string) {
-	var categories []CategoryScore
+// averages the categories by their weights, then applies the caps. It returns
+// the categories, the final score and the caps that lowered it.
+func scoreChecks(checks []PageCheck, categories []categoryDef, severeMax int) ([]CategoryScore, int, []string) {
+	var scored []CategoryScore
 	weighted, weightSum := 0.0, 0
-	for _, id := range []string{CategorySEO, CategoryAI, CategoryTechnical, CategoryContent} {
-		category := CategoryScore{ID: id, Name: categoryNames[id]}
+	for _, def := range categories {
+		category := CategoryScore{ID: def.ID, Name: def.Name}
 		earned, possible := 0.0, 0
 		for _, check := range checks {
-			if check.Category != id || check.Status == CheckInfo {
+			if check.Category != def.ID || check.Status == CheckInfo {
 				continue
 			}
 			possible += check.Weight
@@ -369,22 +436,23 @@ func scoreChecks(checks []PageCheck) ([]CategoryScore, int, []string) {
 		}
 		if possible > 0 {
 			category.Score = int(100*earned/float64(possible) + 0.5)
-			weighted += float64(category.Score * categoryWeights[id])
-			weightSum += categoryWeights[id]
+			weighted += float64(category.Score * def.Weight)
+			weightSum += def.Weight
 		}
-		categories = append(categories, category)
+		scored = append(scored, category)
 	}
 	raw := 0
 	if weightSum > 0 {
 		raw = int(weighted/float64(weightSum) + 0.5)
 	}
-	score, caps := applyCaps(raw, checks)
-	return categories, score, caps
+	score, caps := applyCaps(raw, checks, severeMax)
+	return scored, score, caps
 }
 
 // applyCaps lowers raw by every cap that applies and returns the reasons for
-// the caps that lowered it, strictest first.
-func applyCaps(raw int, checks []PageCheck) (int, []string) {
+// the caps that lowered it, strictest first. A failed critical check caps the
+// score at severeMax (the engine's own limit).
+func applyCaps(raw int, checks []PageCheck, severeMax int) (int, []string) {
 	var critical, high, warns []string
 	for _, check := range checks {
 		switch {
@@ -402,7 +470,7 @@ func applyCaps(raw int, checks []PageCheck) (int, []string) {
 	}
 	var rules []capRule
 	if len(critical) > 0 {
-		rules = append(rules, capRule{capCritical, "a critical check failed (" + strings.Join(critical, ", ") + ")"})
+		rules = append(rules, capRule{severeMax, "a critical check failed (" + strings.Join(critical, ", ") + ")"})
 	}
 	if len(high) > 0 {
 		rules = append(rules, capRule{capHigh, "a high-impact check failed (" + strings.Join(high, ", ") + ")"})

@@ -180,6 +180,7 @@ func TestAnalyzeHTMLCollectsCitationSignals(t *testing.T) {
 		// ₹999 in the header, 40%, Rs. 2,500 and 1 crore.
 		Statistics: 4, Version: CitationSignalsVersion, SnippetTextWords: 40, Sections: 1,
 		DatedClaims: true, TopicHeadings: []string{"Best time to visit Goa"},
+		LDJSONBlocks: 1,
 	}
 	if !slices.Equal(got.SchemaTypes, want.SchemaTypes) {
 		t.Fatalf("schema types = %q, want %q", got.SchemaTypes, want.SchemaTypes)

@@ -8,6 +8,14 @@
 - Owner: "index now new tab me rakh" → IndexNow is a tab on the page. Pages rows got "Edit" (content editor), per the 13 Nov "kahi se bhi one click" rule. Sidebar renamed to "Google Search".
 - Waiting for owner: (1) Delete the backend routes with no screen now (GSC insights, GA4 growth, URL inspection, Content Editor growth panel)? (2) The own tracker "Analytics" page: rename or cut (still on the cut list).
 
+## 20 Nov 2026: separate SEO and AEO audits, toggle, AEO page
+
+- Owner: "fix the /free-seo-audit URL, add an AEO audit too ... user choose kare AEO ya SEO ... dono engine alag aur strong ... best guides padh ke improve ... AEO / SEO toggle ... dono deeply audit".
+- Built on draft PR "Free audit: separate SEO and AEO engines with a toggle" (branch `ccr-2279284f-qy1mek`, not merged, not deployed). Two engines in `audit` (`seoengine.go`, `aeoengine.go`), one fetch for both, cache holds both reports (`free-audit:v3:`).
+- Pages: `/free-seo-audit` (SEO tab) and `/free-aeo-audit` (AEO tab), both indexed and in sitemap and llms.txt. The landing form has SEO and AEO buttons. Switching tabs after a report is served from the cache: no fresh check, no second read of the site.
+- Zero paid calls. Limits, slots and singleflight unchanged.
+- Waiting on owner: review the two check lists and the caps (SEO 49, AEO 39, high 79, six warnings 89), the offers per engine, and the wording "does not measure ..." on both reports. Merge and deploy only on his word.
+
 ## 19 Nov 2026: free SEO + AEO audit on the home page
 
 - Owner: "paise kamane ke 1000 raste ... nai kama paara". Agent's advice: stop new features for 30 days, pitch 20 people a day, first 10 paying customers. Open ask: how many paying users now, how many pitched last week.

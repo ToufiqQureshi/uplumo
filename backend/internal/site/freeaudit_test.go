@@ -24,20 +24,28 @@ func TestAuditOffersFollowTheReportAndTheCatalog(t *testing.T) {
 	}
 	cases := []struct {
 		name     string
+		kind     string
 		scores   map[string]int
 		currency string
 		want     []string
 	}{
-		{"weak everywhere", map[string]int{audit.CategoryAI: 40, audit.CategorySEO: 50, audit.CategoryContent: 90}, planCatalog.INR,
-			[]string{"free_audit_offer_ai_visibility", "free_audit_offer_content_editor", "free_audit_offer_site_audit", "free_audit_offer_rank_tracking"}},
-		{"strong page", map[string]int{audit.CategoryAI: 80, audit.CategorySEO: 95, audit.CategoryContent: 80}, planCatalog.USD,
+		{"seo weak page", audit.KindSEO, map[string]int{audit.CategoryOnPage: 50, audit.CategoryContent: 90}, planCatalog.INR,
+			[]string{"free_audit_offer_site_audit", "free_audit_offer_rank_tracking", "free_audit_offer_content_editor"}},
+		{"seo strong page", audit.KindSEO, map[string]int{audit.CategoryOnPage: 95, audit.CategoryContent: 80}, planCatalog.USD,
 			[]string{"free_audit_offer_site_audit", "free_audit_offer_rank_tracking"}},
+		{"aeo weak page", audit.KindAEO, map[string]int{audit.CategoryAnswers: 40, audit.CategoryTrust: 90}, planCatalog.INR,
+			[]string{"free_audit_offer_ai_visibility", "free_audit_offer_content_editor"}},
+		{"aeo strong page", audit.KindAEO, map[string]int{audit.CategoryAnswers: 85, audit.CategoryTrust: 80}, planCatalog.USD,
+			nil},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			offers := auditOffers(tc.scores, tc.currency)
+			offers := auditOffers(tc.kind, tc.scores, tc.currency)
 			if len(offers) != len(tc.want) {
 				t.Fatalf("offers = %+v", offers)
+			}
+			if len(offers) == 0 {
+				return
 			}
 			for i, offer := range offers {
 				if offer.Event != tc.want[i] {
@@ -47,9 +55,12 @@ func TestAuditOffersFollowTheReportAndTheCatalog(t *testing.T) {
 					t.Errorf("offer %s has no price or link", offer.Event)
 				}
 			}
-			last := offers[len(offers)-1]
-			if !strings.Contains(last.Price, cheapest(planCatalog.RankTracking, tc.currency)) {
-				t.Errorf("rank tracking price = %q, want %q", last.Price, cheapest(planCatalog.RankTracking, tc.currency))
+			if tc.kind == audit.KindSEO && offers[1].Event == "free_audit_offer_rank_tracking" &&
+				!strings.Contains(offers[1].Price, cheapest(planCatalog.RankTracking, tc.currency)) {
+				t.Errorf("rank tracking price = %q, want %q", offers[1].Price, cheapest(planCatalog.RankTracking, tc.currency))
+			}
+			if tc.kind == audit.KindAEO && !strings.Contains(offers[0].Price, cheapest(planCatalog.AIVisibility, tc.currency)) {
+				t.Errorf("AI visibility price = %q, want %q", offers[0].Price, cheapest(planCatalog.AIVisibility, tc.currency))
 			}
 		})
 	}
@@ -57,12 +68,12 @@ func TestAuditOffersFollowTheReportAndTheCatalog(t *testing.T) {
 
 func TestAuditViewOrdersWorstFirst(t *testing.T) {
 	report := audit.PageReport{URL: "https://shop.example/", Reachable: true, Score: 55,
-		Categories: []audit.CategoryScore{{ID: audit.CategorySEO, Score: 55}},
+		Categories: []audit.CategoryScore{{ID: audit.CategoryOnPage, Score: 55}},
 		Checks: []audit.PageCheck{
-			{ID: "a", Category: audit.CategorySEO, Status: audit.CheckPass, Weight: 3},
-			{ID: "b", Category: audit.CategorySEO, Status: audit.CheckWarn, Weight: 3},
-			{ID: "c", Category: audit.CategorySEO, Status: audit.CheckFail, Weight: 1},
-			{ID: "d", Category: audit.CategorySEO, Status: audit.CheckFail, Weight: 2},
+			{ID: "a", Category: audit.CategoryOnPage, Status: audit.CheckPass, Weight: 3},
+			{ID: "b", Category: audit.CategoryOnPage, Status: audit.CheckWarn, Weight: 3},
+			{ID: "c", Category: audit.CategoryOnPage, Status: audit.CheckFail, Weight: 1},
+			{ID: "d", Category: audit.CategoryOnPage, Status: audit.CheckFail, Weight: 2},
 		}}
 	view := auditViewOf(report, planCatalog.INR)
 	var order []string
@@ -101,18 +112,18 @@ func TestAuditReportFragmentSaysWhatTheScoreIs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	report := audit.PageReport{URL: "https://shop.example/?a=1", Reachable: true, Score: 59,
+	report := audit.PageReport{Kind: audit.KindSEO, URL: "https://shop.example/?a=1", Reachable: true, Score: 59,
 		Caps:       []string{"Score capped at 59 because a critical check failed (HTTPS)."},
-		Categories: []audit.CategoryScore{{ID: audit.CategorySEO, Name: "On-page SEO", Score: 40}},
-		Checks: []audit.PageCheck{{ID: "https", Category: audit.CategoryTechnical, Status: audit.CheckFail, Title: "HTTPS",
+		Categories: []audit.CategoryScore{{ID: audit.CategoryOnPage, Name: "On-page SEO", Score: 40}},
+		Checks: []audit.PageCheck{{ID: "https", Category: audit.CategoryOnPage, Status: audit.CheckFail, Title: "HTTPS",
 			Found: "The page loads over plain HTTP.", Fix: "Install a TLS certificate."}}}
 	rec := httptest.NewRecorder()
 	pages.ServeAuditReport(rec, httptest.NewRequestWithContext(context.Background(), "GET", "/free-seo-audit/report", nil), report)
 	body := rec.Body.String()
 	for _, want := range []string{
-		"Page readiness score: Needs work", "does not measure rankings, backlinks", "Why the score is limited",
-		"Score capped at 59 because a critical check failed (HTTPS).", "data-print-report", "Download PDF",
-		"/free-seo-audit/report.docx?url=https%3A%2F%2Fshop.example%2F%3Fa%3D1", "Download Word (.docx)",
+		"SEO score: Needs work", "Checks how well this page is built for Google. It does not measure rankings or backlinks.",
+		"Why the score is limited", "Score capped at 59 because a critical check failed (HTTPS).", "data-print-report", "Download PDF",
+		"/free-seo-audit/report.docx?url=https%3A%2F%2Fshop.example%2F%3Fa%3D1&amp;type=seo", "Download Word (.docx)",
 		"/site/logo.svg?v=", "Prepared by Uplumo · uplumo.com",
 	} {
 		if !strings.Contains(body, want) {
@@ -124,5 +135,31 @@ func TestAuditReportFragmentSaysWhatTheScoreIs(t *testing.T) {
 		if strings.Contains(body, banned) {
 			t.Errorf("fragment contains %q", banned)
 		}
+	}
+}
+
+func TestAEOReportFragmentSaysItsOwnThing(t *testing.T) {
+	pages, err := New(&url.URL{Scheme: "https", Host: "uplumo.com"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	report := audit.PageReport{Kind: audit.KindAEO, URL: "https://shop.example/", Reachable: true, Score: 55,
+		Categories: []audit.CategoryScore{{ID: audit.CategoryAnswers, Name: "Answers AI can quote", Score: 31}},
+		Checks: []audit.PageCheck{{ID: "question-headings", Category: audit.CategoryAnswers, Status: audit.CheckFail, Title: "Questions as headings",
+			Found: "No headings phrased as a question.", Fix: "Add questions as headings."}}}
+	rec := httptest.NewRecorder()
+	pages.ServeAuditReport(rec, httptest.NewRequestWithContext(context.Background(), "GET", "/free-aeo-audit/report", nil), report)
+	body := rec.Body.String()
+	for _, want := range []string{
+		"AEO score: Needs work", "Checks how ready this page is to be read, trusted and quoted by AI assistants",
+		"does not measure whether ChatGPT or other assistants mention you today", "See if ChatGPT recommends you",
+		"&amp;type=aeo", "AEO audit report",
+	} {
+		if !strings.Contains(body, want) && !strings.Contains(body, strings.ReplaceAll(want, "&amp;", "&")) {
+			t.Errorf("AEO fragment does not contain %q", want)
+		}
+	}
+	if strings.Contains(body, "SEO score") {
+		t.Errorf("AEO fragment says SEO score")
 	}
 }

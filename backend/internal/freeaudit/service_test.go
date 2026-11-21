@@ -23,9 +23,12 @@ import (
 	"github.com/toufiqqureshi/uplumo/backend/internal/site"
 )
 
-// fakeChecker counts checks; each takes delay.
+// fakeChecker counts checks; each takes delay. The snapshot it returns has a
+// title of checkerTitle, so the report's escaping can be tested.
 type fakeChecker struct {
-	checks    atomic.Int32
+	checks atomic.Int32
+	// probes counts redirect probes, the one request to the site before a check.
+	probes    atomic.Int32
 	delay     time.Duration
 	reachable bool
 	err       error
@@ -34,7 +37,19 @@ type fakeChecker struct {
 	finalURL string
 }
 
+// checkerTitle is the title of the page the fake checker "reads".
+const checkerTitle = "<script>alert(1)</script>"
+
+func (f *fakeChecker) ValidateURL(_ context.Context, input string) (string, error) {
+	return f.normalize(input)
+}
+
 func (f *fakeChecker) NormalizeURL(_ context.Context, input string) (string, error) {
+	f.probes.Add(1)
+	return f.normalize(input)
+}
+
+func (f *fakeChecker) normalize(input string) (string, error) {
 	if f.err != nil {
 		return "", f.err
 	}
@@ -45,20 +60,22 @@ func (f *fakeChecker) NormalizeURL(_ context.Context, input string) (string, err
 	return normalized, nil
 }
 
-func (f *fakeChecker) Check(_ context.Context, pageURL string) audit.PageReport {
+func (f *fakeChecker) Check(_ context.Context, pageURL string) audit.PageSnapshot {
 	f.checks.Add(1)
 	time.Sleep(f.delay)
-	report := audit.PageReport{URL: pageURL, Reachable: f.reachable, StatusCode: 200, Score: 72,
-		Categories: []audit.CategoryScore{{ID: audit.CategorySEO, Name: "On-page SEO", Score: 90}, {ID: audit.CategoryAI, Name: "AI search (AEO)", Score: 40}},
-		Checks: []audit.PageCheck{{ID: "title", Category: audit.CategorySEO, Status: audit.CheckWarn, Title: "Page title",
-			Found: `"<script>alert(1)</script>" (33 characters).`, Why: "why", Fix: "fix", Weight: 1}}}
+	snap := audit.PageSnapshot{URL: pageURL, CheckedAt: time.Now().UTC(), StatusCode: 200, Reachable: f.reachable,
+		Origin: "https://shop.example"}
 	if f.finalURL != "" {
-		report.URL = f.finalURL
+		snap.URL = f.finalURL
 	}
+	snap.Page.URL = snap.URL
+	snap.Page.Title = checkerTitle
+	snap.Page.WordCount = 120
 	if !f.reachable {
-		report.Problem = "We could not connect to this website."
+		snap.StatusCode = 0
+		snap.Problem = "We could not connect to this website."
 	}
-	return report
+	return snap
 }
 
 func testRedis(t *testing.T) *redis.Client {
@@ -92,8 +109,8 @@ func TestRunCachesAPageForEveryVisitor(t *testing.T) {
 	checker := &fakeChecker{reachable: true}
 	svc := newService(t, checker)
 	for i := range 3 {
-		report, err := svc.Run(context.Background(), "shop.example", fmt.Sprintf("10.0.0.%d", i))
-		if err != nil || report.Score != 72 {
+		report, err := svc.Run(context.Background(), "shop.example", fmt.Sprintf("10.0.0.%d", i), audit.KindSEO)
+		if err != nil || !report.Reachable || report.Kind != audit.KindSEO {
 			t.Fatalf("run %d: report = %+v, err = %v", i, report, err)
 		}
 	}
@@ -108,7 +125,7 @@ func TestRunCachesAPageForEveryVisitor(t *testing.T) {
 
 func TestRunKeepsUnreachableResultsBriefly(t *testing.T) {
 	svc := newService(t, &fakeChecker{})
-	if _, err := svc.Run(context.Background(), "down.example", "10.0.0.1"); err != nil {
+	if _, err := svc.Run(context.Background(), "down.example", "10.0.0.1", audit.KindSEO); err != nil {
 		t.Fatal(err)
 	}
 	if ttl := svc.redis.TTL(context.Background(), cacheKey("https://down.example/")).Val(); ttl > failedCacheTTL || ttl <= 0 {
@@ -122,7 +139,7 @@ func TestRunChecksOncePerPageUnderConcurrentRequests(t *testing.T) {
 	var wg sync.WaitGroup
 	for i := range 20 {
 		wg.Go(func() {
-			if _, err := svc.Run(context.Background(), "busy.example", fmt.Sprintf("10.0.1.%d", i)); err != nil {
+			if _, err := svc.Run(context.Background(), "busy.example", fmt.Sprintf("10.0.1.%d", i), audit.KindSEO); err != nil {
 				t.Errorf("run: %v", err)
 			}
 		})
@@ -138,18 +155,18 @@ func TestRunLimitsFreshChecksPerVisitor(t *testing.T) {
 	svc := newService(t, checker)
 	ctx := context.Background()
 	for i := range freshPerDay {
-		if _, err := svc.Run(ctx, fmt.Sprintf("site%d.example", i), "10.0.2.1"); err != nil {
+		if _, err := svc.Run(ctx, fmt.Sprintf("site%d.example", i), "10.0.2.1", audit.KindSEO); err != nil {
 			t.Fatalf("fresh check %d: %v", i, err)
 		}
 	}
-	if _, err := svc.Run(ctx, "one-more.example", "10.0.2.1"); !errors.Is(err, ErrTooMany) {
+	if _, err := svc.Run(ctx, "one-more.example", "10.0.2.1", audit.KindSEO); !errors.Is(err, ErrTooMany) {
 		t.Fatalf("err = %v, want ErrTooMany", err)
 	}
 	// A cached page still opens, and another visitor is not limited.
-	if _, err := svc.Run(ctx, "site0.example", "10.0.2.1"); err != nil {
+	if _, err := svc.Run(ctx, "site0.example", "10.0.2.1", audit.KindSEO); err != nil {
 		t.Fatalf("cached page: %v", err)
 	}
-	if _, err := svc.Run(ctx, "one-more.example", "10.0.2.2"); err != nil {
+	if _, err := svc.Run(ctx, "one-more.example", "10.0.2.2", audit.KindSEO); err != nil {
 		t.Fatalf("other visitor: %v", err)
 	}
 	if n := checker.checks.Load(); n != freshPerDay+1 {
@@ -167,7 +184,7 @@ func TestRunRefusesBadAddressesWithoutChecking(t *testing.T) {
 	} {
 		checker := &fakeChecker{err: tc.err}
 		svc := newService(t, checker)
-		if _, err := svc.Run(context.Background(), "localhost", "10.0.3.1"); !errors.Is(err, tc.want) {
+		if _, err := svc.Run(context.Background(), "localhost", "10.0.3.1", audit.KindSEO); !errors.Is(err, tc.want) {
 			t.Fatalf("err = %v, want %v", err, tc.want)
 		}
 		if checker.checks.Load() != 0 {
@@ -183,7 +200,7 @@ func TestRunReturnsBusyWhenEverySlotIsTaken(t *testing.T) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
-	if _, err := svc.Run(ctx, "slow.example", "10.0.4.1"); !errors.Is(err, ErrBusy) {
+	if _, err := svc.Run(ctx, "slow.example", "10.0.4.1", audit.KindSEO); !errors.Is(err, ErrBusy) {
 		t.Fatalf("err = %v, want ErrBusy", err)
 	}
 }
@@ -203,7 +220,9 @@ func TestReportRouteRendersEscapedHTML(t *testing.T) {
 		status int
 		want   []string
 	}{
-		{"?url=shop.example", http.StatusOK, []string{"72", "shop.example", "&lt;script&gt;", "See if ChatGPT recommends you"}},
+		{"?url=shop.example", http.StatusOK, []string{"SEO score", "shop.example", "&lt;script&gt;", "Track where you rank on Google"}},
+		{"?url=shop.example&type=aeo", http.StatusOK, []string{"AEO score", "shop.example", "Checks how ready this page is to be read"}},
+		{"?url=shop.example&type=bogus", http.StatusBadRequest, []string{"Choose the SEO audit or the AEO audit"}},
 		{"", http.StatusBadRequest, []string{"Enter a website address"}},
 		{"?url=" + strings.Repeat("a", maxInputBytes+1), http.StatusBadRequest, []string{"Enter a website address"}},
 	}
@@ -226,6 +245,7 @@ func TestReportRouteRendersEscapedHTML(t *testing.T) {
 			t.Errorf("cache-control = %q", rec.Header().Get("Cache-Control"))
 		}
 	}
+	// The SEO and AEO requests of one page are one fresh check.
 	if checker.checks.Load() != 1 {
 		t.Fatalf("checks = %d, want 1", checker.checks.Load())
 	}
@@ -237,14 +257,14 @@ func TestCachedFindsTheReportUnderItsFinalURL(t *testing.T) {
 	checker := &fakeChecker{reachable: true, finalURL: "https://example.com/final/"}
 	svc := newService(t, checker)
 	ctx := context.Background()
-	report, err := svc.Run(ctx, "example.com", "203.0.113.9")
+	report, err := svc.Run(ctx, "example.com", "203.0.113.9", audit.KindSEO)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if report.URL != "https://example.com/final/" {
 		t.Fatalf("report URL = %q", report.URL)
 	}
-	found, ok, err := svc.Cached(ctx, report.URL, "203.0.113.9")
+	found, ok, err := svc.Cached(ctx, report.URL, "203.0.113.9", audit.KindSEO)
 	if err != nil || !ok {
 		t.Fatalf("Cached(final URL) ok=%v err=%v, want the cached report", ok, err)
 	}
@@ -253,5 +273,71 @@ func TestCachedFindsTheReportUnderItsFinalURL(t *testing.T) {
 	}
 	if checker.checks.Load() != 1 {
 		t.Fatalf("checks = %d, want 1", checker.checks.Load())
+	}
+}
+
+func TestOneFreshCheckServesBothEngines(t *testing.T) {
+	checker := &fakeChecker{reachable: true}
+	svc := newService(t, checker)
+	ctx := context.Background()
+	seo, err := svc.Run(ctx, "shop.example", "10.0.6.1", audit.KindSEO)
+	if err != nil {
+		t.Fatal(err)
+	}
+	aeo, err := svc.Run(ctx, "shop.example", "10.0.6.1", audit.KindAEO)
+	if err != nil {
+		t.Fatalf("AEO after SEO: %v", err)
+	}
+	if n := checker.checks.Load(); n != 1 {
+		t.Fatalf("checks = %d, want 1: the second engine is served from the cache", n)
+	}
+	if n := checker.probes.Load(); n != 1 {
+		t.Fatalf("site probes = %d, want 1: the switch reads the cache without a request to the site", n)
+	}
+	if seo.Kind != audit.KindSEO || aeo.Kind != audit.KindAEO {
+		t.Fatalf("kinds = %q and %q", seo.Kind, aeo.Kind)
+	}
+	if seo.Score == 0 && aeo.Score == 0 {
+		t.Fatalf("both reports have no score")
+	}
+	// The toggle reads the cache only.
+	found, ok, err := svc.Cached(ctx, "shop.example", "10.0.6.1", audit.KindSEO)
+	if err != nil || !ok || found.Kind != audit.KindSEO {
+		t.Fatalf("Cached(seo) = %+v ok=%v err=%v", found, ok, err)
+	}
+	if checker.checks.Load() != 1 || checker.probes.Load() != 1 {
+		t.Fatalf("checks = %d, probes = %d after Cached: want 1 and 1", checker.checks.Load(), checker.probes.Load())
+	}
+}
+
+func TestCachedNeverRunsACheck(t *testing.T) {
+	checker := &fakeChecker{reachable: true}
+	svc := newService(t, checker)
+	_, ok, err := svc.Cached(context.Background(), "never.example", "10.0.6.2", audit.KindAEO)
+	if err != nil || ok {
+		t.Fatalf("Cached on an unchecked page: ok=%v err=%v", ok, err)
+	}
+	if checker.checks.Load() != 0 {
+		t.Fatalf("Cached ran %d checks, want 0", checker.checks.Load())
+	}
+}
+
+func TestParseKindDefaultsToSEO(t *testing.T) {
+	cases := map[string]struct {
+		kind string
+		ok   bool
+	}{
+		"":        {audit.KindSEO, true},
+		"seo":     {audit.KindSEO, true},
+		"aeo":     {audit.KindAEO, true},
+		"AEO":     {"", false},
+		"both":    {"", false},
+		"seo aeo": {"", false},
+	}
+	for raw, want := range cases {
+		kind, ok := ParseKind(raw)
+		if kind != want.kind || ok != want.ok {
+			t.Errorf("ParseKind(%q) = %q, %v; want %q, %v", raw, kind, ok, want.kind, want.ok)
+		}
 	}
 }

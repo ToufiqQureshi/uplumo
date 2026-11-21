@@ -33,9 +33,13 @@ func ReportLogoPNG() []byte {
 	return data
 }
 
-// FreeAuditPath is the public free SEO and AEO audit page. Its report is
+// FreeAuditPath is the public free SEO audit page; FreeAEOAuditPath is the
+// AEO one. Both use the same template and script. Each page's report is
 // rendered by ServeAuditReport and loaded into the page by free-audit.js.
-const FreeAuditPath = "/free-seo-audit"
+const (
+	FreeAuditPath    = "/free-seo-audit"
+	FreeAEOAuditPath = "/free-aeo-audit"
+)
 
 // passingScore is the category score at or above which the report stops
 // suggesting the paid tool for that category.
@@ -48,6 +52,11 @@ var scoreRing = 2 * math.Pi * 52
 type auditView struct {
 	Report audit.PageReport
 	Host   string
+	// Kind is "seo" or "aeo"; KindName is its short name and Honest the line
+	// that says what the report does and does not measure.
+	Kind     string
+	KindName string
+	Honest   string
 	// Logo is the URL of the logo shown in the printed report.
 	Logo string
 	// DocxHref downloads this report as a Word file from the cache.
@@ -107,11 +116,12 @@ func (s *Site) serveFragment(w http.ResponseWriter, status int, name string, dat
 }
 
 func auditViewOf(report audit.PageReport, currency string) auditView {
-	view := auditView{Report: report, SignUp: signUpPath}
+	view := auditView{Report: report, SignUp: signUpPath, Kind: report.Kind,
+		KindName: audit.KindName(report.Kind), Honest: audit.KindHonest(report.Kind)}
 	if parsed, err := url.Parse(report.URL); err == nil {
 		view.Host = parsed.Host
 	}
-	view.DocxHref = freeAuditDocxPath + "?url=" + url.QueryEscape(report.URL)
+	view.DocxHref = freeAuditDocxPath + "?url=" + url.QueryEscape(report.URL) + "&type=" + url.QueryEscape(report.Kind)
 	if !report.Reachable {
 		return view
 	}
@@ -152,7 +162,7 @@ func auditViewOf(report audit.PageReport, currency string) auditView {
 	}
 	slices.SortStableFunc(view.Priorities, byPriority)
 	view.Priorities = view.Priorities[:min(len(view.Priorities), 5)]
-	view.Offers = auditOffers(scores, currency)
+	view.Offers = auditOffers(report.Kind, scores, currency)
 	return view
 }
 
@@ -168,8 +178,11 @@ func grade(score int) (label, tone string) {
 }
 
 // auditOffers suggests the paid tools that fix what the report found, with
-// the cheapest plan that includes each one, priced from the plan catalog.
-func auditOffers(scores map[string]int, currency string) []auditOffer {
+// the cheapest plan that includes each one, priced from the plan catalog. An
+// SEO report leads with the site audit and rank tracking; an AEO report leads
+// with the AI visibility tracker. The content editor follows either one when
+// the page's writing is weak.
+func auditOffers(kind string, scores map[string]int, currency string) []auditOffer {
 	from := func(feature planCatalog.Feature) string {
 		for _, plan := range planCatalog.Catalog() {
 			if plan.Allows(feature) {
@@ -181,22 +194,26 @@ func auditOffers(scores map[string]int, currency string) []auditOffer {
 		}
 		return ""
 	}
-	var offers []auditOffer
-	if score := scores[audit.CategoryAI]; score < passingScore {
-		offers = append(offers, auditOffer{
-			Eyebrow: fmt.Sprintf("AI search score: %d/100", score),
-			Title:   "See if ChatGPT recommends you or your competitor",
-			Body:    "Track the questions your buyers ask in ChatGPT, Gemini, Perplexity, Claude and Google AI Overviews. See who gets mentioned and which pages get cited.",
-			Price:   from(planCatalog.AIVisibility), Learn: "/ai-visibility-tracker", Event: "free_audit_offer_ai_visibility",
-		})
+	editor := auditOffer{
+		Eyebrow: "Writing and content",
+		Title:   "Fix the page in the SEO and AEO content editor",
+		Body:    "Open any page in the editor and watch its SEO and AI-answer scores change as you write. The editor is on every plan; search briefs from Google's top pages and AI writing need a paid plan.",
+		Price:   "Briefs and AI writing: " + from(planCatalog.AIWriting), Learn: "/pricing", Event: "free_audit_offer_content_editor",
 	}
-	if seo, content := scores[audit.CategorySEO], scores[audit.CategoryContent]; seo < passingScore || content < passingScore {
-		offers = append(offers, auditOffer{
-			Eyebrow: fmt.Sprintf("On-page SEO %d/100 · Content %d/100", seo, content),
-			Title:   "Fix the page in the SEO and AEO content editor",
-			Body:    "Open any page in the editor and watch its SEO and AI-answer scores change as you write. The editor is on every plan; search briefs from Google's top pages and AI writing need a paid plan.",
-			Price:   "Briefs and AI writing: " + from(planCatalog.AIWriting), Learn: "/pricing", Event: "free_audit_offer_content_editor",
-		})
+	var offers []auditOffer
+	if kind == audit.KindAEO {
+		if score := scores[audit.CategoryAnswers]; score < passingScore || scores[audit.CategoryTrust] < passingScore {
+			offers = append(offers, auditOffer{
+				Eyebrow: fmt.Sprintf("Answers AI can quote: %d/100", scores[audit.CategoryAnswers]),
+				Title:   "See if ChatGPT recommends you or your competitor",
+				Body:    "Track the questions your buyers ask in ChatGPT, Gemini, Perplexity, Claude and Google AI Overviews. See who gets mentioned and which pages get cited.",
+				Price:   from(planCatalog.AIVisibility), Learn: "/ai-visibility-tracker", Event: "free_audit_offer_ai_visibility",
+			})
+		}
+		if scores[audit.CategoryAnswers] < passingScore || scores[audit.CategoryTrust] < passingScore {
+			offers = append(offers, editor)
+		}
+		return offers
 	}
 	offers = append(offers,
 		auditOffer{
@@ -212,17 +229,33 @@ func auditOffers(scores map[string]int, currency string) []auditOffer {
 			Price:   from(planCatalog.RankTracking), Learn: "/keyword-rank-tracker", Event: "free_audit_offer_rank_tracking",
 		},
 	)
+	if scores[audit.CategoryOnPage] < passingScore || scores[audit.CategoryContent] < passingScore {
+		offers = append(offers, editor)
+	}
 	return offers
 }
 
-func freeAuditFAQ() []QA {
+// freeSEOAuditFAQ answers the questions people ask about the SEO audit page.
+func freeSEOAuditFAQ() []QA {
 	return []QA{
 		{"Is the audit really free?", "Yes. No sign-up and no card. It checks one page at a time and calls no paid data provider."},
-		{"What is an AEO audit?", "AEO (answer engine optimisation) is making your pages easy for ChatGPT, Perplexity, Claude and Google AI Overviews to read, trust and quote. " +
-			"The audit checks whether AI crawlers may read your site, whether your content is in the HTML without JavaScript, whether schema says who you are, and whether the page answers questions directly."},
+		{"What does the SEO audit check?", "How well Google can crawl, index, read and rank the page: HTTPS, noindex, Googlebot access in robots.txt, redirects, canonical and hreflang tags, the sitemap, titles, headings, links, speed for real visitors, structured data and content length."},
 		{"Which page is checked?", "The address you enter, after following its redirects. Enter your home page or any important page; each page gets its own report."},
-		{"Does a good score mean I will rank or be cited by AI?", "No. The audit checks what you control on the page. Rankings and AI answers also depend on competition, links and the question asked."},
-		{"How often can I run it?", "A page's report is kept for 24 hours, so running it again shows the same result. Each visitor can run a few fresh checks a day."},
+		{"Does a good score mean I will rank?", "No. The audit checks what you control on the page. Rankings also depend on competition, links and the search the visitor makes."},
+		{"How often can I run it?", "A page's report is kept for 24 hours, so running it again shows the same result. Switching between SEO and AEO uses the same check, so it does not fetch the page again while the report is kept (24 hours)."},
+		{"Why did the check fail?", "Usually the site's firewall or bot protection blocked our checker (user agent \"" + audit.UserAgent + "\"), the site was down, or the address is not a web page."},
+	}
+}
+
+// freeAEOAuditFAQ answers the questions people ask about the AEO audit page.
+func freeAEOAuditFAQ() []QA {
+	return []QA{
+		{"What is an AEO audit?", "AEO (answer engine optimisation) is making your pages easy for ChatGPT, Perplexity, Claude and Google AI Overviews to read, trust and quote. " +
+			"The audit checks whether AI crawlers may read your site, whether your text is in the HTML without JavaScript, whether the page answers questions directly, and whether it shows evidence and who stands behind it."},
+		{"Is the audit really free?", "Yes. No sign-up and no card. It checks one page at a time and calls no paid data provider or AI model."},
+		{"Does the audit tell me whether ChatGPT mentions my business?", "No. It checks how ready the page is to be read, trusted and quoted. Whether assistants mention you today needs the AI visibility tracker, which samples real answers."},
+		{"Which page is checked?", "The address you enter, after following its redirects. Each page gets its own report."},
+		{"Why does the AEO score go down for JavaScript-only sites?", "Most AI crawlers read only the HTML the server sends. A page that is empty until JavaScript runs gives them nothing to quote, so the score is capped."},
 		{"Why did the check fail?", "Usually the site's firewall or bot protection blocked our checker (user agent \"" + audit.UserAgent + "\"), the site was down, or the address is not a web page."},
 	}
 }
