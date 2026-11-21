@@ -56,6 +56,8 @@ func invalid(message string) error { return &Error{Code: "validation_error", Mes
 type Input struct {
 	Title         string    `json:"title"`
 	PeriodDays    int       `json:"periodDays"`
+	StartDate     string    `json:"startDate,omitempty"`
+	EndDate       string    `json:"endDate,omitempty"`
 	Sections      []Section `json:"sections"`
 	Note          string    `json:"note"`
 	WorkCompleted string    `json:"workCompleted"`
@@ -93,6 +95,7 @@ type Project struct {
 // Period is the reporting window and the one before it, both inclusive.
 type Period struct {
 	Days                           int
+	Custom                         bool
 	Start, End, PrevStart, PrevEnd time.Time
 }
 

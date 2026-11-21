@@ -131,7 +131,7 @@ footer{margin-top:8px;font-size:12.5px;color:var(--muted);text-align:center}
 <div class="wrap">
 <p class="eyebrow"><i></i>SEO &amp; site performance report</p>
 <h1>{{.Where}}</h1>
-{{if or .Search .Traffic .Analytics}}<p class="period"><b>{{date .Period.Start}} – {{date .Period.End}}</b> · {{.Period.Days}} days, compared with {{date .Period.PrevStart}} – {{date .Period.PrevEnd}}</p>{{else}}<p class="period">Prepared <b>{{date .GeneratedAt}}</b></p>{{end}}
+{{if or .Search .Traffic .Analytics}}<p class="period"><b>{{date .Period.Start}} – {{date .Period.End}}</b> · {{.Period.Days}} days, compared with {{date .Period.PrevStart}} – {{date .Period.PrevEnd}}</p>{{else if .Period.Custom}}<p class="period">Reporting period <b>{{date .Period.Start}} – {{date .Period.End}}</b></p>{{else}}<p class="period">Prepared <b>{{date .GeneratedAt}}</b></p>{{end}}
 <div class="tiles">
 {{- with .Search}}
 <a class="tile" href="#search"><span class="k">Clicks from Google</span><span class="v">{{compact .Current.Clicks}}</span>{{if .HasPrevious}}{{template "badge" delta .Current.Clicks .Previous.Clicks}}{{end}}</a>

@@ -234,12 +234,14 @@ export type SiteReportResult = z.infer<typeof siteReportResultSchema>;
 
 type SiteReportSettings = {
   title: string;
-  periodDays: 7 | 28 | 90;
   sections: SiteReportSection[];
   note: string;
   workCompleted?: string;
   nextSteps: string;
-};
+} & (
+  | { periodDays: 7 | 28 | 90; startDate?: never; endDate?: never }
+  | { startDate: string; endDate: string; periodDays?: never }
+);
 
 export type SiteReportPreview = {
   html: string;

@@ -4,10 +4,12 @@ import { installGrowthFixtures } from "./search-growth.fixtures";
 test("preview is private and saves exactly the selected report content", async ({
   page,
 }) => {
+  await page.clock.setFixedTime(new Date("2026-11-21T12:00:00Z"));
   const { paid } = await installGrowthFixtures(page);
   const path = "**/api/v1/projects/e2e-project/reports";
   const writes: string[] = [];
   const saved: string[] = [];
+  const previewRequests: unknown[] = [];
   const preview = `<!doctype html><html lang="en"><head><title>Report</title></head><body>
 <main><section id="analytics"><h2>Analytics</h2>
 <div data-report-pair="Traffic channels">
@@ -24,9 +26,10 @@ test("preview is private and saves exactly the selected report content", async (
   await page.route(`${path}/templates/list`, (route) =>
     route.fulfill({ json: { templates: [], remaining: 0 } }),
   );
-  await page.route(`${path}/preview`, (route) =>
-    route.fulfill({ json: { html: preview, skipped: [] } }),
-  );
+  await page.route(`${path}/preview`, (route) => {
+    previewRequests.push(route.request().postDataJSON());
+    return route.fulfill({ json: { html: preview, skipped: [] } });
+  });
   await page.route(`${path}/sharing`, (route) => {
     writes.push("share");
     return route.fulfill({ json: {} });
@@ -57,6 +60,15 @@ test("preview is private and saves exactly the selected report content", async (
     .getByRole("button", { name: "Create client report", exact: true })
     .first()
     .click();
+  await page.getByRole("button", { name: "Last month", exact: true }).click();
+  await expect(page.getByLabel("From", { exact: true })).toHaveValue(
+    "2026-10-01",
+  );
+  await expect(page.getByLabel("To", { exact: true })).toHaveValue(
+    "2026-10-31",
+  );
+  await page.getByRole("button", { name: "Custom", exact: true }).click();
+  await page.getByLabel("To", { exact: true }).fill("2026-10-30");
   await page
     .getByRole("button", { name: "Preview report", exact: true })
     .click();
@@ -66,6 +78,9 @@ test("preview is private and saves exactly the selected report content", async (
   ).toBeVisible();
   const report = page.frameLocator('iframe[title="Client report preview"]');
   await expect(report.getByText("Internal 900")).toBeVisible();
+  expect(previewRequests).toEqual([
+    expect.objectContaining({ startDate: "2026-10-01", endDate: "2026-10-30" }),
+  ]);
   expect(writes).toEqual([]);
   await dialog
     .getByText("Analytics · Traffic channels", { exact: true })
