@@ -137,6 +137,7 @@ export function SiteReportPreviewDialog({
                     <label className="mt-2 block text-sm">
                       Display
                       <select
+                        aria-label="Display"
                         className="ml-2 rounded border bg-background p-1"
                         value={mode}
                         onChange={(event) => {
