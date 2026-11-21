@@ -16,6 +16,7 @@ import { RecentSearches } from "@/client/components/RecentSearches";
 import { BackLink } from "@/client/components/PageHeader";
 import { Badge } from "@/client/components/ui/badge";
 import { useBrandLookupSearchHistory } from "@/client/hooks/useBrandLookupSearchHistory";
+import { captureClientEvent } from "@/client/lib/posthog";
 import {
   BRAND_LOOKUP_MAX_INPUT_LENGTH,
   parseCompetitorList,
@@ -256,9 +257,15 @@ export function BrandLookupPage({
     const explicitScope = scopeTarget
       ? toScopeSearchParam(trimmed, selectedScope)
       : undefined;
-    confirmCost.request(() =>
-      onSearchChange(trimmed, competitors, explicitScope, formLocationCode),
-    );
+    confirmCost.request(() => {
+      captureClientEvent("ai_visibility_brand_lookup_requested", {
+        target_type: detectTarget(trimmed).type,
+        competitor_count: competitors.length,
+        scope: explicitScope ?? "default",
+        location_code: formLocationCode,
+      });
+      onSearchChange(trimmed, competitors, explicitScope, formLocationCode);
+    });
   };
 
   // The project is part of both keys, so switching projects resets the form

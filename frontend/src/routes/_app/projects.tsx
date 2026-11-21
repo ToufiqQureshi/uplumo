@@ -13,6 +13,7 @@ import { QueryState } from "@/client/components/QueryState";
 import { Badge } from "@/client/components/ui/badge";
 import { Button } from "@/client/components/ui/button";
 import { getLastProjectId } from "@/client/lib/active-project";
+import { captureClientEvent } from "@/client/lib/posthog";
 import { CreateProjectModal } from "@/client/features/projects/CreateProjectModal";
 
 export const Route = createFileRoute("/_app/projects")({
@@ -106,6 +107,7 @@ function ArchivedProjects() {
       await queryClient.invalidateQueries({
         queryKey: projectsQueryOptions().queryKey,
       });
+      captureClientEvent("project_restored");
       toast.success("Project restored");
     },
   });

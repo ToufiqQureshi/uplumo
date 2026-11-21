@@ -18,6 +18,7 @@ import {
 } from "@/client/components/ui/card";
 import { useCanManageBilling } from "@/client/features/team/organizationQueries";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { captureClientEvent } from "@/client/lib/posthog";
 import { SUPPORT_EMAIL } from "@/client/lib/support";
 import { ApiError } from "@/client/lib/uplumoApi";
 import {
@@ -329,6 +330,7 @@ function CancelButton({
     meta: { errorToast: false },
     onSuccess: (status) => {
       queryClient.setQueryData(billingStatusQueryOptions.queryKey, status);
+      captureClientEvent("billing_subscription_cancelled");
       toast.success(`${planName} is cancelled. You will not be charged again.`);
     },
   });

@@ -18,6 +18,7 @@ import {
   shouldValidateFieldOnChange,
 } from "@/client/lib/forms";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { captureClientEvent } from "@/client/lib/posthog";
 import { useAuditCapabilities } from "@/client/features/audit/shared";
 
 function getLaunchValidationErrors(
@@ -95,6 +96,11 @@ export function useLaunchController({
           maxPages: effectiveMaxPages,
           lighthouseStrategy: value.runLighthouse ? "auto" : "none",
           renderJavaScript: value.renderJavaScript,
+        });
+        captureClientEvent("audit_started", {
+          max_pages: effectiveMaxPages,
+          lighthouse_strategy: value.runLighthouse ? "auto" : "none",
+          render_javascript: value.renderJavaScript,
         });
         toast.success("Audit started!");
         onAuditStarted(result.auditId);
