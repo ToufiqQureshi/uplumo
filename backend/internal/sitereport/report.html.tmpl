@@ -114,6 +114,11 @@ details li{margin:4px 0;overflow-wrap:anywhere}
 footer{margin-top:8px;font-size:12.5px;color:var(--muted);text-align:center}
 @media (max-width:640px){.hero{padding:28px 0 20px}section{padding:18px;border-radius:14px}.tile .v{font-size:22px}.sev{grid-template-columns:1fr}}
 @media print{body{background:#fff}.toc{display:none}section{box-shadow:none;break-inside:avoid-page}.tabs>input,.tabs>label{display:none}.tabs>.panel{display:block!important}.tabs>.panel::before{content:attr(data-title);display:block;margin:16px 0 8px;font-weight:600}.p-rf tr.r{display:table-row!important}.p-sc-i{display:none!important}details ul{display:block}a.tile:hover{transform:none}}
+.work{padding-left:1.4rem;overflow-wrap:anywhere}.work li+li{margin-top:.65rem}
+.evidence{border-top:1px solid var(--line);padding:12px 0}.evidence summary{font-weight:650;cursor:pointer;overflow-wrap:anywhere}.evidence>p{white-space:pre-line;overflow-wrap:anywhere}
+.rank-grid{display:grid;grid-template-columns:repeat(var(--columns),minmax(0,1fr));gap:4px;max-width:420px}
+.rank-grid span{display:grid;place-items:center;min-height:38px;background:var(--soft);border-radius:4px;text-align:center;font-size:.78rem;overflow-wrap:anywhere}
+.rank-grid .grid-top{background:var(--up-bg);color:var(--up)}.rank-grid .grid-missing{border:1px dashed currentColor;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -121,7 +126,7 @@ footer{margin-top:8px;font-size:12.5px;color:var(--muted);text-align:center}
 <div class="wrap">
 <p class="eyebrow"><i></i>SEO &amp; site performance report</p>
 <h1>{{.Where}}</h1>
-{{if or .Search .Traffic}}<p class="period"><b>{{date .Period.Start}} – {{date .Period.End}}</b> · {{.Period.Days}} days, compared with {{date .Period.PrevStart}} – {{date .Period.PrevEnd}}</p>{{else}}<p class="period">Prepared <b>{{date .GeneratedAt}}</b></p>{{end}}
+{{if or .Search .Traffic .Analytics}}<p class="period"><b>{{date .Period.Start}} – {{date .Period.End}}</b> · {{.Period.Days}} days, compared with {{date .Period.PrevStart}} – {{date .Period.PrevEnd}}</p>{{else}}<p class="period">Prepared <b>{{date .GeneratedAt}}</b></p>{{end}}
 <div class="tiles">
 {{- with .Search}}
 <a class="tile" href="#search"><span class="k">Clicks from Google</span><span class="v">{{compact .Current.Clicks}}</span>{{if .HasPrevious}}{{template "badge" delta .Current.Clicks .Previous.Clicks}}{{end}}</a>
@@ -149,7 +154,7 @@ footer{margin-top:8px;font-size:12.5px;color:var(--muted);text-align:center}
 <main class="wrap">
 
 <section id="summary">
-<header><h2>Summary</h2></header>
+<header><h2>Executive summary</h2></header>
 {{- if .Note}}
 <div class="note">{{range paragraphs .Note}}<p>{{.}}</p>{{end}}</div>
 {{- end}}
@@ -159,6 +164,18 @@ footer{margin-top:8px;font-size:12.5px;color:var(--muted);text-align:center}
 <a class="card {{.Tone}}" href="#{{.Anchor}}"><span class="dot">{{if eq .Tone "up"}}↑{{else if eq .Tone "down"}}↓{{else}}•{{end}}</span><span><b>{{.Title}}</b>{{if .Detail}}<span>{{.Detail}}</span>{{end}}</span></a>
 {{- end}}
 </div>
+{{- end}}
+{{- if .WorkCompleted}}
+<h3>Work completed</h3>
+<ul class="work">{{range workLines .WorkCompleted}}{{if .}}<li>{{with href .}}<a href="{{.}}" target="_blank" rel="noreferrer">{{str .}}</a>{{else}}{{.}}{{end}}</li>{{end}}{{end}}</ul>
+{{- end}}
+{{- if or .NextSteps .Priorities}}
+<h3 id="next">Next priorities</h3>
+{{- if .NextSteps}}
+<div class="steps">{{range paragraphs .NextSteps}}<p>{{.}}</p>{{end}}</div>
+{{- else}}
+<ol class="work">{{range .Priorities}}<li><a href="#{{.Anchor}}">{{.Title}}</a><br>{{.Detail}}</li>{{end}}</ol>
+{{- end}}
 {{- end}}
 </section>
 
@@ -210,22 +227,28 @@ footer{margin-top:8px;font-size:12.5px;color:var(--muted);text-align:center}
 
 {{- with .Traffic}}
 <section id="traffic">
-<header><h2>Organic traffic</h2><p class="src">Source: Google Analytics · Organic Search channel</p></header>
+<header><h2>Google Analytics</h2><p class="src">Source: Google Analytics 4</p></header>
+{{- if .HasOrganic}}
+<h3>Organic search</h3>
 <div class="kpis">
 {{template "metric" dict "Label" "Visits (sessions)" "M" .Sessions "Kind" "num"}}
 {{template "metric" dict "Label" "Visitors" "M" .Users "Kind" "num"}}
 {{template "metric" dict "Label" "Engaged visits" "M" .EngagedSessions "Kind" "num"}}
 {{template "metric" dict "Label" "Engagement rate" "M" .EngagementRate "Kind" "rate"}}
-{{- if .KeyEvents.Value}}{{if gt (mval .KeyEvents) 0.0}}{{template "metric" dict "Label" "Key events" "M" .KeyEvents "Kind" "num"}}{{end}}{{end}}
+{{- if .KeyEvents.Value}}{{template "metric" dict "Label" "Key events" "M" .KeyEvents "Kind" "num"}}{{end}}
 {{- if .Revenue.Value}}{{if gt (mval .Revenue) 0.0}}{{template "metric" dict "Label" (printf "Revenue %s" .Currency) "M" .Revenue "Kind" "num"}}{{end}}{{end}}
 </div>
 {{- if gt (len .Daily) 1}}{{with trafficSeries .Daily}}{{lineChart "sessions" .Values .Dates "organic visits"}}{{end}}{{end}}
+{{- end}}
+{{template "ga4-breakdowns" .}}
 </section>
 {{- end}}
 
+{{- with .Analytics}}{{template "uplumo-analytics" .}}{{end}}
+
 {{- with .Rankings}}
 <section id="rankings">
-<header><h2>Keyword rankings</h2><p class="src">{{.Domain}}{{if .Location}} · {{.Location}}{{end}} · {{.Device}}{{with .CheckedAt}} · checked {{date .}}{{end}}</p></header>
+<header><h2>Keyword rankings</h2><p class="src">{{.Domain}}{{if .Location}} · {{.Location}}{{end}} · {{.Device}}{{with .CheckedAt}} · checked {{date .}}{{end}}{{if .Comparison}} · {{.Comparison}} comparison{{end}}</p></header>
 <div class="dist" role="img" aria-label="{{.Top3}} in top 3, {{sub .Top10 .Top3}} in 4 to 10, {{sub .Top20 .Top10}} in 11 to 20, {{sub .Total .Top20}} lower or not ranking">
 <i class="d1" style="{{width (share .Top3 .Total)}}"></i><i class="d2" style="{{width (share (sub .Top10 .Top3) .Total)}}"></i><i class="d3" style="{{width (share (sub .Top20 .Top10) .Total)}}"></i><i class="d4" style="{{width (share (sub .Total .Top20) .Total)}}"></i>
 </div>
@@ -238,17 +261,21 @@ footer{margin-top:8px;font-size:12.5px;color:var(--muted);text-align:center}
 <input type="radio" name="rf" id="rf-n"><label for="rf-n">Not ranking<small>{{.NotRanking}}</small></label>
 <div class="panel p-rf" data-title="Tracked keywords">
 <div class="table"><table>
-<thead><tr><th>Keyword</th><th class="n">Position</th><th class="n">Change</th><th class="n">Monthly searches</th><th>Ranking page</th></tr></thead>
+<thead><tr><th>Keyword</th><th class="n">Position</th><th class="n">Change</th><th class="n">Monthly searches</th><th>Ranking page</th><th>Checked</th></tr></thead>
 <tbody>
-{{- range rankRows .Rows}}
-<tr class="r {{rankClass .}}"><td class="key">{{.Keyword}}</td><td class="n">{{with .Position}}{{deref .}}{{else}}—{{end}}</td><td class="n">{{with rankMove .}}<span class="chg {{.Tone}}">{{.Text}}</span>{{end}}</td><td class="n">{{with .Volume}}{{inum (deref .)}}{{else}}—{{end}}</td><td class="key">{{with href .URL}}<a href="{{.}}" target="_blank" rel="noreferrer">{{short (str .)}}</a>{{else}}—{{end}}</td></tr>
+{{- range rankRows .Rows $.RankLimit}}
+<tr class="r {{rankClass .}}"><td class="key">{{.Keyword}}</td><td class="n">{{with .Position}}{{deref .}}{{else}}—{{end}}</td><td class="n">{{with rankMove .}}<span class="chg {{.Tone}}">{{.Text}}</span>{{end}}</td><td class="n">{{with .Volume}}{{inum (deref .)}}{{else}}—{{end}}</td><td class="key">{{with href .URL}}<a href="{{.}}" target="_blank" rel="noreferrer">{{short (str .)}}</a>{{else}}—{{end}}</td><td>{{with .CheckedAt}}{{date .}}{{else}}—{{end}}</td></tr>
 {{- end}}
 </tbody></table></div>
-{{- if gt (len .Rows) 200}}<p class="src" style="margin-top:8px">Showing the 200 best-ranked of {{len .Rows}} keywords.</p>{{end}}
+{{- if gt (len .Rows) $.RankLimit}}<p class="src" style="margin-top:8px">Showing {{$.RankLimit}} of {{len .Rows}} checked keywords.</p>{{end}}
 </div>
 </div>
 </section>
 {{- end}}
+
+{{- if .Competitors}}{{template "competitor-rankings" .}}{{end}}
+{{- with .AI}}{{template "ai-evidence" .}}{{end}}
+{{- with .Local}}{{template "local-evidence" .}}{{end}}
 
 {{- with .Audit}}
 <section id="audit">
@@ -291,13 +318,6 @@ footer{margin-top:8px;font-size:12.5px;color:var(--muted);text-align:center}
 {{with .LostReferringDomains}}<div class="kpi"><span class="k">Lost linking websites</span><span class="v" style="color:var(--down)">−{{num (float (deref64 .))}}</span></div>{{end}}
 {{with .Rank}}<div class="kpi"><span class="k">Domain rank</span><span class="v">{{num (float (deref64 .))}}</span></div>{{end}}
 </div>
-</section>
-{{- end}}
-
-{{- if .NextSteps}}
-<section id="next">
-<header><h2>Next steps</h2></header>
-<div class="steps">{{range paragraphs .NextSteps}}<p>{{.}}</p>{{end}}</div>
 </section>
 {{- end}}
 

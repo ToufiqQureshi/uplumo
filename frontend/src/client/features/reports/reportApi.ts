@@ -211,7 +211,11 @@ export async function deleteReportTemplate({
 export const SITE_REPORT_SECTIONS = [
   "search",
   "traffic",
+  "analytics",
   "rankings",
+  "competitors",
+  "ai_visibility",
+  "local_visibility",
   "audit",
   "backlinks",
 ] as const;
@@ -236,6 +240,7 @@ export async function generateSiteReport({
   periodDays: 7 | 28 | 90;
   sections: SiteReportSection[];
   note: string;
+  workCompleted?: string;
   nextSteps: string;
   share: boolean;
 }>) {

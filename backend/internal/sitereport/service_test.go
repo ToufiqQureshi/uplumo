@@ -248,8 +248,15 @@ func TestGenerateSavesSharesAndExplainsSkippedSections(t *testing.T) {
 	if fmt.Sprint(got.Included) != "[search rankings audit backlinks]" {
 		t.Errorf("included = %v", got.Included)
 	}
-	if len(got.Skipped) != 1 || got.Skipped[0].Section != SectionTraffic || !strings.Contains(got.Skipped[0].Reason, "not connected") {
+	wantSkipped := []Section{SectionTraffic, SectionAnalytics, SectionCompetitors, SectionAI, SectionLocal}
+	if len(got.Skipped) != len(wantSkipped) || !strings.Contains(got.Skipped[0].Reason, "not connected") {
 		t.Errorf("skipped = %+v", got.Skipped)
+	} else {
+		for i, part := range got.Skipped {
+			if part.Section != wantSkipped[i] || part.Reason == "" {
+				t.Errorf("skipped[%d] = %+v", i, part)
+			}
+		}
 	}
 }
 
@@ -290,6 +297,7 @@ func TestGenerateValidatesInput(t *testing.T) {
 		"no sections":    {Title: "x", PeriodDays: 28},
 		"bad section":    {Title: "x", PeriodDays: 28, Sections: []Section{"ads"}},
 		"long note":      {Title: "x", PeriodDays: 28, Sections: AllSections, Note: strings.Repeat("a", maxNoteChars+1)},
+		"long work log":  {Title: "x", PeriodDays: 28, Sections: AllSections, WorkCompleted: strings.Repeat("é", maxNoteChars+1)},
 		"long nextsteps": {Title: "x", PeriodDays: 28, Sections: AllSections, NextSteps: strings.Repeat("a", maxNoteChars+1)},
 	}
 	for name, in := range tests {

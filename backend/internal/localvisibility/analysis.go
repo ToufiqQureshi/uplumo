@@ -59,6 +59,12 @@ type CheckResult struct {
 	Missing    []string    `json:"missing"`
 }
 
+const missingMapsResults = "Google Maps results"
+
+func (c CheckResult) MapsAvailable() bool {
+	return !slices.Contains(c.Missing, missingMapsResults)
+}
+
 const maxRivals = 3
 
 // pickRivals are the top businesses of the Maps search other than the

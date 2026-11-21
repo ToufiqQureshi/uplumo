@@ -103,7 +103,7 @@ func (s *Service) RunReport(ctx context.Context, projectID string, input ReportI
 			end = len(rows)
 		}
 		rows = rows[start:end]
-		if offset+limit > len(current.Rows) && offset < current.TotalRowCount {
+		if min(offset+limit, current.TotalRowCount) > len(current.Rows) && offset < current.TotalRowCount {
 			pageRequest := buildRequest(input, dates.Resolved, definition, limit, offset)
 			pageResponse, pageErr := s.runProvider(ctx, connection, pageRequest)
 			if pageErr != nil {

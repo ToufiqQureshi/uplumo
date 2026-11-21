@@ -4,10 +4,13 @@ import (
 	"context"
 	"errors"
 	"slices"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/toufiqqureshi/uplumo/backend/internal/ga4"
+	"github.com/toufiqqureshi/uplumo/backend/internal/google"
 	"github.com/toufiqqureshi/uplumo/backend/internal/gsc"
 )
 
@@ -91,6 +94,64 @@ func TestGSCSourceReportsNotConnected(t *testing.T) {
 	}
 	if got, err := (RankTracking{}).Rankings(t.Context(), "p", "example.com", periodFor(fixedNow, 7)); got != nil || err != nil {
 		t.Fatalf("nil rank tracking = %v, %v", got, err)
+	}
+}
+
+type ga4TestConnection struct{}
+
+func (ga4TestConnection) GetByProjectID(context.Context, string) (ga4.Connection, error) {
+	return ga4.Connection{PropertyID: "properties/123", PropertyTimeZone: "UTC", ConnectedByUserID: "user"}, nil
+}
+
+type ga4TestProvider struct {
+	period   Period
+	requests []ga4.APIRequest
+}
+
+func (f *ga4TestProvider) DoJSON(_ context.Context, request google.APIRequest) error {
+	body := request.Body.(ga4.APIRequest)
+	f.requests = append(f.requests, body)
+	row := ga4.ProviderRow{}
+	for _, dimension := range body.Dimensions {
+		value := map[string]string{"date": "20261103", "sessionDefaultChannelGroup": "Paid Search", "hostName": "example.com",
+			"landingPage": "/pricing?internal=secret", "eventName": "purchase"}[dimension.Name]
+		row.DimensionValues = append(row.DimensionValues, ga4.Value{Value: value})
+	}
+	for _, metric := range body.Metrics {
+		value := 48
+		if body.DateRanges[0].StartDate == f.period.PrevStart.Format(day) {
+			value = 31
+		}
+		if metric.Name == "engagementRate" || metric.Name == "sessionKeyEventRate" {
+			row.MetricValues = append(row.MetricValues, ga4.Value{Value: "0.75"})
+		} else {
+			row.MetricValues = append(row.MetricValues, ga4.Value{Value: strconv.Itoa(value)})
+		}
+	}
+	*request.Response.(*ga4.ProviderResponse) = ga4.ProviderResponse{
+		DimensionHeaders: body.Dimensions, MetricHeaders: body.Metrics, RowCount: 1, Rows: []ga4.ProviderRow{row},
+	}
+	return nil
+}
+
+func TestGA4SourceReadsSevenFreeReportsAndKeepsDashboardEvidence(t *testing.T) {
+	period := periodFor(fixedNow, 28)
+	provider := &ga4TestProvider{period: period}
+	source := GA4{Service: &ga4.Service{Connections: ga4TestConnection{}, Google: provider, Now: func() time.Time { return fixedNow }}}
+	data, err := source.Traffic(t.Context(), "project", period)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if data.breakdownError != nil || len(provider.requests) != 7 || len(data.Channels) != 1 || len(data.LandingPages) != 1 || len(data.Events) != 1 {
+		t.Fatalf("requests=%d data=%+v", len(provider.requests), data)
+	}
+	event := data.Events[0]
+	if data.Channels[0].Name != "Paid Search" || data.LandingPages[0].Name != "/pricing" || event.Name != "purchase" ||
+		event.KeyEvents == nil || *event.KeyEvents != 48 || event.PreviousKeyEvents == nil || *event.PreviousKeyEvents != 31 {
+		t.Fatalf("unexpected evidence: %+v", data)
+	}
+	if provider.requests[3].DimensionFilter != nil || provider.requests[4].DimensionFilter != nil || provider.requests[5].DimensionFilter == nil {
+		t.Fatal("channel and landing page breakdowns should span all channels, and key events should be scoped to organic search")
 	}
 }
 

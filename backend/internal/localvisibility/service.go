@@ -484,10 +484,10 @@ type doneFunc func(key string) (json.RawMessage, bool)
 func buildCheck(in runInput, done doneFunc, now time.Time) (CheckResult, bool) {
 	result := CheckResult{SearchTerm: in.Term, Rivals: []Contender{}, Missing: []string{}}
 	raw, ok := done("maps")
-	if !ok {
-		result.Missing = append(result.Missing, "Google Maps results")
+	places, err := parseMaps(raw)
+	if !ok || err != nil {
+		result.Missing = append(result.Missing, missingMapsResults)
 	}
-	places, _ := parseMaps(raw)
 	result.YourRank = rankOf(places, in.CID)
 	contender := func(key string, place Place) Contender {
 		c := Contender{Place: place}

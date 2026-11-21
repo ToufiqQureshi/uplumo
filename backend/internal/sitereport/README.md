@@ -11,10 +11,12 @@ existing viewer, PDF export, white-label brand bar and public share link.
 | `handler.go`        | `POST /api/v1/projects/{projectId}/reports/generate` (session + project access) |
 | `service.go`        | Validates the click, collects sections in parallel, renders, saves, shares    |
 | `sources.go`        | Adapters: Search Console (`gsc`), Google Analytics (`ga4`), rank tracking     |
+| `evidence.go`       | Read-only adapters for Uplumo Analytics, AI Visibility and Local Visibility |
 | `repository.go`     | Reads `projects`, `go_audits`, `go_audit_issues`, `go_audit_lighthouse_results`, `backlink_snapshots` |
 | `insights.go`       | Data-backed highlights and number formatting                                  |
 | `render.go`         | Template functions and inline SVG charts                                      |
 | `report.html.tmpl`  | The report document (no scripts; CSS-only tabs, filters and expanders)        |
+| `evidence.html.tmpl` | Analytics breakdowns and the competitor, citation and Maps evidence tables  |
 
 Frontend: `frontend/src/client/features/reports/SiteReportBuilder.tsx`
 (the "Create client report" dialog) and `generateSiteReport` in `reportApi.ts`.

@@ -143,6 +143,14 @@ func (s Store) LatestDone(ctx context.Context, projectID, kind string, before ti
 		WHERE project_id=$1 AND kind=$2 AND status='done' AND created_at < $3 ORDER BY created_at DESC LIMIT 1`, projectID, kind, before))
 }
 
+// LatestBusinessCheck reads saved evidence for one project and listing.
+func (s Store) LatestBusinessCheck(ctx context.Context, orgID, projectID, cid, kind string, before time.Time) (*Run, error) {
+	return scanRun(s.DB.QueryRow(ctx, `SELECT `+runColumns+` FROM go_local_runs
+		WHERE organization_id=$1 AND project_id=$2 AND input->>'cid'=$3 AND kind=$4
+		AND status='done' AND created_at < $5 AND COALESCE(finished_at, created_at) < $5
+		ORDER BY created_at DESC, id DESC LIMIT 1`, orgID, projectID, cid, kind, before))
+}
+
 // Cached returns a finished run of the same input newer than since. A run
 // that came back with parts missing is not reused, so asking again buys
 // them instead of showing the gap for a day.

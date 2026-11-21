@@ -9,10 +9,15 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/toufiqqureshi/uplumo/backend/internal/reports"
 )
 
 //go:embed report.html.tmpl
 var reportTemplateText string
+
+//go:embed evidence.html.tmpl
+var evidenceTemplateText string
 
 // defaultAccent is Uplumo's brand green, used when the workspace has no
 // white-label accent.
@@ -23,40 +28,68 @@ const defaultAccent = "#65a30d"
 const maxRankRows = 200
 
 var reportTemplate = template.Must(template.New("report").Funcs(template.FuncMap{
-	"num":           Number,
-	"compact":       Compact,
-	"pos":           Position,
-	"rate":          func(v float64) string { return Percent(v * 100) },
-	"delta":         delta,
-	"posDelta":      positionDelta,
-	"ptDelta":       pointDelta,
-	"mdelta":        metricDelta,
-	"mval":          metricValue,
-	"date":          func(t time.Time) string { return t.Format("2 Jan 2006") },
-	"short":         shortURL,
-	"href":          safeHref,
-	"label":         issueLabel,
-	"width":         widthStyle,
-	"ring":          scoreRing,
-	"rankMove":      rankMove,
-	"deref":         func(v *int) int { return *v },
-	"deref64":       func(v *int64) int64 { return *v },
-	"lineChart":     lineChart,
-	"searchSeries":  searchSeries,
-	"trafficSeries": trafficSeries,
-	"rankRows":      func(rows []RankRow) []RankRow { return firstN(rows, maxRankRows) },
-	"rankClass":     rankClass,
-	"share":         func(part, total int) float64 { return float64(part) / math.Max(float64(total), 1) * 100 },
-	"sub":           func(a, b int) int { return a - b },
-	"ms":            func(v float64) string { return trimZero(fmt.Sprintf("%.1f", v/1000)) + " s" },
-	"cls":           func(v float64) string { return fmt.Sprintf("%.2f", v) },
-	"inp":           func(v float64) string { return Number(v) + " ms" },
-	"paragraphs":    paragraphs,
-	"inum":          func(n int) string { return Number(float64(n)) },
-	"float":         func(n int64) float64 { return float64(n) },
-	"str":           func(u template.URL) string { return string(u) },
-	"dict":          dict,
-}).Parse(reportTemplateText))
+	"num":            Number,
+	"compact":        Compact,
+	"pos":            Position,
+	"rate":           func(v float64) string { return Percent(v * 100) },
+	"delta":          delta,
+	"posDelta":       positionDelta,
+	"ptDelta":        pointDelta,
+	"mdelta":         metricDelta,
+	"mval":           metricValue,
+	"date":           func(t time.Time) string { return t.Format("2 Jan 2006") },
+	"short":          shortURL,
+	"href":           safeHref,
+	"label":          issueLabel,
+	"width":          widthStyle,
+	"ring":           scoreRing,
+	"rankMove":       rankMove,
+	"deref":          func(v *int) int { return *v },
+	"deref64":        func(v *int64) int64 { return *v },
+	"lineChart":      lineChart,
+	"searchSeries":   searchSeries,
+	"trafficSeries":  trafficSeries,
+	"rankRows":       firstN[RankRow],
+	"topCompetitors": func(rows []CompetitorRank) []CompetitorRank { return firstN(rows, 5) },
+	"workLines": func(text string) []string {
+		lines := strings.Split(text, "\n")
+		for i, line := range lines {
+			lines[i] = strings.TrimSpace(line)
+		}
+		return lines
+	},
+	"count": func(n int64) string { return Number(float64(n)) },
+	"amount": func(n *float64) string {
+		if n == nil {
+			return "—"
+		}
+		return Number(*n)
+	},
+	"engagement": func(n *float64) string {
+		if n == nil {
+			return "—"
+		}
+		return Percent(*n * 100)
+	},
+	"siteSeries": analyticsSeries,
+	"rating": func(value *float64) string {
+		if value == nil {
+			return "—"
+		}
+		return fmt.Sprintf("%.1f", *value)
+	},
+	"rankClass":  rankClass,
+	"share":      func(part, total int) float64 { return float64(part) / math.Max(float64(total), 1) * 100 },
+	"sub":        func(a, b int) int { return a - b },
+	"ms":         func(v float64) string { return trimZero(fmt.Sprintf("%.1f", v/1000)) + " s" },
+	"cls":        func(v float64) string { return fmt.Sprintf("%.2f", v) },
+	"inp":        func(v float64) string { return Number(v) + " ms" },
+	"paragraphs": paragraphs,
+	"inum":       func(n int) string { return Number(float64(n)) },
+	"float":      func(n int64) float64 { return float64(n) },
+	"str":        func(u template.URL) string { return string(u) },
+	"dict":       dict,
+}).Parse(reportTemplateText + evidenceTemplateText))
 
 // dict passes named values to a nested template.
 func dict(pairs ...any) (map[string]any, error) {
@@ -76,10 +109,14 @@ func dict(pairs ...any) (map[string]any, error) {
 
 type view struct {
 	Snapshot
-	AccentCSS  template.CSS
-	Where      string
-	Highlights []Highlight
-	Sections   []navItem
+	AccentCSS       template.CSS
+	Where           string
+	Highlights      []Highlight
+	Priorities      []Highlight
+	Sections        []navItem
+	RankLimit       int
+	CompetitorRows  []RankRow
+	CompetitorTotal int
 }
 
 type navItem struct{ ID, Label string }
@@ -92,21 +129,39 @@ func Render(s Snapshot) (string, error) {
 	if hexColor.MatchString(s.Accent) {
 		accent = s.Accent
 	}
-	v := view{Snapshot: s, Highlights: firstN(Highlights(s), 6), Where: s.Project.Domain}
+	v := view{Snapshot: s, Highlights: firstN(Highlights(s), 6), Where: s.Project.Domain, RankLimit: maxRankRows}
+	if s.NextSteps == "" {
+		v.Priorities = priorities(s)
+	}
 	// #nosec G203 -- accent is a validated six-digit hex color.
 	v.AccentCSS = template.CSS(accent)
 	if v.Where == "" {
 		v.Where = s.Project.Name
 	}
-	v.Sections = append(v.Sections, navItem{"summary", "Summary"})
+	v.Sections = append(v.Sections, navItem{"summary", "Executive summary"})
 	if s.Search != nil {
 		v.Sections = append(v.Sections, navItem{"search", "Google Search"})
 	}
 	if s.Traffic != nil {
-		v.Sections = append(v.Sections, navItem{"traffic", "Organic traffic"})
+		v.Sections = append(v.Sections, navItem{"traffic", "Google Analytics"})
+	}
+	if s.Analytics != nil {
+		v.Sections = append(v.Sections, navItem{"analytics", "Uplumo Analytics"})
 	}
 	if s.Rankings != nil {
 		v.Sections = append(v.Sections, navItem{"rankings", "Rankings"})
+	}
+	if s.Competitors != nil {
+		v.Sections = append(v.Sections, navItem{"competitors", "Competitors"})
+		rows := competitorRows(s.Competitors.Rows)
+		v.CompetitorTotal = len(rows)
+		v.CompetitorRows = firstN(rows, maxRankRows)
+	}
+	if s.AI != nil {
+		v.Sections = append(v.Sections, navItem{"ai-visibility", "AI visibility"})
+	}
+	if s.Local != nil {
+		v.Sections = append(v.Sections, navItem{"local-visibility", "Local visibility"})
 	}
 	if s.Audit != nil {
 		v.Sections = append(v.Sections, navItem{"audit", "Site health"})
@@ -114,14 +169,42 @@ func Render(s Snapshot) (string, error) {
 	if s.Backlinks != nil {
 		v.Sections = append(v.Sections, navItem{"backlinks", "Backlinks"})
 	}
-	if s.NextSteps != "" {
-		v.Sections = append(v.Sections, navItem{"next", "Next steps"})
-	}
 	var buf bytes.Buffer
-	if err := reportTemplate.Execute(&buf, v); err != nil {
-		return "", fmt.Errorf("render site report: %w", err)
+	for {
+		buf.Reset()
+		if err := reportTemplate.Execute(&buf, v); err != nil {
+			return "", fmt.Errorf("render site report: %w", err)
+		}
+		if buf.Len() <= reports.MaxHTMLBytes {
+			return buf.String(), nil
+		}
+		switch {
+		case len(v.CompetitorRows) > 1:
+			v.CompetitorRows = v.CompetitorRows[:len(v.CompetitorRows)/2]
+		case s.Rankings != nil && len(s.Rankings.Rows) > 1 && v.RankLimit > 1:
+			v.RankLimit = min(v.RankLimit, len(s.Rankings.Rows)) / 2
+		default:
+			return "", invalid("This report is too large. Choose fewer sections and try again.")
+		}
 	}
-	return buf.String(), nil
+}
+
+func competitorRows(rows []RankRow) []RankRow {
+	var out []RankRow
+	for _, row := range rows {
+		if len(row.Competitors) > 0 {
+			out = append(out, row)
+		}
+	}
+	return out
+}
+
+func analyticsSeries(a *AnalyticsSnapshot) []TrafficDay {
+	out := make([]TrafficDay, 0, len(a.Series))
+	for _, row := range a.Series {
+		out = append(out, TrafficDay{Date: row.Date, Sessions: float64(row.Pageviews)})
+	}
+	return out
 }
 
 // Delta is a change badge: its text and whether the change is good.

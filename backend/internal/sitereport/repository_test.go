@@ -10,8 +10,40 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/toufiqqureshi/uplumo/backend/internal/localvisibility"
 	"github.com/toufiqqureshi/uplumo/backend/internal/reports"
 )
+
+func TestLocalReportUsesTheCurrentProjectListingAndPreviousReviewCheck(t *testing.T) {
+	db := reportDB(t)
+	if _, err := db.Exec(t.Context(), `
+		CREATE TABLE go_local_businesses (
+			project_id text, cid text, place_id text, title text, address text, category text,
+			latitude float8, longitude float8, search_term text, language_code text, updated_at timestamptz
+		);
+		CREATE TABLE go_local_runs (
+			id text, project_id text, organization_id text, kind text, input_hash text, input jsonb,
+			status text, result jsonb, error text, created_at timestamptz, finished_at timestamptz
+		);
+		INSERT INTO go_local_businesses VALUES ('p','123','','Example Hotel','','',0,0,'hotel','en','2026-11-01T10:00Z');
+		INSERT INTO go_local_runs VALUES
+			('1','p','o','reviews','','{"cid":"123"}','done','{"total":12}','', '2026-11-01T10:00Z','2026-11-01T10:01Z'),
+			('2','p','o','reviews','','{"cid":"123"}','done','{"total":17}','', '2026-11-02T10:00Z','2026-11-02T10:01Z'),
+			('3','p','o','reviews','','{"cid":"456"}','done','{"total":99}','', '2026-11-03T10:00Z','2026-11-03T10:01Z'),
+			('4','p','other','reviews','','{"cid":"123"}','done','{"total":98}','', '2026-11-04T10:00Z','2026-11-04T10:01Z'),
+			('5','p','o','reviews','','{"cid":"123"}','failed',null,'', '2026-11-05T10:00Z','2026-11-05T10:01Z'),
+			('6','p','o','reviews','','{"cid":"123"}','done','{"total":97}','', '2026-11-05T11:00Z','2026-11-07T10:01Z');
+	`); err != nil {
+		t.Fatal(err)
+	}
+	got, err := (LocalSnapshots{Store: localvisibility.Store{DB: db}}).Read(t.Context(), "o", "p", fixedNow)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got == nil || got.Reviews == nil || got.Reviews.Total != 17 || got.PreviousReviews == nil || got.PreviousReviews.Total != 12 {
+		t.Fatalf("unexpected local snapshot: %+v", got)
+	}
+}
 
 func reportDB(t *testing.T) *pgxpool.Pool {
 	t.Helper()

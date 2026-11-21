@@ -19,6 +19,18 @@ type Highlight struct {
 func Highlights(s Snapshot) []Highlight {
 	var out []Highlight
 	period := fmt.Sprintf("the previous %d days", s.Period.Days)
+	if a := s.Analytics; a != nil && len(a.LeadActions) > 0 {
+		action := a.LeadActions[0]
+		out = append(out, Highlight{Tone: "flat", Title: fmt.Sprintf("%s recorded %d times", action.Name, action.Count), Detail: "Configured lead action in Uplumo Analytics.", Anchor: "analytics"})
+	}
+	if t := s.Traffic; t != nil && t.KeyEvents.Value != nil {
+		switch {
+		case positive(t.KeyEvents.Previous):
+			out = append(out, changeHighlight("Organic key events", *t.KeyEvents.Value, *t.KeyEvents.Previous, period, "traffic"))
+		case positive(t.KeyEvents.Value):
+			out = append(out, Highlight{Tone: "flat", Title: fmt.Sprintf("%s key events from organic visits", Number(*t.KeyEvents.Value)), Anchor: "traffic"})
+		}
+	}
 	if q := s.Search; q != nil {
 		if q.HasPrevious && q.Previous.Clicks > 0 {
 			out = append(out, changeHighlight("Search clicks", q.Current.Clicks, q.Previous.Clicks, period, "search"))
@@ -40,13 +52,12 @@ func Highlights(s Snapshot) []Highlight {
 		if t.Sessions.Previous != nil && *t.Sessions.Previous > 0 {
 			out = append(out, changeHighlight("Organic visits", *t.Sessions.Value, *t.Sessions.Previous, period, "traffic"))
 		}
-		if t.KeyEvents.Value != nil && *t.KeyEvents.Value > 0 {
-			h := Highlight{Tone: "flat", Title: fmt.Sprintf("%s key events from organic visits", Number(*t.KeyEvents.Value)), Anchor: "traffic"}
-			if t.KeyEvents.Previous != nil && *t.KeyEvents.Previous > 0 {
-				h = changeHighlight("Organic key events", *t.KeyEvents.Value, *t.KeyEvents.Previous, period, "traffic")
-			}
-			out = append(out, h)
-		}
+	}
+	if a := s.AI; a != nil {
+		out = append(out, Highlight{Tone: "flat", Title: fmt.Sprintf("Cited in %d of %d tracked AI answers", a.Cited, a.Answered), Detail: "Latest saved AI visibility check.", Anchor: "ai-visibility"})
+	}
+	if l := s.Local; l != nil && l.Check != nil && l.Check.MapsAvailable() && l.Check.YourRank > 0 {
+		out = append(out, Highlight{Tone: "flat", Title: fmt.Sprintf("Google Maps position %d", l.Check.YourRank), Detail: l.Check.SearchTerm, Anchor: "local-visibility"})
 	}
 	if r := s.Rankings; r != nil {
 		out = append(out, Highlight{Tone: "flat", Title: fmt.Sprintf("%d of %d keywords in the top 10", r.Top10, r.Total), Detail: fmt.Sprintf("%d in the top 3.", r.Top3), Anchor: "rankings"})
@@ -84,6 +95,44 @@ func Highlights(s Snapshot) []Highlight {
 		out = append(out, Highlight{Tone: tone, Title: fmt.Sprintf("%d new linking %s", *b.NewReferringDomains, plural(int(*b.NewReferringDomains), "site", "sites")), Detail: fmt.Sprintf("%d lost.", *b.LostReferringDomains), Anchor: "backlinks"})
 	}
 	return out
+}
+
+func priorities(s Snapshot) []Highlight {
+	var out []Highlight
+	if s.Audit != nil {
+		for _, issue := range s.Audit.Issues {
+			if issue.Severity == "critical" && len(issue.Examples) > 0 {
+				out = append(out, Highlight{Title: "Fix " + strings.ToLower(issueLabel(issue.Type)), Detail: fmt.Sprintf("%d affected pages, including %s", issue.Pages, issue.Examples[0]), Anchor: "audit"})
+				break
+			}
+		}
+	}
+	if s.Search != nil && len(s.Search.Opportunities) > 0 {
+		row := s.Search.Opportunities[0]
+		out = append(out, Highlight{Title: fmt.Sprintf("Improve the page targeting %q", row.Query), Detail: fmt.Sprintf("%s · position %s · %s impressions", row.Page, Position(row.Position), Number(row.Impressions)), Anchor: "opportunities"})
+	}
+	if s.Local != nil && s.Local.Check != nil {
+		for _, fix := range s.Local.Check.Fixes {
+			if fix.Status == "missing" || fix.Status == "behind" {
+				out = append(out, Highlight{Title: fix.Title, Detail: fix.Detail, Anchor: "local-visibility"})
+				break
+			}
+		}
+	}
+	if s.AI != nil {
+		for _, answer := range s.AI.Evidence {
+			if answerPriority(answer) != 1 {
+				continue
+			}
+			for _, source := range answer.Sources {
+				if source.Brand != "" {
+					out = append(out, Highlight{Title: "Review the citation gap for " + answer.Engine, Detail: fmt.Sprintf("%q cited %s.", answer.Prompt, source.Brand), Anchor: "ai-visibility"})
+					return firstN(out, 3)
+				}
+			}
+		}
+	}
+	return firstN(out, 3)
 }
 
 func changeHighlight(label string, current, previous float64, period, anchor string) Highlight {

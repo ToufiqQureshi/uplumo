@@ -1,8 +1,7 @@
 // Package sitereport builds a client-ready site report from the data a
 // project already has: Search Console, Google Analytics, tracked rankings, the
-// latest site audit and the stored backlink snapshot. It buys nothing: Google
-// reads are free and every other section reads stored rows, so one click is
-// 0 paid calls and 0 credits.
+// latest site audit, backlinks, website analytics, AI answers and local checks.
+// Google reports use free reads and every other section reads stored rows.
 package sitereport
 
 import (
@@ -15,15 +14,19 @@ type Section string
 
 // The sections a report can carry, in the order they render.
 const (
-	SectionSearch    Section = "search"
-	SectionTraffic   Section = "traffic"
-	SectionRankings  Section = "rankings"
-	SectionAudit     Section = "audit"
-	SectionBacklinks Section = "backlinks"
+	SectionSearch      Section = "search"
+	SectionTraffic     Section = "traffic"
+	SectionAnalytics   Section = "analytics"
+	SectionRankings    Section = "rankings"
+	SectionCompetitors Section = "competitors"
+	SectionAI          Section = "ai_visibility"
+	SectionLocal       Section = "local_visibility"
+	SectionAudit       Section = "audit"
+	SectionBacklinks   Section = "backlinks"
 )
 
 // AllSections is every section in render order.
-var AllSections = []Section{SectionSearch, SectionTraffic, SectionRankings, SectionAudit, SectionBacklinks}
+var AllSections = []Section{SectionSearch, SectionTraffic, SectionAnalytics, SectionRankings, SectionCompetitors, SectionAI, SectionLocal, SectionAudit, SectionBacklinks}
 
 // PeriodDays are the reporting windows the builder offers.
 var PeriodDays = []int{7, 28, 90}
@@ -51,12 +54,13 @@ func invalid(message string) error { return &Error{Code: "validation_error", Mes
 
 // Input is one "Create report" click.
 type Input struct {
-	Title      string    `json:"title"`
-	PeriodDays int       `json:"periodDays"`
-	Sections   []Section `json:"sections"`
-	Note       string    `json:"note"`
-	NextSteps  string    `json:"nextSteps"`
-	Share      bool      `json:"share"`
+	Title         string    `json:"title"`
+	PeriodDays    int       `json:"periodDays"`
+	Sections      []Section `json:"sections"`
+	Note          string    `json:"note"`
+	WorkCompleted string    `json:"workCompleted"`
+	NextSteps     string    `json:"nextSteps"`
+	Share         bool      `json:"share"`
 }
 
 // Result says what was saved and which sections had no data to show.
@@ -88,17 +92,22 @@ type Period struct {
 
 // Snapshot is everything one report renders. A nil section was skipped.
 type Snapshot struct {
-	Project     Project
-	Period      Period
-	GeneratedAt time.Time
-	Accent      string
-	Note        string
-	NextSteps   string
-	Search      *Search
-	Traffic     *Traffic
-	Rankings    *Rankings
-	Audit       *Audit
-	Backlinks   *Backlinks
+	Project       Project
+	Period        Period
+	GeneratedAt   time.Time
+	Accent        string
+	Note          string
+	WorkCompleted string
+	NextSteps     string
+	Search        *Search
+	Traffic       *Traffic
+	Analytics     *AnalyticsSnapshot
+	Rankings      *Rankings
+	Competitors   *Rankings
+	AI            *AIVisibility
+	Local         *LocalVisibility
+	Audit         *Audit
+	Backlinks     *Backlinks
 }
 
 // Search is Search Console performance for the period.
@@ -166,6 +175,18 @@ type Traffic struct {
 	KeyEvents       Metric
 	Revenue         Metric
 	Daily           []TrafficDay
+	Channels        []GA4Row
+	LandingPages    []GA4Row
+	Events          []GA4Row
+	Limited         bool
+	breakdownError  error
+}
+
+// GA4Row is a channel, landing page or key event from an existing GA4 report.
+type GA4Row struct {
+	Name, Host                          string
+	Sessions, KeyEvents, EngagementRate *float64
+	PreviousKeyEvents                   *float64
 }
 
 // Metric is a value and its previous-period value, either possibly unknown.
@@ -184,6 +205,7 @@ type Rankings struct {
 	Domain     string
 	Location   string
 	Device     string
+	Comparison string
 	CheckedAt  *time.Time
 	Total      int
 	Top3       int
@@ -197,11 +219,18 @@ type Rankings struct {
 
 // RankRow is one tracked keyword.
 type RankRow struct {
-	Keyword  string
-	Position *int
-	Previous *int
-	URL      string
-	Volume   *int
+	Keyword     string
+	Position    *int
+	Previous    *int
+	URL         string
+	Volume      *int
+	Competitors []CompetitorRank
+	CheckedAt   *time.Time
+}
+
+type CompetitorRank struct {
+	Rank        int
+	Domain, URL string
 }
 
 // Change is positive when the keyword moved up.

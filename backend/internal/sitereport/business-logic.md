@@ -18,12 +18,20 @@
   labels are whole, evenly spaced counts.
 - **One failing source does not fail the click.** A Google error skips that
   section and is logged; the rest of the report is saved.
-- **Double clicks save once.** Concurrent requests with the same title share
-  one run. A second click later with the same title gets the existing
+- **Double clicks save once.** Concurrent requests from the same author with
+  identical inputs share one run. A second click later with the same title gets the existing
   "title already exists" error from the reports service.
 - **Safe to share.** The document has no scripts and loads nothing. Links are
   limited to http(s) URLs. It is served under the existing report sandbox and
   CSP, and the public link can be switched off from the Share dialog.
+- **Evidence uses its own date.** Search and analytics use the selected report
+  dates. Rank, AI, Maps, audit and backlink evidence is a saved check with
+  its own date. Missing ranks, missing tracking and failed checks are distinct
+  from zero, and tracked event counts retain their original names.
+- **Report rows are bounded.** Evidence tables show a sample or top rows.
+  The AI section keeps tracked domains visible and preserves the position
+  of each source in the stored list. Maps reviews show aggregate counts and
+  omit names, review text and internal reply drafts.
 - **Global copy.** Plain English, `1,234` number style, dates as `7 Oct 2026`;
   nothing assumes a country.
 - **White label.** The workspace's branding accent colours the report; the

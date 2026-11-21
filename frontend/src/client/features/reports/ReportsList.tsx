@@ -34,7 +34,7 @@ export function ReportsList({
       <EmptyState
         icon={FileText}
         title="No reports yet"
-        description="Turn this project's search, traffic, rankings and site health into an interactive report you can send to a client. Uses no credits."
+        description="Share a client-ready report with results, supporting evidence and next steps."
         action={
           <Button onClick={onCreate}>
             <Sparkles data-icon="inline-start" />

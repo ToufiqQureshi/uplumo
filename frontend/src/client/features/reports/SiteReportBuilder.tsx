@@ -1,14 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import {
-  Activity,
-  Check,
-  Gauge,
-  Link2,
-  Search,
-  TrendingUp,
-  type LucideIcon,
-} from "lucide-react";
+import { Check } from "lucide-react";
 import { useId, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { cn } from "cn";
@@ -32,38 +24,8 @@ import {
   type SiteReportSection,
 } from "@/client/features/reports/reportApi";
 import { reportsQueryKey } from "@/client/features/reports/shared";
+import { SITE_REPORT_SECTION_DETAILS } from "@/client/features/reports/siteReportSections";
 import { sharePath } from "@/shared/report-share";
-
-const SECTIONS: Record<
-  SiteReportSection,
-  { label: string; detail: string; icon: LucideIcon }
-> = {
-  search: {
-    label: "Google Search",
-    detail: "Clicks, impressions, top searches and pages, rising and falling",
-    icon: Search,
-  },
-  traffic: {
-    label: "Organic traffic",
-    detail: "Visits, visitors, engagement and key events from Analytics",
-    icon: Activity,
-  },
-  rankings: {
-    label: "Keyword rankings",
-    detail: "Tracked positions, movers and ranking pages",
-    icon: TrendingUp,
-  },
-  audit: {
-    label: "Site health",
-    detail: "Audit issues with pages, speed and quality scores",
-    icon: Gauge,
-  },
-  backlinks: {
-    label: "Backlinks",
-    detail: "Linking websites gained and lost",
-    icon: Link2,
-  },
-};
 
 const PERIODS = [7, 28, 90] as const;
 type PeriodDays = (typeof PERIODS)[number];
@@ -105,6 +67,7 @@ export function SiteReportBuilder({
     ...SITE_REPORT_SECTIONS,
   ]);
   const [note, setNote] = useState("");
+  const [workCompleted, setWorkCompleted] = useState("");
   const [nextSteps, setNextSteps] = useState("");
   const [share, setShare] = useState(true);
   const [formError, setFormError] = useState<string | null>(null);
@@ -122,6 +85,7 @@ export function SiteReportBuilder({
           periodDays,
           sections,
           note,
+          workCompleted,
           nextSteps,
           share,
         },
@@ -186,7 +150,7 @@ export function SiteReportBuilder({
           <DialogTitle>Create a client report</DialogTitle>
           <DialogDescription>
             Built from this project's connected data into an interactive page
-            you can send to your client. Uses no credits.
+            you can send to your client.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-6">
@@ -237,7 +201,11 @@ export function SiteReportBuilder({
                 className="grid gap-2 sm:grid-cols-2"
               >
                 {SITE_REPORT_SECTIONS.map((section) => {
-                  const { label, detail, icon: Icon } = SECTIONS[section];
+                  const {
+                    label,
+                    detail,
+                    icon: Icon,
+                  } = SITE_REPORT_SECTION_DETAILS[section];
                   const on = sections.includes(section);
                   return (
                     <button
@@ -322,7 +290,24 @@ export function SiteReportBuilder({
                 maxLength={4000}
                 rows={3}
                 onChange={(event) => setNote(event.target.value)}
-                placeholder="What you worked on this period and what the numbers mean."
+                placeholder="Add context the client needs to understand the results."
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="site-report-work" className="text-sm font-medium">
+                Work completed{" "}
+                <span className="font-normal text-muted-foreground">
+                  (optional)
+                </span>
+              </label>
+              <Textarea
+                id="site-report-work"
+                value={workCompleted}
+                maxLength={4000}
+                rows={3}
+                onChange={(event) => setWorkCompleted(event.target.value)}
+                placeholder="List what changed and when. Put evidence links on their own lines."
               />
             </div>
 
@@ -339,7 +324,7 @@ export function SiteReportBuilder({
                 maxLength={4000}
                 rows={3}
                 onChange={(event) => setNextSteps(event.target.value)}
-                placeholder="What you will do next. Separate items with a blank line."
+                placeholder="List the next priorities and why they matter."
               />
             </div>
 

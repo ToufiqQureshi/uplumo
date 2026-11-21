@@ -51,15 +51,18 @@ type ReportSaver interface {
 
 // Service builds and saves site reports.
 type Service struct {
-	Store    Store
-	Search   SearchSource
-	Traffic  TrafficSource
-	Rankings RankSource
-	Reports  ReportSaver
-	Branding func(ctx context.Context, organizationID string) (branding.Branding, bool, error)
-	Logger   *slog.Logger
-	Now      func() time.Time
-	flight   singleflight.Group
+	Store     Store
+	Search    SearchSource
+	Traffic   TrafficSource
+	Rankings  RankSource
+	Analytics func(context.Context, string, Period) (*AnalyticsSnapshot, error)
+	AI        func(context.Context, string, string) (*AIVisibility, error)
+	Local     func(context.Context, string, string, time.Time) (*LocalVisibility, error)
+	Reports   ReportSaver
+	Branding  func(ctx context.Context, organizationID string) (branding.Branding, bool, error)
+	Logger    *slog.Logger
+	Now       func() time.Time
+	flight    singleflight.Group
 }
 
 // Author is the signed-in member who clicked "Create report".
@@ -101,7 +104,9 @@ func (s *Service) generate(ctx context.Context, organizationID, projectID string
 	if err != nil {
 		return Result{}, err
 	}
-	snap := Snapshot{Project: project, Period: periodFor(s.now(), in.PeriodDays), GeneratedAt: s.now().UTC(), Note: in.Note, NextSteps: in.NextSteps, Accent: s.accent(ctx, organizationID)}
+	now := s.now()
+	snap := Snapshot{Project: project, Period: periodFor(now, in.PeriodDays), GeneratedAt: now.UTC(), Note: in.Note,
+		WorkCompleted: in.WorkCompleted, NextSteps: in.NextSteps, Accent: s.accent(ctx, organizationID)}
 	skipped := s.collect(ctx, organizationID, projectID, in.Sections, &snap)
 	included := includedSections(snap)
 	if len(included) == 0 {
@@ -151,6 +156,8 @@ func (s *Service) collect(ctx context.Context, organizationID, projectID string,
 		skip(section, "Could not load "+source+" data right now. Try again in a few minutes.")
 	}
 	var wg sync.WaitGroup
+	wantRankings := slices.Contains(sections, SectionRankings)
+	wantCompetitors := slices.Contains(sections, SectionCompetitors)
 	for _, section := range sections {
 		switch section {
 		case SectionSearch:
@@ -179,26 +186,97 @@ func (s *Service) collect(ctx context.Context, organizationID, projectID string,
 				switch {
 				case err != nil:
 					fail(section, "Google Analytics", err)
-				case data.Sessions.Value == nil || *data.Sessions.Value == 0:
-					skip(section, "Google Analytics recorded no organic search visits in this period.")
+				case data == nil || !data.hasData():
+					if data != nil && data.breakdownError != nil {
+						fail(section, "Google Analytics", data.breakdownError)
+					} else {
+						skip(section, "Google Analytics recorded no traffic or key events in this period.")
+					}
 				default:
+					if data.breakdownError != nil {
+						s.log(ctx, "load Google Analytics report breakdown", data.breakdownError)
+					}
 					snap.Traffic = data
 				}
 			})
-		case SectionRankings:
+		case SectionAnalytics:
+			wg.Go(func() {
+				var data *AnalyticsSnapshot
+				var err error
+				if s.Analytics != nil {
+					data, err = s.Analytics(ctx, projectID, snap.Period)
+				}
+				switch {
+				case err != nil:
+					fail(section, "Uplumo Analytics", err)
+				case data == nil:
+					skip(section, "Uplumo Analytics has no traffic or tracked activity in this period.")
+				default:
+					snap.Analytics = data
+				}
+			})
+		case SectionAI:
+			wg.Go(func() {
+				var data *AIVisibility
+				var err error
+				if s.AI != nil {
+					data, err = s.AI(ctx, organizationID, projectID)
+				}
+				switch {
+				case err != nil:
+					fail(section, "AI Visibility", err)
+				case data == nil:
+					skip(section, "No AI Visibility answers have been saved yet.")
+				default:
+					snap.AI = data
+				}
+			})
+		case SectionLocal:
+			wg.Go(func() {
+				var data *LocalVisibility
+				var err error
+				if s.Local != nil {
+					data, err = s.Local(ctx, organizationID, projectID, snap.GeneratedAt)
+				}
+				switch {
+				case err != nil:
+					fail(section, "Local Visibility", err)
+				case data == nil:
+					skip(section, "No Google Maps, profile or reviews checks have been saved yet.")
+				default:
+					snap.Local = data
+				}
+			})
+		case SectionRankings, SectionCompetitors:
+			if wantRankings && section == SectionCompetitors {
+				continue
+			}
 			wg.Go(func() {
 				var data *Rankings
 				var err error
 				if s.Rankings != nil {
 					data, err = s.Rankings.Rankings(ctx, projectID, snap.Project.Domain, snap.Period)
 				}
+				if wantRankings {
+					switch {
+					case err != nil:
+						fail(SectionRankings, "rank tracking", err)
+					case data == nil || data.Total == 0:
+						skip(SectionRankings, "No keyword has a finished rank check yet. Add keywords in Rank Tracking first.")
+					default:
+						snap.Rankings = data
+					}
+				}
+				if !wantCompetitors {
+					return
+				}
 				switch {
 				case err != nil:
-					fail(section, "rank tracking", err)
-				case data == nil || data.Total == 0:
-					skip(section, "No keyword has a finished rank check yet. Add keywords in Rank Tracking first.")
+					fail(SectionCompetitors, "rank tracking", err)
+				case data == nil || !slices.ContainsFunc(data.Rows, func(row RankRow) bool { return len(row.Competitors) > 0 }):
+					skip(SectionCompetitors, "No competitor positions are saved for the tracked keywords yet.")
 				default:
-					snap.Rankings = data
+					snap.Competitors = data
 				}
 			})
 		case SectionAudit:
@@ -239,14 +317,15 @@ func (s *Service) collect(ctx context.Context, organizationID, projectID string,
 func normalize(in Input) (Input, error) {
 	in.Title = strings.TrimSpace(in.Title)
 	in.Note = strings.TrimSpace(in.Note)
+	in.WorkCompleted = strings.TrimSpace(in.WorkCompleted)
 	in.NextSteps = strings.TrimSpace(in.NextSteps)
 	switch {
 	case in.Title == "":
 		return in, invalid("Add a report title.")
 	case utf8.RuneCountInString(in.Title) > maxTitleChars:
 		return in, invalid(fmt.Sprintf("Keep the title to %d characters or fewer.", maxTitleChars))
-	case utf8.RuneCountInString(in.Note) > maxNoteChars || utf8.RuneCountInString(in.NextSteps) > maxNoteChars:
-		return in, invalid(fmt.Sprintf("Keep the message and next steps to %d characters each.", maxNoteChars))
+	case utf8.RuneCountInString(in.Note) > maxNoteChars || utf8.RuneCountInString(in.NextSteps) > maxNoteChars || utf8.RuneCountInString(in.WorkCompleted) > maxNoteChars:
+		return in, invalid(fmt.Sprintf("Keep the message, work completed and next steps to %d characters each.", maxNoteChars))
 	case !slices.Contains(PeriodDays, in.PeriodDays):
 		return in, invalid("Choose a 7, 28 or 90 day period.")
 	case len(in.Sections) == 0:
@@ -283,6 +362,8 @@ func includedSections(s Snapshot) []Section {
 	present := map[Section]bool{
 		SectionSearch: s.Search != nil, SectionTraffic: s.Traffic != nil, SectionRankings: s.Rankings != nil,
 		SectionAudit: s.Audit != nil, SectionBacklinks: s.Backlinks != nil,
+		SectionAnalytics: s.Analytics != nil, SectionCompetitors: s.Competitors != nil,
+		SectionAI: s.AI != nil, SectionLocal: s.Local != nil,
 	}
 	out := []Section{}
 	for _, section := range AllSections {
