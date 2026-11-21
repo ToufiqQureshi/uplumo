@@ -8,6 +8,7 @@ import {
   InputGroupTextarea,
 } from "@/client/components/ui/input-group";
 import { CreditCostHint } from "@/client/features/billing/credits/CreditCostHint";
+import { captureClientEvent } from "@/client/lib/posthog";
 
 export function ChatComposer({
   busy,
@@ -27,6 +28,7 @@ export function ChatComposer({
     const text = value.trim();
     if (!text || busy) return;
     onSend(text);
+    captureClientEvent("sam_message_sent", { character_count: text.length });
     clearAnalystDraft(projectId);
     setValue("");
   }

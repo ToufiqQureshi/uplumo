@@ -5,6 +5,9 @@ import tsConfigPaths from "vite-tsconfig-paths";
 import viteReact from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
+const definePostHogEnv = (value: string | undefined) =>
+  value === undefined ? "undefined" : JSON.stringify(value);
+
 export default defineConfig(({ mode }) => {
   // Vitest sets mode to "test": only the tsconfig path alias is needed.
   if (mode === "test") {
@@ -22,6 +25,9 @@ export default defineConfig(({ mode }) => {
   // One .env at the repo root feeds both the Go server and Vite.
   const envDir = "..";
   const env = loadEnv(mode, envDir, "");
+  // Browser analytics is configured in the frontend directory so its public
+  // values can be managed independently of the server's shared environment.
+  const posthogEnv = loadEnv(mode, ".", "POSTHOG_");
   const port = process.env.PORT
     ? Number(process.env.PORT)
     : env.PORT
@@ -55,6 +61,14 @@ export default defineConfig(({ mode }) => {
       "POSTHOG_HOST",
       "TURNSTILE_SITE_KEY",
     ],
+    define: {
+      "import.meta.env.POSTHOG_PUBLIC_KEY": definePostHogEnv(
+        posthogEnv.POSTHOG_PUBLIC_KEY ?? env.POSTHOG_PUBLIC_KEY,
+      ),
+      "import.meta.env.POSTHOG_HOST": definePostHogEnv(
+        posthogEnv.POSTHOG_HOST ?? env.POSTHOG_HOST,
+      ),
+    },
     server: { port, proxy: proxied },
     preview: { port, proxy: proxied },
     build: {

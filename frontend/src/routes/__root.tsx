@@ -9,7 +9,9 @@ import { captureGoogleLinkError } from "@/client/features/integrations/googleLin
 import { ExportToSheetsModal } from "@/client/components/table/ExportToSheetsModal";
 import {
   identifyAnalyticsUser,
+  logAnalyticsLifecycle,
   resetAnalyticsUser,
+  setAnalyticsOrganization,
   startAnalyticsCapture,
   stopAnalyticsCapture,
 } from "@/client/lib/posthog";
@@ -34,6 +36,8 @@ export const Route = createRootRoute({
 function PostHogBootstrap() {
   const { data: session, isPending: isSessionPending } = useSession();
   const userId = session?.user?.id ?? null;
+  const email = session?.user?.email ?? null;
+  const name = session?.user?.name ?? null;
   const optedOut = session?.user?.analyticsOptedOut === true;
   const organizationId = getActiveOrganizationId(session);
   const previousUserIdRef = React.useRef<string | null>(null);
@@ -44,8 +48,24 @@ function PostHogBootstrap() {
     }
 
     if (userId && !optedOut) {
+      const isNewAnalyticsIdentity = previousUserIdRef.current !== userId;
+      if (previousUserIdRef.current && isNewAnalyticsIdentity) {
+        resetAnalyticsUser();
+      }
       startAnalyticsCapture();
-      identifyAnalyticsUser({ userId, organizationId });
+      if (isNewAnalyticsIdentity) {
+        identifyAnalyticsUser({ userId, email, name, organizationId });
+        logAnalyticsLifecycle("analytics session identified", {
+          event: "analytics_session_identified",
+          organization_context: Boolean(organizationId),
+        });
+      } else {
+        setAnalyticsOrganization(organizationId);
+        logAnalyticsLifecycle("analytics organization context refreshed", {
+          event: "analytics_organization_context_refreshed",
+          organization_context: Boolean(organizationId),
+        });
+      }
       previousUserIdRef.current = userId;
     } else if (userId && optedOut) {
       stopAnalyticsCapture();
@@ -53,7 +73,7 @@ function PostHogBootstrap() {
       previousUserIdRef.current = null;
       resetAnalyticsUser();
     }
-  }, [isSessionPending, optedOut, organizationId, userId]);
+  }, [email, isSessionPending, name, optedOut, organizationId, userId]);
 
   return null;
 }

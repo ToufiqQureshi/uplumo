@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { ErrorState } from "@/client/components/ErrorState";
 import { Button } from "@/client/components/ui/button";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { captureClientEvent } from "@/client/lib/posthog";
 import {
   publishDraft,
   siteConnectionQueryOptions,
@@ -96,6 +97,10 @@ function PublishActions({
     meta: { errorToast: false },
     onSuccess: (next) => {
       queryClient.setQueryData(publicationOptions.queryKey, next);
+      captureClientEvent("content_site_publication_completed", {
+        publication_status: next.status,
+        indexnow_submitted: next.indexNow?.status === "submitted",
+      });
       toast.success(
         next.status === "publish"
           ? `Live on ${siteName}.`

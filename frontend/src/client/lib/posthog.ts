@@ -73,7 +73,21 @@ function getBrowserPostHogClient(): Promise<BrowserPostHogClient | null> {
       const apiKey = import.meta.env.POSTHOG_PUBLIC_KEY?.trim();
       const host = import.meta.env.POSTHOG_HOST?.trim();
 
-      if (!apiKey || !host) {
+      if (!apiKey) {
+        if (import.meta.env.DEV) {
+          throw new Error(
+            "POSTHOG_PUBLIC_KEY variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once POSTHOG_PUBLIC_KEY is configured",
+          );
+        }
+        return null;
+      }
+
+      if (!host) {
+        if (import.meta.env.DEV) {
+          throw new Error(
+            "POSTHOG_HOST variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once POSTHOG_HOST is configured",
+          );
+        }
         return null;
       }
 
@@ -92,6 +106,10 @@ function getBrowserPostHogClient(): Promise<BrowserPostHogClient | null> {
             return event;
           },
           capture_pageview: "history_change",
+          logs: {
+            serviceName: "uplumo-web",
+            environment: import.meta.env.MODE,
+          },
           mask_personal_data_properties: true,
           custom_personal_data_properties: [
             ...POSTHOG_PERSONAL_DATA_QUERY_PARAMETERS,
@@ -161,16 +179,36 @@ export function captureClientEvent(
   withPostHogClient((client) => client.capture(event, properties));
 }
 
+export function logAnalyticsLifecycle(
+  message: string,
+  attributes: Record<string, boolean | number | string>,
+) {
+  if (!analyticsCaptureEnabled) return;
+  withPostHogClient((client) => client.logger.info(message, attributes));
+}
+
 export function identifyAnalyticsUser(args: {
   userId: string;
+  email?: string | null;
+  name?: string | null;
   organizationId: string | null;
 }) {
   if (!analyticsCaptureEnabled) return;
   withPostHogClient((client) => {
-    client.identify(args.userId);
+    const personProperties: Record<string, string> = {};
+    if (args.email) personProperties.email = args.email;
+    if (args.name) personProperties.name = args.name;
+    client.identify(args.userId, personProperties);
     if (args.organizationId) {
       client.group("organization", args.organizationId);
     }
+  });
+}
+
+export function setAnalyticsOrganization(organizationId: string | null) {
+  if (!analyticsCaptureEnabled || !organizationId) return;
+  withPostHogClient((client) => {
+    client.group("organization", organizationId);
   });
 }
 

@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/client/components/ui/button";
 import { Input } from "@/client/components/ui/input";
 import { Textarea } from "@/client/components/ui/textarea";
+import { captureClientEvent } from "@/client/lib/posthog";
 import {
   LOCATION_OPTIONS,
   SERP_LANGUAGE_OPTIONS,
@@ -33,6 +34,22 @@ type TrackingFormProps = {
   /** How many questions the server lets one project track. */
   maxPrompts: number;
 };
+
+function captureTrackingScheduleSaved(config: TrackingConfig) {
+  captureClientEvent("ai_visibility_tracking_schedule_saved", {
+    automatic_checks_enabled: config.enabled,
+    interval: config.interval,
+    prompt_count: config.prompts.length,
+    engine_count: config.engines.length,
+  });
+}
+
+function captureTrackingCheckStarted(config: TrackingConfig) {
+  captureClientEvent("ai_visibility_tracking_check_started", {
+    prompt_count: config.prompts.length,
+    engine_count: config.engines.length,
+  });
+}
 
 export function TrackingForm({
   projectId,
@@ -75,13 +92,21 @@ export function TrackingForm({
         ...config,
         maxCreditsPerRun: review?.estimate.credits ?? 0,
       }),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: trackingKey(projectId) }),
+    onSuccess: () => {
+      captureTrackingScheduleSaved(config);
+      return queryClient.invalidateQueries({
+        queryKey: trackingKey(projectId),
+      });
+    },
   });
   const run = useMutation({
     mutationFn: () => trackingApi.run(projectId, approvedCredits),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: trackingKey(projectId) }),
+    onSuccess: () => {
+      captureTrackingCheckStarted(config);
+      return queryClient.invalidateQueries({
+        queryKey: trackingKey(projectId),
+      });
+    },
   });
   const reviewed = review?.key === key;
   const unchanged =
