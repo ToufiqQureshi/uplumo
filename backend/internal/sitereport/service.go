@@ -139,12 +139,16 @@ func (s *Service) Preview(ctx context.Context, organizationID, projectID string,
 }
 
 func (s *Service) prepare(ctx context.Context, organizationID, projectID string, in Input) (Preview, Snapshot, error) {
+	now := s.now()
+	period, err := resolvePeriod(in, now)
+	if err != nil {
+		return Preview{}, Snapshot{}, err
+	}
 	project, err := s.Store.Project(ctx, organizationID, projectID)
 	if err != nil {
 		return Preview{}, Snapshot{}, err
 	}
-	now := s.now()
-	snap := Snapshot{Project: project, Period: periodFor(now, in.PeriodDays), GeneratedAt: now.UTC(), Note: in.Note,
+	snap := Snapshot{Project: project, Period: period, GeneratedAt: now.UTC(), Note: in.Note,
 		WorkCompleted: in.WorkCompleted, NextSteps: in.NextSteps, Accent: s.accent(ctx, organizationID)}
 	skipped := s.collect(ctx, organizationID, projectID, in.Sections, &snap)
 	if len(includedSections(snap)) == 0 {
@@ -188,6 +192,8 @@ func (s *Service) collect(ctx context.Context, organizationID, projectID string,
 				}
 				data, err := s.Search.Search(ctx, organizationID, projectID, snap.Period)
 				switch {
+				case errors.Is(err, errSearchRangeUnavailable):
+					skip(section, "Search Console does not cover the full selected period.")
 				case err != nil:
 					fail(section, "Google Search Console", err)
 				case data.Current.Impressions == 0 && data.Previous.Impressions == 0:
@@ -346,8 +352,8 @@ func normalize(in Input) (Input, error) {
 		return in, invalid(fmt.Sprintf("Keep the title to %d characters or fewer.", maxTitleChars))
 	case utf8.RuneCountInString(in.Note) > maxNoteChars || utf8.RuneCountInString(in.NextSteps) > maxNoteChars || utf8.RuneCountInString(in.WorkCompleted) > maxNoteChars:
 		return in, invalid(fmt.Sprintf("Keep the message, work completed and next steps to %d characters each.", maxNoteChars))
-	case !slices.Contains(PeriodDays, in.PeriodDays):
-		return in, invalid("Choose a 7, 28 or 90 day period.")
+	case in.StartDate == "" && in.EndDate == "" && !slices.Contains(PeriodDays, in.PeriodDays):
+		return in, invalid("Choose a preset or enter a custom date range.")
 	case len(in.Sections) == 0:
 		return in, invalid("Choose at least one section.")
 	}
@@ -373,9 +379,36 @@ func normalize(in Input) (Input, error) {
 func periodFor(now time.Time, days int) Period {
 	today := time.Date(now.UTC().Year(), now.UTC().Month(), now.UTC().Day(), 0, 0, 0, 0, time.UTC)
 	end := today.AddDate(0, 0, -gscDelayDays)
-	start := end.AddDate(0, 0, -(days - 1))
+	return makePeriod(end.AddDate(0, 0, -(days-1)), end, false)
+}
+
+func resolvePeriod(in Input, now time.Time) (Period, error) {
+	if in.StartDate == "" && in.EndDate == "" {
+		return periodFor(now, in.PeriodDays), nil
+	}
+	if in.PeriodDays != 0 {
+		return Period{}, invalid("Choose either a preset or a custom date range.")
+	}
+	start, startErr := time.Parse(day, in.StartDate)
+	end, endErr := time.Parse(day, in.EndDate)
+	if startErr != nil || endErr != nil || start.Format(day) != in.StartDate || end.Format(day) != in.EndDate || start.After(end) {
+		return Period{}, invalid("Enter valid From and To dates in order.")
+	}
+	maxDays := PeriodDays[len(PeriodDays)-1]
+	if start.AddDate(0, 0, maxDays-1).Before(end) {
+		return Period{}, invalid(fmt.Sprintf("Choose a date range of up to %d days.", maxDays))
+	}
+	latest := periodFor(now, 1).End
+	if end.After(latest) {
+		return Period{}, invalid("Choose a To date on or before " + latest.Format("2 Jan 2006") + ", when the search data is available.")
+	}
+	return makePeriod(start, end, true), nil
+}
+
+func makePeriod(start, end time.Time, custom bool) Period {
+	days := int(end.Sub(start)/(24*time.Hour)) + 1
 	prevEnd := start.AddDate(0, 0, -1)
-	return Period{Days: days, Start: start, End: end, PrevStart: prevEnd.AddDate(0, 0, -(days - 1)), PrevEnd: prevEnd}
+	return Period{Days: days, Custom: custom, Start: start, End: end, PrevStart: prevEnd.AddDate(0, 0, -(days - 1)), PrevEnd: prevEnd}
 }
 
 func includedSections(s Snapshot) []Section {

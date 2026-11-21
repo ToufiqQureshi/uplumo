@@ -1,3 +1,8 @@
+## 21 Nov 2026 — Exact client report dates
+
+- Owner needs custom From and To dates for client reports, such as the 1st through the 30th. The older screenshot showed the five-section builder, while the live preview on the refreshed tab used the current builder.
+- Added exact dates and a Last month shortcut, while keeping the latest Search Console date visible and avoiding silently shortened ranges.
+
 ## 21 Nov 2026 — Client report evidence
 
 - Owner approved one PR for reports founders and clients can use, with dashboard evidence and no credit or billing copy.

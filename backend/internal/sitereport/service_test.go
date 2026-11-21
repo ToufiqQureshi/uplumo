@@ -108,6 +108,30 @@ func TestRenderOmitsSectionsWithoutData(t *testing.T) {
 	}
 }
 
+func TestCustomPeriodUsesInclusiveCalendarDates(t *testing.T) {
+	input := Input{StartDate: "2026-10-01", EndDate: "2026-10-30"}
+	period, err := resolvePeriod(input, fixedNow)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !period.Custom || period.Days != 30 || period.Start.Format(day) != input.StartDate || period.End.Format(day) != input.EndDate ||
+		period.PrevStart.Format(day) != "2026-09-01" || period.PrevEnd.Format(day) != "2026-09-30" {
+		t.Fatalf("unexpected period: %+v", period)
+	}
+	for _, invalidInput := range []Input{
+		{StartDate: input.StartDate},
+		{StartDate: "2026-02-30", EndDate: input.EndDate},
+		{StartDate: input.EndDate, EndDate: input.StartDate},
+		{StartDate: input.StartDate, EndDate: "2026-11-05"},
+		{StartDate: "2026-01-01", EndDate: input.EndDate},
+		{StartDate: input.StartDate, EndDate: input.EndDate, PeriodDays: 28},
+	} {
+		if _, err := resolvePeriod(invalidInput, fixedNow); err == nil {
+			t.Errorf("accepted invalid period: %+v", invalidInput)
+		}
+	}
+}
+
 func TestPeriodEndsOnSearchConsoleFinalDay(t *testing.T) {
 	tests := []struct {
 		days                           int
@@ -395,10 +419,10 @@ func TestHandler(t *testing.T) {
 	}
 	preview := httptest.NewRecorder()
 	mux.ServeHTTP(preview, httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/projects/p1/reports/preview", strings.NewReader(
-		`{"title":"Draft","periodDays":7,"sections":["search"],"share":true}`,
+		`{"title":"Draft","startDate":"2026-10-01","endDate":"2026-10-30","sections":["search"],"share":true}`,
 	)))
 	if preview.Code != 200 || preview.Header().Get("Cache-Control") != "no-store" ||
-		!strings.Contains(preview.Body.String(), "Executive summary") || len(saver.saved) != 1 || len(saver.shared) != 0 {
+		!strings.Contains(preview.Body.String(), "1 Oct 2026 – 30 Oct 2026") || len(saver.saved) != 1 || len(saver.shared) != 0 {
 		t.Fatalf("private preview status=%d saves=%d shares=%d", preview.Code, len(saver.saved), len(saver.shared))
 	}
 	saver.saveErr = &reports.Error{Code: "VALIDATION_ERROR", Message: "A report with this title already exists in the project."}

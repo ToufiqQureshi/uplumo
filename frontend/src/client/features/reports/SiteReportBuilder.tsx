@@ -21,33 +21,16 @@ import {
   SITE_REPORT_SECTIONS,
   type SiteReportSection,
 } from "@/client/features/reports/reportApi";
+import {
+  SiteReportPeriod,
+  reportPeriodError,
+  reportPeriodLabel,
+  type ReportPeriod,
+} from "@/client/features/reports/SiteReportPeriod";
 import { SiteReportPreviewDialog } from "@/client/features/reports/SiteReportPreviewDialog";
 import { reportsQueryKey } from "@/client/features/reports/shared";
 import { SITE_REPORT_SECTION_DETAILS } from "@/client/features/reports/siteReportSections";
 import { sharePath } from "@/shared/report-share";
-
-const PERIODS = [7, 28, 90] as const;
-type PeriodDays = (typeof PERIODS)[number];
-
-function formatDay(date: Date, withYear: boolean) {
-  return date.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    ...(withYear ? { year: "numeric" } : {}),
-    timeZone: "UTC",
-  });
-}
-
-// Mirrors the server: the window ends on Search Console's last final day,
-// three days before today (UTC).
-export function reportPeriod(days: PeriodDays, now = new Date()) {
-  const end = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 3),
-  );
-  const start = new Date(end);
-  start.setUTCDate(end.getUTCDate() - (days - 1));
-  return `${formatDay(start, start.getUTCFullYear() !== end.getUTCFullYear())} – ${formatDay(end, true)}`;
-}
 
 export function SiteReportBuilder({
   projectId,
@@ -58,9 +41,9 @@ export function SiteReportBuilder({
 }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [periodDays, setPeriodDays] = useState<PeriodDays>(28);
-  const [title, setTitle] = useState(() => `SEO report · ${reportPeriod(28)}`);
-  const [titleEdited, setTitleEdited] = useState(false);
+  const [period, setPeriod] = useState<ReportPeriod>({ key: 28 });
+  const [customTitle, setCustomTitle] = useState<string>();
+  const title = customTitle ?? `SEO report ? ${reportPeriodLabel(period)}`;
   const [sections, setSections] = useState<SiteReportSection[]>([
     ...SITE_REPORT_SECTIONS,
   ]);
@@ -77,7 +60,9 @@ export function SiteReportBuilder({
         data: {
           projectId,
           title: title.trim(),
-          periodDays,
+          ...("startDate" in period
+            ? { startDate: period.startDate, endDate: period.endDate }
+            : { periodDays: period.key }),
           sections,
           note,
           workCompleted,
@@ -85,11 +70,6 @@ export function SiteReportBuilder({
         },
       }),
   });
-
-  const choosePeriod = (days: PeriodDays) => {
-    setPeriodDays(days);
-    if (!titleEdited) setTitle(`SEO report · ${reportPeriod(days)}`);
-  };
 
   const toggle = (section: SiteReportSection) =>
     setSections((current) =>
@@ -105,6 +85,8 @@ export function SiteReportBuilder({
     if (!title.trim()) return setFormError("Add a report title.");
     if (sections.length === 0)
       return setFormError("Choose at least one section.");
+    const dateError = reportPeriodError(period);
+    if (dateError) return setFormError(dateError);
     setFormError(null);
     mutation.mutate();
   };
@@ -178,36 +160,13 @@ export function SiteReportBuilder({
           >
             <legend className="sr-only">Report settings</legend>
 
-            <div className="space-y-2">
-              <p className="text-sm font-medium" id="period-label">
-                Period
-              </p>
-              <div
-                role="group"
-                aria-labelledby="period-label"
-                className="inline-flex rounded-lg border border-border bg-muted/40 p-1"
-              >
-                {PERIODS.map((days) => (
-                  <button
-                    key={days}
-                    type="button"
-                    aria-pressed={periodDays === days}
-                    onClick={() => choosePeriod(days)}
-                    className={cn(
-                      "rounded-md px-3.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground",
-                      periodDays === days &&
-                        "bg-background text-foreground shadow-sm",
-                    )}
-                  >
-                    {days === 90 ? "3 months" : `${days} days`}
-                  </button>
-                ))}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {reportPeriod(periodDays)}, compared with the {periodDays} days
-                before.
-              </p>
-            </div>
+            <SiteReportPeriod
+              period={period}
+              onChange={(value) => {
+                setPeriod(value);
+                setFormError(null);
+              }}
+            />
 
             <div className="space-y-2">
               <p className="text-sm font-medium" id="sections-label">
@@ -287,10 +246,7 @@ export function SiteReportBuilder({
                 id="site-report-title"
                 value={title}
                 maxLength={120}
-                onChange={(event) => {
-                  setTitle(event.target.value);
-                  setTitleEdited(true);
-                }}
+                onChange={(event) => setCustomTitle(event.target.value)}
                 required
               />
             </div>

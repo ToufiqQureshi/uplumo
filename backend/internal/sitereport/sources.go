@@ -16,6 +16,8 @@ import (
 
 const day = "2006-01-02"
 
+var errSearchRangeUnavailable = errors.New("Search Console cannot cover the full report period")
+
 // GSC reads Search Console through the project's own connection. Google does
 // not bill these reads, and one report makes at most 10 of them.
 type GSC struct{ Service *gsc.Service }
@@ -33,7 +35,8 @@ func (g GSC) Search(ctx context.Context, organizationID, projectID string, p Per
 	var perf struct {
 		Connected bool `json:"connected"`
 		Range     struct {
-			ComparisonAvailable bool `json:"comparisonAvailable"`
+			ComparisonAvailable bool   `json:"comparisonAvailable"`
+			StartDate           string `json:"startDate"`
 		} `json:"range"`
 		Totals           Totals            `json:"totals"`
 		PrevTotals       Totals            `json:"prevTotals"`
@@ -48,6 +51,9 @@ func (g GSC) Search(ctx context.Context, organizationID, projectID string, p Per
 	}
 	if !perf.Connected {
 		return nil, ErrNotConnected
+	}
+	if perf.Range.StartDate != start {
+		return nil, errSearchRangeUnavailable
 	}
 	_, pages, err := g.Service.GetPageRows(ctx, organizationID, projectID, start, end)
 	if err != nil {

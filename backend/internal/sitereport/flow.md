@@ -3,7 +3,8 @@
 ```
 Reports page -> "Create client report" dialog
   -> POST /api/v1/projects/{projectId}/reports/preview
-     {title, periodDays: 7|28|90, sections[], note, workCompleted, nextSteps}
+     {title, sections[], note, workCompleted, nextSteps}
+     plus either periodDays: 7|28|90 or inclusive startDate and endDate
   -> sitereport.Service.Preview
        Store.Project                     (Postgres, scoped to the org)
        in parallel, only the chosen sections:

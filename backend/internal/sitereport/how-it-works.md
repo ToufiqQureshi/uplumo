@@ -1,8 +1,9 @@
 # How it works
 
 1. Open **Reports** and click **Create client report**.
-2. Pick the period (7 days, 28 days or 3 months). The window ends three days
-   before today, to use final Google Search Console data. Search and Analytics
+2. Pick a rolling period, Last month, or exact From and To dates up to 90 days.
+   The latest date is three days before today, to allow for the Search Console
+   data delay. Search and Analytics
    comparisons use the previous window of the same length. Saved checks show
    the dates they were collected.
 3. Pick the sections. All are on by default.
