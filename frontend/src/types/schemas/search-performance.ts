@@ -108,7 +108,6 @@ export const SEARCH_PERFORMANCE_TABS = [
   "countries",
   "devices",
 ] as const;
-export type SearchPerformanceTab = (typeof SEARCH_PERFORMANCE_TABS)[number];
 
 const textMatchParam = z.enum(TEXT_MATCH_OPERATORS).optional().catch(undefined);
 

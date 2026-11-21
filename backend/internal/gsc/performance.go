@@ -607,7 +607,7 @@ func (s *Service) now() time.Time {
 	return time.Now().UTC()
 }
 func withoutCountry(input PerformanceInput) PerformanceInput { input.Country = ""; return input }
-func withoutDevice(input PerformanceInput) PerformanceInput { input.Device = ""; return input }
+func withoutDevice(input PerformanceInput) PerformanceInput  { input.Device = ""; return input }
 func previousPeriod(startDate, endDate string) (dateWindow, error) {
 	start, ok1 := parseDate(startDate)
 	end, ok2 := parseDate(endDate)

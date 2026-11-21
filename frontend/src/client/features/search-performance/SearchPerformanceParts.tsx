@@ -1,32 +1,14 @@
-import { useMemo, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Copy, Loader2, Save } from "lucide-react";
-import { toast } from "sonner";
-import {
-  DataTable,
-  useDataTable,
-  useSelectionAnchor,
-} from "@/client/components/table/DataTable";
-import {
-  TableBulkActionBar,
-  TableBulkActionButton,
-} from "@/client/components/table/TableBulkActionBar";
-import { TablePagination } from "@/client/components/table/TablePagination";
+import { useMemo } from "react";
+import { DataTable, useDataTable } from "@/client/components/table/DataTable";
 import { Button } from "@/client/components/ui/button";
 import {
   buildDimensionColumns,
-  buildStrikingColumns,
   type Report,
   type SearchPerformanceTableRow,
 } from "@/client/features/search-performance/SearchPerformanceColumns";
-import { normalizeExportValue, type CsvValue } from "@/client/lib/csv";
+import type { CsvValue } from "@/client/lib/csv";
 import { exportRows } from "@/client/lib/exportRows";
-import { captureClientEvent } from "@/client/lib/posthog";
-import {
-  SEARCH_PERFORMANCE_PAGE_SIZES,
-  type SearchPerformanceTableDimension,
-} from "@/types/schemas/search-performance";
-import { saveKeywords } from "@/client/features/keywords/keywordsApi";
+import type { SearchPerformanceTableDimension } from "@/types/schemas/search-performance";
 
 export type ExportTarget = "csv" | "sheets";
 

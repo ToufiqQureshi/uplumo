@@ -5,7 +5,7 @@ import {
   type SearchPerformanceDevice,
   type SearchPerformanceSearch,
   type GscSearchType,
-  SEARCH_PERFORMANCE_RANGES,
+  type SEARCH_PERFORMANCE_RANGES,
 } from "@/types/schemas/search-performance";
 import {
   Select,
@@ -68,113 +68,61 @@ export function subtractUTCMonths(value: Date, months: number): Date {
   );
 }
 
-/** Get the start of the calendar month for a given date (UTC). */
-function startOfMonth(value: Date): Date {
-  return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), 1));
-}
-
-/** Get the end of the calendar month for a given date (UTC). */
-function endOfMonth(value: Date): Date {
-  return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth() + 1, 0));
-}
-
-/** Preset range definitions for quick selection. */
-type PresetRange = {
-  value: string;
+/** Rolling ranges Search Console resolves itself (`range` in the URL). */
+const ROLLING_PRESETS = [
+  { value: "last_7_days", label: "Last 7 days" },
+  { value: "last_28_days", label: "Last 28 days" },
+  { value: "last_3_months", label: "Last 3 months" },
+  { value: "last_6_months", label: "Last 6 months" },
+  { value: "last_12_months", label: "Last 12 months" },
+  { value: "last_16_months", label: "Last 16 months" },
+] as const satisfies readonly {
+  value: (typeof SEARCH_PERFORMANCE_RANGES)[number];
   label: string;
-  compute: (today: Date) => { startDate: string; endDate: string };
-};
+}[];
 
-const PRESET_RANGES: PresetRange[] = [
-  {
-    value: "last_7_days",
-    label: "Last 7 days",
-    compute: (today: Date) => {
-      const start = new Date(today);
-      start.setUTCDate(start.getUTCDate() - 7);
-      return {
-        startDate: formatDate(start),
-        endDate: formatDate(today),
-      };
-    },
-  },
-  {
-    value: "last_28_days",
-    label: "Last 28 days",
-    compute: (today: Date) => {
-      const start = new Date(today);
-      start.setUTCDate(start.getUTCDate() - 28);
-      return {
-        startDate: formatDate(start),
-        endDate: formatDate(today),
-      };
-    },
-  },
-  {
-    value: "last_3_months",
-    label: "Last 3 months",
-    compute: (today: Date) => {
-      const start = subtractUTCMonths(today, 3);
-      return {
-        startDate: formatDate(start),
-        endDate: formatDate(today),
-      };
-    },
-  },
-  {
-    value: "this_month",
-    label: "This month",
-    compute: (today: Date) => {
-      const start = startOfMonth(today);
-      return {
-        startDate: formatDate(start),
-        endDate: formatDate(today),
-      };
-    },
-  },
-  {
-    value: "last_month",
-    label: "Last month",
-    compute: (today: Date) => {
-      const prevMonth = subtractUTCMonths(today, 1);
-      const start = startOfMonth(prevMonth);
-      const end = endOfMonth(prevMonth);
-      return {
-        startDate: formatDate(start),
-        endDate: formatDate(end),
-      };
-    },
-  },
-  {
-    value: "last_12_months",
-    label: "Last 12 months",
-    compute: (today: Date) => {
-      const start = subtractUTCMonths(today, 12);
-      return {
-        startDate: formatDate(start),
-        endDate: formatDate(today),
-      };
-    },
-  },
-  {
-    value: "last_16_months",
-    label: "Last 16 months",
-    compute: (today: Date) => {
-      const start = subtractUTCMonths(today, 16);
-      return {
-        startDate: formatDate(start),
-        endDate: formatDate(today),
-      };
-    },
-  },
-];
+const MONTH_PRESETS = [
+  { value: "this_month", label: "This month" },
+  { value: "last_month", label: "Last month" },
+] as const;
+type MonthPreset = (typeof MONTH_PRESETS)[number]["value"];
 
-/** Determine which preset is currently selected, if any. */
-function getCurrentPreset(search: SearchPerformanceSearch): string {
-  if (search.startDate || search.endDate) {
-    return "custom";
+/** Calendar-month dates for a month preset, by the viewer's `today` (UTC).
+ *  `latest` is the newest day Search Console has data for (it lags a few
+ *  days), so a range never ends after it. Null when the month has no data
+ *  day yet, such as "This month" on the 1st to 3rd. */
+export function monthPresetDates(
+  preset: MonthPreset,
+  today: Date,
+  latest: Date,
+): { startDate: string; endDate: string } | null {
+  const offset = preset === "this_month" ? 0 : 1;
+  const year = today.getUTCFullYear();
+  const month = today.getUTCMonth() - offset;
+  const start = new Date(Date.UTC(year, month, 1));
+  const monthEnd = new Date(Date.UTC(year, month + 1, 0));
+  const end = monthEnd < latest ? monthEnd : latest;
+  if (end < start) return null;
+  return { startDate: formatDate(start), endDate: formatDate(end) };
+}
+
+function currentPreset(
+  search: SearchPerformanceSearch,
+  today: Date,
+  latest: Date,
+): string {
+  if (!search.startDate || !search.endDate) {
+    return search.range ?? "last_28_days";
   }
-  return search.range ?? "last_28_days";
+  const month = MONTH_PRESETS.find(({ value }) => {
+    const dates = monthPresetDates(value, today, latest);
+    return (
+      dates !== null &&
+      dates.startDate === search.startDate &&
+      dates.endDate === search.endDate
+    );
+  });
+  return month?.value ?? "custom";
 }
 
 function SearchPerformanceDateRange({
@@ -210,49 +158,47 @@ function SearchPerformanceDateRange({
     endDate <= maxDate &&
     (startDate !== appliedStart || endDate !== appliedEnd);
 
-  const currentPreset = getCurrentPreset(search);
-  const presetLabel =
-    currentPreset === "custom"
-      ? "Custom"
-      : PRESET_RANGES.find((p) => p.value === currentPreset)?.label || "Custom";
+  const presetItems = [
+    ...ROLLING_PRESETS,
+    ...MONTH_PRESETS.filter(
+      ({ value }) => monthPresetDates(value, today, latest) !== null,
+    ),
+    { value: "custom", label: "Custom" },
+  ];
+  const preset = currentPreset(search, today, latest);
 
-  const handlePresetChange = (preset: string | null) => {
-    if (!preset || preset === "custom") return;
-    onSearchChange({
-      page: undefined,
-      range: preset as (typeof SEARCH_PERFORMANCE_RANGES)[number],
-      startDate: undefined,
-      endDate: undefined,
-    });
+  const choosePreset = (value: string | null) => {
+    const rolling = ROLLING_PRESETS.find((item) => item.value === value);
+    if (rolling) {
+      onSearchChange({
+        page: undefined,
+        range: rolling.value,
+        startDate: undefined,
+        endDate: undefined,
+      });
+      return;
+    }
+    const month = MONTH_PRESETS.find((item) => item.value === value);
+    const dates = month ? monthPresetDates(month.value, today, latest) : null;
+    if (dates) onSearchChange({ page: undefined, range: undefined, ...dates });
   };
 
   return (
     <div className="flex flex-wrap items-end gap-2">
-      <Select
-        items={PRESET_RANGES.concat([
-          {
-            value: "custom",
-            label: "Custom",
-            compute: () => ({ startDate: "", endDate: "" }),
-          },
-        ])}
-        value={currentPreset}
-        onValueChange={handlePresetChange}
-      >
-        <SelectTrigger
-          size="sm"
-          className="w-40"
-          aria-label="Date range preset"
-        >
-          <SelectValue>{presetLabel}</SelectValue>
+      <Select items={presetItems} value={preset} onValueChange={choosePreset}>
+        <SelectTrigger size="sm" className="w-40" aria-label="Date range">
+          <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {PRESET_RANGES.map((preset) => (
-            <SelectItem key={preset.value} value={preset.value}>
-              {preset.label}
+          {presetItems.map((item) => (
+            <SelectItem
+              key={item.value}
+              value={item.value}
+              disabled={item.value === "custom"}
+            >
+              {item.label}
             </SelectItem>
           ))}
-          <SelectItem value="custom">Custom</SelectItem>
         </SelectContent>
       </Select>
 

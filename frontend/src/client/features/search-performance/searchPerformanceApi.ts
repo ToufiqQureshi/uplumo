@@ -35,33 +35,6 @@ const dimensionRowSchema = z
   .object({ key: z.string() })
   .extend(metricsSchema.shape);
 
-const urlInspectionResultSchema = z.object({
-  indexStatusResult: z
-    .object({
-      verdict: z.string().optional(),
-      coverageState: z.string().optional(),
-      robotsTxtState: z.string().optional(),
-      indexingState: z.string().optional(),
-      pageFetchState: z.string().optional(),
-      lastCrawlTime: z.string().optional(),
-      googleCanonical: z.string().optional(),
-      userCanonical: z.string().optional(),
-    })
-    .optional(),
-  inspectionResultLink: z.string().optional(),
-});
-
-const urlInspectionResponseSchema = z.object({
-  siteUrl: z.string(),
-  results: z.array(
-    z.object({
-      url: z.string(),
-      result: urlInspectionResultSchema.nullable().optional(),
-      error: z.string().optional(),
-    }),
-  ),
-});
-
 const reportSchema = z.discriminatedUnion("connected", [
   z.object({ connected: z.literal(false) }),
   z.object({

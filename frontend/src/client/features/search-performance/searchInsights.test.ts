@@ -1,232 +1,189 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { buildSearchInsights } from "./searchInsights";
+import { beforeEach, describe, expect, it } from "vitest";
+import type { Report } from "@/client/features/search-performance/SearchPerformanceColumns";
+import { buildSearchInsights } from "@/client/features/search-performance/searchInsights";
 
-const baseReport = {
-  range: { comparisonAvailable: true },
-  totals: { clicks: 1000 },
-  countries: [],
-  queryGains: [],
-  queryLosses: [],
-  pageChanges: [],
-  strikingDistance: [],
+type Loss = Report["queryLosses"][number];
+
+const metrics = {
+  clicks: 0,
+  prevClicks: 0,
+  impressions: 100,
+  prevImpressions: 100,
+  position: 8,
+  prevPosition: 8,
+  ctr: 0.1,
+  prevCtr: 0.1,
 };
 
+function loss(overrides: Partial<Loss>): Loss {
+  return {
+    ...metrics,
+    query: "blue shoes",
+    reason: "rank_fell",
+    severity: "watch",
+    ...overrides,
+  };
+}
+
+let report: Report;
+
+beforeEach(() => {
+  report = {
+    connected: true,
+    range: {
+      startDate: "2026-10-01",
+      endDate: "2026-10-31",
+      prevStartDate: "2026-08-31",
+      prevEndDate: "2026-09-30",
+      comparisonAvailable: true,
+    },
+    totals: { clicks: 200, impressions: 5000, ctr: 0.04, position: 9 },
+    prevTotals: { clicks: 150, impressions: 4000, ctr: 0.0375, position: 10 },
+    daily: [],
+    strikingDistance: [],
+    countries: [],
+    devices: [],
+    pageChanges: [],
+    queryLosses: [],
+    queryGains: [],
+  };
+});
+
+const noFilter = { countryFiltered: false };
+
 describe("buildSearchInsights", () => {
-  beforeEach(() => {
-    // Reset any state
+  it("says nothing when the report has nothing worth saying", () => {
+    expect(buildSearchInsights(report, noFilter)).toEqual([]);
   });
 
-  it("should return empty array for empty report", () => {
-    const report = {
-      ...baseReport,
-      range: { comparisonAvailable: false },
-      totals: { clicks: 0 },
-    };
-    expect(buildSearchInsights(report)).toEqual([]);
+  it("names the biggest keyword gain with before and after clicks", () => {
+    report.queryGains = [
+      { ...metrics, query: "red boots", prevClicks: 4, clicks: 14 },
+    ];
+    expect(buildSearchInsights(report, noFilter)).toEqual([
+      {
+        text: '"red boots" gained 10 clicks (4 → 14).',
+        open: { tab: "queries", queryText: "red boots", queryMatch: "equals" },
+      },
+    ]);
   });
 
-  it("should return empty array when comparison is not available", () => {
-    const report = {
-      ...baseReport,
-      range: { comparisonAvailable: false },
-      queryGains: [{ query: "test", clicks: 10, prevClicks: 5 }],
-    };
-    expect(buildSearchInsights(report)).toEqual([]);
+  it.each([
+    ["rank_fell", "its Google position dropped from 3.0 to 9.5"],
+    ["fewer_searches", "fewer people searched for it"],
+    ["ctr_fell", "fewer people clicked your result"],
+    ["mixed", "its position and searches both changed"],
+  ] as const)("explains a %s keyword drop in plain words", (reason, why) => {
+    report.queryLosses = [
+      loss({
+        reason,
+        prevClicks: 21,
+        clicks: 20,
+        prevPosition: 3,
+        position: 9.5,
+      }),
+    ];
+    expect(buildSearchInsights(report, noFilter)[0]?.text).toBe(
+      `"blue shoes" lost 1 click (21 → 20): ${why}.`,
+    );
   });
 
-  it("should include biggest keyword gain when comparison available", () => {
-    const report = {
-      ...baseReport,
-      queryGains: [{ query: "test query", clicks: 15, prevClicks: 5 }],
-    };
-    const insights = buildSearchInsights(report);
-    expect(insights[0]?.text).toContain('"test query" gained 10 clicks');
-    expect(insights[0]?.link?.param).toBe("queryText");
+  it("shows the losing page by its path and filters to that exact page", () => {
+    report.pageChanges = [
+      {
+        ...loss({ prevClicks: 30, clicks: 10 }),
+        page: "https://example.test/blog/post?id=2",
+      },
+    ];
+    const [line] = buildSearchInsights(report, noFilter);
+    expect(line?.text).toMatch(/^\/blog\/post\?id=2 lost 20 clicks/);
+    expect(line?.open).toEqual({
+      tab: "pages",
+      pageText: "https://example.test/blog/post?id=2",
+      pageMatch: "equals",
+    });
   });
 
-  it("should include biggest keyword loss with reason", () => {
-    const report = {
-      ...baseReport,
-      queryLosses: [
-        {
-          query: "declining query",
-          clicks: 5,
-          prevClicks: 15,
-          reason: "rank_fell" as const,
-        },
-      ],
-    };
-    const insights = buildSearchInsights(report);
-    expect(insights[0]?.text).toContain('"declining query" lost 10 clicks');
-    expect(insights[0]?.text).toContain("position dropped");
+  it("drops every period comparison when Google has no previous period", () => {
+    report.range.comparisonAvailable = false;
+    report.queryGains = [{ ...metrics, query: "a", prevClicks: 1, clicks: 9 }];
+    report.queryLosses = [loss({ prevClicks: 9, clicks: 1 })];
+    report.pageChanges = [
+      { ...loss({ prevClicks: 9, clicks: 1 }), page: "https://example.test/" },
+    ];
+    expect(buildSearchInsights(report, noFilter)).toEqual([]);
   });
 
-  it("should handle different loss reasons", () => {
-    const reasons: Array<
-      "rank_fell" | "fewer_searches" | "ctr_fell" | "mixed"
-    > = ["rank_fell", "fewer_searches", "ctr_fell", "mixed"];
-    for (const reason of reasons) {
-      const report = {
-        ...baseReport,
-        queryLosses: [
-          {
-            query: "test",
-            clicks: 5,
-            prevClicks: 10,
-            reason,
-          },
-        ],
-      };
-      const insights = buildSearchInsights(report);
-      expect(insights[0]?.text).toContain("lost 5 clicks");
-    }
+  it("gives the top country's share of clicks by its readable name", () => {
+    report.countries = [
+      { key: "ind", clicks: 125, impressions: 1, ctr: 0, position: 1 },
+      { key: "bra", clicks: 75, impressions: 1, ctr: 0, position: 1 },
+    ];
+    expect(buildSearchInsights(report, noFilter)[0]?.text).toBe(
+      "63% of your clicks come from India.",
+    );
   });
 
-  it("should include biggest page drop", () => {
-    const report = {
-      ...baseReport,
-      pageChanges: [
-        {
-          page: "https://example.com/blog/article?utm=test",
-          clicks: 10,
-          prevClicks: 25,
-        },
-      ],
-    };
-    const insights = buildSearchInsights(report);
-    expect(insights[0]?.text).toContain("/blog/article lost 15 clicks");
-    expect(insights[0]?.link?.param).toBe("pageText");
+  it("skips the country share for a single country or a chosen country", () => {
+    report.countries = [
+      { key: "ind", clicks: 200, impressions: 1, ctr: 0, position: 1 },
+    ];
+    expect(buildSearchInsights(report, noFilter)).toEqual([]);
+    report.countries.push({
+      key: "usa",
+      clicks: 5,
+      impressions: 1,
+      ctr: 0,
+      position: 1,
+    });
+    expect(buildSearchInsights(report, { countryFiltered: true })).toEqual([]);
   });
 
-  it("should include top country when >= 2 countries exist", () => {
-    const report = {
-      ...baseReport,
-      totals: { clicks: 100 },
-      countries: [
-        { key: "usa", clicks: 62, impressions: 500, ctr: 0.1, position: 5 },
-        { key: "gbr", clicks: 25, impressions: 200, ctr: 0.1, position: 6 },
-      ],
-    };
-    const insights = buildSearchInsights(report);
-    expect(insights[0]?.text).toContain("62% of your clicks come from");
+  it("keeps unicode keywords intact and stops at four lines", () => {
+    report.queryGains = [
+      { ...metrics, query: "जूते ऑनलाइन 👟", prevClicks: 0, clicks: 3 },
+    ];
+    report.queryLosses = [loss({ prevClicks: 9, clicks: 1 })];
+    report.pageChanges = [
+      { ...loss({ prevClicks: 9, clicks: 1 }), page: "https://example.test/a" },
+    ];
+    report.countries = [
+      { key: "ind", clicks: 150, impressions: 1, ctr: 0, position: 1 },
+      { key: "usa", clicks: 50, impressions: 1, ctr: 0, position: 1 },
+    ];
+    report.strikingDistance = [
+      {
+        query: "x",
+        page: "https://example.test/x",
+        clicks: 0,
+        impressions: 50,
+        position: 7,
+      },
+    ];
+    const lines = buildSearchInsights(report, noFilter);
+    expect(lines).toHaveLength(4);
+    expect(lines[0]?.text).toContain('"जूते ऑनलाइन 👟" gained 3 clicks');
   });
 
-  it("should not include country when only 1 country exists", () => {
-    const report = {
-      ...baseReport,
-      countries: [
-        { key: "usa", clicks: 100, impressions: 500, ctr: 0.1, position: 5 },
-      ],
-    };
-    const insights = buildSearchInsights(report);
-    expect(
-      insights.find((i) => i.text.includes("of your clicks come from")),
-    ).toBeUndefined();
-  });
-
-  it("should include quick wins for striking distance keywords", () => {
-    const report = {
-      ...baseReport,
-      strikingDistance: [
-        {
-          query: "test",
-          page: "https://example.com",
-          clicks: 1,
-          impressions: 10,
-          position: 5,
-        },
-        {
-          query: "test2",
-          page: "https://example.com",
-          clicks: 1,
-          impressions: 10,
-          position: 18,
-        },
-      ],
-    };
-    const insights = buildSearchInsights(report);
-    expect(
-      insights.find((i) =>
-        i.text.includes("2 keywords rank on positions 4–20"),
-      ),
-    ).toBeDefined();
-  });
-
-  it("should handle unicode query text", () => {
-    const report = {
-      ...baseReport,
-      queryGains: [{ query: "مرحبا بالعالم", clicks: 10, prevClicks: 5 }],
-    };
-    const insights = buildSearchInsights(report);
-    expect(insights[0]?.text).toContain("مرحبا بالعالم");
-  });
-
-  it("should return at most 4 insights", () => {
-    const report = {
-      ...baseReport,
-      queryGains: [{ query: "query1", clicks: 10, prevClicks: 5 }],
-      queryLosses: [
-        {
-          query: "query2",
-          clicks: 5,
-          prevClicks: 10,
-          reason: "rank_fell" as const,
-        },
-      ],
-      pageChanges: [
-        { page: "https://example.com/page1", clicks: 10, prevClicks: 20 },
-      ],
-      countries: [
-        { key: "usa", clicks: 50, impressions: 100, ctr: 0.5, position: 5 },
-        { key: "gbr", clicks: 30, impressions: 100, ctr: 0.3, position: 6 },
-      ],
-      strikingDistance: [
-        {
-          query: "test",
-          page: "https://example.com",
-          clicks: 1,
-          impressions: 10,
-          position: 5,
-        },
-      ],
-    };
-    const insights = buildSearchInsights(report);
-    expect(insights.length).toBeLessThanOrEqual(4);
-  });
-
-  it("should handle invalid report data", () => {
-    const insights = buildSearchInsights({ invalid: "data" });
-    expect(insights).toEqual([]);
-  });
-
-  it("should use singular click when delta is 1", () => {
-    const report = {
-      ...baseReport,
-      queryGains: [{ query: "test", clicks: 6, prevClicks: 5 }],
-    };
-    const insights = buildSearchInsights(report);
-    expect(insights[0]?.text).toContain("gained 1 click");
-  });
-
-  it("should use plural clicks when delta > 1", () => {
-    const report = {
-      ...baseReport,
-      queryGains: [{ query: "test", clicks: 7, prevClicks: 5 }],
-    };
-    const insights = buildSearchInsights(report);
-    expect(insights[0]?.text).toContain("gained 2 clicks");
-  });
-
-  it("should round country percentage correctly", () => {
-    const report = {
-      ...baseReport,
-      totals: { clicks: 100 },
-      countries: [
-        { key: "usa", clicks: 33, impressions: 100, ctr: 0.33, position: 5 },
-        { key: "gbr", clicks: 67, impressions: 100, ctr: 0.67, position: 6 },
-      ],
-    };
-    const insights = buildSearchInsights(report);
-    expect(insights[0]?.text).toContain("33% of your clicks");
+  it("counts quick wins on positions 5 to 20", () => {
+    report.strikingDistance = [
+      {
+        query: "x",
+        page: "https://example.test/x",
+        clicks: 0,
+        impressions: 50,
+        position: 7,
+      },
+      {
+        query: "y",
+        page: "https://example.test/y",
+        clicks: 1,
+        impressions: 40,
+        position: 12,
+      },
+    ];
+    expect(buildSearchInsights(report, noFilter)[0]?.text).toBe(
+      "2 searches rank on positions 5–20: small improvements there bring the most new clicks.",
+    );
   });
 });

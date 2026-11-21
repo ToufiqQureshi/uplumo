@@ -8,7 +8,7 @@ import {
 import { SlidersHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { QueryError } from "@/client/components/QueryState";
-import { ExportMenu } from "@/client/components/ExportMenu";
+import { SectionHeader } from "@/client/components/PageHeader";
 import { Badge } from "@/client/components/ui/badge";
 import { Button } from "@/client/components/ui/button";
 import { Spinner } from "@/client/components/ui/spinner";
@@ -19,41 +19,35 @@ import {
   TabsTrigger,
 } from "@/client/components/ui/tabs";
 import { GoogleConnectionCard } from "@/client/features/integrations/GoogleConnectionCard";
-import { SectionHeader } from "@/client/components/PageHeader";
-import { SearchPerformanceSelects } from "@/client/features/search-performance/SearchPerformanceSelects";
+import { SearchBreakdownTable } from "@/client/features/search-performance/SearchBreakdownTable";
 import { SearchPerformanceLoadingState } from "@/client/features/search-performance/SearchPerformanceLoadingState";
 import {
-  tableQueryOptions,
-  type FilterInput,
-} from "@/client/features/search-performance/searchPerformanceQueries";
+  exportDimensionRows,
+  type ExportTarget,
+} from "@/client/features/search-performance/SearchPerformanceParts";
+import { SearchPerformanceSelects } from "@/client/features/search-performance/SearchPerformanceSelects";
 import {
   SearchPerformanceTextFilters,
   type TextFilters,
 } from "@/client/features/search-performance/SearchPerformanceTextFilters";
-import {
-  exportDimensionRows,
-  DimensionTable,
-  type ExportTarget,
-} from "@/client/features/search-performance/SearchPerformanceParts";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { SearchPerformanceTotals } from "@/client/features/search-performance/SearchPerformanceTotals";
+import { SearchPerformanceTrend } from "@/client/features/search-performance/SearchPerformanceTrend";
+import { SearchRowsTable } from "@/client/features/search-performance/SearchRowsTable";
 import {
   exportSearchPerformanceTable,
   getSearchPerformanceReport,
 } from "@/client/features/search-performance/searchPerformanceApi";
+import {
+  tableQueryOptions,
+  type FilterInput,
+} from "@/client/features/search-performance/searchPerformanceQueries";
 import { buildSearchInsights } from "@/client/features/search-performance/searchInsights";
-import { SearchPerformanceTotals } from "@/client/features/search-performance/SearchPerformanceTotals";
-import { SearchPerformanceTrend } from "@/client/features/search-performance/SearchPerformanceTrend";
+import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import {
-  buildDimensionColumns,
-  type Report,
-  formatCount,
-  formatCtr,
-  formatPosition,
-} from "@/client/features/search-performance/SearchPerformanceColumns";
-import {
+  GSC_DEVICES,
   SEARCH_PERFORMANCE_DEFAULT_PAGE_SIZE,
+  SEARCH_PERFORMANCE_TABS,
   type SearchPerformanceSearch,
-  type SearchPerformanceTableDimension,
 } from "@/types/schemas/search-performance";
 
 function activeFilterCount(
@@ -81,188 +75,6 @@ function buildFilterInput(search: SearchPerformanceSearch): FilterInput {
     ...(search.device ? { device: search.device } : {}),
     ...(search.country ? { country: search.country } : {}),
   };
-}
-
-/** Render a table for a dimension (query or page). */
-function DimensionTableWrapper({
-  dimension,
-  report,
-  search,
-  page,
-  pageSize,
-  onPageChange,
-  onPageSizeChange,
-  onSearchChange,
-  tableQuery,
-  isExporting,
-  onExport,
-}: {
-  dimension: SearchPerformanceTableDimension;
-  report: Report;
-  search: SearchPerformanceSearch;
-  page: number;
-  pageSize: number;
-  onPageChange: (page: number) => void;
-  onPageSizeChange: (size: number) => void;
-  onSearchChange: (update: Partial<SearchPerformanceSearch>) => void;
-  tableQuery: ReturnType<typeof useQuery>;
-  isExporting: boolean;
-  onExport: (target: ExportTarget) => void;
-}) {
-  const isPage = dimension === "page";
-  const keyLabel = isPage ? "Page" : "Query";
-
-  if (tableQuery.isPending) {
-    return <SearchPerformanceLoadingState />;
-  }
-  if (tableQuery.isError) {
-    return (
-      <QueryError
-        error={tableQuery.error}
-        fallback="Failed to load table"
-        onRetry={() => void tableQuery.refetch()}
-        isRetrying={tableQuery.isFetching}
-      />
-    );
-  }
-  if (!tableQuery.data?.connected || tableQuery.data.connected === false)
-    return null;
-
-  const data = tableQuery.data as Extract<typeof tableQuery.data, { connected: true }>;
-  const rows = data.rows;
-  const hasNextPage = data.hasNextPage;
-  const totalCount = data.totalCount;
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
-          {totalCount != null
-            ? `${totalCount} total ${isPage ? "pages" : "queries"}`
-            : ""}
-        </div>
-        <ExportMenu
-          actions={["sheets", "csv"]}
-          onExport={onExport}
-          busy={isExporting}
-          disabled={rows.length === 0}
-        />
-      </div>
-      <DimensionTable
-        rows={rows}
-        keyLabel={keyLabel}
-        isFiltered={Boolean(search.queryText || search.pageText)}
-        isPastEnd={!hasNextPage && rows.length > 0}
-        onClearFilters={() =>
-          onSearchChange({
-            page: undefined,
-            queryText: undefined,
-            pageText: undefined,
-          })
-        }
-        onFirstPage={() => onSearchChange({ page: 1 })}
-      />
-      <div className="flex items-center justify-between">
-        <div />
-        {(hasNextPage || page > 1) && (
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={page === 1 || tableQuery.isFetching}
-              onClick={() => onPageChange(page - 1)}
-            >
-              Previous
-            </Button>
-            <span className="text-sm text-muted-foreground">Page {page}</span>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={!hasNextPage || tableQuery.isFetching}
-              onClick={() => onPageChange(page + 1)}
-            >
-              Next
-            </Button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/** Render countries or devices table (non-paginated, from report data). */
-function StaticDimensionTable({
-  dimension,
-  rows,
-  search,
-  onSearchChange,
-}: {
-  dimension: "country" | "device";
-  rows: Array<{
-    key: string;
-    clicks: number;
-    impressions: number;
-    ctr: number;
-    position: number;
-  }>;
-  search: SearchPerformanceSearch;
-  onSearchChange: (update: Partial<SearchPerformanceSearch>) => void;
-}) {
-  const columns = useMemo(
-    () => buildDimensionColumns(dimension === "country" ? "Country" : "Device"),
-    [dimension],
-  );
-
-  return (
-    <div className="rounded-lg border border-border overflow-hidden">
-      <table className="w-full">
-        <thead>
-          <tr className="border-b bg-muted/50">
-            {columns.map((col) => (
-              <th
-                key={col.id}
-                className={`px-4 py-3 text-sm font-medium text-left ${col.meta?.headerClassName || ""}`}
-              >
-                {typeof col.header === "string"
-                  ? col.header
-                  : typeof col.header === "function"
-                    ? col.header({ column: col, header: col } as any)
-                    : null}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr
-              key={row.key}
-              className="border-b hover:bg-muted/50 cursor-pointer transition-colors"
-              onClick={() => {
-                onSearchChange({
-                  page: undefined,
-                  [dimension]: row.key.toUpperCase(),
-                });
-              }}
-            >
-              <td className="px-4 py-3 text-sm font-medium">{row.key}</td>
-              <td className="px-4 py-3 text-sm text-right tabular-nums">
-                {formatCount(row.clicks)}
-              </td>
-              <td className="px-4 py-3 text-sm text-right tabular-nums">
-                {formatCount(row.impressions)}
-              </td>
-              <td className="px-4 py-3 text-sm text-right tabular-nums">
-                {formatCtr(row.ctr)}
-              </td>
-              <td className="px-4 py-3 text-sm text-right tabular-nums">
-                {formatPosition(row.position)}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
 }
 
 export function SearchPerformancePage({
@@ -298,11 +110,7 @@ export function SearchPerformancePage({
   const tab = search.tab ?? "queries";
   const page = search.page ?? 1;
   const pageSize = search.size ?? SEARCH_PERFORMANCE_DEFAULT_PAGE_SIZE;
-
-  const filterInput = {
-    ...buildFilterInput(search),
-    ...textFilters,
-  };
+  const filterInput = { ...buildFilterInput(search), ...textFilters };
 
   const reportQuery = useQuery({
     queryKey: ["searchPerformance", projectId, filterInput],
@@ -312,12 +120,12 @@ export function SearchPerformancePage({
   });
   const report = reportQuery.data;
 
-  const isTableTab = tab === "queries" || tab === "pages";
-  const dimension: SearchPerformanceTableDimension =
-    tab === "pages" ? "page" : "query";
+  const dimension = tab === "pages" ? "page" : "query";
   const tableQuery = useQuery({
     ...tableQueryOptions(projectId, dimension, page, pageSize, filterInput),
-    enabled: report?.connected === true && isTableTab,
+    enabled:
+      report?.connected === true && (tab === "queries" || tab === "pages"),
+    // Hold rows while paging or filtering, never across Keywords/Pages.
     placeholderData: (previous, previousQuery) =>
       previousQuery?.queryKey[1] === projectId &&
       previousQuery.queryKey[2] === dimension
@@ -325,7 +133,8 @@ export function SearchPerformancePage({
         : undefined,
   });
 
-  // Warm the Queries tab as soon as the report connects
+  // Keywords is the first tab: read its first page as soon as Google is
+  // connected so it opens without a spinner. Free Search Console read.
   useEffect(() => {
     if (report?.connected !== true) return;
     void queryClient.prefetchQuery(
@@ -381,6 +190,7 @@ export function SearchPerformancePage({
 
   const filtersPanel = (
     <SearchPerformanceTextFilters
+      // Remount on URL changes (back/forward) so the draft matches.
       key={JSON.stringify(textFilters)}
       value={textFilters}
       activeFilterCount={filterCount}
@@ -397,7 +207,9 @@ export function SearchPerformancePage({
     />
   );
 
-  const insights = report?.connected ? buildSearchInsights(report) : [];
+  const insights = report?.connected
+    ? buildSearchInsights(report, { countryFiltered: Boolean(search.country) })
+    : [];
 
   return (
     <div className="overflow-auto px-4 py-4 pb-24 md:px-6 md:py-6 md:pb-8">
@@ -424,10 +236,7 @@ export function SearchPerformancePage({
         {reportQuery.isPending ? (
           <SearchPerformanceLoadingState />
         ) : !report ? (
-          <>
-            {filtersPanel}
-            {reportError}
-          </>
+          reportError
         ) : !report.connected ? (
           <div className="max-w-2xl">
             <GoogleConnectionCard provider="gsc" projectId={projectId} />
@@ -435,17 +244,14 @@ export function SearchPerformancePage({
         ) : (
           <>
             {reportQuery.isError ? reportError : null}
-
-            {/* Filter bar */}
             <div className="flex flex-col gap-2 rounded-xl border bg-card px-3 py-2 sm:flex-row sm:items-start">
               <Button
                 type="button"
                 variant={showFilters ? "secondary" : "ghost"}
                 size="sm"
                 aria-expanded={showFilters}
-                aria-controls="search-performance-filters"
                 onClick={() => setShowFilters((current) => !current)}
-                title="Filter by page or search, including regular expressions"
+                title="Filter by page or keyword, including regular expressions"
               >
                 <SlidersHorizontal data-icon="inline-start" />
                 Filters
@@ -453,7 +259,7 @@ export function SearchPerformancePage({
                   <Badge size="sm">{filterCount}</Badge>
                 ) : null}
               </Button>
-              {reportQuery.isFetching && !reportQuery.isPending ? (
+              {reportQuery.isFetching ? (
                 <Spinner className="size-4 text-muted-foreground" />
               ) : null}
               <SearchPerformanceSelects
@@ -464,61 +270,51 @@ export function SearchPerformancePage({
               />
             </div>
             {showFilters ? (
-              <div className="overflow-hidden rounded-xl border border-border">
+              <div className="overflow-hidden rounded-xl border">
                 {filtersPanel}
               </div>
             ) : null}
 
-            {/* KPI row */}
             {reportQuery.isPlaceholderData ? (
               <SearchPerformanceLoadingState />
             ) : (
               <>
                 <SearchPerformanceTotals report={report} />
-
-                {/* Trend chart */}
                 <SearchPerformanceTrend report={report} />
 
-                {/* What changed card */}
-                {insights.length > 0 && (
-                  <div className="rounded-lg border bg-card p-4 space-y-3">
-                    <SectionHeader
-                      title="What changed"
-                      hint="Your biggest wins and losses"
-                    />
-                    <ul className="space-y-2">
-                      {insights.map((insight, idx) => (
-                        <li key={idx} className="text-sm">
-                          {insight.link && (
-                            <button
-                              onClick={() =>
-                                onSearchChange({
-                                  page: undefined,
-                                  [insight.link!.param]: insight.link!.value,
-                                })
-                              }
-                              className="text-left hover:underline text-blue-600 dark:text-blue-400"
-                            >
-                              {insight.text}
-                            </button>
-                          )}
-                          {!insight.link && <span>{insight.text}</span>}
+                {insights.length > 0 ? (
+                  <section className="space-y-2 rounded-xl border bg-card p-4">
+                    <SectionHeader title="What changed" />
+                    <ul className="space-y-1.5">
+                      {insights.map((insight) => (
+                        <li key={insight.text}>
+                          <button
+                            type="button"
+                            className="text-left text-sm underline-offset-4 hover:underline"
+                            onClick={() =>
+                              onSearchChange({
+                                page: undefined,
+                                ...insight.open,
+                              })
+                            }
+                          >
+                            {insight.text}
+                          </button>
                         </li>
                       ))}
                     </ul>
-                  </div>
-                )}
+                  </section>
+                ) : null}
 
-                {/* Data tabs */}
                 <Tabs
                   value={tab}
-                  onValueChange={(value) =>
-                    onSearchChange({
-                      tab: value as typeof tab,
-                      page: undefined,
-                    })
-                  }
-                  className="space-y-4"
+                  onValueChange={(value) => {
+                    const next = SEARCH_PERFORMANCE_TABS.find(
+                      (item) => item === value,
+                    );
+                    if (next) onSearchChange({ tab: next, page: undefined });
+                  }}
+                  className="space-y-3"
                 >
                   <TabsList>
                     <TabsTrigger value="queries">Keywords</TabsTrigger>
@@ -526,62 +322,57 @@ export function SearchPerformancePage({
                     <TabsTrigger value="countries">Countries</TabsTrigger>
                     <TabsTrigger value="devices">Devices</TabsTrigger>
                   </TabsList>
-
-                  <TabsContent value="queries" className="space-y-4">
-                    <DimensionTableWrapper
-                      dimension="query"
-                      report={report}
-                      search={search}
-                      page={page}
-                      pageSize={pageSize}
-                      onPageChange={(nextPage) =>
-                        onSearchChange({ page: nextPage })
-                      }
-                      onPageSizeChange={(size) =>
-                        onSearchChange({ page: undefined, size })
-                      }
-                      onSearchChange={onSearchChange}
-                      tableQuery={tableQuery}
-                      isExporting={isExporting}
-                      onExport={(target) => void handleExport(target)}
-                    />
-                  </TabsContent>
-
-                  <TabsContent value="pages" className="space-y-4">
-                    <DimensionTableWrapper
-                      dimension="page"
-                      report={report}
-                      search={search}
-                      page={page}
-                      pageSize={pageSize}
-                      onPageChange={(nextPage) =>
-                        onSearchChange({ page: nextPage })
-                      }
-                      onPageSizeChange={(size) =>
-                        onSearchChange({ page: undefined, size })
-                      }
-                      onSearchChange={onSearchChange}
-                      tableQuery={tableQuery}
-                      isExporting={isExporting}
-                      onExport={(target) => void handleExport(target)}
-                    />
-                  </TabsContent>
-
+                  {tab === "queries" || tab === "pages" ? (
+                    <TabsContent value={tab}>
+                      <SearchRowsTable
+                        dimension={dimension}
+                        tableQuery={tableQuery}
+                        page={page}
+                        pageSize={pageSize}
+                        isFiltered={filterCount > 0}
+                        isExporting={isExporting}
+                        onPageChange={(next) => onSearchChange({ page: next })}
+                        onPageSizeChange={(size) =>
+                          onSearchChange({ page: undefined, size })
+                        }
+                        onClearFilters={resetFilters}
+                        onExport={(target) => void handleExport(target)}
+                      />
+                    </TabsContent>
+                  ) : null}
                   <TabsContent value="countries">
-                    <StaticDimensionTable
-                      dimension="country"
+                    <SearchBreakdownTable
+                      breakdown="country"
                       rows={report.countries}
-                      search={search}
-                      onSearchChange={onSearchChange}
+                      // Country rows ignore the country filter; the totals
+                      // follow it, so a chosen country shares of its rows.
+                      totalClicks={
+                        search.country
+                          ? report.countries.reduce(
+                              (sum, r) => sum + r.clicks,
+                              0,
+                            )
+                          : report.totals.clicks
+                      }
+                      onSelect={(country) =>
+                        onSearchChange({ page: undefined, country })
+                      }
                     />
                   </TabsContent>
-
                   <TabsContent value="devices">
-                    <StaticDimensionTable
-                      dimension="device"
+                    <SearchBreakdownTable
+                      breakdown="device"
                       rows={report.devices}
-                      search={search}
-                      onSearchChange={onSearchChange}
+                      totalClicks={report.devices.reduce(
+                        (sum, r) => sum + r.clicks,
+                        0,
+                      )}
+                      onSelect={(key) => {
+                        const device = GSC_DEVICES.find(
+                          (item) => item === key.toUpperCase(),
+                        );
+                        if (device) onSearchChange({ page: undefined, device });
+                      }}
                     />
                   </TabsContent>
                 </Tabs>

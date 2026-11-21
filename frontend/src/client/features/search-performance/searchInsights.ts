@@ -1,213 +1,103 @@
-import { z } from "zod";
+import type { Report } from "@/client/features/search-performance/SearchPerformanceColumns";
+import { countryName } from "@/client/lib/countryNames";
+import type { SearchPerformanceSearch } from "@/types/schemas/search-performance";
 
-// Schema for the report data we receive from the backend
-const reportSchema = z.object({
-  range: z.object({
-    comparisonAvailable: z.boolean(),
-  }),
-  totals: z.object({
-    clicks: z.number(),
-  }),
-  countries: z.array(
-    z.object({
-      key: z.string(),
-      clicks: z.number(),
-    }),
-  ),
-  queryGains: z.array(
-    z.object({
-      query: z.string(),
-      clicks: z.number(),
-      prevClicks: z.number(),
-    }),
-  ),
-  queryLosses: z.array(
-    z.object({
-      query: z.string(),
-      clicks: z.number(),
-      prevClicks: z.number(),
-      reason: z.enum(["rank_fell", "fewer_searches", "ctr_fell", "mixed"]),
-    }),
-  ),
-  pageChanges: z.array(
-    z.object({
-      page: z.string(),
-      clicks: z.number(),
-      prevClicks: z.number(),
-    }),
-  ),
-  strikingDistance: z.array(
-    z.object({
-      position: z.number(),
-    }),
-  ),
-});
-
-type Report = z.infer<typeof reportSchema>;
-
-interface SearchInsight {
+type SearchInsight = {
   text: string;
-  link?: {
-    param: string;
-    value: string;
-  };
+  /** The filters that show the rows behind this line. */
+  open: Partial<SearchPerformanceSearch>;
+};
+
+const MAX_INSIGHTS = 4;
+
+type Loss = Pick<
+  Report["queryLosses"][number],
+  "reason" | "position" | "prevPosition"
+>;
+
+function clicks(count: number): string {
+  return `${count} ${count === 1 ? "click" : "clicks"}`;
 }
 
-/**
- * Build search insights from the report data.
- * Returns at most 4 one-line insights, each with real numbers and optional link target.
- * Returns an empty array if no insights can be built.
- */
-export function buildSearchInsights(report: unknown): SearchInsight[] {
-  let parsed: Report;
+function lossReason(loss: Loss): string {
+  switch (loss.reason) {
+    case "rank_fell":
+      return `its Google position dropped from ${loss.prevPosition.toFixed(1)} to ${loss.position.toFixed(1)}`;
+    case "fewer_searches":
+      return "fewer people searched for it";
+    case "ctr_fell":
+      return "fewer people clicked your result";
+    case "mixed":
+      return "its position and searches both changed";
+  }
+}
+
+function pagePath(url: string): string {
   try {
-    parsed = reportSchema.parse(report);
+    const parsed = new URL(url);
+    return `${parsed.pathname}${parsed.search}` || "/";
   } catch {
-    return [];
+    return url;
   }
+}
 
+/** Up to four plain lines about the period, built only from the report the
+ *  page already loaded (no extra request). A line is left out when the data
+ *  behind it is missing, so an empty list means "nothing worth saying". */
+export function buildSearchInsights(
+  report: Report,
+  { countryFiltered }: { countryFiltered: boolean },
+): SearchInsight[] {
   const insights: SearchInsight[] = [];
+  const compare = report.range.comparisonAvailable;
 
-  // Biggest keyword gain
-  if (
-    parsed.range.comparisonAvailable &&
-    parsed.queryGains.length > 0 &&
-    parsed.queryGains[0]
-  ) {
-    const gain = parsed.queryGains[0];
-    const delta = gain.clicks - gain.prevClicks;
-    if (delta > 0) {
-      insights.push({
-        text: `"${gain.query}" gained ${delta} ${delta === 1 ? "click" : "clicks"} (${gain.prevClicks} → ${gain.clicks})`,
-        link: { param: "queryText", value: gain.query },
-      });
-    }
-  }
-
-  // Biggest keyword drop
-  if (
-    parsed.range.comparisonAvailable &&
-    parsed.queryLosses.length > 0 &&
-    parsed.queryLosses[0]
-  ) {
-    const loss = parsed.queryLosses[0];
-    const delta = loss.prevClicks - loss.clicks;
-    if (delta > 0) {
-      let reason = "";
-      switch (loss.reason) {
-        case "rank_fell":
-          reason =
-            " — its Google position dropped. Check if the content needs updating.";
-          break;
-        case "fewer_searches":
-          reason =
-            " — fewer people searched for it. This can be seasonal or permanent.";
-          break;
-        case "ctr_fell":
-          reason =
-            " — fewer people clicked your result. Try improving your title or description.";
-          break;
-        case "mixed":
-          reason =
-            " — position and searches both changed. Check the latest data.";
-          break;
-      }
-      insights.push({
-        text: `"${loss.query}" lost ${delta} ${delta === 1 ? "click" : "clicks"}${reason}`,
-        link: { param: "queryText", value: loss.query },
-      });
-    }
-  }
-
-  // Biggest page drop
-  if (parsed.pageChanges.length > 0 && parsed.pageChanges[0]) {
-    const pageChange = parsed.pageChanges[0];
-    const delta = pageChange.prevClicks - pageChange.clicks;
-    if (delta > 0) {
-      const pagePath = pageChange.page
-        .replace(/^https?:\/\/[^/]+/, "")
-        .split("?")[0];
-      insights.push({
-        text: `${pagePath} lost ${delta} ${delta === 1 ? "click" : "clicks"}`,
-        link: { param: "pageText", value: pageChange.page },
-      });
-    }
-  }
-
-  // Top country (only if >= 2 countries and clicks > 0)
-  if (
-    parsed.countries.length >= 2 &&
-    parsed.totals.clicks > 0 &&
-    parsed.countries[0]
-  ) {
-    const topCountry = parsed.countries[0];
-    const share = Math.round((topCountry.clicks / parsed.totals.clicks) * 100);
-    const countryName = getCountryName(topCountry.key);
-    if (countryName) {
-      insights.push({
-        text: `${share}% of your clicks come from ${countryName}`,
-        link: { param: "country", value: topCountry.key.toUpperCase() },
-      });
-    }
-  }
-
-  // Quick wins: keywords in striking distance (positions 4-20)
-  const strikingCount = parsed.strikingDistance.filter(
-    (row) => row.position >= 4 && row.position <= 20,
-  ).length;
-  if (strikingCount > 0 && insights.length < 4) {
+  const gain = compare ? report.queryGains[0] : undefined;
+  if (gain && gain.clicks > gain.prevClicks) {
     insights.push({
-      text: `${strikingCount} ${strikingCount === 1 ? "keyword" : "keywords"} rank on positions 4–20 — small improvements here bring the most new clicks`,
-      link: { param: "tab", value: "queries" },
+      text: `"${gain.query}" gained ${clicks(gain.clicks - gain.prevClicks)} (${gain.prevClicks} → ${gain.clicks}).`,
+      open: { tab: "queries", queryText: gain.query, queryMatch: "equals" },
     });
   }
 
-  // Return only the first 4 insights
-  return insights.slice(0, 4);
-}
-
-/**
- * Get the display name for a country using Intl.DisplayNames.
- * GSC gives ISO alpha-3 lowercase codes (e.g., "usa", "gbr", "ind").
- */
-function getCountryName(code: string): string | null {
-  try {
-    const displayNames = new Intl.DisplayNames(["en"], { type: "region" });
-    // Convert lowercase alpha-3 to uppercase alpha-2
-    const countryCode = code3to2(code.toUpperCase());
-    if (!countryCode) return null;
-    return displayNames.of(countryCode) || null;
-  } catch {
-    return null;
+  const loss = compare ? report.queryLosses[0] : undefined;
+  if (loss && loss.prevClicks > loss.clicks) {
+    insights.push({
+      text: `"${loss.query}" lost ${clicks(loss.prevClicks - loss.clicks)} (${loss.prevClicks} → ${loss.clicks}): ${lossReason(loss)}.`,
+      open: { tab: "queries", queryText: loss.query, queryMatch: "equals" },
+    });
   }
-}
 
-/**
- * Convert ISO 3166-1 alpha-3 code to alpha-2.
- * Common conversions for testing.
- */
-function code3to2(code3: string): string | null {
-  const map: Record<string, string> = {
-    USA: "US",
-    GBR: "GB",
-    CAN: "CA",
-    AUS: "AU",
-    IND: "IN",
-    DEU: "DE",
-    FRA: "FR",
-    JPN: "JP",
-    CHN: "CN",
-    BRA: "BR",
-    MEX: "MX",
-    ZAF: "ZA",
-    NLD: "NL",
-    ESP: "ES",
-    ITA: "IT",
-    KOR: "KR",
-    RUS: "RU",
-    SGP: "SG",
-    HKG: "HK",
-    NZL: "NZ",
-  };
-  return map[code3] || null;
+  const page = compare ? report.pageChanges[0] : undefined;
+  if (page && page.prevClicks > page.clicks) {
+    insights.push({
+      text: `${pagePath(page.page)} lost ${clicks(page.prevClicks - page.clicks)} (${page.prevClicks} → ${page.clicks}): ${lossReason(page)}.`,
+      open: { tab: "pages", pageText: page.page, pageMatch: "equals" },
+    });
+  }
+
+  // Country rows ignore the country filter, the totals do not, so a share is
+  // only true when no country is chosen.
+  const top = report.countries[0];
+  if (
+    !countryFiltered &&
+    report.countries.length >= 2 &&
+    top &&
+    report.totals.clicks > 0
+  ) {
+    const share = Math.round((top.clicks / report.totals.clicks) * 100);
+    insights.push({
+      text: `${share}% of your clicks come from ${countryName(top.key)}.`,
+      open: { tab: "countries" },
+    });
+  }
+
+  const quickWins = report.strikingDistance.length;
+  if (quickWins > 0) {
+    insights.push({
+      text: `${quickWins} ${quickWins === 1 ? "search ranks" : "searches rank"} on positions 5–20: small improvements there bring the most new clicks.`,
+      open: { tab: "queries" },
+    });
+  }
+
+  return insights.slice(0, MAX_INSIGHTS);
 }

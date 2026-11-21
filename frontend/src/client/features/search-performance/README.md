@@ -1,44 +1,36 @@
-# Search Console Page
+# Google Search page
 
-The Search Console page shows keywords, pages, countries, and devices from Google Search Console.
+One screen of the customer's own Google Search Console data: totals and
+their change, a daily trend, a short "What changed" list, and Keywords,
+Pages, Countries and Devices tables. Route: `/p/$projectId/search-performance`.
 
-## Code Map
+## Code map
 
-| File                           | Purpose                                                                      |
-| ------------------------------ | ---------------------------------------------------------------------------- |
-| `SearchPerformancePage.tsx`    | Main page component; renders the UI layout and tabs                          |
-| `SearchPerformanceSelects.tsx` | Filter bar with date range presets, search type, device, and country filters |
-| `SearchPerformanceTrend.tsx`   | Daily clicks and impressions trend chart                                     |
-| `SearchPerformanceTotals.tsx`  | KPI cards showing totals and % change vs previous period                     |
-| `searchInsights.ts`            | Computes 4 key insights from the report data                                 |
-| `searchPerformanceApi.ts`      | API client for fetching report and table data                                |
-| `searchPerformanceQueries.ts`  | TanStack Query hooks for data fetching                                       |
-| `SearchPerformanceColumns.tsx` | Table columns and formatting helpers                                         |
-| `SearchPerformanceParts.tsx`   | Export helpers for tables                                                    |
+| File                               | What it does                                                                 |
+| ---------------------------------- | ---------------------------------------------------------------------------- |
+| `SearchPerformancePage.tsx`        | The page: connection card, filter bar, totals, trend, insights, tabs         |
+| `SearchPerformanceSelects.tsx`     | Date presets (rolling and calendar month), custom dates, type/device/country |
+| `SearchPerformanceTextFilters.tsx` | Page and keyword text filters, including regular expressions                 |
+| `SearchPerformanceTotals.tsx`      | Clicks, impressions, CTR, position with change against the previous period   |
+| `SearchPerformanceTrend.tsx`       | Daily clicks and impressions chart                                           |
+| `searchInsights.ts`                | Up to four "What changed" lines built from the loaded report                 |
+| `SearchRowsTable.tsx`              | Paginated Keywords or Pages table with export                                |
+| `SearchBreakdownTable.tsx`         | Countries or Devices table with share of clicks                              |
+| `SearchPerformanceParts.tsx`       | Keywords/Pages table body and export helpers                                 |
+| `SearchPerformanceColumns.tsx`     | Report types, table columns, number formatting                               |
+| `searchPerformanceApi.ts`          | `report`, `table` and `export` calls with Zod response schemas               |
+| `searchPerformanceQueries.ts`      | TanStack Query options for the table                                         |
+| `../../lib/countryNames.ts`        | Search Console country code (`ind`) to a name in the viewer's language       |
 
-## Tabs
+## Routes
 
-| Tab       | Dimension | Data Source                                      |
-| --------- | --------- | ------------------------------------------------ |
-| Queries   | query     | Paginated endpoint `/table` with dimension=query |
-| Pages     | page      | Paginated endpoint `/table` with dimension=page  |
-| Countries | country   | Backend report endpoint; `report.countries`      |
-| Devices   | device    | Backend report endpoint; `report.devices`        |
+All under `/api/v1/projects/{id}/gsc/search-performance/`, all free Search
+Console reads (see `backend/internal/gsc/flow.md`):
 
-## Backend Data Flow
+| Route    | Used for                                                 |
+| -------- | -------------------------------------------------------- |
+| `report` | Totals, trend, insights, Countries and Devices (9 reads) |
+| `table`  | One page of Keywords or Pages (1 read)                   |
+| `export` | Full Keywords or Pages download (1 read)                 |
 
-The page fetches one report from `/api/v1/projects/{id}/gsc/search-performance/report`:
-
-- Fetches up to 9 Search Console queries in parallel (all free)
-- Returns `connected: true` with totals, trends, and all dimension breakdowns
-- Returns `connected: false` if no Search Console account is linked
-
-No paid provider calls. No spend guard.
-
-## User Flow
-
-1. Connect Google Search Console account (via integrations page)
-2. See real-time metrics: clicks, impressions, CTR, position
-3. Filter by search type, device, country, or custom date range
-4. Click rows in Keywords/Pages/Countries/Devices tabs to drill into filters
-5. Export Keywords or Pages as CSV/Google Sheets
+No tables of our own; nothing is stored.

@@ -9,18 +9,21 @@ money is called anywhere in this package, so nothing here is spend-guarded.
 | Tables | `table` | 1 per page turn |
 | Export | `export` | 1 |
 
-## Insights flow
+## Report flow
 
-screen -> `POST .../insights` (filters + brand names) -> `Service.GetInsights`
--> `fetchSearchAnalyticsRows` (parallel reads) -> pure functions in
-`insights_analysis.go` -> one JSON answer.
+screen -> `POST .../report` (filters) -> `Service.GetPerformance` ->
+`fetchSearchAnalyticsRows` (parallel reads) -> one JSON answer with totals,
+daily rows, losses and gains, quick-win searches, countries and devices.
 
-- The browser keeps an answer for 5 minutes per project, filters and brand
-  names (`staleTime`), so switching between Overview, Fix and Grow reads
-  Google once. The Indexing, Explore and Conversions screens do not request it.
+- The country read drops the country filter and the device read drops the
+  device filter, so those tables always list every country or device.
 - If any read fails the whole answer fails; there is no partial result.
 - Nothing retries automatically.
+- The `insights` route (`Service.GetInsights`) has no screen since the
+  page was simplified; it is kept until it is removed on purpose.
 
 ## Paid calls per user action
 
-0. A test (`TestGetInsightsFindsWhatIsWorthDoing`) asserts the read count.
+0. Every read above is a free Search Console read.
+`TestGetPerformanceIncludesDevicesBuildRequestWithoutDeviceFilter` asserts
+the report's read count.
