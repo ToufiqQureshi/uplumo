@@ -5,7 +5,7 @@ money is called anywhere in this package, so nothing here is spend-guarded.
 
 | Screen | Route | Search Console reads |
 | --- | --- | --- |
-| Search Console Page | `report` | up to 9 in parallel (daily, previous daily, pages and queries for both periods, query+page, countries, devices); 5 when the previous period is outside Google's 16 months |
+| Search Console Page | `report` | up to 9 in parallel (daily, previous daily, pages and queries for both periods, query+page, countries, devices); 5 when the previous period is outside Google's 16 months. White-label reports call `GetPerformance` without devices: up to 8 |
 | Tables | `table` | 1 per page turn |
 | Export | `export` | 1 |
 
@@ -25,5 +25,6 @@ daily rows, losses and gains, quick-win searches, countries and devices.
 ## Paid calls per user action
 
 0. Every read above is a free Search Console read.
-`TestGetPerformanceIncludesDevicesBuildRequestWithoutDeviceFilter` asserts
-the report's read count.
+`TestGetPerformanceIncludesDevicesBuildRequestWithoutDeviceFilter` (9 reads)
+and `TestGetPerformanceBuildsLegacyReportAndOmitsCountryFilterForCountryRows`
+(8 reads, no devices) assert the counts; `sitereport` caps a report at 10.

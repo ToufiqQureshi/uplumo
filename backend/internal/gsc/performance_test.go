@@ -216,7 +216,7 @@ func TestGetPerformanceIncludesDevicesBuildRequestWithoutDeviceFilter(t *testing
 		NewClient:   func(string, string) SearchClient { return client },
 		Now:         func() time.Time { return time.Date(2026, time.May, 28, 12, 0, 0, 0, time.UTC) },
 	}
-	result, err := service.GetPerformance(context.Background(), "org", "project", PerformanceInput{DateRange: last7Days, Device: "MOBILE"})
+	result, err := service.GetPerformanceWithDevices(context.Background(), "org", "project", PerformanceInput{DateRange: last7Days, Device: "MOBILE"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -254,6 +254,28 @@ func TestGetPerformanceIncludesDevicesBuildRequestWithoutDeviceFilter(t *testing
 	}
 }
 
+func TestReportRouteIsTheOnlyReportThatReadsDevices(t *testing.T) {
+	client := &performanceClientStub{rows: []SearchRow{{Keys: []string{"MOBILE"}, Clicks: 3, Impressions: 30, CTR: 0.1, Position: 4}}}
+	service := &Service{
+		Connections: performanceConnectionStub{connection: Connection{SiteURL: "https://example.test/", ConnectedByUserID: "user"}},
+		NewClient:   func(string, string) SearchClient { return client },
+		Now:         func() time.Time { return time.Date(2026, time.May, 28, 12, 0, 0, 0, time.UTC) },
+	}
+	request := httptest.NewRequestWithContext(t.Context(), "POST", "/api/v1/projects/project/gsc/search-performance/report", strings.NewReader(`{"dateRange":"last_7_days"}`))
+	request.Header.Set("Content-Type", "application/json")
+	got, err := runPerformanceReport(service, httptest.NewRecorder(), request, "org", "project")
+	if err != nil {
+		t.Fatal(err)
+	}
+	report, ok := got.(map[string]any)
+	if !ok {
+		t.Fatalf("report = %T", got)
+	}
+	if _, ok := report["devices"]; !ok {
+		t.Fatal("the Google Search page report must include devices")
+	}
+}
+
 func TestGetPerformanceBuildsLegacyReportAndOmitsCountryFilterForCountryRows(t *testing.T) {
 	client := &performanceClientStub{rows: []SearchRow{{Keys: []string{"term", "https://example.test/"}, Clicks: 2, Impressions: 10, CTR: .2, Position: 6}}}
 	service := &Service{
@@ -266,10 +288,13 @@ func TestGetPerformanceBuildsLegacyReportAndOmitsCountryFilterForCountryRows(t *
 		t.Fatal(err)
 	}
 	requests := client.requestSnapshot()
-	// date, page and query (now, before each), query+page, country, device. All are
-	// free Search Console reads.
-	if len(requests) != 9 {
-		t.Fatalf("got %d provider requests, want 9", len(requests))
+	// date, page and query (now, before each), query+page, country. All are
+	// free Search Console reads; white-label reports never pay for devices.
+	if len(requests) != 8 {
+		t.Fatalf("got %d provider requests, want 8", len(requests))
+	}
+	if _, ok := result["devices"]; ok {
+		t.Fatal("GetPerformance must not read devices")
 	}
 	for _, dimension := range []string{"page", "query"} {
 		periods := map[string]bool{}
