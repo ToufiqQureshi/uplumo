@@ -60,7 +60,7 @@ Look at the actual results for the important queries. Compare your title, the di
 
 **Fix:** If the page matches the search but the title is vague, make it specific. A title such as “Family Rooms in [Town] | [Hotel Name]” is clearer than “Rooms,” provided it describes the page accurately. Google may choose its own title or snippet. If a pricing query leads to a general article, fix the page mismatch before polishing the description.
 
-**Where Uplumo helps:** Connect Search Console to **Search Growth** to investigate query performance, CTR gaps and improvement candidates. Use Rank Tracking for consistent keyword checks. The next action depends on whether the issue is low visibility, weak relevance or an unhelpful search listing.
+**Where Uplumo helps:** Connect Search Console to **Google Search** in Uplumo to see which keywords and pages gained or lost clicks, why a drop happened (lower position, fewer searches or fewer clicks on your result), and which searches sit on positions 5 to 20. Use Rank Tracking for consistent keyword checks. The next action depends on whether the issue is low visibility, weak relevance or an unhelpful search listing.
 
 ### Problem: clicks but no leads — can the right visitor take the next step?
 
@@ -140,7 +140,7 @@ Instead, create a small work record:
 
 *Keep a small change log so you can compare like-for-like periods after an edit.*
 
-Use Uplumo's [Google keyword rank tracker](/keyword-rank-tracker) to follow selected keyword positions with a consistent location and device setup. Review Search Growth alongside it, and use Analytics or connected GA4 to check the outcomes you have configured.
+Use Uplumo's [Google keyword rank tracker](/keyword-rank-tracker) to follow selected keyword positions with a consistent location and device setup. Review the Google Search page alongside it, and use Analytics or connected GA4 to check the outcomes you have configured.
 
 Rankings help explain visibility. Enquiries help you assess whether the visitors are useful to the business. Neither should replace the other.
 

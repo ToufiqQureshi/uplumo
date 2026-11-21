@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { DataTable, useDataTable } from "@/client/components/table/DataTable";
 import { Button } from "@/client/components/ui/button";
 import {
@@ -66,6 +66,7 @@ export function DimensionTable({
   isPastEnd,
   onClearFilters,
   onFirstPage,
+  rowAction,
 }: {
   rows: SearchPerformanceTableRow[];
   keyLabel: string;
@@ -73,8 +74,12 @@ export function DimensionTable({
   isPastEnd: boolean;
   onClearFilters: () => void;
   onFirstPage: () => void;
+  rowAction?: (key: string) => ReactNode;
 }) {
-  const columns = useMemo(() => buildDimensionColumns(keyLabel), [keyLabel]);
+  const columns = useMemo(
+    () => buildDimensionColumns(keyLabel, rowAction),
+    [keyLabel, rowAction],
+  );
   const table = useDataTable({
     data: rows,
     columns,

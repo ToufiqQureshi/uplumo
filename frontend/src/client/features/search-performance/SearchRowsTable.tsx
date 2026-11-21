@@ -1,4 +1,6 @@
+import { useCallback } from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
+import { EditPageButton } from "@/client/features/content-editor/EditPageButton";
 import { ExportMenu } from "@/client/components/ExportMenu";
 import { QueryError } from "@/client/components/QueryState";
 import { TablePagination } from "@/client/components/table/TablePagination";
@@ -18,6 +20,7 @@ type TableResult = Awaited<ReturnType<typeof getSearchPerformanceTable>>;
 /** The paginated Keywords or Pages table, read one page at a time from
  *  Search Console (free), with a full export. */
 export function SearchRowsTable({
+  projectId,
   dimension,
   tableQuery,
   page,
@@ -29,6 +32,7 @@ export function SearchRowsTable({
   onClearFilters,
   onExport,
 }: {
+  projectId: string;
   dimension: SearchPerformanceTableDimension;
   tableQuery: UseQueryResult<TableResult>;
   page: number;
@@ -40,6 +44,20 @@ export function SearchRowsTable({
   onClearFilters: () => void;
   onExport: (target: ExportTarget) => void;
 }) {
+  // One click opens the page's own content in the editor (free: it copies
+  // the project's own page).
+  const editPage = useCallback(
+    (url: string) => (
+      <EditPageButton
+        projectId={projectId}
+        url={url}
+        variant="ghost"
+        label="Edit"
+      />
+    ),
+    [projectId],
+  );
+
   if (tableQuery.isPending) return <SearchPerformanceLoadingState />;
   if (tableQuery.isError) {
     return (
@@ -71,6 +89,7 @@ export function SearchRowsTable({
         isPastEnd={page > 1 && data.rows.length === 0}
         onClearFilters={onClearFilters}
         onFirstPage={() => onPageChange(1)}
+        rowAction={dimension === "page" ? editPage : undefined}
       />
       <TablePagination
         page={page}

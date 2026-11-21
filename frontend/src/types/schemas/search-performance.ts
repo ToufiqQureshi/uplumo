@@ -107,6 +107,7 @@ export const SEARCH_PERFORMANCE_TABS = [
   "pages",
   "countries",
   "devices",
+  "indexnow",
 ] as const;
 
 const textMatchParam = z.enum(TEXT_MATCH_OPERATORS).optional().catch(undefined);

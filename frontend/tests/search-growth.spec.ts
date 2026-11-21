@@ -1,271 +1,190 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { installGrowthFixtures } from "./search-growth.fixtures";
-import { mockPageImport } from "./page-import.fixtures";
 
-test("search growth stays explicit and carries evidence through save, analyst and editor", async ({
-  page,
-}, testInfo) => {
-  const { requests, paid, chatModes, growthInputs } =
-    await installGrowthFixtures(page);
-  await mockPageImport(page, {
-    id: "imported-guide",
-    projectId: "e2e-project",
-    title: "Booking guide",
-    content: "## Imported section\n\nText copied from the live page.",
-  });
-  await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto("/p/e2e-project/search-performance?view=conversions");
-  const analyze = page.getByRole("button", { name: "Find opportunities" });
-  await expect(analyze).toBeVisible();
-  expect(requests.filter((p) => p.endsWith("/ga4/growth/report"))).toHaveLength(
-    0,
-  );
-  await page.getByRole("button", { name: "Load my GA4 goals" }).click();
-  await page
-    .getByLabel("What matters to your business?")
-    .selectOption("generate_lead");
-  await analyze.click();
-  expect(growthInputs[0]).toMatchObject({
-    goalEvent: "generate_lead",
-    comparison: "previous",
-    expanded: false,
-  });
-  await expect(
-    page.getByRole("heading", { name: "Search clicks are falling" }),
-  ).toBeVisible();
-  await page
-    .getByText("Query evidence and save action", { exact: true })
-    .click();
-  await page.getByLabel("What will you change?").fill("Review the enquiry CTA");
-  await page.getByRole("button", { name: "Save action and baseline" }).click();
-  await expect(
-    page.getByRole("button", { name: "Saved", exact: true }),
-  ).toBeVisible();
-  await page.getByText("Saved actions and results", { exact: true }).click();
-  await expect(
-    page.getByText("Review the enquiry CTA", { exact: true }),
-  ).toBeVisible();
-  await page
-    .getByText("Investigate tracking, devices and AI citations", {
-      exact: true,
-    })
-    .click();
-  await page.getByText("Measurement setup", { exact: true }).click();
-  await page
-    .getByRole("button", { name: "Check GA4 measurement setup" })
-    .click();
-  await expect(
-    page.getByText("Configured key events: 1.", { exact: false }),
-  ).toBeVisible();
-  await page.getByText("Performance by device", { exact: true }).click();
-  await page.getByRole("button", { name: "Compare devices" }).click();
-  await expect(
-    page.getByRole("cell", { name: "mobile", exact: true }),
-  ).toBeVisible();
-  await page.getByText("AI visibility evidence", { exact: true }).click();
-  await page
-    .getByRole("button", { name: "Load saved AI citation evidence" })
-    .click();
-  await expect(
-    page.getByText("No completed AI tracking run is saved yet."),
-  ).toBeVisible();
-  await page
-    .getByText("Why are clicks low or falling?", { exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "Investigate this page's clicks" })
-    .click();
-  await expect(
-    page.getByText("Fewer impressions are becoming clicks", { exact: true }),
-  ).toBeVisible();
-  await page
-    .getByRole("button", { name: "Check Google's stored index status" })
-    .click();
-  await expect(
-    page.getByText("Submitted and indexed", { exact: false }),
-  ).toBeVisible();
-  await page.getByText("Attribution and tracking", { exact: true }).click();
-  await page.getByRole("button", { name: "Check attribution" }).click();
-  await expect(
-    page.getByText("Verify your completed lead event in DebugView."),
-  ).toBeVisible();
-  await page.getByText("Visitor journey", { exact: true }).click();
-  await page.getByRole("button", { name: "Inspect tracked journey" }).click();
-  await expect(
-    page.getByRole("cell", { name: "1. page_view", exact: true }),
-  ).toBeVisible();
-  await page.getByText("Sitemap health", { exact: true }).click();
-  await page
-    .getByRole("button", { name: "Check submitted sitemap status" })
-    .click();
-  await expect(page.getByText("Errors: 2", { exact: false })).toBeVisible();
-  await page
-    .getByText("Weekly actions and important drop alerts", { exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "Enable weekly checks for selected goal" })
-    .click();
-  await expect(
-    page.getByText("Weekly checks enabled for generate_lead.", {
-      exact: false,
+const range = {
+  startDate: "2026-09-26",
+  endDate: "2026-10-24",
+  prevStartDate: "2026-08-28",
+  prevEndDate: "2026-09-25",
+  comparisonAvailable: true,
+};
+const row = { impressions: 1, ctr: 0.1, position: 4 };
+const change = {
+  impressions: 900,
+  prevImpressions: 1000,
+  position: 7.2,
+  prevPosition: 3.1,
+  ctr: 0.011,
+  prevCtr: 0.05,
+};
+
+/** The Google Search page with one report; returns every API path read. */
+async function openPage(page: Page, search = "") {
+  const fixtures = await installGrowthFixtures(page);
+  const tableRequests: unknown[] = [];
+  // Registered after the shared fixtures, so these answers win.
+  await page.route("**/gsc/search-performance/report", (route) =>
+    route.fulfill({
+      json: {
+        connected: true,
+        range,
+        totals: { clicks: 200, impressions: 20000, ctr: 0.01, position: 8 },
+        prevTotals: {
+          clicks: 150,
+          impressions: 18000,
+          ctr: 0.008,
+          position: 9,
+        },
+        daily: [{ date: range.startDate, clicks: 12, impressions: 700 }],
+        strikingDistance: [
+          {
+            query: "villa with pool",
+            page: "https://example.com/villa",
+            clicks: 2,
+            impressions: 300,
+            position: 8,
+          },
+        ],
+        countries: [
+          { key: "ind", clicks: 150, ...row },
+          { key: "bra", clicks: 50, ...row },
+        ],
+        devices: [
+          { key: "MOBILE", clicks: 160, ...row },
+          { key: "DESKTOP", clicks: 40, ...row },
+        ],
+        pageChanges: [
+          {
+            ...change,
+            reason: "rank_fell",
+            severity: "urgent",
+            page: "https://example.com/rooms",
+            clicks: 40,
+            prevClicks: 120,
+          },
+        ],
+        queryLosses: [
+          {
+            ...change,
+            reason: "fewer_searches",
+            severity: "watch",
+            query: "resort in lonavala",
+            clicks: 10,
+            prevClicks: 50,
+          },
+        ],
+        queryGains: [
+          { ...change, query: "pool villa", clicks: 30, prevClicks: 5 },
+        ],
+      },
     }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "Turn off weekly checks" }).click();
-  await expect(
-    page.getByText("Weekly checks are off.", { exact: false }),
-  ).toBeVisible();
-  expect(paid).toEqual([]);
-  await page.screenshot({
-    path: testInfo.outputPath("search-growth-desktop.png"),
-    fullPage: true,
-  });
-  await page.setViewportSize({ width: 390, height: 844 });
-  await expect(
-    page.getByRole("button", { name: "Refresh analysis" }),
-  ).toBeVisible();
-  await page.screenshot({
-    path: testInfo.outputPath("search-growth-mobile.png"),
-    fullPage: true,
-  });
-  await page
-    .getByRole("button", { name: "Improve this page in editor" })
-    .click();
-  await expect(
-    page.getByRole("heading", { name: "Improve an existing page" }),
-  ).toBeVisible();
-  await expect(page.getByText("Related queries: booking guide")).toBeVisible();
-  // The page's own text opened as a draft, not an empty editor.
-  await expect(page).toHaveURL(/draft=imported-guide/u);
-  await expect(page.getByText("Text copied from the live page.")).toBeVisible();
-  // The query the page ranks for becomes the draft's target topic, unsaved.
-  await expect(
-    page.getByRole("button", { name: "Remove booking guide" }),
-  ).toBeVisible();
-  expect(paid).toEqual([]);
-  await page.goto("/p/e2e-project/search-performance?view=conversions");
-  await page.getByRole("button", { name: "Find opportunities" }).click();
-  await page
-    .getByRole("button", { name: "Create AI improvement brief" })
-    .click();
-  const composer = page.getByPlaceholder(
-    "Ask SAM to research, analyze, or track anything…",
   );
-  await expect(composer).toHaveValue(/Search growth analysis/);
-  await expect(
-    page.getByText(
-      "SEO analyst · read-only data tools · AI reply uses credits",
-    ),
-  ).toBeVisible();
-  expect(paid).toEqual([]);
-  await composer.press("Enter");
-  await expect.poll(() => chatModes).toEqual(["search_growth"]);
-  expect(paid).toEqual(["/api/v1/projects/e2e-project/sam/sessions/chat"]);
-});
-
-for (const width of [320, 390]) {
-  test(`mobile investigations stay readable at ${width}px without a wider page`, async ({
-    page,
-  }, testInfo) => {
-    const { paid, requests } = await installGrowthFixtures(page);
-    await page.setViewportSize({ width, height: 844 });
-    await page.goto("/p/e2e-project/search-performance?view=conversions");
-    await page.getByRole("button", { name: "Find opportunities" }).click();
-    await page
-      .getByText("Investigate tracking, devices and AI citations", {
-        exact: true,
-      })
-      .click();
-    await expect(page.getByLabel("Step 1 event")).toBeHidden();
-    expect(
-      requests.filter((path) => path.endsWith("/ga4/growth/funnel")),
-    ).toHaveLength(0);
-    await page.getByText("Visitor journey", { exact: true }).click();
-    await expect(page.getByLabel("Step 3 event")).toHaveValue("generate_lead");
-    await page.getByRole("button", { name: "Add a step", exact: true }).click();
-    await page.getByLabel("Step 4 event").fill("purchase");
-    await page
-      .getByRole("button", { name: "Remove step 4", exact: true })
-      .click();
-    await expect(page.getByLabel("Step 4 event")).toHaveCount(0);
-    await page.getByRole("button", { name: "Inspect tracked journey" }).click();
-    const journey = page.getByLabel("Journey step results", { exact: true });
-    await expect(journey).toBeVisible();
-    await expect(
-      journey.getByRole("heading", { name: "1. page_view", exact: true }),
-    ).toBeVisible();
-    await expect(
-      journey.getByText("Left before next step", { exact: true }),
-    ).toBeVisible();
-    await expect(journey.getByText("150", { exact: true })).toBeVisible();
-    await expect(journey.getByText("75.0%", { exact: true })).toBeVisible();
-    await journey.scrollIntoViewIfNeeded();
-    await page.screenshot({
-      path: testInfo.outputPath(`search-growth-journey-${width}.png`),
-      fullPage: false,
+  await page.route("**/gsc/search-performance/table", (route) => {
+    const input: unknown = route.request().postDataJSON();
+    tableRequests.push(input);
+    const pages =
+      typeof input === "object" &&
+      input !== null &&
+      "dimension" in input &&
+      input.dimension === "page";
+    return route.fulfill({
+      json: {
+        connected: true,
+        dimension: pages ? "page" : "query",
+        page: 1,
+        pageSize: 25,
+        hasNextPage: false,
+        totalCount: 1,
+        rows: [
+          pages
+            ? { key: "https://example.com/rooms", clicks: 40, ...row }
+            : { key: "pool villa", clicks: 30, ...row },
+        ],
+      },
     });
-    await page.getByText("Performance by device", { exact: true }).click();
-    await expect(page.getByLabel("Step 1 event")).toBeHidden();
-    await page
-      .getByRole("button", { name: "Compare devices", exact: true })
-      .click();
-    await expect(
-      page
-        .getByLabel("Google organic device results")
-        .getByRole("heading", { name: "mobile", exact: true }),
-    ).toBeVisible();
-    await page.getByText("Sitemap health", { exact: true }).click();
-    await page
-      .getByRole("button", { name: "Check submitted sitemap status" })
-      .click();
-    await expect(page.getByText("Errors: 2", { exact: false })).toBeVisible();
-    await page
-      .getByText("Why are clicks low or falling?", { exact: true })
-      .click();
-    await page
-      .getByRole("button", { name: "Investigate this page's clicks" })
-      .click();
-    await expect(
-      page
-        .getByLabel("Query comparison results")
-        .getByRole("heading", { name: "booking guide", exact: true }),
-    ).toBeVisible();
-    await expect
-      .poll(() =>
-        page.evaluate(
-          () => document.documentElement.scrollWidth <= window.innerWidth,
-        ),
-      )
-      .toBe(true);
-    expect(paid).toEqual([]);
   });
+  await page.route("**/indexnow/get", (route) =>
+    route.fulfill({ json: { included: true, domain: "example.com", key: "" } }),
+  );
+  await page.goto(`/p/e2e-project/search-performance${search}`);
+  await expect(
+    page.getByRole("heading", { name: "Google Search" }),
+  ).toBeVisible();
+  return { ...fixtures, tableRequests };
 }
 
-test("a temporary project access failure can be retried on the same page", async ({
+test("shows totals, plain insights and keywords, with no paid call", async ({
   page,
 }) => {
-  await installGrowthFixtures(page);
-  let checks = 0;
-  await page.route("**/api/v1/projects/e2e-project/get", async (route) => {
-    checks += 1;
-    if (checks > 1) {
-      await route.fallback();
-      return;
-    }
-    await route.fulfill({
-      status: 502,
-      json: { error: { code: "internal", message: "Temporary failure." } },
-    });
-  });
-  await page.goto("/p/e2e-project/search-performance?view=conversions");
+  const { paid } = await openPage(page);
+
+  const changed = page.locator("section", { hasText: "What changed" });
   await expect(
-    page.getByRole("alert").getByText("Could not open this project"),
+    changed.getByText('"pool villa" gained 25 clicks (5 → 30).'),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Try again" }).click();
   await expect(
-    page.getByRole("button", { name: "Find opportunities" }),
+    changed.getByText(
+      '"resort in lonavala" lost 40 clicks (50 → 10): fewer people searched for it.',
+    ),
   ).toBeVisible();
-  await expect(page).toHaveURL(
-    /\/p\/e2e-project\/search-performance\?view=conversions$/,
+  await expect(
+    changed.getByText(
+      "/rooms lost 80 clicks (120 → 40): its Google position dropped from 3.1 to 7.2.",
+    ),
+  ).toBeVisible();
+  await expect(
+    changed.getByText("75% of your clicks come from India."),
+  ).toBeVisible();
+  // Four lines at most: the quick-win line is the fifth and is left out.
+  await expect(changed.getByRole("listitem")).toHaveCount(4);
+
+  await expect(page.getByRole("cell", { name: "pool villa" })).toBeVisible();
+  // The old screens are gone.
+  for (const name of ["Fix", "Grow", "Explore", "Conversions"])
+    await expect(page.getByRole("tab", { name, exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Ask SAM/u })).toHaveCount(0);
+  expect(paid).toEqual([]);
+});
+
+test("countries and devices show names and shares, and a row filters the page", async ({
+  page,
+}) => {
+  await openPage(page);
+
+  await page.getByRole("tab", { name: "Countries" }).click();
+  const india = page.getByRole("row", { name: /India/u });
+  await expect(india).toContainText("75%");
+  await expect(page.getByRole("row", { name: /Brazil/u })).toContainText("25%");
+  await india.getByRole("button", { name: "India" }).click();
+  await expect(page).toHaveURL(/country=ind/u);
+
+  await page.getByRole("tab", { name: "Devices" }).click();
+  await expect(page.getByRole("row", { name: /Mobile/u })).toContainText("80%");
+  await page.getByRole("button", { name: "Desktop" }).click();
+  await expect(page).toHaveURL(/device=DESKTOP/u);
+});
+
+test("pages have one-click Edit, and old links still open the page", async ({
+  page,
+}) => {
+  await openPage(page, "?view=fix&tab=striking");
+
+  await page.getByRole("tab", { name: "Pages" }).click();
+  await expect(
+    page.getByRole("button", { name: "Edit: https://example.com/rooms" }),
+  ).toBeVisible();
+
+  await page.getByRole("tab", { name: "IndexNow" }).click();
+  await expect(page.getByText(/IndexNow/u).first()).toBeVisible();
+});
+
+test("Last month sets the whole previous calendar month", async ({ page }) => {
+  await openPage(page);
+
+  await page.getByRole("combobox", { name: "Date range" }).click();
+  await page.getByRole("option", { name: "Last month" }).click();
+  await expect(page).toHaveURL(/startDate=\d{4}-\d{2}-01/u);
+  await expect(page.getByRole("combobox", { name: "Date range" })).toHaveText(
+    /Last month/u,
   );
-  expect(checks).toBe(2);
 });

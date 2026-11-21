@@ -24,7 +24,10 @@
    - **Countries** and **Devices**: where and on what your visitors search,
      with each one's share of your clicks. Choose a country or device to see
      the whole page for it.
-6. **Narrow down.** Filters for search type, device, country, and page or
+6. **IndexNow.** The IndexNow tab asks Bing and other IndexNow engines to
+   re-crawl your pages after a change. It works without Search Console, so
+   it also shows before Google is connected.
+7. **Narrow down.** Filters for search type, device, country, and page or
    keyword text (contains, equals, or a regular expression) apply to every
    number and table on the page.
 

@@ -11,7 +11,7 @@ The Content Editor manages project-scoped writing drafts, scores SEO and answer-
 - `scoring.ts`, `scoring-rules.ts`, and `scoring-signals.ts` calculate writing checks; scores are editorial signals, not ranking predictions.
 - `article-export.tsx` builds the copied HTML, the .html page and the .md file; `ExportCards.tsx` holds the Export and My blog theme cards. The preview dialog shows the article in the saved theme inside a sandboxed frame.
 - `contentEditorApi.ts` defines the browser API calls. `WriterAssistant.tsx` and `BriefPanel.tsx` make the paid actions explicit.
-- `EditPageButton.tsx` opens a page of the project's site in the editor from Site Audit issues, the AI visibility answer proof and Search Growth; backend `page_import.go` and `page_markdown.go`.
+- `EditPageButton.tsx` opens a page of the project's site in the editor from Site Audit issues, the AI visibility answer proof and the Pages tab of Google Search; backend `page_import.go` and `page_markdown.go`.
 - Backend handlers live in `backend/internal/contenteditor/`; WordPress publishing and schema generation live in `backend/internal/sitepublish/` and `frontend/src/client/features/site-publishing/`.
 
 ## Data and routes

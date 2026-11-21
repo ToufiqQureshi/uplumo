@@ -1,4 +1,5 @@
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
+import type { ReactNode } from "react";
 import type { AppColumnMeta } from "@/client/components/table/DataTable";
 import { SortableHeader } from "@/client/components/table/SortableHeader";
 import type {
@@ -42,6 +43,8 @@ const dimensionHelper = createColumnHelper<DimensionRow>();
 
 export function buildDimensionColumns(
   keyLabel: string,
+  /** An extra last column per row, such as "Edit" on a page. */
+  rowAction?: (key: string) => ReactNode,
 ): ColumnDef<DimensionRow>[] {
   return [
     dimensionHelper.accessor("key", {
@@ -81,5 +84,15 @@ export function buildDimensionColumns(
       cell: ({ getValue }) => formatPosition(getValue()),
       meta: rightAligned,
     }),
+    ...(rowAction
+      ? [
+          dimensionHelper.display({
+            id: "action",
+            header: () => null,
+            cell: ({ row }) => rowAction(row.original.key),
+            meta: { cellClassName: "text-right" },
+          }),
+        ]
+      : []),
   ];
 }

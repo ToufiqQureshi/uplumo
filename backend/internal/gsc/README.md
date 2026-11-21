@@ -1,7 +1,7 @@
 # Search Console (gsc)
 
 Reads a project's Google Search Console data with the owner's own Google
-grant, and turns it into the Search Growth screens. Read-only: the grant is
+grant, and turns it into the Google Search page. Read-only: the grant is
 `webmasters.readonly`, so Uplumo can never change anything in Search Console.
 
 ## Code map
@@ -20,10 +20,10 @@ grant, and turns it into the Search Growth screens. Read-only: the grant is
 
 | Route | What |
 | --- | --- |
-| `/api/v1/projects/{id}/gsc/search-performance/report` | Totals, daily trend, striking distance, countries, top losses |
+| `/api/v1/projects/{id}/gsc/search-performance/report` | Totals, daily trend, striking distance, countries, devices, top losses and gains |
 | `.../table` | One page of queries or pages (25, 50 or 100 rows) |
 | `.../export` | Up to 25,000 query or page rows |
-| `.../insights` | The free analysis (below) |
+| `.../insights` | The free analysis; no screen calls it since the page was simplified |
 | `.../sitemaps` | Submitted sitemaps, up to 200 |
 
 Filters (page, query, device, country, search type, dates) are shared by

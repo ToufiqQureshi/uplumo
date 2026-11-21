@@ -16,6 +16,7 @@ import {
 } from "@/client/components/ui/select";
 import { Input } from "@/client/components/ui/input";
 import { Button } from "@/client/components/ui/button";
+import { countryName } from "@/client/lib/countryNames";
 
 const DEVICE_LABELS: Record<SearchPerformanceDevice, string> = {
   DESKTOP: "Desktop",
@@ -267,11 +268,11 @@ export function SearchPerformanceSelects({
   const countryItems = [
     { value: ALL, label: "All countries" },
     ...(country !== ALL && !countries.some((row) => row.key === country)
-      ? [{ value: country, label: country.toUpperCase() }]
+      ? [{ value: country, label: countryName(country) }]
       : []),
     ...countries.map((row) => ({
       value: row.key,
-      label: row.key.toUpperCase(),
+      label: countryName(row.key),
     })),
   ];
   return (

@@ -2,7 +2,8 @@
 
 One screen of the customer's own Google Search Console data: totals and
 their change, a daily trend, a short "What changed" list, and Keywords,
-Pages, Countries and Devices tables. Route: `/p/$projectId/search-performance`.
+Pages, Countries and Devices tables, plus an IndexNow tab
+(`features/indexnow/IndexNowCard.tsx`, shown even without Search Console). Route: `/p/$projectId/search-performance`.
 
 ## Code map
 

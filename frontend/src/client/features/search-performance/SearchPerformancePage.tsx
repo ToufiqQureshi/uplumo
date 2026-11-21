@@ -1,10 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import {
-  keepPreviousData,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { SlidersHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { QueryError } from "@/client/components/QueryState";
@@ -18,6 +14,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/client/components/ui/tabs";
+import { IndexNowCard } from "@/client/features/indexnow/IndexNowCard";
 import { GoogleConnectionCard } from "@/client/features/integrations/GoogleConnectionCard";
 import { SearchBreakdownTable } from "@/client/features/search-performance/SearchBreakdownTable";
 import { SearchPerformanceLoadingState } from "@/client/features/search-performance/SearchPerformanceLoadingState";
@@ -86,7 +83,6 @@ export function SearchPerformancePage({
   search: SearchPerformanceSearch;
   onSearchChange: (update: Partial<SearchPerformanceSearch>) => void;
 }) {
-  const queryClient = useQueryClient();
   const textFilters = useMemo<TextFilters>(
     () => ({
       pageFilter: search.pageText
@@ -132,21 +128,6 @@ export function SearchPerformancePage({
         ? previous
         : undefined,
   });
-
-  // Keywords is the first tab: read its first page as soon as Google is
-  // connected so it opens without a spinner. Free Search Console read.
-  useEffect(() => {
-    if (report?.connected !== true) return;
-    void queryClient.prefetchQuery(
-      tableQueryOptions(
-        projectId,
-        "query",
-        1,
-        SEARCH_PERFORMANCE_DEFAULT_PAGE_SIZE,
-        { ...buildFilterInput(search), ...textFilters },
-      ),
-    );
-  }, [report?.connected, projectId, search, textFilters, queryClient]);
 
   const handleExport = async (target: ExportTarget) => {
     if (!report?.connected || reportQuery.isPlaceholderData || isExporting)
@@ -207,6 +188,13 @@ export function SearchPerformancePage({
     />
   );
 
+  const indexNow = (
+    <section className="space-y-3">
+      <SectionHeader title="Ask Bing and other engines to index your pages (IndexNow)" />
+      <IndexNowCard projectId={projectId} />
+    </section>
+  );
+
   const insights = report?.connected
     ? buildSearchInsights(report, { countryFiltered: Boolean(search.country) })
     : [];
@@ -238,8 +226,11 @@ export function SearchPerformancePage({
         ) : !report ? (
           reportError
         ) : !report.connected ? (
-          <div className="max-w-2xl">
+          // IndexNow needs no Search Console connection, so it stays
+          // reachable before Google is connected.
+          <div className="max-w-2xl space-y-6">
             <GoogleConnectionCard provider="gsc" projectId={projectId} />
+            {indexNow}
           </div>
         ) : (
           <>
@@ -321,10 +312,12 @@ export function SearchPerformancePage({
                     <TabsTrigger value="pages">Pages</TabsTrigger>
                     <TabsTrigger value="countries">Countries</TabsTrigger>
                     <TabsTrigger value="devices">Devices</TabsTrigger>
+                    <TabsTrigger value="indexnow">IndexNow</TabsTrigger>
                   </TabsList>
                   {tab === "queries" || tab === "pages" ? (
                     <TabsContent value={tab}>
                       <SearchRowsTable
+                        projectId={projectId}
                         dimension={dimension}
                         tableQuery={tableQuery}
                         page={page}
@@ -374,6 +367,9 @@ export function SearchPerformancePage({
                         if (device) onSearchChange({ page: undefined, device });
                       }}
                     />
+                  </TabsContent>
+                  <TabsContent value="indexnow" className="max-w-2xl">
+                    {indexNow}
                   </TabsContent>
                 </Tabs>
               </>

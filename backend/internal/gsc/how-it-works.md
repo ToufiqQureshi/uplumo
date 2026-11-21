@@ -1,22 +1,17 @@
-# Search Growth: how it works for a user
+# Google Search: how it works for a user
 
 1. Connect Google Search Console and choose the website's property. Nothing is
    changed in Search Console; Uplumo only reads.
-2. **Overview** says in one sentence what happened to Google clicks, lists up
-   to three things to do first, shows clicks, views, CTR and rank against the
-   previous period, and splits where the traffic comes from.
-3. Tell Uplumo your brand names once. Then branded searches (people who already
-   know you) are separated from non-branded ones (new people finding you). Uplumo
-   never guesses your brand.
-4. **Fix** lists every page and search that lost clicks, why, and pages that have
-   been fading for two periods in a row.
-5. **Grow** lists searches where you rank well but people skip you (a better
-   title often fixes it) and searches where several of your pages compete.
-6. **Explore** has every query and page Google returned, with filters (including
-   regular expressions), paging and export.
-7. **Indexing** checks whether Google has a page, and asks Bing and others to
-   look at new pages (IndexNow).
-8. **Conversions** joins Search Console with Google Analytics, when connected.
+2. The page shows clicks, impressions, CTR and average position against the
+   previous period of the same length, and a daily trend.
+3. **What changed** lists up to four lines from the site's own data: the
+   keyword that gained most, the keyword and page that lost most with the
+   reason (lower position, fewer searches, or fewer clicks on the result),
+   the top country's share of clicks, and how many searches rank 5 to 20.
+4. **Keywords** and **Pages** list every query and page Google returned, with
+   filters (including regular expressions), paging and export.
+5. **Countries** and **Devices** show where and on what people search, with
+   each one's share of clicks.
+6. **IndexNow** asks Bing and other engines to look at new or changed pages.
 
-Google hides rare searches, so query rows add up to less than the totals. The
-page says so, and says when a list stopped at its row limit.
+Google hides rare searches, so keyword rows add up to less than the totals.
