@@ -33,7 +33,15 @@ test("preview is private and saves exactly the selected report content", async (
   });
   await page.route(`${path}/save`, (route) => {
     writes.push("save");
-    const body = route.request().postDataJSON() as { html: string };
+    const body: unknown = route.request().postDataJSON();
+    if (
+      !body ||
+      typeof body !== "object" ||
+      !("html" in body) ||
+      typeof body.html !== "string"
+    ) {
+      throw new Error("Expected the reviewed report HTML");
+    }
     saved.push(body.html);
     return route.fulfill({
       json: {

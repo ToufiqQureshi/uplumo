@@ -101,18 +101,18 @@ export function indexReportDraft(html: string) {
       }
       const pair = table.closest("[data-report-pair]");
       const metric = cell.getAttribute("data-report-metric");
-      if (pair && metric) {
-        for (const bar of pair.querySelectorAll(
-          '[data-report-view="chart"] [data-report-metric]',
-        )) {
-          if (bar.getAttribute("data-report-metric") === metric)
-            add(bar, "", undefined, key);
-        }
+      if (!pair || !metric) continue;
+      const chartMetrics = pair.querySelectorAll(
+        '[data-report-view="chart"] [data-report-metric]',
+      );
+      for (const bar of chartMetrics) {
+        if (bar.getAttribute("data-report-metric") === metric)
+          add(bar, "", undefined, key);
       }
     }
   }
   for (const node of doc.querySelectorAll(
-    ".tile,.kpi,.card,.sev > div,.rings figure,.cwv span,.note p,.steps p,.work li,details,details li,.rank-grid,.dist,svg.chart:not(.panel svg),.tabs > .panel:not(.p-rf)",
+    ".tile,.kpi,.card,.sev > div,.rings figure,.cwv span,.note p,.steps p,.work li,details,details li,.evidence > p,.rank-grid,.dist,svg.chart:not(.panel svg),.tabs > .panel:not(.p-rf)",
   )) {
     const label =
       node.getAttribute("data-title") ??
