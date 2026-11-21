@@ -35,7 +35,7 @@ import {
   type SelectionAnchor,
 } from "./tableSelection";
 
-type AppColumnMeta<TData> = {
+export type AppColumnMeta<TData> = {
   headerClassName?: string;
   cellClassName?: string | ((row: Row<TData>) => string | undefined);
 };

@@ -107,7 +107,7 @@ func runPerformanceReport(s *Service, w http.ResponseWriter, r *http.Request, or
 	if err := validatePerformanceInput(&input); err != nil {
 		return nil, err
 	}
-	return s.GetPerformance(r.Context(), orgID, projectID, input)
+	return s.GetPerformanceWithDevices(r.Context(), orgID, projectID, input)
 }
 func runPerformanceTable(s *Service, w http.ResponseWriter, r *http.Request, orgID, projectID string) (any, error) {
 	var input TableInput

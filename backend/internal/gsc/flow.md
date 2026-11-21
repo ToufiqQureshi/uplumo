@@ -5,23 +5,26 @@ money is called anywhere in this package, so nothing here is spend-guarded.
 
 | Screen | Route | Search Console reads |
 | --- | --- | --- |
-| Search Growth, any screen | `report` | up to 8 in parallel (daily, previous daily, pages and queries for both periods, query+page, countries); 4 when the previous period is outside Google's 16 months |
-| Overview, Fix, Grow | `insights` | up to 6 in parallel: query+page (10,000 rows), pages and queries for the current and previous period (5,000 each), pages for the period before that (5,000) |
-| Explore tables | `table` | 1 per page turn |
-| Explore export | `export` | 1 |
+| Search Console Page | `report` | up to 9 in parallel (daily, previous daily, pages and queries for both periods, query+page, countries, devices); 5 when the previous period is outside Google's 16 months. White-label reports call `GetPerformance` without devices: up to 8 |
+| Tables | `table` | 1 per page turn |
+| Export | `export` | 1 |
 
-## Insights flow
+## Report flow
 
-screen -> `POST .../insights` (filters + brand names) -> `Service.GetInsights`
--> `fetchSearchAnalyticsRows` (parallel reads) -> pure functions in
-`insights_analysis.go` -> one JSON answer.
+screen -> `POST .../report` (filters) -> `Service.GetPerformance` ->
+`fetchSearchAnalyticsRows` (parallel reads) -> one JSON answer with totals,
+daily rows, losses and gains, quick-win searches, countries and devices.
 
-- The browser keeps an answer for 5 minutes per project, filters and brand
-  names (`staleTime`), so switching between Overview, Fix and Grow reads
-  Google once. The Indexing, Explore and Conversions screens do not request it.
+- The country read drops the country filter and the device read drops the
+  device filter, so those tables always list every country or device.
 - If any read fails the whole answer fails; there is no partial result.
 - Nothing retries automatically.
+- The `insights` route (`Service.GetInsights`) has no screen since the
+  page was simplified; it is kept until it is removed on purpose.
 
 ## Paid calls per user action
 
-0. A test (`TestGetInsightsFindsWhatIsWorthDoing`) asserts the read count.
+0. Every read above is a free Search Console read.
+`TestGetPerformanceIncludesDevicesBuildRequestWithoutDeviceFilter` (9 reads)
+and `TestGetPerformanceBuildsLegacyReportAndOmitsCountryFilterForCountryRows`
+(8 reads, no devices) assert the counts; `sitereport` caps a report at 10.

@@ -1,9 +1,7 @@
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
-import type { MutableRefObject } from "react";
-import { makeSelectionColumn } from "@/client/components/table/DataTable";
+import type { ReactNode } from "react";
+import type { AppColumnMeta } from "@/client/components/table/DataTable";
 import { SortableHeader } from "@/client/components/table/SortableHeader";
-import { safeHttpUrl } from "@/shared/safe-url";
-import type { SelectionAnchor } from "@/client/components/table/tableSelection";
 import type {
   getSearchPerformanceReport,
   getSearchPerformanceTable,
@@ -18,7 +16,6 @@ export type SearchPerformanceTableRow = Extract<
   { connected: true }
 >["rows"][number];
 type DimensionRow = SearchPerformanceTableRow;
-type StrikingRow = Report["strikingDistance"][number];
 
 const numberFormat = new Intl.NumberFormat("en-US");
 
@@ -34,15 +31,20 @@ export function formatPosition(value: number): string {
   return value.toFixed(1);
 }
 
-const rightAligned = {
+// Typed with DataTable's column meta. Keep this import: DataTable.tsx also
+// augments TanStack's ColumnMeta, and TypeScript only accepts typed accessor
+// columns as ColumnDef everywhere when that augmentation loads early.
+const rightAligned: AppColumnMeta<DimensionRow> = {
   headerClassName: "text-right",
   cellClassName: "text-right tabular-nums",
-} as const;
+};
 
 const dimensionHelper = createColumnHelper<DimensionRow>();
 
 export function buildDimensionColumns(
   keyLabel: string,
+  /** An extra last column per row, such as "Edit" on a page. */
+  rowAction?: (key: string) => ReactNode,
 ): ColumnDef<DimensionRow>[] {
   return [
     dimensionHelper.accessor("key", {
@@ -82,62 +84,15 @@ export function buildDimensionColumns(
       cell: ({ getValue }) => formatPosition(getValue()),
       meta: rightAligned,
     }),
-  ];
-}
-
-const strikingHelper = createColumnHelper<StrikingRow>();
-
-export function buildStrikingColumns(
-  anchorRef: MutableRefObject<SelectionAnchor | null>,
-): ColumnDef<StrikingRow>[] {
-  return [
-    makeSelectionColumn<StrikingRow>(anchorRef),
-    strikingHelper.accessor("query", {
-      enableSorting: false,
-      header: () => "Query",
-      cell: ({ getValue }) => (
-        <span className="block max-w-xs truncate" title={getValue()}>
-          {getValue()}
-        </span>
-      ),
-    }),
-    strikingHelper.accessor("page", {
-      enableSorting: false,
-      header: () => "Page",
-      // GSC page keys are canonical http(s) URLs of the verified property;
-      // the scheme check is defense-in-depth before rendering an href.
-      cell: ({ getValue }) => (
-        <a
-          href={safeHttpUrl(getValue()) ?? undefined}
-          target="_blank"
-          rel="noreferrer"
-          className="block max-w-sm truncate text-primary underline-offset-4 hover:underline"
-          title={getValue()}
-        >
-          {getValue()}
-        </a>
-      ),
-    }),
-    strikingHelper.accessor("impressions", {
-      header: ({ column }) => (
-        <SortableHeader column={column} label="Impressions" align="right" />
-      ),
-      cell: ({ getValue }) => formatCount(getValue()),
-      meta: rightAligned,
-    }),
-    strikingHelper.accessor("clicks", {
-      header: ({ column }) => (
-        <SortableHeader column={column} label="Clicks" align="right" />
-      ),
-      cell: ({ getValue }) => formatCount(getValue()),
-      meta: rightAligned,
-    }),
-    strikingHelper.accessor("position", {
-      header: ({ column }) => (
-        <SortableHeader column={column} label="Position" align="right" />
-      ),
-      cell: ({ getValue }) => formatPosition(getValue()),
-      meta: rightAligned,
-    }),
+    ...(rowAction
+      ? [
+          dimensionHelper.display({
+            id: "action",
+            header: () => null,
+            cell: ({ row }) => rowAction(row.original.key),
+            meta: { cellClassName: "text-right" },
+          }),
+        ]
+      : []),
   ];
 }

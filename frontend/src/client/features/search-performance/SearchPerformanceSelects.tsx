@@ -5,6 +5,7 @@ import {
   type SearchPerformanceDevice,
   type SearchPerformanceSearch,
   type GscSearchType,
+  type SEARCH_PERFORMANCE_RANGES,
 } from "@/types/schemas/search-performance";
 import {
   Select,
@@ -15,6 +16,7 @@ import {
 } from "@/client/components/ui/select";
 import { Input } from "@/client/components/ui/input";
 import { Button } from "@/client/components/ui/button";
+import { countryName } from "@/client/lib/countryNames";
 
 const DEVICE_LABELS: Record<SearchPerformanceDevice, string> = {
   DESKTOP: "Desktop",
@@ -51,7 +53,7 @@ function formatDate(value: Date): string {
   return value.toISOString().slice(0, 10);
 }
 
-function subtractUTCMonths(value: Date, months: number): Date {
+export function subtractUTCMonths(value: Date, months: number): Date {
   const first = new Date(
     Date.UTC(value.getUTCFullYear(), value.getUTCMonth() - months, 1),
   );
@@ -65,6 +67,63 @@ function subtractUTCMonths(value: Date, months: number): Date {
       Math.min(value.getUTCDate(), lastDay),
     ),
   );
+}
+
+/** Rolling ranges Search Console resolves itself (`range` in the URL). */
+const ROLLING_PRESETS = [
+  { value: "last_7_days", label: "Last 7 days" },
+  { value: "last_28_days", label: "Last 28 days" },
+  { value: "last_3_months", label: "Last 3 months" },
+  { value: "last_6_months", label: "Last 6 months" },
+  { value: "last_12_months", label: "Last 12 months" },
+  { value: "last_16_months", label: "Last 16 months" },
+] as const satisfies readonly {
+  value: (typeof SEARCH_PERFORMANCE_RANGES)[number];
+  label: string;
+}[];
+
+const MONTH_PRESETS = [
+  { value: "this_month", label: "This month" },
+  { value: "last_month", label: "Last month" },
+] as const;
+type MonthPreset = (typeof MONTH_PRESETS)[number]["value"];
+
+/** Calendar-month dates for a month preset, by the viewer's `today` (UTC).
+ *  `latest` is the newest day Search Console has data for (it lags a few
+ *  days), so a range never ends after it. Null when the month has no data
+ *  day yet, such as "This month" on the 1st to 3rd. */
+export function monthPresetDates(
+  preset: MonthPreset,
+  today: Date,
+  latest: Date,
+): { startDate: string; endDate: string } | null {
+  const offset = preset === "this_month" ? 0 : 1;
+  const year = today.getUTCFullYear();
+  const month = today.getUTCMonth() - offset;
+  const start = new Date(Date.UTC(year, month, 1));
+  const monthEnd = new Date(Date.UTC(year, month + 1, 0));
+  const end = monthEnd < latest ? monthEnd : latest;
+  if (end < start) return null;
+  return { startDate: formatDate(start), endDate: formatDate(end) };
+}
+
+function currentPreset(
+  search: SearchPerformanceSearch,
+  today: Date,
+  latest: Date,
+): string {
+  if (!search.startDate || !search.endDate) {
+    return search.range ?? "last_28_days";
+  }
+  const month = MONTH_PRESETS.find(({ value }) => {
+    const dates = monthPresetDates(value, today, latest);
+    return (
+      dates !== null &&
+      dates.startDate === search.startDate &&
+      dates.endDate === search.endDate
+    );
+  });
+  return month?.value ?? "custom";
 }
 
 function SearchPerformanceDateRange({
@@ -100,8 +159,50 @@ function SearchPerformanceDateRange({
     endDate <= maxDate &&
     (startDate !== appliedStart || endDate !== appliedEnd);
 
+  const presetItems = [
+    ...ROLLING_PRESETS,
+    ...MONTH_PRESETS.filter(
+      ({ value }) => monthPresetDates(value, today, latest) !== null,
+    ),
+    { value: "custom", label: "Custom" },
+  ];
+  const preset = currentPreset(search, today, latest);
+
+  const choosePreset = (value: string | null) => {
+    const rolling = ROLLING_PRESETS.find((item) => item.value === value);
+    if (rolling) {
+      onSearchChange({
+        page: undefined,
+        range: rolling.value,
+        startDate: undefined,
+        endDate: undefined,
+      });
+      return;
+    }
+    const month = MONTH_PRESETS.find((item) => item.value === value);
+    const dates = month ? monthPresetDates(month.value, today, latest) : null;
+    if (dates) onSearchChange({ page: undefined, range: undefined, ...dates });
+  };
+
   return (
     <div className="flex flex-wrap items-end gap-2">
+      <Select items={presetItems} value={preset} onValueChange={choosePreset}>
+        <SelectTrigger size="sm" className="w-40" aria-label="Date range">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {presetItems.map((item) => (
+            <SelectItem
+              key={item.value}
+              value={item.value}
+              disabled={item.value === "custom"}
+            >
+              {item.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
       <label className="grid gap-1 text-[11px] text-muted-foreground">
         From
         <Input
@@ -167,11 +268,11 @@ export function SearchPerformanceSelects({
   const countryItems = [
     { value: ALL, label: "All countries" },
     ...(country !== ALL && !countries.some((row) => row.key === country)
-      ? [{ value: country, label: country.toUpperCase() }]
+      ? [{ value: country, label: countryName(country) }]
       : []),
     ...countries.map((row) => ({
       value: row.key,
-      label: row.key.toUpperCase(),
+      label: countryName(row.key),
     })),
   ];
   return (

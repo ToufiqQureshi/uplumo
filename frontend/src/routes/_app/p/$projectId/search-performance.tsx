@@ -14,8 +14,7 @@ export const Route = createFileRoute("/_app/p/$projectId/search-performance")({
   search: {
     middlewares: [
       stripSearchParams({
-        view: "overview",
-        tab: "striking",
+        tab: "queries",
         range: "last_28_days",
         searchType: "web",
         page: 1,

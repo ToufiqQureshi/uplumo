@@ -69,7 +69,7 @@ const projectNavItems = [
   },
   {
     to: "/p/$projectId/search-performance" as const,
-    label: "Search Growth",
+    label: "Google Search",
     icon: GoogleGlyphMuted,
   },
   {

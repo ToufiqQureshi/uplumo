@@ -7,7 +7,7 @@ import {
 /** Date ranges offered by the Search Growth page. A deliberate subset of
  *  the GSC agent ranges (GSC_DATE_RANGES in searchAnalytics.ts); assignability
  *  to GscDateRange is compiler-checked at the resolveDateRange call site. */
-const SEARCH_PERFORMANCE_RANGES = [
+export const SEARCH_PERFORMANCE_RANGES = [
   "last_7_days",
   "last_28_days",
   "last_3_months",
@@ -103,29 +103,17 @@ export const searchPerformanceTableExportInputSchema = z.object({
 });
 
 export const SEARCH_PERFORMANCE_TABS = [
-  "striking",
   "queries",
   "pages",
-  "refresh",
+  "countries",
+  "devices",
+  "indexnow",
 ] as const;
-export type SearchPerformanceTab = (typeof SEARCH_PERFORMANCE_TABS)[number];
 
 const textMatchParam = z.enum(TEXT_MATCH_OPERATORS).optional().catch(undefined);
 
-/** The Search Growth screens, in the order they are offered. */
-export const SEARCH_GROWTH_VIEWS = [
-  "overview",
-  "fix",
-  "grow",
-  "explore",
-  "indexing",
-  "conversions",
-] as const;
-export type SearchGrowthView = (typeof SEARCH_GROWTH_VIEWS)[number];
-
 /** /p/$projectId/search-performance query params. */
 export const searchPerformanceSearchSchema = z.object({
-  view: z.enum(SEARCH_GROWTH_VIEWS).optional().catch(undefined),
   tab: z.enum(SEARCH_PERFORMANCE_TABS).optional().catch(undefined),
   range: z.enum(SEARCH_PERFORMANCE_RANGES).optional().catch(undefined),
   searchType: z.enum(GSC_SEARCH_TYPES).optional().catch(undefined),

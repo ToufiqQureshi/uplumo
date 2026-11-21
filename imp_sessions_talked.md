@@ -1,3 +1,13 @@
+## 20 Nov 2026: Search Console page made simple (PR #324)
+
+- Owner: "search console and analytics muje bilkul samj nai aaraa ... bekkar ha logo ke b complaint ha ... uplumo chidnke chale gaye".
+- Decision: "simple rakhna ... sam and all fix grow and other tab zaroorat nai ha hata de". Users only want: how pages and keywords perform, which countries visitors come from, and real insights.
+- Owner: custom dates like Search Console ("1 se 31 tak"). Built: presets incl. This month / Last month, plus From/To.
+- Built: one page (totals, trend, up to 4 "What changed" lines from own data, Keywords | Pages | Countries | Devices). Removed SAM button and Fix, Grow, Explore, Indexing, Conversions. 0 paid calls; +1 free GSC read (devices).
+- Owner asked for Haiku to code and Claude to review. Haiku left type errors, a 20-country hard-coded map and broken month presets; the reviewer (Claude) fixed them in the same PR.
+- Owner: "index now new tab me rakh" → IndexNow is a tab on the page. Pages rows got "Edit" (content editor), per the 13 Nov "kahi se bhi one click" rule. Sidebar renamed to "Google Search".
+- Waiting for owner: (1) Delete the backend routes with no screen now (GSC insights, GA4 growth, URL inspection, Content Editor growth panel)? (2) The own tracker "Analytics" page: rename or cut (still on the cut list).
+
 ## 20 Nov 2026: separate SEO and AEO audits, toggle, AEO page
 
 - Owner: "fix the /free-seo-audit URL, add an AEO audit too ... user choose kare AEO ya SEO ... dono engine alag aur strong ... best guides padh ke improve ... AEO / SEO toggle ... dono deeply audit".

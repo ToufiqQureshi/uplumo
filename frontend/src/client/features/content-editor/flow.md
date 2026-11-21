@@ -8,7 +8,7 @@
 
 ## Open a live page: 0 paid calls
 
-"Edit in Content Editor" (Site Audit issues, AI visibility answer proof, Search Growth) → `POST .../content/drafts/import {url}` → `PageImporter`: the URL must be on the project's domain or its subdomains; a page already imported returns its draft unchanged and unfetched; otherwise the server fetches it through the audit SSRF guard (10 s, 2 MB, at most three redirects that stay on the site), keeps the title, meta description, headings, paragraphs, lists, quotes and links as Markdown (images, navigation, header and footer left out), saves a draft with `source_url`, and the browser opens `content-editor?draft=…`. Concurrent clicks share one fetch and one draft.
+"Edit in Content Editor" (Site Audit issues, AI visibility answer proof, Pages tab of Google Search) → `POST .../content/drafts/import {url}` → `PageImporter`: the URL must be on the project's domain or its subdomains; a page already imported returns its draft unchanged and unfetched; otherwise the server fetches it through the audit SSRF guard (10 s, 2 MB, at most three redirects that stay on the site), keeps the title, meta description, headings, paragraphs, lists, quotes and links as Markdown (images, navigation, header and footer left out), saves a draft with `source_url`, and the browser opens `content-editor?draft=…`. Concurrent clicks share one fetch and one draft.
 
 ## Paid actions
 

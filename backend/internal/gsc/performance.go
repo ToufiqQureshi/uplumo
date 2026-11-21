@@ -21,6 +21,7 @@ const (
 	strikingDistanceLimit = 1000
 	dailyRowLimit         = 1000
 	countryRowLimit       = 25
+	deviceRowLimit        = 10
 	exportRowLimit        = maxReportRowLimit
 )
 
@@ -244,8 +245,19 @@ func (s *Service) client(ctx context.Context, organizationID, projectID string) 
 	return connection, s.NewClient(connection.ConnectedByUserID, accountID), nil
 }
 
-// GetPerformance returns totals, comparisons, striking-distance rows and country options.
+// GetPerformance returns totals, comparisons, striking-distance rows and
+// country options: up to 8 free Search Console reads (white-label reports).
 func (s *Service) GetPerformance(ctx context.Context, organizationID, projectID string, input PerformanceInput) (map[string]any, error) {
+	return s.performance(ctx, organizationID, projectID, input, false)
+}
+
+// GetPerformanceWithDevices is GetPerformance plus clicks by device, one
+// more free read, for the Google Search page only.
+func (s *Service) GetPerformanceWithDevices(ctx context.Context, organizationID, projectID string, input PerformanceInput) (map[string]any, error) {
+	return s.performance(ctx, organizationID, projectID, input, true)
+}
+
+func (s *Service) performance(ctx context.Context, organizationID, projectID string, input PerformanceInput, withDevices bool) (map[string]any, error) {
 	connection, client, err := s.client(ctx, organizationID, projectID)
 	if err != nil {
 		if errors.Is(err, ErrConnectionNotFound) {
@@ -280,6 +292,7 @@ func (s *Service) GetPerformance(ctx context.Context, organizationID, projectID 
 	if err != nil {
 		return nil, err
 	}
+
 	requests := []SearchRequest{filtersRequest}
 	if comparisonAvailable {
 		previousInput := currentInput
@@ -311,6 +324,14 @@ func (s *Service) GetPerformance(ctx context.Context, organizationID, projectID 
 	}
 	queryPagesIndex := len(requests)
 	requests = append(requests, queryPages, countryRequest)
+	if withDevices {
+		// The device read drops the device filter so every device is listed.
+		deviceRequest, buildErr := BuildSearchAnalyticsRequest(withoutDevice(currentInput), []string{"device"}, deviceRowLimit, 0, now)
+		if buildErr != nil {
+			return nil, buildErr
+		}
+		requests = append(requests, deviceRequest)
+	}
 	rowsByRequest, err := s.fetchSearchAnalyticsRows(ctx, client, connection.SiteURL, requests...)
 	if err != nil {
 		mapped := mapProviderError(err)
@@ -331,7 +352,11 @@ func (s *Service) GetPerformance(ctx context.Context, organizationID, projectID 
 		previous = dateWindow{}
 	}
 	queryRows, countryRows := rowsByRequest[queryPagesIndex], rowsByRequest[queryPagesIndex+1]
-	return map[string]any{"connected": true, "range": map[string]any{"startDate": window.StartDate, "endDate": window.EndDate, "prevStartDate": previous.StartDate, "prevEndDate": previous.EndDate, "comparisonAvailable": comparisonAvailable}, "totals": sumSearchTotals(currentRows), "prevTotals": sumSearchTotals(previousRows), "daily": toDailyRows(currentRows), "strikingDistance": buildStrikingDistanceRows(queryRows, strikingDistanceLimit), "countries": toDimensionRows(countryRows), "pageChanges": pageChanges, "queryLosses": queryLosses, "queryGains": queryGains}, nil
+	report := map[string]any{"connected": true, "range": map[string]any{"startDate": window.StartDate, "endDate": window.EndDate, "prevStartDate": previous.StartDate, "prevEndDate": previous.EndDate, "comparisonAvailable": comparisonAvailable}, "totals": sumSearchTotals(currentRows), "prevTotals": sumSearchTotals(previousRows), "daily": toDailyRows(currentRows), "strikingDistance": buildStrikingDistanceRows(queryRows, strikingDistanceLimit), "countries": toDimensionRows(countryRows), "pageChanges": pageChanges, "queryLosses": queryLosses, "queryGains": queryGains}
+	if withDevices {
+		report["devices"] = toDimensionRows(rowsByRequest[queryPagesIndex+2])
+	}
+	return report, nil
 }
 
 func toDailyRows(rows []SearchRow) []map[string]any {
@@ -602,6 +627,7 @@ func (s *Service) now() time.Time {
 	return time.Now().UTC()
 }
 func withoutCountry(input PerformanceInput) PerformanceInput { input.Country = ""; return input }
+func withoutDevice(input PerformanceInput) PerformanceInput  { input.Device = ""; return input }
 func previousPeriod(startDate, endDate string) (dateWindow, error) {
 	start, ok1 := parseDate(startDate)
 	end, ok2 := parseDate(endDate)
