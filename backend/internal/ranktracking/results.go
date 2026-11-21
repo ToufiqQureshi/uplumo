@@ -42,6 +42,7 @@ type DeviceResult struct {
 	RankingURL       *string            `json:"rankingUrl"`
 	SerpFeatures     []string           `json:"serpFeatures"`
 	Competitors      []CompetitorResult `json:"competitors"`
+	CheckedAt        *time.Time         `json:"-"`
 }
 
 // ResultRow is one tracked keyword with its latest positions.
@@ -206,7 +207,7 @@ func (s *Service) LatestResults(ctx context.Context, projectID, configID, period
 		}
 		result := DeviceResult{
 			Position: snap.Position, PreviousPosition: previous[snap.TrackingKeywordID+":"+snap.Device],
-			RankingURL: snap.URL, SerpFeatures: snap.SerpFeatures, Competitors: snap.Competitors,
+			RankingURL: snap.URL, SerpFeatures: snap.SerpFeatures, Competitors: snap.Competitors, CheckedAt: &snap.CheckedAt,
 		}
 		if result.SerpFeatures == nil {
 			result.SerpFeatures = []string{}

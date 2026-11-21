@@ -409,9 +409,17 @@ func run(logger *slog.Logger) (err error) {
 	} else {
 		logger.Warn("SUPABASE_* image storage variables not set; content editor image uploads are unavailable")
 	}
+	analyticsService := analytics.NewService(db, rdb, countryLookup)
+	localReportSource := sitereport.LocalSnapshots{Store: localvisibility.Store{DB: db}}
+	if gateSvc != nil {
+		localReportSource.Plans = gateSvc.Gate(planCatalog.LocalVisibility)
+	}
 	siteReports := &sitereport.Service{
 		Store: sitereport.Repository{DB: db}, Search: sitereport.GSC{Service: gscService}, Traffic: sitereport.GA4{Service: ga4Svc},
 		Rankings: sitereport.RankTracking{Service: rankTrackingService}, Reports: reportsSvc, Branding: brandingSvc.Get, Logger: logger,
+		Analytics: sitereport.UplumoAnalytics{Service: analyticsService}.Read,
+		AI:        sitereport.AITracking{Service: aiTracking}.Read,
+		Local:     localReportSource.Read,
 	}
 	// The free audit reads Chrome field data only when a CrUX key is set;
 	// without one its Core Web Vitals check reports "not measured".
@@ -440,7 +448,7 @@ func run(logger *slog.Logger) (err error) {
 			DB:                  db,
 			Redis:               httpapi.PingFunc(func(ctx context.Context) error { return rdb.Ping(ctx).Err() }),
 			Auth:                authService,
-			Analytics:           analytics.NewService(db, rdb, countryLookup),
+			Analytics:           analyticsService,
 			TrustedProxyCIDRs:   cfg.TrustedProxyCIDRs,
 			Billing:             gateSvc,
 			BillingRoutes:       billingRoutes,

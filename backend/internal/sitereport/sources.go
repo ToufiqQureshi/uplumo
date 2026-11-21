@@ -127,6 +127,9 @@ func (g GA4) Traffic(ctx context.Context, projectID string, p Period) (*Traffic,
 		Current  map[string]*float64 `json:"current"`
 		Previous map[string]*float64 `json:"previous"`
 		Trend    []map[string]any    `json:"trend"`
+		Metadata struct {
+			HasLimitedData bool `json:"hasLimitedData"`
+		} `json:"reportMetadata"`
 	}
 	if err := roundTrip(raw, &overview); err != nil {
 		return nil, fmt.Errorf("decode analytics overview: %w", err)
@@ -136,6 +139,7 @@ func (g GA4) Traffic(ctx context.Context, projectID string, p Period) (*Traffic,
 	}
 	out := &Traffic{
 		Currency: overview.Request.CurrencyCode,
+		Limited:  overview.Metadata.HasLimitedData,
 		Sessions: metric("sessions"), Users: metric("activeUsers"), EngagedSessions: metric("engagedSessions"),
 		EngagementRate: metric("engagementRate"), KeyEvents: metric("keyEvents"), Revenue: metric("purchaseRevenue"),
 	}
@@ -150,8 +154,97 @@ func (g GA4) Traffic(ctx context.Context, projectID string, p Period) (*Traffic,
 		}
 	}
 	out.Daily = fillDays(p, out.Daily, func(d TrafficDay) string { return d.Date }, func(date string) TrafficDay { return TrafficDay{Date: date} })
+	for _, breakdown := range []struct {
+		kind               ga4.ReportKind
+		channel, dimension string
+		rows               *[]GA4Row
+	}{
+		{ga4.TrafficAcquisition, "all", "sessionDefaultChannelGroup", &out.Channels},
+		{ga4.LandingPages, "all", "landingPage", &out.LandingPages},
+		{ga4.KeyEvents, "organic_search", "eventName", &out.Events},
+	} {
+		rows, limited, err := g.breakdown(ctx, projectID, p, breakdown.kind, breakdown.channel, breakdown.dimension)
+		if err != nil {
+			out.breakdownError = errors.Join(out.breakdownError, fmt.Errorf("load %s: %w", breakdown.kind, err))
+			out.Limited = true
+			continue
+		}
+		*breakdown.rows = rows
+		out.Limited = out.Limited || limited
+	}
 	return out, nil
 }
+
+func (t *Traffic) hasData() bool {
+	return t.HasOrganic() || len(t.Channels)+len(t.LandingPages)+len(t.Events) > 0
+}
+
+// HasOrganic reports whether either period has organic sessions.
+func (t *Traffic) HasOrganic() bool {
+	return positive(t.Sessions.Value) || positive(t.Sessions.Previous)
+}
+
+func (g GA4) breakdown(ctx context.Context, projectID string, p Period, kind ga4.ReportKind, channel, dimension string) ([]GA4Row, bool, error) {
+	raw, err := g.Service.RunReport(ctx, projectID, ga4.ReportInput{
+		Kind: kind, Channel: channel, Limit: new(evidenceRows), ComparePreviousPeriod: kind == ga4.KeyEvents,
+		StartDate: p.Start.Format(day), EndDate: p.End.Format(day),
+	})
+	if err != nil {
+		return nil, false, err
+	}
+	var payload struct {
+		Rows     []map[string]json.RawMessage `json:"rows"`
+		Metadata struct {
+			Limited bool `json:"hasLimitedData"`
+		} `json:"reportMetadata"`
+		Comparison struct {
+			Coverage struct {
+				Complete bool `json:"complete"`
+			} `json:"coverage"`
+			Rows []struct {
+				Dimensions map[string]string `json:"dimensions"`
+				Metrics    map[string]struct {
+					Current, Previous *float64
+				} `json:"metrics"`
+			} `json:"rows"`
+		} `json:"comparison"`
+	}
+	if err := roundTrip(raw, &payload); err != nil {
+		return nil, false, err
+	}
+	var out []GA4Row
+	if kind == ga4.KeyEvents {
+		for _, row := range payload.Comparison.Rows {
+			events := row.Metrics["keyEvents"]
+			if !positive(events.Current) && !positive(events.Previous) {
+				continue
+			}
+			out = append(out, GA4Row{Name: row.Dimensions[dimension], KeyEvents: events.Current, PreviousKeyEvents: events.Previous})
+		}
+		return firstN(out, evidenceRows), payload.Metadata.Limited || !payload.Comparison.Coverage.Complete, nil
+	}
+	for _, row := range payload.Rows {
+		var item GA4Row
+		fields := map[string]any{
+			dimension: &item.Name, "hostName": &item.Host,
+			"sessions": &item.Sessions, "keyEvents": &item.KeyEvents, "engagementRate": &item.EngagementRate,
+		}
+		for key, value := range fields {
+			if raw := row[key]; len(raw) > 0 {
+				if err := json.Unmarshal(raw, value); err != nil {
+					return nil, false, fmt.Errorf("decode GA4 %s: %w", key, err)
+				}
+			}
+		}
+		if positive(item.Sessions) || positive(item.KeyEvents) {
+			item.Name = reportPath(item.Name)
+			out = append(out, item)
+		}
+	}
+	return out, payload.Metadata.Limited, nil
+}
+
+func positive(value *float64) bool { return value != nil && *value > 0 }
 
 // RankTracking reads stored rank snapshots; it never starts a paid check.
 type RankTracking struct{ Service *ranktracking.Service }
@@ -194,7 +287,7 @@ func (r RankTracking) Rankings(ctx context.Context, projectID, domain string, p 
 	if chosen.Devices == "mobile" {
 		device = "mobile"
 	}
-	out := &Rankings{Domain: chosen.Domain, Device: device}
+	out := &Rankings{Domain: chosen.Domain, Device: device, Comparison: compare}
 	if chosen.LocationName != nil {
 		out.Location = *chosen.LocationName
 	}
@@ -206,9 +299,18 @@ func (r RankTracking) Rankings(ctx context.Context, projectID, domain string, p 
 		if device == "mobile" {
 			result = row.Mobile
 		}
-		item := RankRow{Keyword: row.Keyword, Position: result.Position, Previous: result.PreviousPosition, Volume: row.SearchVolume}
+		if result.CheckedAt == nil {
+			continue
+		}
+		item := RankRow{Keyword: row.Keyword, Position: result.Position, Previous: result.PreviousPosition, Volume: row.SearchVolume, CheckedAt: result.CheckedAt}
 		if result.RankingURL != nil {
 			item.URL = *result.RankingURL
+		}
+		for _, competitor := range result.Competitors {
+			if competitor.Rank <= 0 || competitor.Domain == "" || matchesDomain(evidenceDomain(competitor.Domain), chosen.Domain) {
+				continue
+			}
+			item.Competitors = append(item.Competitors, CompetitorRank{Rank: competitor.Rank, Domain: competitor.Domain, URL: competitor.URL})
 		}
 		out.Rows = append(out.Rows, item)
 	}

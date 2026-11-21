@@ -1,0 +1,167 @@
+{{- define "ga4-breakdowns"}}
+{{- if .Limited}}<p class="src">Some Google Analytics data was unavailable or limited.</p>{{end}}
+{{- with .Channels}}
+<div data-report-pair="Traffic channels">
+<h3>Traffic channels</h3>
+{{template "bar-chart" dict "Rows" (ga4Bars .) "Label" "Sessions by channel"}}
+{{template "ga4-table" dict "Rows" . "Label" "Channel" "Paired" true}}
+</div>
+{{- end}}
+{{- with .LandingPages}}
+<h3>Top landing pages across all channels</h3>
+{{template "ga4-table" dict "Rows" . "Label" "Landing page"}}
+{{- end}}
+{{- with .Events}}
+<h3>Key events from organic search</h3>
+<div class="table"><table><thead><tr><th>Event name</th><th class="n">This period</th><th class="n">Previous period</th></tr></thead><tbody>
+{{range .}}<tr><td class="key">{{.Name}}</td><td class="n">{{amount .KeyEvents}}</td><td class="n">{{amount .PreviousKeyEvents}}</td></tr>{{end}}
+</tbody></table></div>
+{{- end}}
+{{- end}}
+
+{{- define "ga4-table"}}
+<div class="table"{{if .Paired}} data-report-view="table"{{end}}><table><thead><tr><th>{{.Label}}</th><th class="n" data-report-metric="primary">Sessions</th><th class="n">Engagement rate</th><th class="n">Key events</th></tr></thead><tbody>
+{{- $paired := .Paired}}
+{{range .Rows}}<tr{{if $paired}} data-report-row="{{.Name}}"{{end}}><td class="key">{{if .Host}}{{.Host}} {{end}}{{.Name}}</td><td class="n">{{amount .Sessions}}</td><td class="n">{{engagement .EngagementRate}}</td><td class="n">{{amount .KeyEvents}}</td></tr>{{end}}
+</tbody></table></div>
+{{- end}}
+
+{{- define "uplumo-analytics"}}
+<section id="analytics">
+<header><h2>Uplumo Analytics</h2><p class="src">Source: Uplumo website tracking</p></header>
+<div class="kpis">
+<div class="kpi"><span class="k">Daily visitors, summed</span><span class="v">{{count .Visitors}}</span>{{if .PreviousVisitors}}<span class="p">was {{count .PreviousVisitors}}</span>{{end}}</div>
+<div class="kpi"><span class="k">Sessions</span><span class="v">{{count .Sessions}}</span></div>
+<div class="kpi"><span class="k">Pageviews</span><span class="v">{{count .Pageviews}}</span></div>
+</div>
+{{- if gt (len .Series) 1}}{{with trafficSeries (siteSeries .)}}{{lineChart "uplumo-pageviews" .Values .Dates "pageviews"}}{{end}}{{end}}
+{{- with .Channels}}
+<div data-report-pair="Acquisition channels">
+<h3>Acquisition channels</h3>
+{{template "bar-chart" dict "Rows" (analyticsBars .) "Label" "Sessions by acquisition channel"}}
+<div class="table" data-report-view="table"><table><thead><tr><th>Channel</th><th class="n" data-report-metric="primary">Sessions</th></tr></thead><tbody>
+{{range .}}<tr data-report-row="{{.Channel}}"><td class="key">{{.Channel}}</td><td class="n">{{count .Sessions}}</td></tr>{{end}}
+</tbody></table></div>
+</div>
+{{- end}}
+{{- with .Entries}}
+<h3>Top entry pages</h3>
+<div class="table"><table><thead><tr><th>Page</th><th class="n">Sessions</th></tr></thead><tbody>
+{{range .}}<tr><td class="key">{{.Path}}</td><td class="n">{{count .Sessions}}</td></tr>{{end}}
+</tbody></table></div>
+{{- end}}
+{{- with .Referrers}}
+<h3>Top external referrers</h3>
+<div class="table"><table><thead><tr><th>Website</th><th class="n">Daily visitors, summed</th></tr></thead><tbody>
+{{range .}}<tr><td class="key">{{.Host}}</td><td class="n">{{count .Visitors}}</td></tr>{{end}}
+</tbody></table></div>
+{{- end}}
+{{- $leads := .LeadsConfigured}}
+{{- with .AILandings}}
+<h3>Visits referred by AI assistants</h3>
+<div class="table"><table><thead><tr><th>AI source</th><th>Entry page</th><th class="n">Daily visitors, summed</th>{{if $leads}}<th class="n">Daily visitors who took a lead action</th>{{end}}</tr></thead><tbody>
+{{range .}}<tr><td>{{.Source}}</td><td class="key">{{.Path}}</td><td class="n">{{count .Visitors}}</td>{{if $leads}}<td class="n">{{count .LeadVisitors}}</td>{{end}}</tr>{{end}}
+</tbody></table></div>
+{{- end}}
+{{- with .LeadActions}}{{template "tracked-events" dict "Title" "Configured lead actions" "Rows" .}}{{end}}
+{{- with .Events}}{{template "tracked-events" dict "Title" "Tracked actions" "Rows" .}}{{end}}
+</section>
+{{- end}}
+
+{{- define "tracked-events"}}
+<h3>{{.Title}}</h3>
+<div class="table"><table><thead><tr><th>Tracked event</th><th class="n">Times recorded</th></tr></thead><tbody>
+{{range .Rows}}<tr><td class="key">{{.Name}}</td><td class="n">{{count .Count}}</td></tr>{{end}}
+</tbody></table></div>
+{{- end}}
+
+{{- define "competitor-rankings"}}
+<section id="competitors">
+{{with .Competitors}}<header><h2>Competitor rankings</h2><p class="src">Source: Rank Tracking · {{.Domain}}{{if .Location}} · {{.Location}}{{end}} · {{.Device}}{{with .CheckedAt}} · checked {{date .}}{{end}}</p></header>{{end}}
+<p class="lede">Up to five other sites per keyword from the saved Google results. Monthly searches are keyword estimates.{{if gt .CompetitorTotal (len .CompetitorRows)}} Showing {{len .CompetitorRows}} of {{.CompetitorTotal}} keywords with competitor results.{{end}}</p>
+<div data-report-pair="Competitor comparisons">
+{{template "bar-chart" dict "Rows" (rankBars .CompetitorRows) "Label" "Project and leading competitor positions · first 8 keywords shown · lower is better" "Rank" true}}
+<div class="table" data-report-view="table"><table><thead><tr><th>Keyword</th><th class="n">Monthly searches</th><th data-report-metric="primary">Project position and page</th><th data-report-metric="comparison">Competitor positions and pages</th></tr></thead><tbody>
+{{- range .CompetitorRows}}
+<tr data-report-row="{{.Keyword}}"><td class="key">{{.Keyword}}{{with .CheckedAt}}<br><span class="src">{{date .}}</span>{{end}}</td><td class="n">{{with .Volume}}{{inum (deref .)}}{{else}}—{{end}}</td>
+<td>{{with .Position}}#{{deref .}}{{else}}Outside tracked results{{end}}{{with href .URL}}<br><a href="{{.}}" target="_blank" rel="noreferrer">{{short (str .)}}</a>{{end}}</td>
+<td>{{range topCompetitors .Competitors}}<div>#{{.Rank}} {{.Domain}}{{with href .URL}}<br><a href="{{.}}" target="_blank" rel="noreferrer">{{short (str .)}}</a>{{end}}</div>{{end}}</td></tr>
+{{- end}}
+</tbody></table></div>
+</div>
+</section>
+{{- end}}
+
+{{- define "bar-chart"}}
+{{- if .Rows}}
+<figure class="bars" data-report-view="chart">
+<figcaption>{{.Label}}</figcaption>
+{{- $rank := .Rank}}
+{{- range .Rows}}
+<div class="bar-row" data-report-row="{{.Key}}">
+<b>{{.Label}}</b>
+<span class="bar-track" data-report-metric="primary"><i aria-hidden="true" data-report-value="{{.Value}}" style="width:{{width .Width}}"></i>{{if $rank}}{{if .Value}}Project #{{num .Value}}{{else}}Project outside tracked results{{end}}{{else}}{{num .Value}}{{end}}</span>
+{{if $rank}}<span class="bar-track other" data-report-metric="comparison"><i aria-hidden="true" data-report-value="{{.Other}}" style="width:{{width .OtherWidth}}"></i>{{.Comparison}} #{{num .Other}}</span>{{end}}
+</div>
+{{- end}}
+</figure>
+{{- end}}
+{{- end}}
+
+{{- define "ai-evidence"}}
+<section id="ai-visibility">
+<header><h2>AI visibility and citations</h2><p class="src">Source: AI Visibility · checked {{date .CheckedAt}}</p></header>
+<p class="lede">{{.Brand}} was cited in <b>{{.Cited}} of {{.Answered}}</b> tracked answers. Showing {{len .Evidence}} answers from this saved check.</p>
+{{- range .Evidence}}
+<details class="evidence">
+<summary>{{.Engine}} · {{.Prompt}}{{with .CheckedAt}} <span class="src">· {{date .}}</span>{{end}}</summary>
+<p>{{.Excerpt}}</p>
+{{- if .Sources}}
+<div class="table"><table><thead><tr><th>Citation order</th><th>Cited website</th><th>Cited page</th></tr></thead><tbody>
+{{range .Sources}}<tr><td>{{.Position}}</td><td>{{.Domain}}{{if .Owned}} · Project{{else if .Brand}} · Competitor{{end}}{{if .Brand}} ({{.Brand}}){{end}}</td><td class="key">{{with href .URL}}<a href="{{.}}" target="_blank" rel="noreferrer">{{short (str .)}}</a>{{end}}</td></tr>{{end}}
+</tbody></table></div>
+{{if gt .SourceCount (len .Sources)}}<p class="src">Showing {{len .Sources}} of {{.SourceCount}} sources.</p>{{end}}
+{{- else}}<p class="src">No link citations were saved for this answer.</p>{{end}}
+</details>
+{{- end}}
+</section>
+{{- end}}
+
+{{- define "local-evidence"}}
+<section id="local-visibility">
+<header><h2>Local visibility</h2><p class="src">Source: saved Google Maps and Business Profile checks</p></header>
+<p class="lede"><b>{{.Business.Title}}</b>{{if .Business.Address}} · {{.Business.Address}}{{end}}</p>
+{{- $local := .}}
+{{- with .Check}}
+<h3>Google Maps for “{{.SearchTerm}}”</h3>
+<p class="src">Checked {{date $local.CheckAt}}{{if not .MapsAvailable}} · Maps results unavailable{{else if .YourRank}} · Project position #{{.YourRank}}{{else}} · Profile was outside the returned results{{end}}</p>
+{{- with .You.Profile}}
+<p>Business Profile{{if .Categories}} · {{range $i, $category := .Categories}}{{if $i}}, {{end}}{{$category}}{{end}}{{end}}{{if .Rating}} · {{rating .Rating}} average rating{{end}} · {{inum .Reviews}} reviews</p>
+{{- end}}
+{{- with .Rivals}}
+<div class="table"><table><thead><tr><th>Business</th><th class="n">Maps position</th><th class="n">Rating</th><th class="n">Reviews</th></tr></thead><tbody>
+{{range .}}<tr><td class="key">{{.Place.Title}}</td><td class="n">{{.Place.Rank}}</td><td class="n">{{rating .Place.Rating}}</td><td class="n">{{inum .Place.Reviews}}</td></tr>{{end}}
+</tbody></table></div>
+{{- end}}
+{{- end}}
+{{- with .Grid}}
+<h3>Maps rank grid for “{{.SearchTerm}}”</h3>
+<p class="src">Checked {{date $local.GridAt}} · {{.Size}} × {{.Size}} points · {{.SpacingKm}} km apart</p>
+<p>{{.Summary}}</p>
+<div class="rank-grid" style="--columns:{{.Size}}" aria-label="Maps rank grid, north at top">
+{{range .Points}}<span class="{{if .Missing}}grid-missing{{else if and .Rank (le .Rank 3)}}grid-top{{end}}" title="Row {{.Row}}, column {{.Col}}">{{if .Missing}}Unavailable{{else if .Rank}}#{{.Rank}}{{else}}>20{{end}}</span>{{end}}
+</div>
+{{- end}}
+{{- with .Reviews}}
+<h3>Google Business Profile reviews</h3>
+<p class="src">Checked {{date $local.ReviewsAt}}</p>
+<p>{{inum .Total}} reviews{{if .Rating}} · {{rating .Rating}} average rating{{end}}{{if .ReplyRate}} · {{deref .ReplyRate}}% reply rate across {{inum .Fetched}} reviews sampled{{end}}.</p>
+{{with $local.PreviousReviews}}<p class="src">Previous check ({{date $local.PreviousReviewsAt}}) · {{inum .Total}} reviews{{if .Rating}} · {{rating .Rating}} average rating{{end}}</p>{{end}}
+{{- with .Rivals}}
+<div class="table"><table><thead><tr><th>Business</th><th class="n">Reviews sampled</th><th class="n">Reply rate</th></tr></thead><tbody>
+{{range .}}<tr><td class="key">{{.Title}}</td><td class="n">{{inum .Fetched}}</td><td class="n">{{with .ReplyRate}}{{deref .}}%{{else}}—{{end}}</td></tr>{{end}}
+</tbody></table></div>
+{{- end}}
+{{- end}}
+</section>
+{{- end}}

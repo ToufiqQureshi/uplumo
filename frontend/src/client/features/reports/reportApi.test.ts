@@ -199,8 +199,8 @@ describe("generateSiteReport", () => {
         reportId: "r9",
         title: "SEO report",
         shareToken: null,
-        included: ["audit"],
-        skipped: [{ section: "search", reason: "Not connected." }],
+        included: ["audit", "analytics", "competitors", "ai_visibility"],
+        skipped: [{ section: "local_visibility", reason: "No saved checks." }],
       }),
     );
     const out = await generateSiteReport({
@@ -208,21 +208,44 @@ describe("generateSiteReport", () => {
         projectId: "p 1",
         title: "SEO report",
         periodDays: 28,
-        sections: ["search", "audit"],
+        sections: [
+          "audit",
+          "analytics",
+          "competitors",
+          "ai_visibility",
+          "local_visibility",
+        ],
         note: "",
+        workCompleted: "Updated the comparison page",
         nextSteps: "",
         share: false,
       },
     });
-    expect(out.skipped[0]?.reason).toBe("Not connected.");
+    expect(out.included).toEqual([
+      "audit",
+      "analytics",
+      "competitors",
+      "ai_visibility",
+    ]);
+    expect(out.skipped[0]).toEqual({
+      section: "local_visibility",
+      reason: "No saved checks.",
+    });
     expect(fetchMock.mock.calls[0]).toMatchObject([
       "/api/v1/projects/p%201/reports/generate",
       {
         body: JSON.stringify({
           title: "SEO report",
           periodDays: 28,
-          sections: ["search", "audit"],
+          sections: [
+            "audit",
+            "analytics",
+            "competitors",
+            "ai_visibility",
+            "local_visibility",
+          ],
           note: "",
+          workCompleted: "Updated the comparison page",
           nextSteps: "",
           share: false,
         }),

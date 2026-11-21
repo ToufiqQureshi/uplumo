@@ -1,3 +1,10 @@
+## 21 Nov 2026 — Client report evidence
+
+- Owner approved one PR for reports founders and clients can use, with dashboard evidence and no credit or billing copy.
+- Scope: Search Console, GA4, Uplumo Analytics, own rankings, competitor rankings and saved monthly volume, AI answers/cited pages, Business Profile/Maps, site health and backlinks.
+- Executive summary includes outcomes, optional completed work with proof links, and up to three evidence-backed priorities when the author supplies none. Uses existing sources and incurs zero paid provider calls.
+- Owner requested private preview, detailed inclusion controls, charts and merge in the same PR (#326). Reports now default to private. Saving uses the edited preview, with chart/table modes for traffic channels and competitor comparisons.
+
 ## 20 Nov 2026: Search Console page made simple (PR #324)
 
 - Owner: "search console and analytics muje bilkul samj nai aaraa ... bekkar ha logo ke b complaint ha ... uplumo chidnke chale gaye".
