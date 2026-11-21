@@ -2,10 +2,9 @@
 
 ```
 Reports page -> "Create client report" dialog
-  -> POST /api/v1/projects/{projectId}/reports/generate
-     {title, periodDays: 7|28|90, sections[], note, workCompleted, nextSteps, share}
-  -> sitereport.Service.Generate
-       singleflight on org + project + author + validated input
+  -> POST /api/v1/projects/{projectId}/reports/preview
+     {title, periodDays: 7|28|90, sections[], note, workCompleted, nextSteps}
+  -> sitereport.Service.Preview
        Store.Project                     (Postgres, scoped to the org)
        in parallel, only the chosen sections:
          search    -> gsc.Service.GetPerformance + GetPageRows + GetQueryRows
@@ -17,11 +16,14 @@ Reports page -> "Create client report" dialog
          audit     -> go_audits / go_audit_issues / go_audit_lighthouse_results
          backlinks -> backlink_snapshots (latest stored row)
        Render (html/template, inline SVG)
-       reports.Service.Save  -> reports table
-       reports.Service.Share -> share_token (when share = true)
-  <- {reportId, title, shareToken, included[], skipped[{section, reason}]}
+  <- {html, skipped[{section, reason}]}
+  -> browser removes excluded content from the document
+  -> /reports/save (saves the reviewed HTML without additional provider reads)
+  -> /reports/sharing only when the author chooses a client link
   -> app opens /p/{projectId}/reports/{reportId}; client opens /s/{token}
 ```
+
+The existing `/reports/generate` API still shares the same rendering path.
 
 ## Paid calls per click: 0
 

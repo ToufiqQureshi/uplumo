@@ -130,16 +130,11 @@ func citationEvidence(run aisearch.TrackingRun, answers []aisearch.TrackingAnswe
 			row.Sources = append(row.Sources, source)
 		}
 		row.SourceCount = len(row.Sources)
-		// Keep tracked domains visible before filling the remaining slots with other sources.
-		slices.SortStableFunc(row.Sources, func(a, b AISource) int { return sourcePriority(a) - sourcePriority(b) })
-		row.Sources = firstN(row.Sources, 6)
-		slices.SortFunc(row.Sources, func(a, b AISource) int { return a.Position - b.Position })
 		out.Evidence = append(out.Evidence, row)
 	}
 	slices.SortStableFunc(out.Evidence, func(a, b AIAnswer) int {
 		return answerPriority(a) - answerPriority(b)
 	})
-	out.Evidence = firstN(out.Evidence, evidenceRows)
 	return out
 }
 

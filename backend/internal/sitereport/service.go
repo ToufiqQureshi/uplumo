@@ -100,41 +100,61 @@ func (s *Service) Generate(ctx context.Context, organizationID, projectID string
 }
 
 func (s *Service) generate(ctx context.Context, organizationID, projectID string, author Author, in Input) (Result, error) {
-	project, err := s.Store.Project(ctx, organizationID, projectID)
-	if err != nil {
-		return Result{}, err
-	}
-	now := s.now()
-	snap := Snapshot{Project: project, Period: periodFor(now, in.PeriodDays), GeneratedAt: now.UTC(), Note: in.Note,
-		WorkCompleted: in.WorkCompleted, NextSteps: in.NextSteps, Accent: s.accent(ctx, organizationID)}
-	skipped := s.collect(ctx, organizationID, projectID, in.Sections, &snap)
-	included := includedSections(snap)
-	if len(included) == 0 {
-		return Result{}, &Error{Code: "no_report_data", Message: noDataMessage(skipped)}
-	}
-	html, err := Render(snap)
+	draft, snap, err := s.prepare(ctx, organizationID, projectID, in)
 	if err != nil {
 		return Result{}, err
 	}
 	saved, err := s.Reports.Save(ctx, reports.SaveInput{
 		ProjectID: projectID, OrganizationID: organizationID, Title: in.Title, Summary: summary(snap),
-		HTML: html, Skill: new("Site report"), CreatedBy: author.Name, CreatedByUserID: author.UserID,
+		HTML: draft.HTML, Skill: new("Site report"), CreatedBy: author.Name, CreatedByUserID: author.UserID,
 	})
 	if err != nil {
 		return Result{}, err
 	}
-	result := Result{ReportID: saved.ReportID, Title: saved.Title, Included: included, Skipped: skipped}
+	result := Result{ReportID: saved.ReportID, Title: saved.Title, Included: includedSections(snap), Skipped: draft.Skipped}
 	if in.Share {
 		meta, err := s.Reports.Share(ctx, projectID, saved.ReportID)
 		if err != nil {
-			// The report is saved; the client link can still be created from
-			// the report page, so this is not a failed click.
 			s.log(ctx, "share generated site report", err)
 		} else {
 			result.ShareToken = meta.ShareToken
 		}
 	}
 	return result, nil
+}
+
+// Preview renders a report without saving it or creating a share token.
+func (s *Service) Preview(ctx context.Context, organizationID, projectID string, in Input) (Preview, error) {
+	if s == nil || s.Store == nil {
+		return Preview{}, &Error{Code: "reports_unavailable", Message: "Site reports are not available on this server."}
+	}
+	in, err := normalize(in)
+	if err != nil {
+		return Preview{}, err
+	}
+	run, cancel := context.WithTimeout(ctx, generateTimeout)
+	defer cancel()
+	draft, _, err := s.prepare(run, organizationID, projectID, in)
+	return draft, err
+}
+
+func (s *Service) prepare(ctx context.Context, organizationID, projectID string, in Input) (Preview, Snapshot, error) {
+	project, err := s.Store.Project(ctx, organizationID, projectID)
+	if err != nil {
+		return Preview{}, Snapshot{}, err
+	}
+	now := s.now()
+	snap := Snapshot{Project: project, Period: periodFor(now, in.PeriodDays), GeneratedAt: now.UTC(), Note: in.Note,
+		WorkCompleted: in.WorkCompleted, NextSteps: in.NextSteps, Accent: s.accent(ctx, organizationID)}
+	skipped := s.collect(ctx, organizationID, projectID, in.Sections, &snap)
+	if len(includedSections(snap)) == 0 {
+		return Preview{}, Snapshot{}, &Error{Code: "no_report_data", Message: noDataMessage(skipped)}
+	}
+	html, err := Render(snap)
+	if err != nil {
+		return Preview{}, Snapshot{}, err
+	}
+	return Preview{HTML: html, Skipped: skipped}, snap, nil
 }
 
 // collect fills the chosen sections. Google reads run in parallel; a source

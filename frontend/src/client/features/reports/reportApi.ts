@@ -232,18 +232,36 @@ const siteReportResultSchema = z.object({
 });
 export type SiteReportResult = z.infer<typeof siteReportResultSchema>;
 
-/** Builds a client report from the project's connected data. 0 credits. */
-export async function generateSiteReport({
-  data,
-}: ReportInput<{
+type SiteReportSettings = {
   title: string;
   periodDays: 7 | 28 | 90;
   sections: SiteReportSection[];
   note: string;
   workCompleted?: string;
   nextSteps: string;
-  share: boolean;
-}>) {
+};
+
+export type SiteReportPreview = {
+  html: string;
+  skipped: SiteReportResult["skipped"];
+};
+
+export async function previewSiteReport({
+  data,
+}: ReportInput<SiteReportSettings>): Promise<SiteReportPreview> {
+  const { projectId, ...body } = data;
+  return apiRequest(
+    reportPath(projectId, "preview"),
+    siteReportResultSchema.pick({ skipped: true }).extend({ html: z.string() }),
+    "POST",
+    body,
+  );
+}
+
+/** Builds a client report from the project's connected data. 0 credits. */
+export async function generateSiteReport({
+  data,
+}: ReportInput<SiteReportSettings & { share: boolean }>) {
   const { projectId, ...body } = data;
   return apiRequest(
     reportPath(projectId, "generate"),

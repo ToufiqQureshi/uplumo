@@ -72,6 +72,12 @@ type Result struct {
 	Skipped    []SkippedPart `json:"skipped"`
 }
 
+// Preview is the private document and its unavailable sections.
+type Preview struct {
+	HTML    string        `json:"html"`
+	Skipped []SkippedPart `json:"skipped"`
+}
+
 // SkippedPart explains why a requested section is not in the report.
 type SkippedPart struct {
 	Section Section `json:"section"`

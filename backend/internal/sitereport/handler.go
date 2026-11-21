@@ -23,12 +23,16 @@ type Deps struct {
 	WithProjectAccess func(http.Handler) http.Handler
 }
 
-// Mount registers the "Create report" endpoint.
+// Mount registers the create and private preview endpoints.
 func Mount(mux *http.ServeMux, d Deps) {
-	mux.Handle("POST /api/v1/projects/{projectId}/reports/generate", d.WithSession(d.WithProjectAccess(http.HandlerFunc(d.generate))))
+	for _, action := range []string{"generate", "preview"} {
+		mux.Handle("POST /api/v1/projects/{projectId}/reports/"+action, d.WithSession(d.WithProjectAccess(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			d.generate(w, r, action == "preview")
+		}))))
+	}
 }
 
-func (d Deps) generate(w http.ResponseWriter, r *http.Request) {
+func (d Deps) generate(w http.ResponseWriter, r *http.Request, preview bool) {
 	if d.Service == nil {
 		httpx.WriteError(w, http.StatusServiceUnavailable, "reports_unavailable", "Site reports are not available on this server.")
 		return
@@ -48,6 +52,16 @@ func (d Deps) generate(w http.ResponseWriter, r *http.Request) {
 	orgID, ok := auth.ProjectOrganizationFromContext(r.Context())
 	if !ok {
 		httpx.WriteError(w, http.StatusInternalServerError, "internal", "Something went wrong.")
+		return
+	}
+	if preview {
+		result, err := d.Service.Preview(r.Context(), orgID, r.PathValue("projectId"), in)
+		if err != nil {
+			d.writeError(w, r, err)
+			return
+		}
+		w.Header().Set("Cache-Control", "no-store")
+		httpx.WriteJSON(w, http.StatusOK, result)
 		return
 	}
 	name := strings.TrimSpace(user.Name)

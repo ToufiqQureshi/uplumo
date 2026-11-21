@@ -113,12 +113,17 @@ details li{margin:4px 0;overflow-wrap:anywhere}
 .of{font-size:15px;font-weight:500;color:var(--muted)}
 footer{margin-top:8px;font-size:12.5px;color:var(--muted);text-align:center}
 @media (max-width:640px){.hero{padding:28px 0 20px}section{padding:18px;border-radius:14px}.tile .v{font-size:22px}.sev{grid-template-columns:1fr}}
-@media print{body{background:#fff}.toc{display:none}section{box-shadow:none;break-inside:avoid-page}.tabs>input,.tabs>label{display:none}.tabs>.panel{display:block!important}.tabs>.panel::before{content:attr(data-title);display:block;margin:16px 0 8px;font-weight:600}.p-rf tr.r{display:table-row!important}.p-sc-i{display:none!important}details ul{display:block}a.tile:hover{transform:none}}
+@media print{body{background:#fff}.toc{display:none}section{box-shadow:none;break-inside:avoid-page}.tabs>input,.tabs>label{display:none}.tabs>.panel{display:block!important}.tabs>.panel::before{content:attr(data-title);display:block;margin:16px 0 8px;font-weight:600}.p-rf tr.r{display:table-row!important}details ul{display:block}a.tile:hover{transform:none}}
 .work{padding-left:1.4rem;overflow-wrap:anywhere}.work li+li{margin-top:.65rem}
 .evidence{border-top:1px solid var(--line);padding:12px 0}.evidence summary{font-weight:650;cursor:pointer;overflow-wrap:anywhere}.evidence>p{white-space:pre-line;overflow-wrap:anywhere}
 .rank-grid{display:grid;grid-template-columns:repeat(var(--columns),minmax(0,1fr));gap:4px;max-width:420px}
 .rank-grid span{display:grid;place-items:center;min-height:38px;background:var(--soft);border-radius:4px;text-align:center;font-size:.78rem;overflow-wrap:anywhere}
 .rank-grid .grid-top{background:var(--up-bg);color:var(--up)}.rank-grid .grid-missing{border:1px dashed currentColor;color:var(--muted)}
+.bars{margin:12px 0 20px;max-width:640px}.bars figcaption{font-weight:650;margin:0 0 8px}
+.bar-row{display:grid;grid-template-columns:minmax(7rem,1fr) minmax(0,2fr);gap:4px 12px;margin:0 0 9px;font-size:.86rem;overflow-wrap:anywhere}
+.bar-track{grid-column:2;background:var(--soft);border-radius:3px;position:relative;padding:2px 6px;isolation:isolate}
+.bar-track i{position:absolute;inset:0 auto 0 0;border-radius:3px;background:color-mix(in srgb,var(--accent) 30%,transparent);z-index:-1}
+.bar-track.other i{background:color-mix(in srgb,var(--muted) 25%,transparent)}
 </style>
 </head>
 <body>
@@ -192,8 +197,8 @@ footer{margin-top:8px;font-size:12.5px;color:var(--muted);text-align:center}
 <div class="tabs">
 <input type="radio" name="sc" id="sc-c" checked><label for="sc-c">Clicks per day</label>
 <input type="radio" name="sc" id="sc-i"><label for="sc-i">Impressions per day</label>
-<div class="panel p-sc-c" data-title="Clicks per day">{{with searchSeries .Daily false}}{{lineChart "clicks" .Values .Dates "clicks"}}{{end}}</div>
-<div class="panel p-sc-i" data-title="Impressions per day">{{with searchSeries .Daily true}}{{lineChart "impr" .Values .Dates "impressions"}}{{end}}</div>
+<div class="panel p-sc-c" data-report-tab="sc-c" data-title="Clicks per day">{{with searchSeries .Daily false}}{{lineChart "clicks" .Values .Dates "clicks"}}{{end}}</div>
+<div class="panel p-sc-i" data-report-tab="sc-i" data-title="Impressions per day">{{with searchSeries .Daily true}}{{lineChart "impr" .Values .Dates "impressions"}}{{end}}</div>
 </div>
 {{- end}}
 
@@ -204,11 +209,11 @@ footer{margin-top:8px;font-size:12.5px;color:var(--muted);text-align:center}
 {{- if .Gains}}<input type="radio" name="sq" id="sq-g"><label for="sq-g">Rising<small>{{len .Gains}}</small></label>{{end}}
 {{- if .Losses}}<input type="radio" name="sq" id="sq-l"><label for="sq-l">Falling<small>{{len .Losses}}</small></label>{{end}}
 {{- if .Countries}}<input type="radio" name="sq" id="sq-c"><label for="sq-c">Countries<small>{{len .Countries}}</small></label>{{end}}
-<div class="panel p-sq-q" data-title="Top searches">{{template "rows" dict "Rows" .TopQueries "Head" "Search" "Link" false}}</div>
-<div class="panel p-sq-p" data-title="Top pages">{{template "rows" dict "Rows" .TopPages "Head" "Page" "Link" true}}</div>
-{{- if .Gains}}<div class="panel p-sq-g" data-title="Rising searches">{{template "changes" .Gains}}</div>{{end}}
-{{- if .Losses}}<div class="panel p-sq-l" data-title="Falling searches">{{template "changes" .Losses}}</div>{{end}}
-{{- if .Countries}}<div class="panel p-sq-c" data-title="Countries">{{template "rows" dict "Rows" .Countries "Head" "Country" "Link" false}}</div>{{end}}
+<div class="panel p-sq-q" data-report-tab="sq-q" data-title="Top searches">{{template "rows" dict "Rows" .TopQueries "Head" "Search" "Link" false}}</div>
+<div class="panel p-sq-p" data-report-tab="sq-p" data-title="Top pages">{{template "rows" dict "Rows" .TopPages "Head" "Page" "Link" true}}</div>
+{{- if .Gains}}<div class="panel p-sq-g" data-report-tab="sq-g" data-title="Rising searches">{{template "changes" .Gains}}</div>{{end}}
+{{- if .Losses}}<div class="panel p-sq-l" data-report-tab="sq-l" data-title="Falling searches">{{template "changes" .Losses}}</div>{{end}}
+{{- if .Countries}}<div class="panel p-sq-c" data-report-tab="sq-c" data-title="Countries">{{template "rows" dict "Rows" .Countries "Head" "Country" "Link" false}}</div>{{end}}
 </div>
 
 {{- if .Opportunities}}

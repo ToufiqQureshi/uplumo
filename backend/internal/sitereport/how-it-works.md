@@ -9,10 +9,12 @@
 4. Optionally add context, completed work with evidence links, and next steps.
    The summary can suggest up to three priorities from the chosen sections
    when the next-steps field is empty.
-5. Leave **Create a client link** on to get a public link straight away.
-6. Click **Create report**. The report opens; if a link was made it is copied.
-   Sections without data (say, Analytics not connected) are left out and the
-   toast says why, so you know what to connect.
+5. Click **Preview report** to see the actual document privately. Sections
+   without data are listed beside the preview. Use **Included content** to
+   remove sections, metrics, columns or rows. Traffic-channel and competitor
+   comparisons offer a chart, a table or both.
+6. Save privately or explicitly choose **Create a link anyone can view**.
+   The client link opens the saved version of the preview.
 
 The client sees headline numbers, an executive summary and the selected
 sections with data. This includes traffic channels, landing pages and key

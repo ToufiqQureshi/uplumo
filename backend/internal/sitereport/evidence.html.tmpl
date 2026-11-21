@@ -1,8 +1,11 @@
 {{- define "ga4-breakdowns"}}
 {{- if .Limited}}<p class="src">Some Google Analytics data was unavailable or limited.</p>{{end}}
 {{- with .Channels}}
+<div data-report-pair="Traffic channels">
 <h3>Traffic channels</h3>
-{{template "ga4-table" dict "Rows" . "Label" "Channel"}}
+{{template "bar-chart" dict "Rows" (ga4Bars .) "Label" "Sessions by channel"}}
+{{template "ga4-table" dict "Rows" . "Label" "Channel" "Paired" true}}
+</div>
 {{- end}}
 {{- with .LandingPages}}
 <h3>Top landing pages across all channels</h3>
@@ -17,8 +20,9 @@
 {{- end}}
 
 {{- define "ga4-table"}}
-<div class="table"><table><thead><tr><th>{{.Label}}</th><th class="n">Sessions</th><th class="n">Engagement rate</th><th class="n">Key events</th></tr></thead><tbody>
-{{range .Rows}}<tr><td class="key">{{if .Host}}{{.Host}} {{end}}{{.Name}}</td><td class="n">{{amount .Sessions}}</td><td class="n">{{engagement .EngagementRate}}</td><td class="n">{{amount .KeyEvents}}</td></tr>{{end}}
+<div class="table"{{if .Paired}} data-report-view="table"{{end}}><table><thead><tr><th>{{.Label}}</th><th class="n" data-report-metric="primary">Sessions</th><th class="n">Engagement rate</th><th class="n">Key events</th></tr></thead><tbody>
+{{- $paired := .Paired}}
+{{range .Rows}}<tr{{if $paired}} data-report-row="{{.Name}}"{{end}}><td class="key">{{if .Host}}{{.Host}} {{end}}{{.Name}}</td><td class="n">{{amount .Sessions}}</td><td class="n">{{engagement .EngagementRate}}</td><td class="n">{{amount .KeyEvents}}</td></tr>{{end}}
 </tbody></table></div>
 {{- end}}
 
@@ -32,10 +36,13 @@
 </div>
 {{- if gt (len .Series) 1}}{{with trafficSeries (siteSeries .)}}{{lineChart "uplumo-pageviews" .Values .Dates "pageviews"}}{{end}}{{end}}
 {{- with .Channels}}
+<div data-report-pair="Acquisition channels">
 <h3>Acquisition channels</h3>
-<div class="table"><table><thead><tr><th>Channel</th><th class="n">Sessions</th></tr></thead><tbody>
-{{range .}}<tr><td class="key">{{.Channel}}</td><td class="n">{{count .Sessions}}</td></tr>{{end}}
+{{template "bar-chart" dict "Rows" (analyticsBars .) "Label" "Sessions by acquisition channel"}}
+<div class="table" data-report-view="table"><table><thead><tr><th>Channel</th><th class="n" data-report-metric="primary">Sessions</th></tr></thead><tbody>
+{{range .}}<tr data-report-row="{{.Channel}}"><td class="key">{{.Channel}}</td><td class="n">{{count .Sessions}}</td></tr>{{end}}
 </tbody></table></div>
+</div>
 {{- end}}
 {{- with .Entries}}
 <h3>Top entry pages</h3>
@@ -72,14 +79,33 @@
 <section id="competitors">
 {{with .Competitors}}<header><h2>Competitor rankings</h2><p class="src">Source: Rank Tracking · {{.Domain}}{{if .Location}} · {{.Location}}{{end}} · {{.Device}}{{with .CheckedAt}} · checked {{date .}}{{end}}</p></header>{{end}}
 <p class="lede">Up to five other sites per keyword from the saved Google results. Monthly searches are keyword estimates.{{if gt .CompetitorTotal (len .CompetitorRows)}} Showing {{len .CompetitorRows}} of {{.CompetitorTotal}} keywords with competitor results.{{end}}</p>
-<div class="table"><table><thead><tr><th>Keyword</th><th class="n">Monthly searches</th><th>Project position and page</th><th>Competitor positions and pages</th></tr></thead><tbody>
+<div data-report-pair="Competitor comparisons">
+{{template "bar-chart" dict "Rows" (rankBars .CompetitorRows) "Label" "Project and leading competitor positions · first 8 keywords shown · lower is better" "Rank" true}}
+<div class="table" data-report-view="table"><table><thead><tr><th>Keyword</th><th class="n">Monthly searches</th><th data-report-metric="primary">Project position and page</th><th data-report-metric="comparison">Competitor positions and pages</th></tr></thead><tbody>
 {{- range .CompetitorRows}}
-<tr><td class="key">{{.Keyword}}{{with .CheckedAt}}<br><span class="src">{{date .}}</span>{{end}}</td><td class="n">{{with .Volume}}{{inum (deref .)}}{{else}}—{{end}}</td>
+<tr data-report-row="{{.Keyword}}"><td class="key">{{.Keyword}}{{with .CheckedAt}}<br><span class="src">{{date .}}</span>{{end}}</td><td class="n">{{with .Volume}}{{inum (deref .)}}{{else}}—{{end}}</td>
 <td>{{with .Position}}#{{deref .}}{{else}}Outside tracked results{{end}}{{with href .URL}}<br><a href="{{.}}" target="_blank" rel="noreferrer">{{short (str .)}}</a>{{end}}</td>
 <td>{{range topCompetitors .Competitors}}<div>#{{.Rank}} {{.Domain}}{{with href .URL}}<br><a href="{{.}}" target="_blank" rel="noreferrer">{{short (str .)}}</a>{{end}}</div>{{end}}</td></tr>
 {{- end}}
 </tbody></table></div>
+</div>
 </section>
+{{- end}}
+
+{{- define "bar-chart"}}
+{{- if .Rows}}
+<figure class="bars" data-report-view="chart">
+<figcaption>{{.Label}}</figcaption>
+{{- $rank := .Rank}}
+{{- range .Rows}}
+<div class="bar-row" data-report-row="{{.Key}}">
+<b>{{.Label}}</b>
+<span class="bar-track" data-report-metric="primary"><i aria-hidden="true" data-report-value="{{.Value}}" style="width:{{width .Width}}"></i>{{if $rank}}{{if .Value}}Project #{{num .Value}}{{else}}Project outside tracked results{{end}}{{else}}{{num .Value}}{{end}}</span>
+{{if $rank}}<span class="bar-track other" data-report-metric="comparison"><i aria-hidden="true" data-report-value="{{.Other}}" style="width:{{width .OtherWidth}}"></i>{{.Comparison}} #{{num .Other}}</span>{{end}}
+</div>
+{{- end}}
+</figure>
+{{- end}}
 {{- end}}
 
 {{- define "ai-evidence"}}

@@ -7,9 +7,11 @@ import (
 	"html/template"
 	"math"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
+	"github.com/toufiqqureshi/uplumo/backend/internal/analytics"
 	"github.com/toufiqqureshi/uplumo/backend/internal/reports"
 )
 
@@ -50,6 +52,9 @@ var reportTemplate = template.Must(template.New("report").Funcs(template.FuncMap
 	"searchSeries":   searchSeries,
 	"trafficSeries":  trafficSeries,
 	"rankRows":       firstN[RankRow],
+	"ga4Bars":        ga4Bars,
+	"analyticsBars":  analyticsBars,
+	"rankBars":       rankBars,
 	"topCompetitors": func(rows []CompetitorRank) []CompetitorRank { return firstN(rows, 5) },
 	"workLines": func(text string) []string {
 		lines := strings.Split(text, "\n")
@@ -130,6 +135,11 @@ func Render(s Snapshot) (string, error) {
 		accent = s.Accent
 	}
 	v := view{Snapshot: s, Highlights: firstN(Highlights(s), 6), Where: s.Project.Domain, RankLimit: maxRankRows}
+	if s.AI != nil {
+		ai := *s.AI
+		ai.Evidence = slices.Clone(ai.Evidence)
+		v.AI = &ai
+	}
 	if s.NextSteps == "" {
 		v.Priorities = priorities(s)
 	}
@@ -179,14 +189,37 @@ func Render(s Snapshot) (string, error) {
 			return buf.String(), nil
 		}
 		switch {
+		case trimCitationSources(v.AI):
 		case len(v.CompetitorRows) > 1:
 			v.CompetitorRows = v.CompetitorRows[:len(v.CompetitorRows)/2]
 		case s.Rankings != nil && len(s.Rankings.Rows) > 1 && v.RankLimit > 1:
 			v.RankLimit = min(v.RankLimit, len(s.Rankings.Rows)) / 2
+		case v.AI != nil && len(v.AI.Evidence) > 1:
+			v.AI.Evidence = v.AI.Evidence[:len(v.AI.Evidence)/2]
 		default:
 			return "", invalid("This report is too large. Choose fewer sections and try again.")
 		}
 	}
+}
+
+func trimCitationSources(ai *AIVisibility) bool {
+	if ai == nil {
+		return false
+	}
+	trimmed := false
+	for i := range ai.Evidence {
+		answer := &ai.Evidence[i]
+		if len(answer.Sources) <= 6 {
+			continue
+		}
+		rows := slices.Clone(answer.Sources)
+		slices.SortStableFunc(rows, func(a, b AISource) int { return sourcePriority(a) - sourcePriority(b) })
+		rows = rows[:max(6, len(rows)/2)]
+		slices.SortFunc(rows, func(a, b AISource) int { return a.Position - b.Position })
+		answer.Sources = rows
+		trimmed = true
+	}
+	return trimmed
 }
 
 func competitorRows(rows []RankRow) []RankRow {
@@ -197,6 +230,61 @@ func competitorRows(rows []RankRow) []RankRow {
 		}
 	}
 	return out
+}
+
+type barRow struct {
+	Key, Label        string
+	Value             float64
+	Width             float64
+	Comparison        string
+	Other, OtherWidth float64
+}
+
+func ga4Bars(rows []GA4Row) []barRow {
+	var bars []barRow
+	for _, row := range rows {
+		if row.Sessions != nil {
+			bars = append(bars, barRow{Key: row.Name, Label: row.Name, Value: *row.Sessions})
+		}
+	}
+	return scaleBars(bars)
+}
+
+func analyticsBars(rows []analytics.AcquisitionCount) []barRow {
+	var bars []barRow
+	for _, row := range rows {
+		bars = append(bars, barRow{Key: row.Channel, Label: row.Channel, Value: float64(row.Sessions)})
+	}
+	return scaleBars(bars)
+}
+
+func rankBars(rows []RankRow) []barRow {
+	var bars []barRow
+	for _, row := range firstN(rows, 8) {
+		best := row.Competitors[0]
+		for _, competitor := range row.Competitors[1:] {
+			if competitor.Rank < best.Rank {
+				best = competitor
+			}
+		}
+		item := barRow{Key: row.Keyword, Label: row.Keyword, Comparison: best.Domain, Other: float64(best.Rank)}
+		if row.Position != nil {
+			item.Value = float64(*row.Position)
+		}
+		bars = append(bars, item)
+	}
+	return scaleBars(bars)
+}
+
+func scaleBars(rows []barRow) []barRow {
+	peak := 1.0
+	for _, row := range rows {
+		peak = max(peak, row.Value, row.Other)
+	}
+	for i := range rows {
+		rows[i].Width, rows[i].OtherWidth = rows[i].Value/peak*100, rows[i].Other/peak*100
+	}
+	return rows
 }
 
 func analyticsSeries(a *AnalyticsSnapshot) []TrafficDay {

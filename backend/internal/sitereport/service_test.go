@@ -393,6 +393,14 @@ func TestHandler(t *testing.T) {
 	if len(saver.saved) != 1 || saver.saved[0].CreatedBy != "Workspace member" || saver.saved[0].ProjectID != "p1" {
 		t.Fatalf("saved = %+v", saver.saved)
 	}
+	preview := httptest.NewRecorder()
+	mux.ServeHTTP(preview, httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/projects/p1/reports/preview", strings.NewReader(
+		`{"title":"Draft","periodDays":7,"sections":["search"],"share":true}`,
+	)))
+	if preview.Code != 200 || preview.Header().Get("Cache-Control") != "no-store" ||
+		!strings.Contains(preview.Body.String(), "Executive summary") || len(saver.saved) != 1 || len(saver.shared) != 0 {
+		t.Fatalf("private preview status=%d saves=%d shares=%d", preview.Code, len(saver.saved), len(saver.shared))
+	}
 	saver.saveErr = &reports.Error{Code: "VALIDATION_ERROR", Message: "A report with this title already exists in the project."}
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/projects/p1/reports/generate", strings.NewReader(`{"title":"B","periodDays":7,"sections":["audit"]}`)))
